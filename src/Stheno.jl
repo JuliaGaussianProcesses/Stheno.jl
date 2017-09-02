@@ -1,10 +1,12 @@
 module Stheno
 
-# Module-wide definitions for consistency.
-export CovMat, AVector
-const CovMat = Matrix{Float64}
-const AVector = Union{AbstractVector, RowVector}
+using PDMats, Distributions
 
-include("cov.jl")
+# Kernel and covariance 
+include("kernel.jl")
+include("strided_covmat.jl")
+
+# Multivariate Normal and GP.
+include("normal.jl")
 
 end # module

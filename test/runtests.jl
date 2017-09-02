@@ -1,4 +1,8 @@
 using Stheno
 using Base.Test
 
-include("cov.jl")
+@testset "Stheno" begin
+    include("kernel.jl")
+    include("strided_covmat.jl")
+    include("normal.jl")
+end
