@@ -5,4 +5,5 @@ using Base.Test
     include("kernel.jl")
     include("strided_covmat.jl")
     include("normal.jl")
+    include("gp.jl")
 end
