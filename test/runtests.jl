@@ -2,8 +2,8 @@ using Stheno
 using Base.Test
 
 @testset "Stheno" begin
-    include("kernel.jl")
-    include("strided_covmat.jl")
     include("normal.jl")
+    include("kernel.jl")
     include("gp.jl")
+    include("covariance_matrices.jl")
 end

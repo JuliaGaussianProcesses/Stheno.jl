@@ -1,13 +1,10 @@
 module Stheno
 
-using PDMats, Distributions
+using PDMats
 
-# Kernel and covariance 
-include("kernel.jl")
-include("strided_covmat.jl")
-
-# Multivariate Normal and GP.
 include("normal.jl")
+include("kernel.jl")
 include("gp.jl")
+include("covariance_matrices.jl")
 
 end # module

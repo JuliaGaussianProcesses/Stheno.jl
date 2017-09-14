@@ -29,3 +29,13 @@ cov(k::Kernel, x::AbstractVector) = StridedPDMatrix(chol(Symmetric(k.(x, RowVect
 cov(k::Kernel, x::RowVector) = StridedPDMatrix(chol(Symmetric(k.(x.vec, x))))
 cov(k::Kernel, x::T, y::T) where T<:RowVector = k.(x.vec, y)
 cov(k::Kernel, x::T, y::T) where T<:AbstractVector = k.(x, RowVector(y))
+
+
+"""
+    
+
+Compute the covariance matrix implied by a collection of 
+"""
+function cov(obs::Vararg{Tuple{GP, T, T} where T<:Union{AbstractVector, RowVector}})
+    
+end

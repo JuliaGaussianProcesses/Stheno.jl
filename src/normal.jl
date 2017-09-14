@@ -36,5 +36,5 @@ lpdf(d::Normal, x::AbstractVector) =
 
 Take `N` samples from `d` using random number generator `rng` (not optional).
 """
-sample(rng::AbstractRNG, d::Normal{<:RealOrVec, <:StridedPDMatrix}, N::Int=1) =
+sample(rng::AbstractRNG, d::Normal{<:RealOrVec, <:AbstractPDMat}, N::Int=1) =
     mean(d) .+ chol(cov(d)).'randn(rng, dims(d), N)
