@@ -25,8 +25,8 @@ chol(Σ::StridedPDMatrix) = Σ.U
 
 Allocate memory for the covariance matrix and call `cov!`.
 """
-cov(k::Kernel, x::AbstractVector) = StridedPDMatrix(chol(Symmetric(k.(x, RowVector(x)))))
-cov(k::Kernel, x::RowVector) = StridedPDMatrix(chol(Symmetric(k.(x.vec, x))))
+cov(k::Kernel, x::AbstractVector) = StridedPDMatrix(chol(Symmetric(k.(x, RowVector(x)) + 1e-12I)))
+cov(k::Kernel, x::RowVector) = StridedPDMatrix(chol(Symmetric(k.(x.vec, x)) + 1e-12I))
 cov(k::Kernel, x::T, y::T) where T<:RowVector = k.(x.vec, y)
 cov(k::Kernel, x::T, y::T) where T<:AbstractVector = k.(x, RowVector(y))
 

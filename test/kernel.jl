@@ -67,4 +67,22 @@
     @test (EQ() * 5.0)(3.0, 3.5) == EQ()(3.0, 3.5) * 5.0
     @test (RQ(3.3) * EQ())(1.2, 1.1) == RQ(3.3)(1.2, 1.1) * EQ()(1.2, 1.1)
     @test (RQ(1.0) * EQ() * 5.0)(3.4, 2.1) == RQ(1.0)(3.4, 2.1) * EQ()(3.4, 2.1) * 5.0
+
+    # Tests for Circularised Kernels.
+    @test lb(Circularised(EQ(), 0.0, 1.0)) == 0.0
+    @test ub(Circularised(EQ(), 0.0, 1.0)) == 1.0
+    @test Circularised(EQ(), 0.0, 1.0) == Circularised(EQ(), 0.0, 1.0)
+    @test Circularised(RQ(1.0), 0.0, 1.0) != Circularised(EQ(), 0.0, 1.0)
+    @test Circularised(EQ(), 0.5, 1.0) != Circularised(EQ(), 0.0, 1.0)
+    @test Circularised(EQ(), 0.0, 0.5) != Circularised(EQ(), 0.0, 1.0)
+    @test Circularised(EQ(), 0.0, 1.0)(0.0, 0.0) == 1.0
+    @test Circularised(EQ(), 0.0, 1.0)(0.0, 0.0) == EQ()(0.0, 0.0)
+
+    # Test some invariances.
+    let k = Circularised(EQ(), 0.0, 1.0)
+        @test k(0.0, 0.2) ≈ k(0.8, 1.0)
+        @test k(0.2, 0.0) ≈ k(0.0, 0.2)
+        @test k(0.0, 0.2) ≈ k(1.0, 0.8)
+        @test k(0.0, 1e-5) ≈ k(1.0 - 1e-5, 1.0)
+    end
 end
