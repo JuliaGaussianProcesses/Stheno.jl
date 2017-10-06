@@ -38,4 +38,19 @@
         @test cov(k, y, x) == cov(k, x, y).'
         @test cov(k, RowVector(x), RowVector(y)) == cov(k, x, y)
     end
+
+    # Test joint covariance matrix construction.
+    let
+        rng = MersenneTwister(123456)
+        P, Q = 3, 2
+        x, y = randn(rng, P), randn(rng, Q)
+        gpc = GPCollection()
+        gp1, gp2 = GP(gpc, x->0.0, EQ()), GP(gpc, x->0.0, RQ(1.0))
+        K1, K2 = full(cov(kernel(gp1), x)), full(cov(kernel(gp2), y))
+        @test K1 == full(cov((gp1, x),))
+        @test K2 == full(cov((gp2, y),))
+
+        K_manual = vcat(hcat(K1, zeros(P, Q)), hcat(zeros(Q, P), K2))
+        @test K_manual == full(cov((gp1, x), (gp2, y)))
+    end
 end

@@ -23,20 +23,29 @@
         @test size(jk_ext, 2) == 4
     end
 
-    # Test `length`, `mean`, `kernel` for `GPCollection`.
+    # Test `length`, `mean`, `kernel` and `push!` for `GPCollection`.
     import Stheno.GPCollection
     let rng = MersenneTwister(123456)
 
         r1, r2, r3 = randn(rng, 5), randn(rng, 6), randn(rng, 7)
         μ, jk = randn(rng, 3), KernelCollection([r1, r2, r3])
         @test_throws ArgumentError GPCollection(randn(rng, 4), jk)
-        gp = GPCollection(μ, jk)
+        gpc = GPCollection(μ, jk)
 
-        @test length(gp) == 3
-        @test mean(gp, 1) === μ[1]
-        @test kernel(gp, 1) === jk[1, 1]
-        @test kernel(gp, 1, 1) == jk[1, 1]
-        @test kernel(gp, 1, 2) == jk[1, 2]
+        @test length(gpc) == 3
+        @test mean(gpc, 1) === μ[1]
+        @test kernel(gpc, 1) === jk[1, 1]
+        @test kernel(gpc, 1, 1) == jk[1, 1]
+        @test kernel(gpc, 1, 2) == jk[1, 2]
+
+        @test_throws ArgumentError push!(gpc, x->x, randn(3))
+        r4 = randn(rng, 4)
+        push!(gpc, 5.0, r4)
+        @test gpc.k.k[4] == r4
+        @test kernel(gpc, 1, 4) == r4[1]
+        @test kernel(gpc, 2, 4) == r4[2]
+        @test kernel(gpc, 3, 4) == r4[3]
+        @test kernel(gpc, 4, 4) == r4[4]
     end
 
     # Test `append_indep!`.
@@ -102,4 +111,62 @@
         @test_throws AssertionError kernel(gp1, gp_different)
     end
 
+    # Test addition of GPs.
+    let rng = MersenneTwister(123456)
+
+        # Select some input locations.
+        N = 2
+        x = randn(rng, N)
+
+        # Set up a pair of GPs.
+        μ1, μ2, μ3 = sin, cos, tan
+        k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
+        gpc = GPCollection()
+        gp1 = GP(gpc, μ1, k1)
+        gp2 = GP(gpc, μ2, k2)
+        gp3 = GP(gpc, μ3, k3)
+
+        # Compute all four summations (we will check for approximate commutativity).
+        gp_1p1 = gp1 + gp1
+        gp_1p2 = gp1 + gp2
+        gp_2p1 = gp2 + gp1
+        gp_2p2 = gp2 + gp2
+
+        # Check that the mean functions have been correctly computed.
+        @test mean(gp_1p1).(x) == μ1.(x) .+ μ1.(x)
+        @test mean(gp_1p2).(x) == μ1.(x) .+ μ2.(x)
+        @test mean(gp_2p1).(x) == μ2.(x) .+ μ1.(x)
+        @test mean(gp_2p2).(x) == μ2.(x) .+ μ2.(x)
+
+        # Check that the marginal covariances have been correctly computed.
+        @test full(cov(kernel(gp_1p1), x)) ≈ 4 .* full(cov(k1, x))
+        @test full(cov(kernel(gp_1p2), x)) ≈ full(cov(k1, x)) .+ full(cov(k2, x))
+        @test full(cov(kernel(gp_2p1), x)) ≈ full(cov(k2, x)) .+ full(cov(k1, x))
+        @test full(cov(kernel(gp_2p2), x)) ≈ 4 .* full(cov(k2, x))
+
+        # Check that the cross-covariances havae been correctly computed.
+        @test full(cov(kernel(gp1, gp_1p1), x)) ≈ 2 .* full(cov(kernel(gp1), x))
+        @test full(cov(kernel(gp1, gp_1p2), x)) ≈ full(cov(kernel(gp1), x))
+        @test full(cov(kernel(gp1, gp_2p1), x)) ≈ full(cov(kernel(gp1), x))
+        @test full(cov(kernel(gp1, gp_2p2), x)) ≈ diagm(1e-12 * ones(N))
+    end
+
+    # Test that sampling works properly.
+    let rng = MersenneTwister(123456)
+
+        # Select some input locations.
+        N = 2
+        x = randn(rng, N)
+
+        # Set up a pair of GPs.
+        μ1, μ2, μ3 = sin, cos, tan
+        k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
+        gpc = GPCollection()
+        gp1 = GP(gpc, μ1, k1)
+        gp2 = GP(gpc, μ2, k2)
+        gp3 = GP(gpc, μ3, k3)
+
+        
+
+    end
 end

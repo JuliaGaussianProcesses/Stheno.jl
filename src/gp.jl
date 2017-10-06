@@ -13,8 +13,13 @@ struct KernelCollection
     KernelCollection(k::Vector{<:Vector{<:Any}}) = new(k)
     KernelCollection() = new(Vector{Vector{Any}}())
 end
-getindex(t::KernelCollection, p::Int, q::Int) = p > q ? t.k[p][q] : t.k[q][p]
-push!(t::KernelCollection, x::Vector{<:Any}) = (push!(t.k, x); t)
+function getindex(t::KernelCollection, p::Int, q::Int)
+    return p > q ? t.k[p][q] : t.k[q][p]
+end
+function push!(t::KernelCollection, x::Vector{<:Any})
+    push!(t.k, x)
+    return t
+end
 size(t::KernelCollection) = (length(t.k), length(t.k))
 size(t::KernelCollection, d::Int) =
     d < 1 ? throw(error("arraysize: dim out of bounds.")) : (d < 3 ? length(t.k) : 1)
@@ -45,9 +50,23 @@ length(gpc::GPCollection) = length(gpc.μ)
 """
     mean(gpc::GPCollection, p::Int)
 
-Mean function of the `p`th GP in `gpc`.
+Mean function of the `p`th GP in `gpc`, or the vector of mean functions of the entire
+collection.
 """
 mean(gpc::GPCollection, p::Int) = gpc.μ[p]
+
+function push!(gpc::GPCollection, μ, k::Vector)
+
+    # Check that the provided Vector of (cross-)covariances is of the correct length.
+    l_new = length(gpc) + 1
+    length(k) == l_new ||
+        throw(ArgumentError("Expected k to be of length $l_new, got $(length(k))"))
+
+    # Push onto the gpc and return the gpc.
+    push!(gpc.μ, μ)
+    push!(gpc.k, k)
+    return gpc
+end
 
 """
     kernel(gpc::GPCollection, p::Int, q::Int)
@@ -81,7 +100,7 @@ covariance function information.
 struct GP
     idx::Int
     joint::GPCollection
-    GP(idx::Int, jgp::GPCollection) = new(idx, jgp)
+    GP(jgp::GPCollection, idx::Int) = new(idx, jgp)
     function GP(jgp::GPCollection, μ, k::Kernel)
         jgp = append_indep!(jgp, μ, k)
         return new(length(jgp), jgp)
@@ -124,7 +143,24 @@ Sample from the joint distribution that `gp` induces over the function values at
 locations `x`.
 """
 sample(rng::AbstractRNG, gp::GP, x::AbstractVector, N::Int=1) =
-    sample(rng, Normal(mean(gp)(x), cov(kernel(gp), x)), N)
+    sample(rng, Normal(mean(gp).(x), cov(kernel(gp), x)), N)
+
+"""
+
+Sample from the joint distribution over each `GP` in `pairs`. Returns a vector containing
+samples from each process provided.
+"""
+function sample(
+    rng::AbstractRNG,
+    pairs::Vector,
+)
+    cum_lengths = vcat(0, cumsum(map(pair->length(pair[2]), pairs)))
+    μ = vcat(map(pair->mean(pair[1]).(pair[2]), pairs)...)
+    Σ = cov(pairs...)
+    f_all = sample(rng, Normal(μ, Σ))
+    return [view(f_all, (cum_lengths[n]+1):cum_lengths[n+1]) for n in eachindex(pairs)]
+end
+
 
 """
     +(p1::GP, p2::GP)
@@ -140,18 +176,16 @@ function +(p1::GP, p2::GP)
     joint, p, q = p1.joint, p1.idx, p2.idx
 
     # Compute and push the mean function of the new GP.
-    μ = mean(joint)
-    μp, μq = μ[p], μ[q]
-    push!(μ, x->μp(x) + μq(x))
+    μ_new = x->mean(p1)(x) + mean(p2)(x)
 
     # Compute + push the cross-kernels between this process and each other process + itself.
-    k, p, q, N = kernel(joint), p1.idx, p2.idx, length(joint)
-    ks = Vector{Kernel}(N + 1)
+    N = length(joint)
+    ks_new = Vector{Any}(N + 1)
     for t in 1:N
-        ks[p] = k[t, p] + k[t, q]
+        ks_new[t] = kernel(joint, t, p) + kernel(joint, t, q)
     end
-    ks[end] = k[p, p] + k[q, q] + 2 * k[p, q]
-    push!(k, ks)
+    ks_new[end] = kernel(joint, p) + kernel(joint, q) + 2 * kernel(joint, p, q)
+    push!(joint, μ_new, ks_new)
 
     # Create and return the new GP.
     return GP(joint, N + 1)
