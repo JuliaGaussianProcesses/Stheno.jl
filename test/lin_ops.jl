@@ -8,7 +8,8 @@
         x, y = randn(rng, 3), randn(rng, 2)
         μ1, μ2 = sin, cos
         k1, k2 = EQ(), RQ(10.0)
-        f1, f2 = GP(μ1, k1), GP(μ2, k2)
+        gpc = GPC()
+        f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
         f3 = f1(x)
 
         # Check mean and marginal covariance under indexing.        
@@ -19,9 +20,10 @@
         for m in eachindex(x), n in eachindex(y)
             @test kernel(f3, f1)(m, y[n]) == kernel(f1)(x[m], y[n])
             @test kernel(f1, f3)(y[n], m) == kernel(f1)(y[n], x[m])
+
+            @test kernel(f3, f2)(m, y[n]) == 0.0
+            @test kernel(f2, f3)(y[n], m) == 0.0
         end
-        @test kernel(f3, f2) == Constant(0.0)
-        @test kernel(f2, f3) == Constant(0.0)
     end
 
     # Test addition of GPs.
@@ -33,7 +35,8 @@
         # Set three independent GPs.
         μ1, μ2, μ3 = sin, cos, tan
         k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-        f1, f2, f3 = GP(μ1, k1), GP(μ2, k2), GP(μ3, k3)
+        gpc = GPC()
+        f1, f2, f3 = GP(μ1, k1, gpc), GP(μ2, k2, gpc), GP(μ3, k3, gpc)
 
         # Compute all four summations between first two GPs.
         f_1p1 = f1 + f1

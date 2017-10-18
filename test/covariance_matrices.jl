@@ -45,8 +45,8 @@
         P, Q = 3, 2
         x, y = randn(rng, P), randn(rng, Q)
 
-        gpc = GPCollection()
-        gp1, gp2 = GP(gpc, x->0.0, EQ()), GP(gpc, x->0.0, RQ(1.0))
+        gpc = GPC()
+        gp1, gp2 = GP(x->0.0, EQ(), gpc), GP(x->0.0, RQ(1.0), gpc)
         K1, K2 = full(cov(kernel(gp1), x)), full(cov(kernel(gp2), y))
         @test K1 == full(cov([(gp1, x)]))
         @test K2 == full(cov([(gp2, y)]))
@@ -61,8 +61,8 @@
         P1, P2, Ps1, Ps2 = 3, 2, 4, 5
         x1, x2, xs1, xs2 = randn.(rng, [P1, P2, Ps1, Ps2])
 
-        gpc = GPCollection()
-        gp1, gp2 = GP(gpc, x->0.0, EQ()), GP(gpc, x->0.0, RQ(1.0))
+        gpc = GPC()
+        gp1, gp2 = GP(x->0.0, EQ(), gpc), GP(x->0.0, RQ(1.0), gpc)
 
         K11, K12 = full(cov(kernel(gp1, gp1), xs1, x1)), full(cov(kernel(gp1, gp2), xs1, x2))
         K21, K22 = full(cov(kernel(gp2, gp1), xs2, x1)), full(cov(kernel(gp2, gp2), xs2, x2))

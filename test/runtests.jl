@@ -15,5 +15,5 @@ using Base.Test
 
     include("gp.jl")
     include("lin_ops.jl")
-    # include("covariance_matrices.jl")
+    include("covariance_matrices.jl")
 end

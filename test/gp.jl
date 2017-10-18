@@ -6,7 +6,7 @@
         # Specification for three independent GPs.
         μ1, μ2, μ3 = sin, cos, tan
         k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-        f1, f2, f3 = GP.([μ1, μ2, μ3], [k1, k2, k3])
+        f1, f2, f3 = GP.([μ1, μ2, μ3], [k1, k2, k3], GPC())
 
         @test mean(f1) == μ1
         @test mean(f2) == μ2
@@ -34,8 +34,8 @@
     #     μ1, μ2, μ3 = sin, cos, tan
     #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
 
-    #     # Make a GPCollection and append stuff to it.
-    #     gpc = GPCollection()
+    #     # Make a GPC and append stuff to it.
+    #     gpc = GPC()
     #     append_indep!(gpc, μ1, k1)
     #     append_indep!(gpc, μ2, k2)
     #     append_indep!(gpc, μ3, k3)
@@ -62,8 +62,8 @@
     #     μ1, μ2, μ3 = sin, cos, tan
     #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
 
-    #     # Build a GPCollection.
-    #     gpc = GPCollection()
+    #     # Build a GPC.
+    #     gpc = GPC()
     #     gp1 = GP(gpc, μ1, k1)
     #     gp2 = GP(gpc, μ2, k2)
     #     gp3 = GP(gpc, μ3, k3)
@@ -83,9 +83,9 @@
     #     @test kernel(gp1, gp3) == Constant(0.0)
     #     @test kernel(gp2, gp3) == Constant(0.0)
 
-    #     # Build a different GPCollection and make sure that an assertion is thrown
-    #     # when trying to index into different GPCollections.
-    #     gpc2 = GPCollection()
+    #     # Build a different GPC and make sure that an assertion is thrown
+    #     # when trying to index into different GPCs.
+    #     gpc2 = GPC()
     #     gp_different = GP(gpc2, μ1, k1)
     #     @test_throws AssertionError kernel(gp1, gp_different)
     # end
@@ -100,7 +100,7 @@
     #     # Set up some GPs.
     #     μ1, μ2, μ3 = sin, cos, tan
     #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-    #     f1, f2, f3 = GP.(GPCollection(), [μ1, μ2, μ3], [k1, k2, k3])
+    #     f1, f2, f3 = GP.(GPC(), [μ1, μ2, μ3], [k1, k2, k3])
 
     #     # Test that the mean functions work correctly for observations of a single GP.
     #     @test mean(GPInputSetPair(f1, x1)) == μ1.(x1)
@@ -121,7 +121,7 @@
     #     # Set up a pair of GPs.
     #     μ1, μ2, μ3 = sin, cos, tan
     #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-    #     gpc = GPCollection()
+    #     gpc = GPC()
     #     gp1 = GP(gpc, μ1, k1)
     #     gp2 = GP(gpc, μ2, k2)
     #     gp3 = GP(gpc, μ3, k3)
@@ -134,7 +134,7 @@
     #     # Set up some GPs.
     #     μ1, μ2, μ3 = sin, cos, tan
     #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-    #     gp1, gp2, gp3 = GP.(GPCollection(), [μ1, μ2, μ3], [k1, k2, k3])
+    #     gp1, gp2, gp3 = GP.(GPC(), [μ1, μ2, μ3], [k1, k2, k3])
 
     #     x, xs = randn.(rng, [4, 5])
     #     # @test predict([(gp1, x)]) ≈ zeros(size(x))
