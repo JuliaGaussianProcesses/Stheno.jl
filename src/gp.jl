@@ -1,5 +1,5 @@
-import Base: +, length, getindex, push!, mean, size
-export mean, kernel, GP
+import Base: length, getindex, push!, mean, size
+export mean, kernel, GP, observe!, predict
 
 """
     KernelCollection
@@ -33,10 +33,11 @@ that the user of the package should not need to interact with directly.
 struct GPCollection
     μ::Vector{<:Any}
     k::KernelCollection
+    obs::Vector{Any}
     GPCollection() = new(Vector{Any}(), KernelCollection())
     function GPCollection(μ::Vector{<:Any}, k::KernelCollection)
         length(μ) != size(k, 1) && throw(ArgumentError("μ and k have different sizes."))
-        return new(μ, k)
+        return new(μ, k, Vector{Any}())
     end
 end
 
@@ -48,13 +49,11 @@ The number of Gaussian Processes represented by `gpc`.
 length(gpc::GPCollection) = length(gpc.μ)
 
 """
-    mean(gpc::GPCollection, p::Int)
+    push!(gpc::GPCollection, μ, k::Vector)
 
-Mean function of the `p`th GP in `gpc`, or the vector of mean functions of the entire
-collection.
+Push a mean function and vector of (cross-)covariance functions on to the end of the
+GPCollection `gpc`.
 """
-mean(gpc::GPCollection, p::Int) = gpc.μ[p]
-
 function push!(gpc::GPCollection, μ, k::Vector)
 
     # Check that the provided Vector of (cross-)covariances is of the correct length.
@@ -69,6 +68,14 @@ function push!(gpc::GPCollection, μ, k::Vector)
 end
 
 """
+    mean(gpc::GPCollection, p::Int)
+
+Mean function of the `p`th GP in `gpc`, or the vector of mean functions of the entire
+collection.
+"""
+mean(gpc::GPCollection, p::Int) = gpc.μ[p]
+
+"""
     kernel(gpc::GPCollection, p::Int, q::Int)
     kernel(gpc::GPCollection, p::Int)
 
@@ -76,7 +83,11 @@ Get the cross-covariance between the `p`th and `q`th processes in `gpc`. If only
 index `p` is provided, or `p == q`, then the covariance function of the `p`th process in
 `gpc` is returned.
 """
-kernel(gpc::GPCollection, p::Int, q::Int) = gpc.k[p, q]
+function kernel(gpc::GPCollection, p::Int, q::Int)
+    k = gpc.k[p, q]
+    return p == q ? k :
+        p > q ? k[1] : k[2]
+end
 kernel(gpc::GPCollection, p::Int) = kernel(gpc, p, p)
 
 """
@@ -87,7 +98,7 @@ Append an independent GP onto `gp`, with mean function `μ` and kernel `k`.
 function append_indep!(gpc::GPCollection, μ, k::Kernel)
     len = length(gpc)
     push!(gpc.μ, μ)
-    push!(gpc.k, vcat(fill(Constant(0.0), len), k))
+    push!(gpc.k, vcat(fill((Constant(0.0), Constant(0.0)), len), k))
     return gpc
 end
 
@@ -108,11 +119,21 @@ struct GP
 end
 
 """
+    getindex(gpc::GPCollection, n::Int)
+
+Return the `n`th `GP` in `gpc`.
+"""
+getindex(gpc::GPCollection, n::Int) =
+    (n > length(gpc) || n < 1) ?
+        throw(ArgumentError("n is out of bounds.")) :
+        GP(gpc, n)
+
+"""
     mean(gp::GP)
 
 Get the mean function of the marginal `GP` `gp`.
 """
-mean(gp::GP) = mean(gp.joint, gp.idx)
+@inline mean(gp::GP) = mean(gp.joint, gp.idx)
 
 """
     kernel(gp1::GP, gp2::GP)
@@ -126,7 +147,7 @@ provided, the "marginal" covariance function associated with this `GP` is return
     @assert gp1.joint === gp2.joint
     return kernel(gp1.joint, gp1.idx, gp2.idx)
 end
-kernel(gp::GP) = kernel(gp.joint, gp.idx)
+@inline kernel(gp::GP) = kernel(gp.joint, gp.idx)
 
 """
     lml(gp::GP, x::AbstractVector, y::AbstractVector)
@@ -146,47 +167,24 @@ sample(rng::AbstractRNG, gp::GP, x::AbstractVector, N::Int=1) =
     sample(rng, Normal(mean(gp).(x), cov(kernel(gp), x)), N)
 
 """
+    sample(rng::AbstractRNG, pairs::Vector)
 
 Sample from the joint distribution over each `GP` in `pairs`. Returns a vector containing
 samples from each process provided.
 """
-function sample(
-    rng::AbstractRNG,
-    pairs::Vector,
-)
+function sample(rng::AbstractRNG, pairs::Vector{Tuple{GP, Tx}}) where Tx<:Vector
     cum_lengths = vcat(0, cumsum(map(pair->length(pair[2]), pairs)))
     μ = vcat(map(pair->mean(pair[1]).(pair[2]), pairs)...)
-    Σ = cov(pairs...)
-    f_all = sample(rng, Normal(μ, Σ))
+    f_all = sample(rng, Normal(μ, cov(pairs...)))
     return [view(f_all, (cum_lengths[n]+1):cum_lengths[n+1]) for n in eachindex(pairs)]
 end
 
-
 """
-    +(p1::GP, p2::GP)
+    observe(gp::GP, x::Vector, f::Vector{Float64})
 
-Return the process that one obtains when two GPs are added together, and compute all of the
-information necessary to perform inference in the joint distribution over the GPs.
-If `p1` and `p2` point towards different `GPCollection`s, an assertion will fail.
+Observe that the value of the `GP` `gp` is `f` at `x`.
 """
-function +(p1::GP, p2::GP)
-
-    # Make sure the KernelCollection is common to both processes and extract it.
-    @assert p1.joint === p2.joint
-    joint, p, q = p1.joint, p1.idx, p2.idx
-
-    # Compute and push the mean function of the new GP.
-    μ_new = x->mean(p1)(x) + mean(p2)(x)
-
-    # Compute + push the cross-kernels between this process and each other process + itself.
-    N = length(joint)
-    ks_new = Vector{Any}(N + 1)
-    for t in 1:N
-        ks_new[t] = kernel(joint, t, p) + kernel(joint, t, q)
-    end
-    ks_new[end] = kernel(joint, p) + kernel(joint, q) + 2 * kernel(joint, p, q)
-    push!(joint, μ_new, ks_new)
-
-    # Create and return the new GP.
-    return GP(joint, N + 1)
+function observe!(gp::GP, x::Vector, f::Vector{Float64})
+    append!(gp.joint.obs, (gp.idx, x, f))
+    return nothing
 end

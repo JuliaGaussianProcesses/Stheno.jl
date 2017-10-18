@@ -111,45 +111,26 @@
         @test_throws AssertionError kernel(gp1, gp_different)
     end
 
-    # Test addition of GPs.
-    let rng = MersenneTwister(123456)
+    # # Test concatenation of GP means.
+    # let rng = MersenneTwister(123456)
 
-        # Select some input locations.
-        N = 2
-        x = randn(rng, N)
+    #     # Select some input locations.
+    #     N1, N2, N3 = 2, 3, 4
+    #     x1, x2, x3 = randn.(rng, [N1, N2, N3])
 
-        # Set up a pair of GPs.
-        μ1, μ2, μ3 = sin, cos, tan
-        k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-        gpc = GPCollection()
-        gp1 = GP(gpc, μ1, k1)
-        gp2 = GP(gpc, μ2, k2)
-        gp3 = GP(gpc, μ3, k3)
+    #     # Set up some GPs.
+    #     μ1, μ2, μ3 = sin, cos, tan
+    #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
+    #     f1, f2, f3 = GP.(GPCollection(), [μ1, μ2, μ3], [k1, k2, k3])
 
-        # Compute all four summations (we will check for approximate commutativity).
-        gp_1p1 = gp1 + gp1
-        gp_1p2 = gp1 + gp2
-        gp_2p1 = gp2 + gp1
-        gp_2p2 = gp2 + gp2
+    #     # Test that the mean functions work correctly for observations of a single GP.
+    #     @test mean(GPInputSetPair(f1, x1)) == μ1.(x1)
+    #     @test mean(GPInputSetPair(f2, x2)) == μ2.(x2)
+    #     @test mean(GPInputSetPair(f3, x3)) == μ3.(x3)
 
-        # Check that the mean functions have been correctly computed.
-        @test mean(gp_1p1).(x) == μ1.(x) .+ μ1.(x)
-        @test mean(gp_1p2).(x) == μ1.(x) .+ μ2.(x)
-        @test mean(gp_2p1).(x) == μ2.(x) .+ μ1.(x)
-        @test mean(gp_2p2).(x) == μ2.(x) .+ μ2.(x)
-
-        # Check that the marginal covariances have been correctly computed.
-        @test full(cov(kernel(gp_1p1), x)) ≈ 4 .* full(cov(k1, x))
-        @test full(cov(kernel(gp_1p2), x)) ≈ full(cov(k1, x)) .+ full(cov(k2, x))
-        @test full(cov(kernel(gp_2p1), x)) ≈ full(cov(k2, x)) .+ full(cov(k1, x))
-        @test full(cov(kernel(gp_2p2), x)) ≈ 4 .* full(cov(k2, x))
-
-        # Check that the cross-covariances havae been correctly computed.
-        @test full(cov(kernel(gp1, gp_1p1), x)) ≈ 2 .* full(cov(kernel(gp1), x))
-        @test full(cov(kernel(gp1, gp_1p2), x)) ≈ full(cov(kernel(gp1), x))
-        @test full(cov(kernel(gp1, gp_2p1), x)) ≈ full(cov(kernel(gp1), x))
-        @test full(cov(kernel(gp1, gp_2p2), x)) ≈ diagm(1e-12 * ones(N))
-    end
+    #     # Test the that mean functions work correctly for collections of GPs.
+    #     @test mean([GPInputSetPair(f1, x1)])
+    # end
 
     # Test that sampling works properly.
     let rng = MersenneTwister(123456)
@@ -165,8 +146,18 @@
         gp1 = GP(gpc, μ1, k1)
         gp2 = GP(gpc, μ2, k2)
         gp3 = GP(gpc, μ3, k3)
+    end
 
-        
+    # Test that certain aspects of posterior prediction work correctly in a variety of
+    # situations - single GP, some combinations of GPs.
+    let rng = MersenneTwister(123456)
 
+        # Set up some GPs.
+        μ1, μ2, μ3 = sin, cos, tan
+        k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
+        gp1, gp2, gp3 = GP.(GPCollection(), [μ1, μ2, μ3], [k1, k2, k3])
+
+        x, xs = randn.(rng, [4, 5])
+        # @test predict([(gp1, x)]) ≈ zeros(size(x))
     end
 end

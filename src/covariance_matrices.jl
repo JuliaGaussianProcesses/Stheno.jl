@@ -34,12 +34,12 @@ cov(k, x::T, y::T) where T<:RowVector = k.(x.vec, y)
 cov(k, x::T, y::T) where T<:AbstractVector = k.(x, RowVector(y))
 
 """
-    
+    cov(obs::Vector{Tuple{GP, T}}) where T<:Union{AbstractVector, RowVector}
 
 Compute the covariance matrix implied by a collection of GPs. This should comprise a
 collection of Tuples, the first element of which are GPs, the second input locations.
 """
-function cov(obs::Vararg{Tuple{GP, T} where T<:Union{AbstractVector, RowVector}})
+function cov(obs::Vector{Tuple{GP, T}}) where T<:Union{AbstractVector, RowVector}
     N_p = length(obs)
     N = map(x->length(x[2]), obs)
     N_tot = sum(N)
@@ -59,4 +59,33 @@ function cov(obs::Vararg{Tuple{GP, T} where T<:Union{AbstractVector, RowVector}}
         end
     end
     return StridedPDMatrix(chol(Symmetric(K) + 1e-12I))
+end
+
+"""
+    cov(pred::Vector{Tuple{GP, T}}, obs::Vector{Tuple{GP, V}}) where
+        {T<:Union{AbstractVector, RowVector}, V<:Union{AbstractVector, RowVector}}
+
+Compute the cross-covariance between the collection of GPs and input sets specified in
+`pred`, and the collection of GPs and input sets specified in `obs`.
+"""
+function cov(pred::Vector{Tuple{GP, T}}, obs::Vector{Tuple{GP, V}}) where
+    {T<:Union{AbstractVector, RowVector}, V<:Union{AbstractVector, RowVector}}
+    M_p, M_o = length(pred), length(obs)
+    N_p, N_o = map(x->length(x[2]), pred), map(x->length(x[2]), obs)
+    K = Matrix{Float64}(sum(N_p), sum(N_o))
+    pos = 1
+    for q in 1:M_o
+        gp_q, x_q = obs[q][1], obs[q][2]
+        for c in 1:N_o[q]
+            for p in 1:M_p
+                gp_p, x_p = pred[p][1], pred[p][2]
+                k = kernel(gp_p, gp_q)
+                for r in 1:N_p[p]
+                    K[pos] = k(x_p[r], x_q[c])
+                    pos += 1
+                end
+            end
+        end
+    end
+    return K
 end

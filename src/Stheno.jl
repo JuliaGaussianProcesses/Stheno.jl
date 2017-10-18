@@ -1,16 +1,25 @@
 module Stheno
 
-using PDMats
+    using PDMats
 
-include("normal.jl")
+    const ColOrRowVec = Union{AbstractVector, RowVector}
 
-# All covariance matrix functionality.
-include("kernel/base.jl")
-include("kernel/compose.jl")
-include("kernel/transform.jl")
-include("kernel/input_transform.jl")
+    include("normal.jl")
 
-include("gp.jl")
-include("covariance_matrices.jl")
+    # All covariance matrix functionality.
+    include("kernel/base.jl")
+    include("kernel/compose.jl")
+    include("kernel/transform.jl")
+    include("kernel/input_transform.jl")
+
+    # GP stuff, including tracking and linear operator creation.
+    include("gp.jl")
+
+    # Covariance matrices and kernels on finite dimensional objects.
+    include("covariance_matrices.jl")
+    include("kernel/finite.jl")
+
+    # Base implementation of linear operators and all implemented linear operators.
+    include("lin_ops.jl")
 
 end # module

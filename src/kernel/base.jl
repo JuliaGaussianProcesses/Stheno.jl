@@ -37,7 +37,7 @@ end
 The standardised Exponentiated Quadratic kernel with no free parameters.
 """
 struct EQ <: Kernel{Stationary} end
-(::EQ)(x::Real, y::Real) = exp(-0.5 * abs2(x - y))
+@inline (::EQ)(x::Real, y::Real) = exp(-0.5 * abs2(x - y))
 ==(::EQ, ::EQ) = true
 
 """
@@ -49,7 +49,7 @@ kurtosis is `α`.
 struct RQ{T<:Real} <: Kernel{Stationary}
     α::T
 end
-(k::RQ)(x::Real, y::Real) = (1 + 0.5 * abs2(x - y) / k.α)^(-k.α)
+@inline (k::RQ)(x::Real, y::Real) = (1 + 0.5 * abs2(x - y) / k.α)^(-k.α)
 ==(a::RQ, b::RQ) = a.α == b.α
 
 """
@@ -61,5 +61,5 @@ intercept is `c`.
 struct Linear{T<:Real} <: Kernel{NonStationary}
     c::T
 end
-(k::Linear)(x::Real, y::Real) = (x - k.c) * (y - k.c)
+@inline (k::Linear)(x::Real, y::Real) = (x - k.c) * (y - k.c)
 ==(a::Linear, b::Linear) = a.c == b.c
