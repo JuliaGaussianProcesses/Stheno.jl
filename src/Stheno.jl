@@ -4,8 +4,6 @@ module Stheno
 
     const ColOrRowVec = Union{AbstractVector, RowVector}
 
-    include("normal.jl")
-
     # All covariance matrix functionality.
     include("kernel/base.jl")
     include("kernel/compose.jl")
@@ -14,6 +12,7 @@ module Stheno
 
     # GP stuff, including tracking and linear operator creation.
     include("gp.jl")
+    include("normal.jl")
     include("lin_ops.jl")
 
     # Covariance matrices and kernels on finite dimensional objects.

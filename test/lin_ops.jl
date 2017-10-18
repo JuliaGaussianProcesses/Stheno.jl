@@ -50,22 +50,22 @@
         @test mean(f_2p1).(x) == μ2.(x) .+ μ1.(x)
         @test mean(f_2p2).(x) == μ2.(x) .+ μ2.(x)
 
-        # # Check that the marginal covariances have been correctly computed.
-        # @test full(cov(kernel(gp_1p1), x)) ≈ 4 .* full(cov(k1, x))
-        # @test full(cov(kernel(gp_1p2), x)) ≈ full(cov(k1, x)) .+ full(cov(k2, x))
-        # @test full(cov(kernel(gp_2p1), x)) ≈ full(cov(k2, x)) .+ full(cov(k1, x))
-        # @test full(cov(kernel(gp_2p2), x)) ≈ 4 .* full(cov(k2, x))
+        # Check that the marginal covariances have been correctly computed.
+        @test full(cov(kernel(f_1p1), x)) ≈ 4 .* full(cov(k1, x))
+        @test full(cov(kernel(f_1p2), x)) ≈ full(cov(k1, x)) .+ full(cov(k2, x))
+        @test full(cov(kernel(f_2p1), x)) ≈ full(cov(k2, x)) .+ full(cov(k1, x))
+        @test full(cov(kernel(f_2p2), x)) ≈ 4 .* full(cov(k2, x))
 
-        # # Check that the cross-covariances have been correctly computed.
-        # @test full(cov(kernel(gp1, gp_1p1), x)) ≈ 2 .* full(cov(kernel(gp1), x))
-        # @test full(cov(kernel(gp1, gp_1p2), x)) ≈ full(cov(kernel(gp1), x))
-        # @test full(cov(kernel(gp1, gp_2p1), x)) ≈ full(cov(kernel(gp1), x))
-        # @test full(cov(kernel(gp1, gp_2p2), x)) ≈ diagm(1e-12 * ones(N))
+        # Check that the cross-covariances have been correctly computed.
+        @test full(cov(kernel(f1, f_1p1), x)) ≈ 2 .* full(cov(kernel(f1), x))
+        @test full(cov(kernel(f1, f_1p2), x)) ≈ full(cov(kernel(f1), x))
+        @test full(cov(kernel(f1, f_2p1), x)) ≈ full(cov(kernel(f1), x))
+        @test full(cov(kernel(f1, f_2p2), x)) ≈ diagm(1e-12 * ones(3))
 
-        # # Check that the cross-covariances match.
-        # @test full(cov(kernel(gp1, gp_1p1), x)) == permutedims(full(cov(kernel(gp_1p1, gp1), x)), [2, 1])
-        # @test full(cov(kernel(gp1, gp_1p2), x)) == permutedims(full(cov(kernel(gp_1p2, gp1), x)), [2, 1])
-        # @test full(cov(kernel(gp1, gp_2p1), x)) == permutedims(full(cov(kernel(gp_2p1, gp1), x)), [2, 1])
-        # @test full(cov(kernel(gp1, gp_2p2), x)) == permutedims(full(cov(kernel(gp_2p2, gp1), x)), [2, 1])
+        # Check that the cross-covariances match.
+        @test full(cov(kernel(f1, f_1p1), x)) == permutedims(full(cov(kernel(f_1p1, f1), x)), [2, 1])
+        @test full(cov(kernel(f1, f_1p2), x)) == permutedims(full(cov(kernel(f_1p2, f1), x)), [2, 1])
+        @test full(cov(kernel(f1, f_2p1), x)) == permutedims(full(cov(kernel(f_2p1, f1), x)), [2, 1])
+        @test full(cov(kernel(f1, f_2p2), x)) == permutedims(full(cov(kernel(f_2p2, f1), x)), [2, 1])
     end
 end

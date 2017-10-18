@@ -11,7 +11,8 @@ Generic multivariate Normal distribution.
 struct Normal{Tμ<:RealOrVec, TΣ<:AbstractPDMat}
     μ::Tμ
     Σ::TΣ
-    function Normal(μ::T, Σ::V) where {T<:AbstractVector, V<:AbstractPDMat}
+    gpc::GPC
+    function Normal(μ::T, Σ::V, gpc::GPC) where {T<:AbstractVector, V<:AbstractPDMat}
         (length(μ) != size(Σ, 1) || length(μ) != size(Σ, 2)) &&
             throw(error("μ and Σ are not consistent."))
         return new{T, V}(μ, Σ)
@@ -38,3 +39,13 @@ Take `N` samples from `d` using random number generator `rng` (not optional).
 """
 sample(rng::AbstractRNG, d::Normal{<:RealOrVec, <:AbstractPDMat}, N::Int=1) =
     mean(d) .+ chol(cov(d)).'randn(rng, dims(d), N)
+
+# """
+#     observe(gp::GP, x::Vector, f::Vector{Float64})
+
+# Observe that the value of the `GP` `gp` is `f` at `x`.
+# """
+# function observe!(gp::GP, x::Vector, f::Vector{Float64})
+#     append!(gp.joint.obs, (gp.idx, x, f))
+#     return nothing
+# end
