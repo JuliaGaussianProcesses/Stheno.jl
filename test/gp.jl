@@ -27,68 +27,33 @@
         @test kernel(f3, f3) == k3
     end
 
-    # # Test `append_indep!`.
-    # import Stheno.append_indep!
-    # let
-    #     # Specification for three independent GPs.
-    #     μ1, μ2, μ3 = sin, cos, tan
-    #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
+    # Test a generic toy problem.
+    let
+        rng = MersenneTwister(123456)
+        N, S = 5, 100000
+        μ_vec, x = randn(rng, N), randn(rng, N)
+        μ, k = n::Int->μ_vec[n], (m::Int, n::Int)->EQ()(x[m], x[n])
+        d = Normal(nothing, nothing, μ, k, N, GPC())
 
-    #     # Make a GPC and append stuff to it.
-    #     gpc = GPC()
-    #     append_indep!(gpc, μ1, k1)
-    #     append_indep!(gpc, μ2, k2)
-    #     append_indep!(gpc, μ3, k3)
+        @test mean(d) == μ
+        @test mean(d).(1:N) == μ_vec
+        @test dims(d) == N
+        for m in 1:N, n in 1:N
+            @test kernel(d)(m, n) == EQ()(x[m], x[n])
+        end
 
-    #     # Check mean function vector.
-    #     @test mean(gpc, 1) == sin
-    #     @test mean(gpc, 2) == cos
-    #     @test mean(gpc, 3) == tan
+        x̂ = sample(rng, d, S)
+        @test size(x̂) == (N, S)
+        @test maximum(abs.(mean(x̂, 2) - mean(d).(1:N))) < 1e-2
+        Σ = broadcast(kernel(d), collect(1:N), RowVector(collect(1:N)))
+        @test maximum(abs.(cov(x̂, 2) - Σ)) < 1e-2
 
-    #     # Check on-diagonal covariance functions.
-    #     @test kernel(gpc, 1) == EQ()
-    #     @test kernel(gpc, 2) == RQ(10.0)
-    #     @test kernel(gpc, 3) == RQ(1.0)
-
-    #     # Check off-diagonal covariance functions.
-    #     @test kernel(gpc, 1, 2) == Constant(0.0)
-    #     @test kernel(gpc, 1, 3) == Constant(0.0)
-    #     @test kernel(gpc, 2, 3) == Constant(0.0)
-    # end
-
-    # # Check invariances for construction of a set of independent GPs.
-    # let
-    #     # Specification for three independent GPs.
-    #     μ1, μ2, μ3 = sin, cos, tan
-    #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-
-    #     # Build a GPC.
-    #     gpc = GPC()
-    #     gp1 = GP(gpc, μ1, k1)
-    #     gp2 = GP(gpc, μ2, k2)
-    #     gp3 = GP(gpc, μ3, k3)
-
-    #     # Check mean functions.
-    #     @test mean(gp1) == sin
-    #     @test mean(gp2) == cos
-    #     @test mean(gp3) == tan
-
-    #     # Check covariance functions.
-    #     @test kernel(gp1) == EQ()
-    #     @test kernel(gp2) == RQ(10.0)
-    #     @test kernel(gp3) == RQ(1.0)
-
-    #     # Check cross-covariance functions.
-    #     @test kernel(gp1, gp2) == Constant(0.0)
-    #     @test kernel(gp1, gp3) == Constant(0.0)
-    #     @test kernel(gp2, gp3) == Constant(0.0)
-
-    #     # Build a different GPC and make sure that an assertion is thrown
-    #     # when trying to index into different GPCs.
-    #     gpc2 = GPC()
-    #     gp_different = GP(gpc2, μ1, k1)
-    #     @test_throws AssertionError kernel(gp1, gp_different)
-    # end
+        f = randn(rng, N)
+        condition!(d, f)
+        @test d in keys(d.gpc.obs)
+        @test f in values(d.gpc.obs)
+        @test d.gpc.obs[d] === f
+    end
 
     # # Test concatenation of GP means.
     # let rng = MersenneTwister(123456)
@@ -109,22 +74,6 @@
 
     #     # Test the that mean functions work correctly for collections of GPs.
     #     @test mean([GPInputSetPair(f1, x1)])
-    # end
-
-    # # Test that sampling works properly.
-    # let rng = MersenneTwister(123456)
-
-    #     # Select some input locations.
-    #     N = 2
-    #     x = randn(rng, N)
-
-    #     # Set up a pair of GPs.
-    #     μ1, μ2, μ3 = sin, cos, tan
-    #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-    #     gpc = GPC()
-    #     gp1 = GP(gpc, μ1, k1)
-    #     gp2 = GP(gpc, μ2, k2)
-    #     gp3 = GP(gpc, μ3, k3)
     # end
 
     # # Test that certain aspects of posterior prediction work correctly in a variety of

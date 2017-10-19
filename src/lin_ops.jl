@@ -6,7 +6,7 @@ import Base: +
 A GP evaluated at `x` is a multivariate Normal distribution whos mean and
 covariance are fully specified by `x` and the mean and covariance functions of `f_q`.
 """
-(f_q::GP)(x::ColOrRowVec) = instantiate_gp(f_q, x)
+(f_q::GP)(x::ColOrRowVec) = instantiate_normal(f_q, x)
 
 function μ_p′(f_q::GP, x::ColOrRowVec)
     μ_q = mean(f_q)
@@ -18,14 +18,16 @@ function k_p′(f_q::GP, x::ColOrRowVec)
     return (m::Int, n::Int)->k_q(x[m], x[n])
 end
 
+dims(f_q::GP, x::ColOrRowVec) = length(x)
+
 # f_q == f_p′.f should hold.
-function k_pp′(f_q::GP, f_p::GP, f_p′::GP)
+function k_pp′(f_q::GP, f_p::AbstractGP, f_p′::Normal)
     k_pq, x_p′ = kernel(f_p, f_q), f_p′.args[1]
     return (x, n′::Int)->k_pq(x, x_p′[n′])
 end
 
 # f_q == f_p′.f should hold.
-function k_p′p(f_q::GP, f_p′::GP, f_p::GP)
+function k_p′p(f_q::GP, f_p′::Normal, f_p::AbstractGP)
     k_qp, x_p′ = kernel(f_q, f_p), f_p′.args[1]
     return (n::Int, x′)->k_qp(x_p′[n], x′)
 end

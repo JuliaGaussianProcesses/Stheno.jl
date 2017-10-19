@@ -12,7 +12,6 @@ module Stheno
 
     # GP stuff, including tracking and linear operator creation.
     include("gp.jl")
-    include("normal.jl")
     include("lin_ops.jl")
 
     # Covariance matrices and kernels on finite dimensional objects.

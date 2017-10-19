@@ -3,8 +3,6 @@ using Base.Test
 
 @testset "Stheno" begin
 
-    include("normal.jl")
-
     @testset "Kernel" begin
         include("kernel/base.jl")
         include("kernel/compose.jl")
