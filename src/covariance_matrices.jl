@@ -86,3 +86,6 @@ function cov(d::Vector{Normal}, d′::Vector{Normal})
     end
     return K
 end
+cov(d::Normal, d′::Normal) = cov([d], [d′])
+cov(d::Normal, d′::Vector{Normal}) = cov([d], d′)
+cov(d::Vector{Normal}, d′::Normal) = cov(d, [d′]) 

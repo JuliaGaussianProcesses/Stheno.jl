@@ -16,6 +16,6 @@ module Stheno
 
     # Covariance matrices and kernels on finite dimensional objects.
     include("covariance_matrices.jl")
-    include("kernel/finite.jl")
+    include("inference.jl")
 
 end # module
