@@ -126,8 +126,10 @@ lpdf(d::Normal, f::RealVector) =
 
 Take `N` samples from `d` using random number generator `rng` (not optional).
 """
-sample(rng::AbstractRNG, d::Normal, N::Int=1) =
+sample(rng::AbstractRNG, d::Normal, N::Int) =
     mean(d).(1:dims(d)) .+ chol(cov(d)).'randn(rng, dims(d), N)
+sample(rng::AbstractRNG, d::Normal) =
+    mean(d).(1:dims(d)) .+ chol(cov(d)).'randn(rng, dims(d))
 
 """
     condition!(d::Normal, f::Vector{<:Real})
