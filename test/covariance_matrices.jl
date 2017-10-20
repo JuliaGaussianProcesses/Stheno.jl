@@ -48,11 +48,11 @@
         gpc = GPC()
         f1, f2 = GP(x->0.0, EQ(), gpc), GP(x->0.0, RQ(1.0), gpc)
         K1, K2 = full(cov(kernel(f1), x)), full(cov(kernel(f2), y))
-        @test K1 == full(cov([f1(x)]))
-        @test K2 == full(cov([f2(y)]))
+        @test K1 ≈ full(cov([f1(x)]))
+        @test K2 ≈ full(cov([f2(y)]))
 
         K_manual = vcat(hcat(K1, zeros(P, Q)), hcat(zeros(Q, P), K2))
-        @test K_manual == full(cov([f1(x), f2(y)]))
+        @test K_manual ≈ full(cov([f1(x), f2(y)]))
     end
 
     # Test joint cross-covariance matrix construction.

@@ -60,7 +60,7 @@
         @test full(cov(kernel(f1, f_1p1), x)) ≈ 2 .* full(cov(kernel(f1), x))
         @test full(cov(kernel(f1, f_1p2), x)) ≈ full(cov(kernel(f1), x))
         @test full(cov(kernel(f1, f_2p1), x)) ≈ full(cov(kernel(f1), x))
-        @test full(cov(kernel(f1, f_2p2), x)) ≈ diagm(1e-12 * ones(3))
+        @test full(cov(kernel(f1, f_2p2), x)) ≈ diagm(1e-9 * ones(3))
 
         # Check that the cross-covariances match.
         @test full(cov(kernel(f1, f_1p1), x)) == permutedims(full(cov(kernel(f_1p1, f1), x)), [2, 1])
