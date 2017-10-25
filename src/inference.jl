@@ -1,4 +1,4 @@
-export posterior
+# export posterior
 
 """
     posterior()

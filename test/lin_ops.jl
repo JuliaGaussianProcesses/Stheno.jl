@@ -26,6 +26,26 @@
         end
     end
 
+    # Test inference.
+    let rng = MersenneTwister(123456)
+        x, x′, f̂ = randn(rng, 3), randn(rng, 2), randn(rng, 3)
+        f = GP(sin, EQ(), GPC())
+        fpost_d = posterior(f(x), f(x), f̂)
+        fpost_d′ = posterior(f(x′), f(x), f̂)
+        fpost_gp = posterior(f, f(x), f̂)
+
+        # Test finite GP posterior.
+        idx = eachindex(fpost_d)
+        @test dims(fpost_d) == length(x)
+        @test mean(fpost_d).(idx) ≈ f̂
+        @test all(full(cov(fpost_d)) .- diagm(2e-9 * ones(x)) .< 1e-12)
+        @test dims(fpost_d′) == length(x′)
+
+        # Test process posterior works.
+        @test mean(fpost_gp).(x) ≈ f̂
+        @test all(full(cov(fpost_gp(x))) .- diagm(2e-9 * ones(x)) .< 1e-12)
+    end
+
     # Test addition of GPs.
     let rng = MersenneTwister(123456)
 

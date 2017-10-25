@@ -1,5 +1,5 @@
-import Base: mean, show, cov, chol
-export mean, kernel, GP, Normal, GPC, condition!, predict, lpdf, sample, dims
+import Base: mean, show, cov, chol, eachindex
+export mean, mean_vector, kernel, GP, Normal, GPC, condition!, predict, lpdf, sample, dims
 
 const RealVector = AbstractVector{<:Real}
 
@@ -30,17 +30,17 @@ struct GP <: AbstractGP
     μ::Any
     k::Any
     gpc::GPC
-end
-
-"""
-    GP(μ, k, gpc::GPC)
-
-Construct a Gaussian Process from a mean function and kernel.
-"""
-function GP(μ, k, gpc::GPC)
-    gp = GP(GP, nothing, μ, k, gpc)
-    push!(gpc.gps, gp)
-    return gp
+    function GP(op, args...)
+        gpc = get_check_gpc(op, args...)
+        new_gp = new(op, args, μ_p′(op, args...), k_p′(op, args...), gpc)
+        populate_gpc!(new_gp, gpc, op)
+        return new_gp
+    end
+    function GP(μ, k, gpc::GPC)
+        gp = new(GP, nothing, μ, k, gpc)
+        push!(gpc.gps, gp)
+        return gp
+    end
 end
 
 function show(io::IO, gp::GP)
@@ -59,10 +59,33 @@ struct Normal <: AbstractGP
     k::Any
     D::Int
     gpc::GPC
+    function Normal(μ, k, dims::Int, gpc::GPC)
+        gp = new(Normal, nothing, μ, k, dims, gpc)
+        push!(gpc.gps, gp)
+        return gp
+    end
+    function Normal(op, args...)
+        gpc = get_check_gpc(op, args...)
+        new_gp = new(op, args, μ_p′(op, args...), k_p′(op, args...), dims(op, args...), gpc)
+        populate_gpc!(new_gp, gpc, op)
+        return new_gp
+    end
 end
 
-@inline mean(gp::AbstractGP) = gp.μ
+function populate_gpc!(new_gp, gpc, op)
+    for gp in gpc.gps
+        gpc.k_x[(new_gp, gp)] = k_p′p(op, new_gp, gp)
+        gpc.k_x[(gp, new_gp)] = k_pp′(op, gp, new_gp)
+    end
+    push!(gpc.gps, new_gp)
+end
+
 @inline dims(d::Normal) = d.D
+@inline eachindex(f::Normal) = 1:dims(f)
+
+mean(f::AbstractGP) = f.μ
+mean_vector(f::Normal) = mean(f).(eachindex(f))
+mean_vector(f::Vector{Normal}) = vcat(mean_vector.(f)...)
 
 """
     kernel(f::AbstractGP)
@@ -91,35 +114,13 @@ function get_check_gpc(args...)
     return gpc
 end
 
-function instantiate_gp(op, args...)
-    gpc = get_check_gpc(op, args...)
-    new_gp = GP(op, args, μ_p′(op, args...), k_p′(op, args...), gpc)
-    for gp in gpc.gps
-        gpc.k_x[(new_gp, gp)] = k_p′p(op, new_gp, gp)
-        gpc.k_x[(gp, new_gp)] = k_pp′(op, gp, new_gp)
-    end
-    push!(gpc.gps, new_gp)
-    return new_gp
-end
-
-function instantiate_normal(op, args...)
-    gpc = get_check_gpc(op, args...)
-    new_gp = Normal(op, args, μ_p′(op, args...), k_p′(op, args...), dims(op, args...), gpc)
-    for gp in gpc.gps
-        gpc.k_x[(new_gp, gp)] = k_p′p(op, new_gp, gp)
-        gpc.k_x[(gp, new_gp)] = k_pp′(op, gp, new_gp)
-    end
-    push!(gpc.gps, new_gp)
-    return new_gp
-end
-
 """
     lpdf(d::Normal, f::AbstractVector{<:Real})
 
 Returns the log probability density of `f` under `d`.
 """
 lpdf(d::Normal, f::RealVector) =
-    -0.5 * (dims(d) * log(2π) * logdet(cov(d)) + invquad(cov(d), f .- mean(d).(1:dims(d))))
+    -0.5 * (dims(d) * log(2π) * logdet(cov(d)) + invquad(cov(d), f .- mean(d).(eachindex(d))))
 
 """
     sample(rng::AbstractRNG, d::Normal, N::Int=1)
@@ -127,16 +128,22 @@ lpdf(d::Normal, f::RealVector) =
 Take `N` samples from `d` using random number generator `rng` (not optional).
 """
 sample(rng::AbstractRNG, d::Normal, N::Int) =
-    mean(d).(1:dims(d)) .+ chol(cov(d)).'randn(rng, dims(d), N)
+    mean(d).(eachindex(d)) .+ chol(cov(d)).'randn(rng, dims(d), N)
 sample(rng::AbstractRNG, d::Normal) =
-    mean(d).(1:dims(d)) .+ chol(cov(d)).'randn(rng, dims(d))
+    mean(d).(eachindex(d)) .+ chol(cov(d)).'randn(rng, dims(d))
 
 """
-    condition!(d::Normal, f::Vector{<:Real})
+    sample(rng::AbstractRNG, ds::Vector{Normal}, N::Int=1)
 
-Observe that the value of the `Normal` `d` is `f`.
+Sample jointly from multiple correlated Normal distributions.
 """
-function condition!(d::Normal, f::RealVector)
-    d.gpc.obs[d] = f
-    return nothing
+function sample(rng::AbstractRNG, ds::Vector{Normal}, N::Int)
+    lin_sample = mean_vector(ds) .+ chol(cov(ds)).'randn(rng, sum(dims.(ds)), N)
+    srt, fin = vcat(1, cumsum(dims.(ds))[1:end-1] .+ 1), cumsum(dims.(ds))
+    return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
+end
+function sample(rng::AbstractRNG, ds::Vector{Normal})
+    lin_sample = mean_vector(ds) .+ chol(cov(ds)).'randn(rng, sum(dims.(ds)))
+    srt, fin = vcat(1, cumsum(dims.(ds))[1:end-1] .+ 1), cumsum(dims.(ds))
+    return broadcast((srt, fin)->lin_sample[srt:fin], srt, fin)
 end

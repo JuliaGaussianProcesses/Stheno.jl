@@ -17,7 +17,7 @@ for op in (:+, :*)
             Composite{NonStationary, typeof($op), Tuple{Ta, Tb}}((a, b))
         $op(a::Ta, b::Tb) where {Ta<:Kernel{Stationary}, Tb<:Kernel{Stationary}} =
             Composite{Stationary, typeof($op), Tuple{Ta, Tb}}((a, b))
-        (k::Composite{<:KernelType, typeof($op)})(x::T, y::T) where T =
+        (k::Composite{<:KernelType, typeof($op)})(x, y) =
             $op(k.args[1](x, y), k.args[2](x, y))
         function ==(
             a::Composite{<:KernelType, typeof($op), <:Tuple{Kernel, N} where N},
