@@ -1,10 +1,10 @@
-export InputTransformedKernel, input_transform, Index
+export InputTransformedKernel, input_transform, Index, Periodic, Transform
 
 """
     InputTransformedKernel{T<:KernelType} <: Kernel{T}
 
-An `InputTransformedKernel` kernel is one which applies a transformation to its inputs prior
-to applying a Kernel that it owns.
+An `InputTransformedKernel` kernel is one which applies a transformation `f` to its inputs
+prior to applying a Kernel `k` that it owns.
 """
 struct InputTransformedKernel{T<:KernelType, Tk<:Kernel{T}, Tf} <: Kernel{T}
     k::Tk
@@ -12,6 +12,7 @@ struct InputTransformedKernel{T<:KernelType, Tk<:Kernel{T}, Tf} <: Kernel{T}
     InputTransformedKernel(k::Tk, f::Tf) where {T<:KernelType, Tk<:Kernel{T}, Tf} =
         new{T, Tk, Tf}(k, f)
 end
+const Transform = InputTransformedKernel
 
 @inline (k::InputTransformedKernel)(x::Tin, y::Tin) where Tin =
     kernel(k)(input_transform(k)(x), input_transform(k)(y))
@@ -59,3 +60,17 @@ end
 function Index{N}(k::Kernel) where N
     return InputTransformedKernel(k, Index{N}())
 end
+
+"""
+    Periodic <: Kernel
+
+Make a periodic kernel by applying the transformation `T:θ→(cos(2πθ), sin(2πθ))` to inputs
+and computing `k(T(θ)[1], T(θ′)[1]) * k(T(θ)[2], T(θ′)[2])`.
+"""
+struct Periodic{T<:KernelType, Tk} <: Kernel{T}
+    k::Tk
+    Periodic(k::Kernel{T}) where T<:KernelType = new{T, typeof(k)}(k)
+end
+==(k1::Periodic{T, Tk}, k2::Periodic{T, Tk}) where {T, Tk} = k1.k == k2.k
+@inline (k::Periodic)(θ::Real, θ′::Real) =
+    k.k(cos(2π * θ), cos(2π * θ′)) * k.k(sin(2π * θ), sin(2π * θ′))

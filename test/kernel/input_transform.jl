@@ -52,4 +52,21 @@
         @test k2(x1, x2) == Index{2}(EQ())(x1, x2)
     end
 
+    let rng = MersenneTwister(123456)
+        k1, k2 = Periodic(EQ()), Periodic(RQ(1.0))
+
+        # Check equality operator works as intended.
+        @test k1 == k1
+        @test k2 == k2
+        @test k1 != k2
+
+        # Check manually applying the input transformation and computing the result has the
+        # intended results.
+        x, x′ = randn(rng), randn(rng)
+        @test EQ()(cos(2π * x), cos(2π * x′)) * EQ()(sin(2π * x), sin(2π * x′)) ==
+            k1(x, x′)
+        @test RQ(1.0)(cos(2π * x), cos(2π * x′)) * RQ(1.0)(sin(2π * x), sin(2π * x′)) ==
+            k2(x, x′)
+    end
+
 end

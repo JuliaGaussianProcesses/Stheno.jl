@@ -3,6 +3,8 @@ import PDMats: AbstractPDMat, invquad, dim
 import Base: cov, logdet, full, size, chol, ==
 export cov, invquad, AbstractPDMat
 
+const __ϵ = 1e-9
+
 """
     StridedPDMatrix
 
@@ -34,9 +36,9 @@ Allocate memory for the covariance matrix and call `cov!`.
 """
 function cov(k, x::AbstractVector)
     x1, x2 = reshape(x, length(x), 1), reshape(x, 1, length(x))
-    return StridedPDMatrix(chol(Symmetric(k.(x1, x2) + 1e-9I)))
+    return StridedPDMatrix(chol(Symmetric(k.(x1, x2) + __ϵ * I)))
 end
-cov(k, x::RowVector) = StridedPDMatrix(chol(Symmetric(k.(x.vec, x)) + 1e-9I))
+cov(k, x::RowVector) = StridedPDMatrix(chol(Symmetric(k.(x.vec, x)) + __ϵ * I))
 cov(k, x::T, y::T) where T<:RowVector = k.(x.vec, y)
 cov(k, x::T, y::T) where T<:AbstractVector = k.(x, RowVector(y))
 
@@ -61,7 +63,7 @@ function cov(d::Vector{Normal})
             end
         end
     end
-    return StridedPDMatrix(chol(Symmetric(K) + 1e-12I))
+    return StridedPDMatrix(chol(Symmetric(K) + __ϵ * I))
 end
 
 """

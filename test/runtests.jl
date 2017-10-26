@@ -1,5 +1,6 @@
 using Stheno
 using Base.Test
+using BenchmarkTools
 
 @testset "Stheno" begin
 

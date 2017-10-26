@@ -37,4 +37,19 @@
     @test Linear(0.0)(5.0, 4.0) ≈ 20
     @test Linear(2.0)(5.0, 4.0) ≈ 6
 
+    # Performance checks: Constant.
+    @test memory(@benchmark Constant(1.0) seconds=0.1) == 0
+    @test memory(@benchmark $(Constant(1.0))(1.0, 0.0) seconds=0.1) == 0
+
+    # Performance checks: EQ.
+    @test memory(@benchmark EQ() seconds=0.1) == 0
+    @test memory(@benchmark $(EQ())(1.0, 0.0) seconds=0.1) == 0
+
+    # Performance checks: RQ.
+    @test memory(@benchmark RQ(1.0) seconds=0.1) == 0
+    @test memory(@benchmark $(RQ(1.0))(1.0, 0.0) seconds=0.1) == 0
+
+    # Performance checks: Linear.
+    @test memory(@benchmark Linear(1.0) seconds=0.1) == 0
+    @test memory(@benchmark $(Linear(1.0))(1.0, 0.0) seconds=0.1) == 0
 end
