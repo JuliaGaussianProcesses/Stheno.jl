@@ -1,6 +1,7 @@
 @testset "gp" begin
 
     # Test the creation of indepenent GPs.
+    import Stheno.Constant
     let rng = MersenneTwister(123456)
 
         # Specification for three independent GPs.
@@ -32,8 +33,9 @@
         rng = MersenneTwister(123456)
         N, S = 5, 100000
         μ_vec, x = randn(rng, N), randn(rng, N)
-        μ, k = n::Int->μ_vec[n], (m::Int, n::Int)->EQ()(x[m], x[n])
-        d = Normal(μ, k, N, GPC())
+        # μ, k = n::Int->μ_vec[n], (m::Int, n::Int)->EQ()(x[m], x[n])
+        μ, k = n::Int->μ_vec[n], FullFinite(EQ(), x)
+        d = GP(μ, k, GPC())
 
         @test mean(d) == μ
         @test mean(d).(1:N) == μ_vec

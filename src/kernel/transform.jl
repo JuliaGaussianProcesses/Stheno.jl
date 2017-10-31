@@ -1,3 +1,5 @@
+export Circularised
+
 """
     Circularised{K<:Kernel{Stationary}} <: Kernel{Stationary}
 

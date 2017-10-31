@@ -10,6 +10,7 @@ module Stheno
     include("kernel/transform.jl")
     include("kernel/input_transform.jl")
     include("kernel/finite.jl")
+    include("kernel/posterior.jl")
 
     # GP stuff, including tracking and linear operator creation.
     include("gp.jl")

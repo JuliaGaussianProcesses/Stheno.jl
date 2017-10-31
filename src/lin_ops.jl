@@ -1,85 +1,50 @@
 import Base: +
 export posterior
 
+const k = kernel
+
 """
     (f_q::GP)(x::ColOrRowVec)
 
-A GP evaluated at `x` is a multivariate Normal distribution whos mean and
-covariance are fully specified by `x` and the mean and covariance functions of `f_q`.
+A GP evaluated at `x` is a multivariate finite-dimensional GP whose mean and covariance
+are fully specified by `x` and the mean function and kernel of `f_q`.
 """
-(f_q::GP)(x::ColOrRowVec) = Normal(f_q, x)
-
+(f_q::GP)(x::ColOrRowVec) = GP(f_q, x)
 function μ_p′(f_q::GP, x::ColOrRowVec)
     μ_q = mean(f_q)
     return n::Int->μ_q(x[n])
 end
-k_p′(f_q::GP, x::ColOrRowVec) = Finite(kernel(f_q), x)
-k_p′p(f_q::GP, f_p′::Normal, f_p::AbstractGP) = LeftFinite(kernel(f_q, f_p), f_p′.args[1])
-k_pp′(f_q::GP, f_p::AbstractGP, f_p′::Normal) = RightFinite(kernel(f_p, f_q), f_p′.args[1])
+k_p′(f_q::GP, x::ColOrRowVec) = FullFinite(k(f_q), x)
+k_p′p(f_q::GP, f_p′::GP, f_p::GP) = LeftFinite(k(f_q, f_p), f_p′.args[1])
+k_pp′(f_q::GP, f_p::GP, f_p′::GP) = RightFinite(k(f_p, f_q), f_p′.args[1])
 dims(::GP, x::ColOrRowVec) = length(x)
 
 """
-    posterior(f::AbstractGP, f_obs::Normal, f̂::ColOrRowVec)
+    posterior(f::GP, f_obs::GP, f̂::ColOrRowVec)
 
 Compute the posterior of the process `f` have observed that `f_obs` equals `f̂`.
 """
-posterior(f::T, f_obs::Normal, f̂::ColOrRowVec) where T<:AbstractGP =
-    T(posterior, f, f_obs, f̂)
-posterior(f::T, f_obs::Vector{Normal}, f̂::Vector{ColOrRowVec}) where T<:AbstractGP =
-    T(posterior, f, f_bs, f̂)
+posterior(f::GP, f_obs::GP, f̂::ColOrRowVec) =
+    GP(posterior, f, f_obs, f̂, PosteriorData(chol(cov(f_obs))))
+posterior(f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:ColOrRowVec}) =
+    GP(posterior, f, f_obs, f̂, PosteriorData(chol(cov(f_obs))))
 
-dims(::typeof(posterior), f::Normal, ::Normal, f̂::ColOrRowVec) = dims(f)
-
-function μ_p′(::typeof(posterior), f::AbstractGP, f_obs::Normal, f̂::ColOrRowVec)
-    idx = eachindex(f_obs)
-    μ, k_ff̂, U = mean(f), kernel(f, f_obs), chol(cov(f_obs))
-    α = (U \ At_ldiv_B(U, f̂ .- mean(f_obs).(idx)))
-    tmp = Vector{Float64}(length(idx))
-    return x::Number->μ(x) + RowVector(broadcast!(k_ff̂, tmp, x, idx)) * α
+function μ_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::ColOrRowVec, data::PosteriorData)
+    μ, k_ff̂ = mean(f), k(f, f_obs)
+    α = A_ldiv_B!(data.U, At_ldiv_B!(data.U, f̂ .- mean_vector(f_obs)))
+    return x::Number->μ(x) + RowVector(broadcast!(k_ff̂, data.tmp, x, data.idx)) * α
 end
-# function μ_p′(
-#     ::typeof(posterior),
-#     f::AbstractGP,
-#     f_obs::Vector{Normal}, 
-#     f̂::Vector{ColOrRowVec},
-# )
-    
-# end
-
-function k_p′(::typeof(posterior), f::AbstractGP, f_obs::Normal, f̂::ColOrRowVec)
-    k_f, k_f̂f = kernel(f), kernel(f_obs, f)
-    idx, U = collect(eachindex(f_obs)), chol(cov(f_obs))
-    tmp, tmp′ = Vector{Float64}(length(idx)), Vector{Float64}(length(idx))
-    return function(x, x′)
-        a = At_ldiv_B!(U, broadcast!(k_f̂f, tmp, idx, x))
-        b = At_ldiv_B!(U, broadcast!(k_f̂f, tmp′, idx, x′))
-        return k_f(x, x′) - dot(a, b)
-    end
-end
-
-function k_pp′(::typeof(posterior), f_p::AbstractGP, f_p′::AbstractGP)
+k_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::ColOrRowVec, data::PosteriorData) =
+    PosteriorKernel(k(f), k(f_obs, f), k(f_obs, f), data)
+function k_p′p(::typeof(posterior), f_p′::GP, f_p::GP)
     f, f_obs = f_p′.args[1], f_p′.args[2]
-    k_ff′, k_f̂f, k_f̂f′ = kernel(f_p, f), kernel(f_obs, f_p), kernel(f_obs, f)
-    idx, U = collect(eachindex(f_obs)), chol(cov(f_obs))
-    tmp, tmp′ = Vector{Float64}(length(idx)), Vector{Float64}(length(idx))
-    return function(x, x′)
-        a = At_ldiv_B!(U, broadcast!(k_f̂f, tmp, idx, x))
-        b = At_ldiv_B!(U, broadcast!(k_f̂f′, tmp′, idx, x′))
-        return k_ff′(x, x′) - dot(a, b)
-    end
+    return PosteriorKernel(k(f, f_p), k(f_obs, f), k(f_obs, f_p), k(f_p′).data)
 end
-
-function k_p′p(::typeof(posterior), f_p′::AbstractGP, f_p::AbstractGP)
+function k_pp′(::typeof(posterior), f_p::GP, f_p′::GP)
     f, f_obs = f_p′.args[1], f_p′.args[2]
-    k_f′f, k_f̂f′, k_f̂f = kernel(f, f_p), kernel(f_obs, f), kernel(f_obs, f_p)
-    idx, U = collect(eachindex(f_obs)), chol(cov(f_obs))
-    tmp, tmp′ = Vector{Float64}(length(idx)), Vector{Float64}(length(idx))
-    return function(x, x′)
-        a = At_ldiv_B!(U, broadcast!(k_f̂f′, tmp, idx, x))
-        b = At_ldiv_B!(U, broadcast!(k_f̂f, tmp′, idx, x′))
-        return k_f′f(x, x′) - dot(a, b)
-    end
+    return PosteriorKernel(k(f_p, f), k(f_obs, f_p), k(f_obs, f), k(f_p′).data)
 end
+dims(::typeof(posterior), f::GP, ::GP, f̂::ColOrRowVec) = dims(f)
 
 """
     +(fa::GP, fb::GP)
@@ -91,8 +56,6 @@ function μ_p′(::typeof(+), fa::GP, fb::GP)
     μ_a, μ_b = mean(fa), mean(fb)
     return x->μ_a(x) + μ_b(x)
 end
-k_p′(::typeof(+), fa::GP, fb::GP) = kernel(fa) + kernel(fb) + 2 * kernel(fa, fb)
-k_pp′(::typeof(+), f_p::GP, f_p′::GP) =
-    kernel(f_p, f_p′.args[1]) + kernel(f_p, f_p′.args[2])
-k_p′p(::typeof(+), f_p′::GP, f_p::GP) =
-    kernel(f_p′.args[1], f_p) + kernel(f_p′.args[2], f_p)
+k_p′(::typeof(+), fa::GP, fb::GP) = k(fa) + k(fb) + 2 * k(fa, fb)
+k_pp′(::typeof(+), f_p::GP, f_p′::GP) = k(f_p, f_p′.args[1]) + k(f_p, f_p′.args[2])
+k_p′p(::typeof(+), f_p′::GP, f_p::GP) = k(f_p′.args[1], f_p) + k(f_p′.args[2], f_p)

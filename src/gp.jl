@@ -1,149 +1,91 @@
 import Base: mean, show, cov, chol, eachindex
-export mean, mean_vector, kernel, GP, Normal, GPC, condition!, predict, lpdf, sample, dims
+export mean, mean_vector, kernel, GP, GPC, condition!, predict, lpdf, sample, dims
 
-const RealVector = AbstractVector{<:Real}
-
+# A collection of GPs (GPC == "GP Collection"). Primarily used to track cross-kernels.
 struct GPC
     gps::Set{Any}
     k_x::ObjectIdDict
-    obs::ObjectIdDict
-    GPC() = new(Set{Any}(), ObjectIdDict(), ObjectIdDict())
+    GPC() = new(Set{Any}(), ObjectIdDict())
 end
 
 """
-Supertype for all GP objects - infinite (GP) and finite (Normal).
-"""
-abstract type AbstractGP end
+    GP{Tk<:Kernel}
 
+A Gaussian Process (GP) object. Either constructed using an Affine Transformation of
+existing GPs or by providing a mean function `μ`, a kernel `k`, and a `GPC` `gpc`.
 """
-    GP
-
-A Gaussian Process object - specified by a mean function `μ`, a kernel `k` and cross-kernels
-found in the dictionary `k_x` (note that cross-kernels are computed lazily). Also required
-is the operation used to construct it, `f`, and the arguments to that operation, `args`.
-A `GP` which is constructed independently of any other `GP` objects will have the `f = GP`
-and `args = nothing`.
-"""
-struct GP <: AbstractGP
+struct GP{Tk<:Kernel}
     f::Any
     args::Any
     μ::Any
-    k::Any
+    k::Tk
     gpc::GPC
-    function GP(op, args...)
-        gpc = get_check_gpc(op, args...)
-        new_gp = new(op, args, μ_p′(op, args...), k_p′(op, args...), gpc)
-        populate_gpc!(new_gp, gpc, op)
-        return new_gp
-    end
-    function GP(μ, k, gpc::GPC)
+    GP{Tk}(f, args, μ, k::Tk, gpc::GPC) where Tk<:Kernel = new{Tk}(f, args, μ, k, gpc)
+    function GP{Tk}(μ, k::Tk, gpc::GPC) where Tk<:Kernel
         gp = new(GP, nothing, μ, k, gpc)
         push!(gpc.gps, gp)
         return gp
     end
 end
-
-function show(io::IO, gp::AbstractGP)
-    print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
-end
-
-"""
-    Normal{Tμ<:AbstractVector{<:Real}, TΣ<:AbstractPDMat}
-
-Generic multivariate Normal distribution.
-"""
-struct Normal <: AbstractGP
-    f::Any
-    args::Any
-    μ::Any
-    k::Any
-    D::Int
-    gpc::GPC
-    function Normal(μ, k, dims::Int, gpc::GPC)
-        gp = new(Normal, nothing, μ, k, dims, gpc)
-        push!(gpc.gps, gp)
-        return gp
-    end
-    function Normal(op, args...)
-        gpc = get_check_gpc(op, args...)
-        new_gp = new(op, args, μ_p′(op, args...), k_p′(op, args...), dims(op, args...), gpc)
-        populate_gpc!(new_gp, gpc, op)
-        return new_gp
-    end
-end
-
-function populate_gpc!(new_gp, gpc, op)
+function GP(op, args...)
+    gpc = get_check_gpc(op, args...)
+    k = k_p′(op, args...)
+    new_gp = GP{typeof(k)}(op, args, μ_p′(op, args...), k, gpc)
     for gp in gpc.gps
         gpc.k_x[(new_gp, gp)] = k_p′p(op, new_gp, gp)
         gpc.k_x[(gp, new_gp)] = k_pp′(op, gp, new_gp)
     end
     push!(gpc.gps, new_gp)
+    return new_gp
 end
+GP(μ, k::Tk, gpc::GPC) where Tk = GP{Tk}(μ, k, gpc)
+show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
 
-@inline dims(d::Normal) = d.D
-@inline eachindex(f::Normal) = 1:dims(f)
+@inline dims(d::GP) = dims(kernel(d))
+@inline eachindex(f::GP) = 1:dims(f)
 
-mean(f::AbstractGP) = f.μ
-mean_vector(f::Normal) = mean(f).(eachindex(f))
-mean_vector(f::Vector{Normal}) = vcat(mean_vector.(f)...)
+mean(f::GP) = f.μ
+mean_vector(f::GP) = mean(f).(eachindex(f))
+mean_vector(f::Vector) = vcat(mean_vector.(f)...)
 
 """
-    kernel(f::AbstractGP)
-    kernel(fa::AbstractGP, fb::AbstractGP)
+    kernel(f::GP)
+    kernel(fa::GP, fb::GP)
 
-Get the cross-covariance function between `AbstractGP`s `fa` and `fb`. If only a single
-`AbstractGP` is provided, the "marginal" covariance function associated with this
-`AbstractGP` is returned.
+Get the cross-kernel between `GP`s `fa` and `fb`, and `kernel(f) == kernel(f, f)`.
 """
-kernel(f::AbstractGP) = f.k
-function kernel(fa::AbstractGP, fb::AbstractGP)
+kernel(f::GP) = f.k
+function kernel(fa::GP, fb::GP)
     @assert fa.gpc === fb.gpc
-    return fa === fb ? fa.k :
-        (fa, fb) in keys(fa.gpc.k_x) ?
-            fa.gpc.k_x[(fa, fb)] :
-            Constant(0.0)
+    return fa === fb ?
+        fa.k :
+        (fa, fb) in keys(fa.gpc.k_x) ? fa.gpc.k_x[(fa, fb)] : Constant(0.0)
 end
-
-k_pp′(::Any, ::AbstractGP, ::AbstractGP) = throw(error("Oops, k_pp′ not implemented."))
-k_p′p(::Any, ::AbstractGP, ::AbstractGP) = throw(error("Oops, k_p′p not implemented."))
 
 function get_check_gpc(args...)
-    id = findfirst(map(arg->arg isa AbstractGP, args))
-    gpc = args[id].gpc
-    @assert all([!(arg isa AbstractGP) || arg.gpc == gpc for arg in args])
+    gpc = args[findfirst(map(arg->arg isa GP, args))].gpc
+    @assert all([!(arg isa GP) || arg.gpc == gpc for arg in args])
     return gpc
 end
 
 """
-    lpdf(d::Normal, f::AbstractVector{<:Real})
+    lpdf(d::GP, f::AbstractVector{<:Real})
 
-Returns the log probability density of `f` under `d`.
+Returns the log probability density of `f` under `d`. Dims `d` must be finite.
 """
-lpdf(d::Normal, f::RealVector) =
-    -0.5 * (dims(d) * log(2π) * logdet(cov(d)) + invquad(cov(d), f .- mean(d).(eachindex(d))))
-
-"""
-    sample(rng::AbstractRNG, d::Normal, N::Int=1)
-
-Take `N` samples from `d` using random number generator `rng` (not optional).
-"""
-sample(rng::AbstractRNG, d::Normal, N::Int) =
-    mean(d).(eachindex(d)) .+ chol(cov(d)).'randn(rng, dims(d), N)
-sample(rng::AbstractRNG, d::Normal) =
-    mean(d).(eachindex(d)) .+ chol(cov(d)).'randn(rng, dims(d))
+lpdf(d::GP, f::AbstractVector{<:Real}) =
+    -0.5 * (dims(d) * log(2π) * logdet(cov(d)) + invquad(cov(d), f .- mean_vector(d)))
 
 """
-    sample(rng::AbstractRNG, ds::Vector{Normal}, N::Int=1)
+    sample(rng::AbstractRNG, d::Union{GP, Vector}, N::Int=1)
 
-Sample jointly from multiple correlated Normal distributions.
+Sample jointly from a single / multiple finite-dimensional GPs.
 """
-function sample(rng::AbstractRNG, ds::Vector{Normal}, N::Int)
+function sample(rng::AbstractRNG, ds::Vector, N::Int)
     lin_sample = mean_vector(ds) .+ chol(cov(ds)).'randn(rng, sum(dims.(ds)), N)
     srt, fin = vcat(1, cumsum(dims.(ds))[1:end-1] .+ 1), cumsum(dims.(ds))
     return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
 end
-function sample(rng::AbstractRNG, ds::Vector{Normal})
-    lin_sample = mean_vector(ds) .+ chol(cov(ds)).'randn(rng, sum(dims.(ds)))
-    srt, fin = vcat(1, cumsum(dims.(ds))[1:end-1] .+ 1), cumsum(dims.(ds))
-    return broadcast((srt, fin)->lin_sample[srt:fin], srt, fin)
-end
+sample(rng::AbstractRNG, ds::Vector) = reshape.(sample(rng, ds, 1), dims.(ds))
+sample(rng::AbstractRNG, d::GP, N::Int) = sample(rng, [d], N)[1]
+sample(rng::AbstractRNG, d::GP) = sample(rng, [d])[1]

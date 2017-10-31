@@ -5,7 +5,7 @@
 
         # Construct kernels.
         x, y = randn(rng, N), randn(rng, N)
-        k1, k2, k3 = Finite(EQ(), x), Finite(EQ(), y), Finite(RQ(1.0), x)
+        k1, k2, k3 = FullFinite(EQ(), x), FullFinite(EQ(), y), FullFinite(RQ(1.0), x)
 
         # Check equality works as expected
         @test k1 == k1
@@ -23,9 +23,9 @@
         end
 
         # Memory performance tests.
-        @test memory(@benchmark Finite(EQ(), $x) seconds=0.1) == 32
-        @test memory(@benchmark Finite(EQ(), $y) seconds=0.1) == 32
-        @test memory(@benchmark Finite(RQ(1.0), $x) seconds=0.1) == 32
+        @test memory(@benchmark FullFinite(EQ(), $x) seconds=0.1) == 32
+        @test memory(@benchmark FullFinite(EQ(), $y) seconds=0.1) == 32
+        @test memory(@benchmark FullFinite(RQ(1.0), $x) seconds=0.1) == 32
 
         @test memory(@benchmark $k1(1, 2) seconds=0.1) == 0
     end

@@ -10,6 +10,7 @@ using BenchmarkTools
         include("kernel/transform.jl")
         include("kernel/input_transform.jl")
         include("kernel/finite.jl")
+        include("kernel/posterior.jl")
     end
 
     include("gp.jl")

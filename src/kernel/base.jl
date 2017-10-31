@@ -1,5 +1,5 @@
 import Base: +, *, ==
-export KernelType, Kernel, EQ, RQ, Linear, Circularised, lb, ub
+export KernelType, Kernel, EQ, RQ, Linear, WhiteNoise, lb, ub
 
 """
 Determines whether a kernel is stationary or not and enables dispatch on this.
@@ -63,3 +63,14 @@ struct Linear{T<:Real} <: Kernel{NonStationary}
 end
 @inline (k::Linear)(x::Real, y::Real) = (x - k.c) * (y - k.c)
 ==(a::Linear, b::Linear) = a.c == b.c
+
+"""
+    WhiteNoise{T<:Real} <: Kernel{Stationary}
+
+A stationary white-noise kernel. Has a single parameter `σ²` which controls the variance.
+"""
+struct WhiteNoise{T<:Real} <: Kernel{Stationary}
+    σ²::T
+end
+@inline (k::WhiteNoise)(x::Real, x′::Real) = x == x′ ? k.σ² : 0.0
+==(a::WhiteNoise, b::WhiteNoise) = a.σ² == b.σ²

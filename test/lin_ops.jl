@@ -38,15 +38,15 @@
         fpost_gp = posterior(f, f(x), f̂)
 
         # Test finite GP posterior.
-        idx = eachindex(fpost_d)
+        idx = collect(eachindex(fpost_d))
         @test dims(fpost_d) == length(x)
         @test mean(fpost_d).(idx) ≈ f̂
-        @test all(full(cov(fpost_d)) .- diagm(2e-9 * ones(x)) .< 1e-12)
+        @test all(kernel(fpost_d).(idx, RowVector(idx)) .- diagm(2e-9 * ones(x)) .< 1e-12)
         @test dims(fpost_d′) == length(x′)
 
         # Test process posterior works.
         @test mean(fpost_gp).(x) ≈ f̂
-        @test all(full(cov(fpost_gp(x))) .- diagm(2e-9 * ones(x)) .< 1e-12)
+        @test all(kernel(fpost_gp).(x, RowVector(x)) .- diagm(2e-9 * ones(x)) .< 1e-12)
     end
 
     # Test addition of GPs.
@@ -74,22 +74,22 @@
         @test mean(f_2p2).(x) == μ2.(x) .+ μ2.(x)
 
         # Check that the marginal covariances have been correctly computed.
-        @test full(cov(kernel(f_1p1), x)) ≈ 4 .* full(cov(k1, x))
-        @test full(cov(kernel(f_1p2), x)) ≈ full(cov(k1, x)) .+ full(cov(k2, x))
-        @test full(cov(kernel(f_2p1), x)) ≈ full(cov(k2, x)) .+ full(cov(k1, x))
-        @test full(cov(kernel(f_2p2), x)) ≈ 4 .* full(cov(k2, x))
+        @test kernel(f_1p1).(x, x') ≈ 4 .* k1.(x, x')
+        @test kernel(f_1p2).(x, x') ≈ k1.(x, x') .+ k2.(x, x')
+        @test kernel(f_2p1).(x, x') ≈ k2.(x, x') .+ k1.(x, x')
+        @test kernel(f_2p2).(x, x') ≈ 4 .* k2.(x, x')
 
         # Check that the cross-covariances have been correctly computed.
-        @test full(cov(kernel(f1, f_1p1), x)) ≈ 2 .* full(cov(kernel(f1), x))
-        @test full(cov(kernel(f1, f_1p2), x)) ≈ full(cov(kernel(f1), x))
-        @test full(cov(kernel(f1, f_2p1), x)) ≈ full(cov(kernel(f1), x))
-        @test full(cov(kernel(f1, f_2p2), x)) ≈ diagm(1e-9 * ones(3))
+        @test kernel(f1, f_1p1).(x, x') ≈ 2 .* kernel(f1).(x, x')
+        @test kernel(f1, f_1p2).(x, x') ≈ kernel(f1).(x, x')
+        @test kernel(f1, f_2p1).(x, x') ≈ kernel(f1).(x, x')
+        @test kernel(f1, f_2p2).(x, x') ≈ zeros(3, 3)
 
         # Check that the cross-covariances match.
-        @test full(cov(kernel(f1, f_1p1), x)) == permutedims(full(cov(kernel(f_1p1, f1), x)), [2, 1])
-        @test full(cov(kernel(f1, f_1p2), x)) == permutedims(full(cov(kernel(f_1p2, f1), x)), [2, 1])
-        @test full(cov(kernel(f1, f_2p1), x)) == permutedims(full(cov(kernel(f_2p1, f1), x)), [2, 1])
-        @test full(cov(kernel(f1, f_2p2), x)) == permutedims(full(cov(kernel(f_2p2, f1), x)), [2, 1])
+        @test kernel(f1, f_1p1).(x, x') == permutedims(kernel(f_1p1, f1).(x, x'), [2, 1])
+        @test kernel(f1, f_1p2).(x, x') == permutedims(kernel(f_1p2, f1).(x, x'), [2, 1])
+        @test kernel(f1, f_2p1).(x, x') == permutedims(kernel(f_2p1, f1).(x, x'), [2, 1])
+        @test kernel(f1, f_2p2).(x, x') == permutedims(kernel(f_2p2, f1).(x, x'), [2, 1])
 
         # Memory performance tests.
         @test memory(@benchmark $(mean(f_1p1))(1.0) seconds=0.1) == 0

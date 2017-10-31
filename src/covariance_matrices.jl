@@ -8,13 +8,11 @@ const __ϵ = 1e-9
 """
     StridedPDMatrix
 
-A strided positive definite matrix, represented in terms of it's Cholesky factorization `U`,
-which should be an upper triangular matrix.
+A strided positive definite matrix, represented in terms of it's Cholesky factorization `U`.
 """
 struct StridedPDMatrix{T<:Real} <: AbstractPDMat{T}
     U::UpperTriangular{T}
 end
-
 dim(Σ::StridedPDMatrix) = size(Σ.U, 1)
 full(Σ::StridedPDMatrix) = Σ.U'Σ.U
 logdet(Σ::StridedPDMatrix) = 2 * sum(log, view(Σ.U, diagind(Σ.U)))
@@ -23,74 +21,42 @@ chol(Σ::StridedPDMatrix) = Σ.U
 ==(Σ1::StridedPDMatrix, Σ2::StridedPDMatrix) = Σ1.U == Σ2.U
 
 """
-    cov(d::Normal)
+    cov(d::Union{GP, Vector})
 
-The covariance matrix of a finite dimensional Normal distribution.
+Compute the covariance matrix implied by a FiniteGP.
 """
-cov(d::Normal) = cov(kernel(d), 1:dims(d))
-
-"""
-    cov(k::Kernel, x::T, y::T) where T<:Union{AbstractVector, RowVector}
-
-Allocate memory for the covariance matrix and call `cov!`.
-"""
-function cov(k, x::AbstractVector)
-    x1, x2 = reshape(x, length(x), 1), reshape(x, 1, length(x))
-    return StridedPDMatrix(chol(Symmetric(k.(x1, x2) + __ϵ * I)))
-end
-cov(k, x::RowVector) = StridedPDMatrix(chol(Symmetric(k.(x.vec, x)) + __ϵ * I))
-cov(k, x::T, y::T) where T<:RowVector = k.(x.vec, y)
-cov(k, x::T, y::T) where T<:AbstractVector = k.(x, RowVector(y))
-
-"""
-    cov(obs::Vector{Tuple{GP, T}}) where T<:Union{AbstractVector, RowVector}
-
-Compute the covariance matrix implied by a collection of GPs. This should comprise a
-collection of Tuples, the first element of which are GPs, the second input locations.
-"""
-function cov(d::Vector{Normal})
-    N = map(dims, d)
+function cov(d::Vector)
+    pos, N = 1, map(dims, d)
     K = Matrix{Float64}(sum(N), sum(N))
-    pos = 1
-    for q in eachindex(d)
-        for c in 1:N[q]
-            for p in eachindex(d)
-                pos = app_to_row(K, pos, N[p], kernel(d[p], d[q]), c)
-            end
-        end
+    for q in eachindex(d), c in 1:N[q], p in eachindex(d)
+        pos = broadcast_over_col(K, pos, N[p], kernel(d[p], d[q]), c)
     end
     return StridedPDMatrix(chol(Symmetric(K) + __ϵ * I))
 end
+cov(d::GP) = cov([d])
 
-# Internal function used inside covariance matrix to reduce allocation counts due to type
-# instabilities.
-function app_to_row(K, pos, Np, k, c)
+"""
+    cov(d::Union{GP, Vector}, d′::Union{GP, Vector})
+
+Compute the cross-covariance between each GP in `d` and `d′`.
+"""
+function cov(d::Vector, d′::Vector)
+    pos, Dx, Dx′ = 1, map(dims, d), map(dims, d′)
+    K = Matrix{Float64}(sum(Dx), sum(Dx′))
+    for q in eachindex(d′), c in 1:Dx′[q], p in eachindex(d)
+        pos = broadcast_over_col(K, pos, Dx[p], kernel(d[p], d′[q]), c)
+    end
+    return K
+end
+cov(d::GP, d′::GP) = cov([d], [d′])
+cov(d::GP, d′::Vector) = cov([d], d′)
+cov(d::Vector, d′::GP) = cov(d, [d′])
+
+# Function barrier to improve performance of `cov`.
+function broadcast_over_col(K, pos, Np, k, c)
     for r in 1:Np
         @inbounds K[pos] = k(r, c)
         pos += 1
     end
     return pos
 end
-
-"""
-    cov(d::Vector{Normal}, d′::Vector{Normal})
-
-Compute the cross-covariance between the 
-"""
-function cov(d::Vector{Normal}, d′::Vector{Normal})
-    Dx, Dx′ = map(dims, d), map(dims, d′)
-    K = Matrix{Float64}(sum(Dx), sum(Dx′))
-    pos = 1
-    for q in eachindex(d′)
-        for c in 1:Dx′[q]
-            for p in eachindex(d)
-                pos = app_to_row(K, pos, Dx[p], kernel(d[p], d′[q]), c)
-            end
-        end
-    end
-    return K
-end
-
-cov(d::Normal, d′::Normal) = cov([d], [d′])
-cov(d::Normal, d′::Vector{Normal}) = cov([d], d′)
-cov(d::Vector{Normal}, d′::Normal) = cov(d, [d′]) 

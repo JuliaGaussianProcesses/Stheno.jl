@@ -37,6 +37,15 @@
     @test Linear(0.0)(5.0, 4.0) ≈ 20
     @test Linear(2.0)(5.0, 4.0) ≈ 6
 
+    # Tests for WhiteNoise kernel.
+    @test WhiteNoise <: Kernel{Stationary}
+    @test !issubtype(WhiteNoise, Kernel{NonStationary})
+    @test WhiteNoise(1.0)(1.0, 1.0) == 1.0
+    @test WhiteNoise(1.0)(0.0, 1e-9) == 0.0
+    @test WhiteNoise(1.0) == WhiteNoise(1.0)
+    @test WhiteNoise(1.0) != WhiteNoise(0.99999)
+    @test WhiteNoise(1.0) != RQ(1.0)
+
     # Performance checks: Constant.
     @test memory(@benchmark Constant(1.0) seconds=0.1) == 0
     @test memory(@benchmark $(Constant(1.0))(1.0, 0.0) seconds=0.1) == 0
@@ -52,4 +61,8 @@
     # Performance checks: Linear.
     @test memory(@benchmark Linear(1.0) seconds=0.1) == 0
     @test memory(@benchmark $(Linear(1.0))(1.0, 0.0) seconds=0.1) == 0
+
+    # Performance checks: White noise.
+    @test memory(@benchmark WhiteNoise(1.0) seconds=0.1) == 0
+    @test memory(@benchmark $(WhiteNoise(1.0))(1.0, 0.0) seconds=0.1) == 0
 end
