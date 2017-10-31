@@ -55,15 +55,21 @@ function cov(d::Vector{Normal})
     for q in eachindex(d)
         for c in 1:N[q]
             for p in eachindex(d)
-                k = kernel(d[p], d[q])
-                for r in 1:N[p]
-                    K[pos] = k(r, c)
-                    pos +=1
-                end
+                pos = app_to_row(K, pos, N[p], kernel(d[p], d[q]), c)
             end
         end
     end
     return StridedPDMatrix(chol(Symmetric(K) + __ϵ * I))
+end
+
+# Internal function used inside covariance matrix to reduce allocation counts due to type
+# instabilities.
+function app_to_row(K, pos, Np, k, c)
+    for r in 1:Np
+        @inbounds K[pos] = k(r, c)
+        pos += 1
+    end
+    return pos
 end
 
 """
@@ -78,16 +84,13 @@ function cov(d::Vector{Normal}, d′::Vector{Normal})
     for q in eachindex(d′)
         for c in 1:Dx′[q]
             for p in eachindex(d)
-                k = kernel(d[p], d′[q])
-                for r in 1:Dx[p]
-                    K[pos] = k(r, c)
-                    pos += 1
-                end
+                pos = app_to_row(K, pos, Dx[p], kernel(d[p], d′[q]), c)
             end
         end
     end
     return K
 end
+
 cov(d::Normal, d′::Normal) = cov([d], [d′])
 cov(d::Normal, d′::Vector{Normal}) = cov([d], d′)
 cov(d::Vector{Normal}, d′::Normal) = cov(d, [d′]) 

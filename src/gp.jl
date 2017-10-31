@@ -43,7 +43,7 @@ struct GP <: AbstractGP
     end
 end
 
-function show(io::IO, gp::GP)
+function show(io::IO, gp::AbstractGP)
     print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
 end
 

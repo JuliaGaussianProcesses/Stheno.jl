@@ -24,6 +24,9 @@
             @test kernel(f3, f2)(m, y[n]) == 0.0
             @test kernel(f2, f3)(y[n], m) == 0.0
         end
+
+        @test memory(@benchmark $(mean(f3))(1) seconds=0.1) == 0
+        @test memory(@benchmark $(kernel(f3))(1, 2) seconds=0.1) == 0
     end
 
     # Test inference.
@@ -87,5 +90,13 @@
         @test full(cov(kernel(f1, f_1p2), x)) == permutedims(full(cov(kernel(f_1p2, f1), x)), [2, 1])
         @test full(cov(kernel(f1, f_2p1), x)) == permutedims(full(cov(kernel(f_2p1, f1), x)), [2, 1])
         @test full(cov(kernel(f1, f_2p2), x)) == permutedims(full(cov(kernel(f_2p2, f1), x)), [2, 1])
+
+        # Memory performance tests.
+        @test memory(@benchmark $(mean(f_1p1))(1.0) seconds=0.1) == 0
+        @test memory(@benchmark $(mean(f_1p2))(0.0) seconds=0.1) == 0
+        @test memory(@benchmark $(mean(f_2p1))(-1.0) seconds=0.1) == 0
+        @test memory(@benchmark $(mean(f_2p2))(5.0) seconds=0.1) == 0
+        @test memory(@benchmark $(kernel(f1, f_1p1))(1.0, 0.0) seconds=0.1) == 0
+        @test memory(@benchmark $(kernel(f_2p2))(0.0, 1.0) seconds=0.1) == 0
     end
 end

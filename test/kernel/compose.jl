@@ -40,4 +40,6 @@
     # Peformance checks: *
     @test memory(@benchmark EQ() * EQ() seconds=0.1) == 0
     @test memory(@benchmark $(EQ() * EQ())(1.0, 0.0) seconds=0.1) == 0
+    @test memory(@benchmark EQ() * RQ(1.0) seconds=0.1) == 0
+    @test memory(@benchmark $(EQ() * RQ(1.0))(1.0, 0.0) seconds=0.1) == 0
 end
