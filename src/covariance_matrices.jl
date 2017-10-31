@@ -29,7 +29,8 @@ function cov(d::Vector)
     pos, N = 1, map(dims, d)
     K = Matrix{Float64}(sum(N), sum(N))
     for q in eachindex(d), c in 1:N[q], p in eachindex(d)
-        pos = broadcast_over_col(K, pos, N[p], kernel(d[p], d[q]), c)
+        broadcast!(kernel(d[p], d[q]), view(K, pos:pos+N[p]-1), 1:N[p], c)
+        pos += N[p]
     end
     return StridedPDMatrix(chol(Symmetric(K) + __ϵ * I))
 end
@@ -44,19 +45,11 @@ function cov(d::Vector, d′::Vector)
     pos, Dx, Dx′ = 1, map(dims, d), map(dims, d′)
     K = Matrix{Float64}(sum(Dx), sum(Dx′))
     for q in eachindex(d′), c in 1:Dx′[q], p in eachindex(d)
-        pos = broadcast_over_col(K, pos, Dx[p], kernel(d[p], d′[q]), c)
+        broadcast!(kernel(d[p], d′[q]), view(K, pos:pos+Dx[p]-1), 1:Dx[p], c)
+        pos += Dx[p]
     end
     return K
 end
 cov(d::GP, d′::GP) = cov([d], [d′])
 cov(d::GP, d′::Vector) = cov([d], d′)
 cov(d::Vector, d′::GP) = cov(d, [d′])
-
-# Function barrier to improve performance of `cov`.
-function broadcast_over_col(K, pos, Np, k, c)
-    for r in 1:Np
-        @inbounds K[pos] = k(r, c)
-        pos += 1
-    end
-    return pos
-end
