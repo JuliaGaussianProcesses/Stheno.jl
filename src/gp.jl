@@ -1,5 +1,7 @@
-import Base: mean, show, cov, chol, eachindex
+import Base: mean, show, cov, chol, eachindex, transpose
 export mean, mean_vector, kernel, GP, GPC, condition!, predict, lpdf, sample, dims
+
+const __ϵ = 1e-9
 
 # A collection of GPs (GPC == "GP Collection"). Primarily used to track cross-kernels.
 struct GPC
@@ -32,14 +34,16 @@ function GP(op, args...)
     k = k_p′(op, args...)
     new_gp = GP{typeof(k)}(op, args, μ_p′(op, args...), k, gpc)
     for gp in gpc.gps
-        gpc.k_x[(new_gp, gp)] = k_p′p(op, new_gp, gp)
-        gpc.k_x[(gp, new_gp)] = k_pp′(op, gp, new_gp)
+        gpc.k_x[(new_gp, gp)] = k_p′p(gp, op, args...)
+        gpc.k_x[(gp, new_gp)] = k_pp′(gp, op, args...)
     end
     push!(gpc.gps, new_gp)
     return new_gp
 end
 GP(μ, k::Tk, gpc::GPC) where Tk = GP{Tk}(μ, k, gpc)
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
+transpose(f::GP) = f
+isfinite(f::GP) = isfinite(f.k)
 
 @inline dims(d::GP) = dims(kernel(d))
 @inline eachindex(f::GP) = 1:dims(f)
@@ -69,23 +73,19 @@ function get_check_gpc(args...)
 end
 
 """
-    lpdf(d::GP, f::AbstractVector{<:Real})
+    cov(d::Union{GP, Vector{GP}}, d′::Union{GP, Vector{GP}})
 
-Returns the log probability density of `f` under `d`. Dims `d` must be finite.
+Compute the cross-covariance between GPs (or vectors of) `d` and `d′`.
 """
-lpdf(d::GP, f::AbstractVector{<:Real}) =
-    -0.5 * (dims(d) * log(2π) * logdet(cov(d)) + invquad(cov(d), f .- mean_vector(d)))
+cov(d::Vector{GP}, d′::Vector{GP}) = cov(kernel.(d, RowVector(d′)))
+cov(d::Vector{GP}, d′::GP) = cov(d, Vector{GP}([d′]))
+cov(d::GP, d′::Vector{GP}) = cov(Vector{GP}([d]), d′)
+cov(d::GP, d′::GP) = cov(Vector{GP}([d]), Vector{GP}([d′]))
 
 """
-    sample(rng::AbstractRNG, d::Union{GP, Vector}, N::Int=1)
+    cov(d::Union{GP, Vector{GP}})
 
-Sample jointly from a single / multiple finite-dimensional GPs.
+Compute the marginal covariance matrix for GP (or vector thereof) `d`.
 """
-function sample(rng::AbstractRNG, ds::Vector, N::Int)
-    lin_sample = mean_vector(ds) .+ chol(cov(ds)).'randn(rng, sum(dims.(ds)), N)
-    srt, fin = vcat(1, cumsum(dims.(ds))[1:end-1] .+ 1), cumsum(dims.(ds))
-    return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
-end
-sample(rng::AbstractRNG, ds::Vector) = reshape.(sample(rng, ds, 1), dims.(ds))
-sample(rng::AbstractRNG, d::GP, N::Int) = sample(rng, [d], N)[1]
-sample(rng::AbstractRNG, d::GP) = sample(rng, [d])[1]
+cov(d::Vector{GP}) = StridedPDMatrix(chol(cov(kernel.(d, RowVector(d))) + __ϵ * I))
+cov(d::GP) = cov(Vector{GP}([d]))

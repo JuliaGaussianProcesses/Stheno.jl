@@ -1,3 +1,0 @@
-@testset "Inference" begin
-
-end

@@ -23,6 +23,8 @@ const Transform = InputTransformedKernel
 ) where {T, Tk, Tf} =
     kernel(k1) == kernel(k2)
 
+dims(k::InputTransformedKernel) = dims(k.k)
+
 """
     kernel(k::InputTransformedKernel)
 

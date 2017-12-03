@@ -1,52 +1,58 @@
 # Covariance functions for FiniteGPs / Multivariate Normals.
-export FullFinite, LeftFinite, RightFinite
-
-abstract type Finite <: Kernel{NonStationary} end
+import Base: size, show
+export Finite, LeftFinite, RightFinite
 
 """
     Finite <: Kernel{NonStationary}
 
 A kernel on a finite index set.
 """
-struct FullFinite{T<:ColOrRowVec, V<:ColOrRowVec, Tk<:Any} <: Finite
+struct Finite{Tx<:ColOrRowVec, Ty<:ColOrRowVec, Tk<:Any} <: Kernel{NonStationary}
     k::Tk
-    x::T
-    y::V
+    x::Tx
+    y::Ty
 end
-FullFinite(k, x) = FullFinite(k, x, x)
-@inline (k::FullFinite)(p::Int, q::Int) = k.k(k.x[p], k.y[q])
-==(a::FullFinite, b::FullFinite) = a.k == b.k && a.x == b.x && a.y == b.y
-function Base.show(io::IO, k::FullFinite)
-    print(io, "FullFinite of size $(length(k.x))x$(length(k.y)) with base kernel $(k.k)")
-end
-dims(k::FullFinite) = length(k.x) # This is a hack! Needs to me made more robust.
+Finite(k, x) = Finite(k, x, x)
+@inline (k::Finite)(p::Int, q::Int) = k.k(k.x[p], k.y[q])
+==(a::Finite, b::Finite) = a.k == b.k && a.x == b.x && a.y == b.y
+show(io::IO, k::Finite) =
+    print(io, "Finite of size $(length(k.x))x$(length(k.y)) with base kernel $(k.k)")
+size(k::Finite) = (length(k.x), length(k.y))
+size(k::Finite, n::Int) = n == 1 ? length(k.x) : (n == 2 ? length(k.y) : 1)
+dims(k::Finite) = length(k.x) # This is a hack! Needs to me made more robust.
+isfinite(::Finite) = true
 
 """
     LeftFinite <: Kernel{NonStationary}
 
 A kernel who's first (left) argument is from a finite index set.
 """
-struct LeftFinite{T<:ColOrRowVec, Tk<:Any} <: Finite
+struct LeftFinite{T<:ColOrRowVec, Tk<:Any} <: Kernel{NonStationary}
     k::Tk
     x::T
 end
 @inline (k::LeftFinite)(p::Int, q) = k.k(k.x[p], q)
 ==(a::LeftFinite, b::LeftFinite) = a.k == b.k && a.x == b.x
-function Base.show(io::IO, k::LeftFinite)
-    print(io, "LeftFinite of size $(length(k.x)) with base kernel $(k.k)")
-end
+show(io::IO, k::LeftFinite) = print(io, "LeftFinite, size = $(length(k.x)), kernel = $(k.k)")
+size(k::LeftFinite, n::Int) =
+    n == 1 ?
+        length(k.x) :
+        error("size(k::LeftFinite, 2) undefined.")
 
 """
     RightFinite <: Kernel{NonStationary}
 
 A kernel who's second (right) argument is from a finite index set.
 """
-struct RightFinite{T<:ColOrRowVec, Tk<:Any} <: Finite
+struct RightFinite{T<:ColOrRowVec, Tk<:Any} <: Kernel{NonStationary}
     k::Tk
     y::T
 end
 @inline (k::RightFinite)(p, q::Int) = k.k(p, k.y[q])
 ==(a::RightFinite, b::RightFinite) = a.k == b.k && a.y == b.y
-function Base.show(io::IO, k::RightFinite)
+show(io::IO, k::RightFinite) =
     print(io, "RightFinite of size $(length(k.y)) with base kernel $(k.k)")
-end
+size(k::RightFinite, n::Int) =
+    n == 1 ?
+        error("size(k::RightFinite, 1) undefined.") :
+        length(k.y)

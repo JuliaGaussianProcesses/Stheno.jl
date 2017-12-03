@@ -1,5 +1,6 @@
 import Base: +, *, ==
-export KernelType, Kernel, EQ, RQ, Linear, WhiteNoise, lb, ub
+export KernelType, Kernel, EQ, RQ, Linear, Noise, Weiner, WeinerVelocity, Exponential,
+    Constant
 
 """
 Determines whether a kernel is stationary or not and enables dispatch on this.
@@ -18,6 +19,8 @@ abstract type Stationary <: KernelType end
 Supertype for all kernels; `T` indicates whether is `Stationary` or `NonStationary`.
 """
 abstract type Kernel{T<:KernelType} end
+
+isfinite(::Kernel) = false
 
 """
     Constant{T<:Real} <: Kernel{Stationary}
@@ -65,12 +68,38 @@ end
 ==(a::Linear, b::Linear) = a.c == b.c
 
 """
-    WhiteNoise{T<:Real} <: Kernel{Stationary}
+    Noise{T<:Real} <: Kernel{Stationary}
 
-A stationary white-noise kernel. Has a single parameter `σ²` which controls the variance.
+A standardised stationary white-noise kernel.
 """
-struct WhiteNoise{T<:Real} <: Kernel{Stationary}
-    σ²::T
-end
-@inline (k::WhiteNoise)(x::Real, x′::Real) = x == x′ ? k.σ² : 0.0
-==(a::WhiteNoise, b::WhiteNoise) = a.σ² == b.σ²
+struct Noise <: Kernel{Stationary} end
+@inline (::Noise)(x::Real, x′::Real) = x == x′ ? 1.0 : 0.0
+==(::Noise, ::Noise) = true
+
+"""
+    Weiner <: Kernel{NonStationary}
+
+The standardised stationary Weiner-process kernel.
+"""
+struct Weiner <: Kernel{NonStationary} end
+@inline (::Weiner)(x::Real, x′::Real) = min(x, x′)
+==(::Weiner, ::Weiner) = true
+
+"""
+    WeinerVelocity <: Kernel{NonStationary}
+
+The standardised WeinerVelocity kernel.
+"""
+struct WeinerVelocity <: Kernel{NonStationary} end
+@inline (::WeinerVelocity)(x::Real, x′::Real) =
+    min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
+==(::WeinerVelocity, ::WeinerVelocity) = true
+
+"""
+    Exponential <: Kernel{Stationary}
+
+The standardised Exponential kernel.
+"""
+struct Exponential <: Kernel{Stationary} end
+@inline (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
+==(::Exponential, ::Exponential) = true

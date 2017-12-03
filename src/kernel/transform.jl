@@ -1,4 +1,4 @@
-export Circularised
+export Circularised, lb, ub
 
 """
     Circularised{K<:Kernel{Stationary}} <: Kernel{Stationary}

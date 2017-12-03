@@ -22,9 +22,12 @@
         @test k1 != k3
         @test k2 != k3
 
-        @test memory(@benchmark $k1(1.0, 0.0) seconds=0.1) == 0
-        @test memory(@benchmark $k2(1.0, 0.0) seconds=0.1) == 0
-        @test memory(@benchmark $k3(1.0, 0.0) seconds=0.1) == 0
+        if check_mem
+
+            @test memory(@benchmark $k1(1.0, 0.0) seconds=0.1) == 0
+            @test memory(@benchmark $k2(1.0, 0.0) seconds=0.1) == 0
+            @test memory(@benchmark $k3(1.0, 0.0) seconds=0.1) == 0
+        end
     end
 
     # Test functionality under equality.
@@ -56,10 +59,13 @@
         @test k1(x1, x2) == Index{1}(EQ())(x1, x2)
         @test k2(x1, x2) == Index{2}(EQ())(x1, x2)
 
-        @test memory(@benchmark Transform(EQ(), Index{1}()) seconds=0.1) == 0
-        @test memory(@benchmark Transform(EQ(), Index{2}()) seconds=0.1) == 0
-        @test memory(@benchmark $k1($x1, $x2) seconds=0.1) == 0
-        @test memory(@benchmark $k2($x1, $x2) seconds=0.1) == 0
+        if check_mem
+
+            @test memory(@benchmark Transform(EQ(), Index{1}()) seconds=0.1) == 0
+            @test memory(@benchmark Transform(EQ(), Index{2}()) seconds=0.1) == 0
+            @test memory(@benchmark $k1($x1, $x2) seconds=0.1) == 0
+            @test memory(@benchmark $k2($x1, $x2) seconds=0.1) == 0
+        end
     end
 
     let rng = MersenneTwister(123456)
@@ -78,10 +84,12 @@
         @test RQ(1.0)(cos(2π * x), cos(2π * x′)) * RQ(1.0)(sin(2π * x), sin(2π * x′)) ==
             k2(x, x′)
 
-        @test memory(@benchmark Periodic($(EQ())) seconds=0.1) == 0
-        @test memory(@benchmark Periodic($(RQ(1.0))) seconds=0.1) == 0
-        @test memory(@benchmark $(Periodic(EQ()))(1.0, 0.0) seconds=0.1) == 0
-        @test memory(@benchmark $(Periodic(RQ(1.0)))(1.0, 0.0) seconds=0.1) == 0
+        if check_mem
+            @test memory(@benchmark Periodic($(EQ())) seconds=0.1) == 0
+            @test memory(@benchmark Periodic($(RQ(1.0))) seconds=0.1) == 0
+            @test memory(@benchmark $(Periodic(EQ()))(1.0, 0.0) seconds=0.1) == 0
+            @test memory(@benchmark $(Periodic(RQ(1.0)))(1.0, 0.0) seconds=0.1) == 0
+        end
     end
 
 end

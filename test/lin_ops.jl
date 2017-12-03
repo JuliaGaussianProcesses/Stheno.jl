@@ -1,5 +1,13 @@
 @testset "lin_ops" begin
 
+    # Test mean_vector.
+    let rng = MersenneTwister(123456)
+        x, x′ = randn(rng, 5), randn(rng, 10)
+        f = GP(sin, EQ(), GPC())
+        @test mean_vector(f(x)) == sin.(x)
+        @test mean_vector([f(x), f(x′)]) == vcat(sin.(x), sin.(x′))
+    end
+
     # Test indexing into a GP and that the cross-covariances with another independent GP
     # are zero.
     let rng = MersenneTwister(123456)
@@ -12,21 +20,55 @@
         f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
         f3 = f1(x)
 
-        # Check mean and marginal covariance under indexing.        
-        @test mean(f3).(eachindex(x)) == mean(f1).(x)
-        for m in eachindex(x), n in eachindex(x)
-            @test kernel(f3)(m, n) == kernel(f1)(x[m], x[n])
-        end
-        for m in eachindex(x), n in eachindex(y)
-            @test kernel(f3, f1)(m, y[n]) == kernel(f1)(x[m], y[n])
-            @test kernel(f1, f3)(y[n], m) == kernel(f1)(y[n], x[m])
+        # Check mean and marginal covariance under indexing.
+        idx, idy = eachindex(x), eachindex(y)
+        @test mean(f3).(idx) == mean(f1).(x)
+        @test kernel(f3).(idx, idx.') == kernel(f1).(x, x.')
+        @test kernel(f3, f1).(idx, y.') == kernel(f1).(x, y.')
+        @test kernel(f1, f3).(y, idx.') == kernel(f1).(y, x.')
+        @test all(kernel(f3, f2).(idx, y.') .== 0.0)
+        @test all(kernel(f2, f3).(y.', idx) .== 0.0)
 
-            @test kernel(f3, f2)(m, y[n]) == 0.0
-            @test kernel(f2, f3)(y[n], m) == 0.0
+        if check_mem
+            @test memory(@benchmark $(mean(f3))(1) seconds=0.1) == 0
+            @test memory(@benchmark $(kernel(f3))(1, 2) seconds=0.1) == 0
         end
 
-        @test memory(@benchmark $(mean(f3))(1) seconds=0.1) == 0
-        @test memory(@benchmark $(kernel(f3))(1, 2) seconds=0.1) == 0
+        # Check that kernel types are correct.
+        f4 = f1(y)
+        @test typeof(kernel(f4)) <: Finite
+        @test typeof(kernel(f4, f4)) <: Finite
+        @test typeof(kernel(f4, f3)) <: Finite
+        @test typeof(kernel(f3, f4)) <: Finite
+        @test typeof(kernel(f4, f1)) <: LeftFinite
+        @test typeof(kernel(f1, f4)) <: RightFinite
+        @test typeof(kernel(f2, f4)) <: RightFinite
+        @test typeof(kernel(f4, f2)) <: LeftFinite
+
+        # Check that kernels evaluate correctly.
+        @test kernel(f4).(idy, idy.') == kernel(f1).(y, y.')
+        @test kernel(f3, f4).(idx, idy.') == kernel(f1).(x, y.')
+        @test kernel(f4, f3).(idy, idx.') == kernel(f3, f4).(idx, idy.').'
+
+        # Check that nested indexing works as expected.
+        f5 = f3(1:2)
+        @test typeof(kernel(f5)) <: Finite
+        @test typeof(kernel(f4, f5)) <: Finite
+        @test typeof(kernel(f5, f4)) <: Finite
+        @test typeof(kernel(f5, f3)) <: Finite
+        @test typeof(kernel(f3, f5)) <: Finite
+        @test typeof(kernel(f5, f2)) <: LeftFinite
+        @test typeof(kernel(f2, f5)) <: RightFinite
+        @test typeof(kernel(f5, f1)) <: LeftFinite
+        @test typeof(kernel(f1, f5)) <: RightFinite
+
+        # Check that the kernels evaluate correctly.
+        id5, id4, id3 = eachindex(f5), eachindex(f4), eachindex(f3)
+        @test kernel(f5).(id5, id5.') == kernel(f3).(id5, id5.')
+        @test kernel(f5, f4).(id5, id4.') == kernel(f1).(x[id5], y[id4].')
+        @test kernel(f4, f5).(id4, id5.') == kernel(f5, f4).(id5, id4.').'
+        @test kernel(f5, f3).(id5, id3.') == kernel(f1).(x[id5], x[id3].')
+        @test kernel(f3, f5).(id3, id5.') == kernel(f5, f3).(id5, id3.').'
     end
 
     # Test inference.
@@ -49,54 +91,35 @@
         @test all(kernel(fpost_gp).(x, RowVector(x)) .- diagm(2e-9 * ones(x)) .< 1e-12)
     end
 
-    # Test addition of GPs.
+    # Test the multiplication of a GP by a constant.
     let rng = MersenneTwister(123456)
 
         # Select some input locations.
-        x, y = randn(rng, 3), randn(rng, 2)
+        x, y, σ = randn(rng, 3), randn(rng, 2), exp(randn(rng))
 
         # Set three independent GPs.
-        μ1, μ2, μ3 = sin, cos, tan
-        k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
+        μ, k = sin, RQ(1.0)
         gpc = GPC()
-        f1, f2, f3 = GP(μ1, k1, gpc), GP(μ2, k2, gpc), GP(μ3, k3, gpc)
+        f, fi = GP(μ, k, gpc), GP(x->0, EQ(), gpc)
+        σf = σ * f
+        fσ = f * σ
 
-        # Compute all four summations between first two GPs.
-        f_1p1 = f1 + f1
-        f_1p2 = f1 + f2
-        f_2p1 = f2 + f1
-        f_2p2 = f2 + f2
+        # Check that the mean has been appropriately scaled.
+        @test mean(σf).(x) == σ * mean(f).(x)
+        @test mean(fσ).(x) == mean(f).(x) * σ
 
-        # Check that the mean functions have been correctly computed.
-        @test mean(f_1p1).(x) == μ1.(x) .+ μ1.(x)
-        @test mean(f_1p2).(x) == μ1.(x) .+ μ2.(x)
-        @test mean(f_2p1).(x) == μ2.(x) .+ μ1.(x)
-        @test mean(f_2p2).(x) == μ2.(x) .+ μ2.(x)
+        # Check the marginal covariance.
+        @test kernel(σf).(x, y') == σ^2 .* kernel(f).(x, y')
+        @test kernel(σf).(x, y') == kernel(f).(x, y') .* σ^2
 
-        # Check that the marginal covariances have been correctly computed.
-        @test kernel(f_1p1).(x, x') ≈ 4 .* k1.(x, x')
-        @test kernel(f_1p2).(x, x') ≈ k1.(x, x') .+ k2.(x, x')
-        @test kernel(f_2p1).(x, x') ≈ k2.(x, x') .+ k1.(x, x')
-        @test kernel(f_2p2).(x, x') ≈ 4 .* k2.(x, x')
+        # Check the cross-covariances.
+        @test kernel(σf, f).(x, y') == σ .* kernel(f).(x, y')
+        @test kernel(f, σf).(x, y') == kernel(f).(x, y') .* σ
+        @test kernel(fσ, f).(x, y') == σ .* kernel(f).(x, y')
+        @test kernel(f, fσ).(x, y') == kernel(f).(x, y') .* σ
 
-        # Check that the cross-covariances have been correctly computed.
-        @test kernel(f1, f_1p1).(x, x') ≈ 2 .* kernel(f1).(x, x')
-        @test kernel(f1, f_1p2).(x, x') ≈ kernel(f1).(x, x')
-        @test kernel(f1, f_2p1).(x, x') ≈ kernel(f1).(x, x')
-        @test kernel(f1, f_2p2).(x, x') ≈ zeros(3, 3)
-
-        # Check that the cross-covariances match.
-        @test kernel(f1, f_1p1).(x, x') == permutedims(kernel(f_1p1, f1).(x, x'), [2, 1])
-        @test kernel(f1, f_1p2).(x, x') == permutedims(kernel(f_1p2, f1).(x, x'), [2, 1])
-        @test kernel(f1, f_2p1).(x, x') == permutedims(kernel(f_2p1, f1).(x, x'), [2, 1])
-        @test kernel(f1, f_2p2).(x, x') == permutedims(kernel(f_2p2, f1).(x, x'), [2, 1])
-
-        # Memory performance tests.
-        @test memory(@benchmark $(mean(f_1p1))(1.0) seconds=0.1) == 0
-        @test memory(@benchmark $(mean(f_1p2))(0.0) seconds=0.1) == 0
-        @test memory(@benchmark $(mean(f_2p1))(-1.0) seconds=0.1) == 0
-        @test memory(@benchmark $(mean(f_2p2))(5.0) seconds=0.1) == 0
-        @test memory(@benchmark $(kernel(f1, f_1p1))(1.0, 0.0) seconds=0.1) == 0
-        @test memory(@benchmark $(kernel(f_2p2))(0.0, 1.0) seconds=0.1) == 0
+        # Check still independent.
+        @test kernel(σf, fi).(x, y') == kernel(f, fi).(x, y')
+        @test kernel(fσ, fi).(x, y') == kernel(f, fi).(x, y')
     end
 end

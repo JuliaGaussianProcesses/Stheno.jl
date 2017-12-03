@@ -1,9 +1,7 @@
 import Base.BLAS: trsv
 import PDMats: AbstractPDMat, invquad, dim
 import Base: cov, logdet, full, size, chol, ==
-export cov, invquad, AbstractPDMat
-
-const __ϵ = 1e-9
+export cov, cov!, invquad, AbstractPDMat
 
 """
     StridedPDMatrix
@@ -21,35 +19,27 @@ chol(Σ::StridedPDMatrix) = Σ.U
 ==(Σ1::StridedPDMatrix, Σ2::StridedPDMatrix) = Σ1.U == Σ2.U
 
 """
-    cov(d::Union{GP, Vector})
+    cov!(K::AbstractMatrix, k::Union{Kernel, Matrix{Kernel}})
 
-Compute the covariance matrix implied by a FiniteGP.
+Store in `K` the covariance matrix implied by the finite kernel (matrix thereof) `k`.
 """
-function cov(d::Vector)
-    pos, N = 1, map(dims, d)
-    K = Matrix{Float64}(sum(N), sum(N))
-    for q in eachindex(d), c in 1:N[q], p in eachindex(d)
-        broadcast!(kernel(d[p], d[q]), view(K, pos:pos+N[p]-1), 1:N[p], c)
-        pos += N[p]
-    end
-    return StridedPDMatrix(chol(Symmetric(K) + __ϵ * I))
-end
-cov(d::GP) = cov([d])
-
-"""
-    cov(d::Union{GP, Vector}, d′::Union{GP, Vector})
-
-Compute the cross-covariance between each GP in `d` and `d′`.
-"""
-function cov(d::Vector, d′::Vector)
-    pos, Dx, Dx′ = 1, map(dims, d), map(dims, d′)
-    K = Matrix{Float64}(sum(Dx), sum(Dx′))
-    for q in eachindex(d′), c in 1:Dx′[q], p in eachindex(d)
-        broadcast!(kernel(d[p], d′[q]), view(K, pos:pos+Dx[p]-1), 1:Dx[p], c)
-        pos += Dx[p]
+cov!(K::AbstractMatrix, k::Kernel) = broadcast!(k, K, 1:size(k, 1), (1:size(k, 2))')
+function cov!(K::AbstractMatrix, k::Matrix)
+    rs_, cs_ = size.(k[:, 1], 1), size.(k[1, :], 2)
+    rs, cs = Vector{Int}(length(rs_) + 1), Vector{Int}(length(cs_) + 1)
+    cumsum!(view(rs, 2:length(rs_) + 1), rs_)
+    cumsum!(view(cs, 2:length(cs_) + 1), cs_)
+    rs[1], cs[1] = 0, 0
+    for I in CartesianRange(size(k))
+        cov!(view(K, rs[I[1]]+1:rs[I[1]+1], cs[I[2]]+1:cs[I[2]+1]), k[I[1], I[2]])
     end
     return K
 end
-cov(d::GP, d′::GP) = cov([d], [d′])
-cov(d::GP, d′::Vector) = cov([d], d′)
-cov(d::Vector, d′::GP) = cov(d, [d′])
+
+"""
+    cov(k::Union{Kernel, Matrix{Kernel}})
+
+Compute the covariance matrix implied by the finite kernel (or matrix thereof) `k`.
+"""
+cov(k::Kernel) = cov!(Matrix{Float64}(size(k, 1), size(k, 2)), k)
+cov(k::Matrix) = cov!(Matrix{Float64}(sum(size.(k[:, 1], 1)), sum(size.(k[1, :], 2))), k)

@@ -22,35 +22,35 @@
         @test chol(K) == chol(K_)
     end
 
-    # Test joint covariance matrix construction.
-    let
-        rng = MersenneTwister(123456)
-        P, Q = 3, 2
-        x, y = randn(rng, P), randn(rng, Q)
+    # Test covariance matrix construction with a single kernel.
+    let rng = MersenneTwister(123456)
+        P, Q = 5, 6
+        x, y = randn(rng, 5), randn(rng, 6)
+        k = Finite(EQ(), x, y)
 
-        gpc = GPC()
-        f1, f2 = GP(x->0.0, EQ(), gpc), GP(x->0.0, RQ(1.0), gpc)
-        K1, K2 = kernel(f1).(x, x'), kernel(f2).(y, y')
-        @test K1 ≈ full(cov([f1(x)]))
-        @test K2 ≈ full(cov([f2(y)]))
+        K = Matrix{Float64}(P, Q)
+        @test cov!(K, k) == EQ().(x, y.')
+        @test cov!(K, k) == cov(k)
 
-        K_manual = vcat(hcat(K1, zeros(P, Q)), hcat(zeros(Q, P), K2))
-        @test K_manual ≈ full(cov([f1(x), f2(y)]))
+        k = Finite(RQ(1.0), x)
+        K = Matrix{Float64}(P, P)
+        @test cov!(K, k) == RQ(1.0).(x, x.')
+        @test cov!(K, k) == cov(k)
     end
 
-    # Test joint cross-covariance matrix construction.
-    let
-        rng = MersenneTwister(123456)
-        P1, P2, Ps1, Ps2 = 3, 2, 4, 5
-        x1, x2, xs1, xs2 = randn.(rng, [P1, P2, Ps1, Ps2])
+    # Test covariance matrix construct with multiple kernels.
+    let rng = MersenneTwister(123456)
+        P1, P2, Q1, Q2 = 3, 4, 5, 6
+        x1, x2, y1, y2 = randn.(rng, [P1, P2, Q1, Q2])
+        k11, k12, k21, k22 = Finite.(
+            [EQ(), RQ(1.0), Stheno.Constant(2.5), Linear(4.0)],
+            [x1, x1, x2, x2],
+            [y1, y2, y1, y2],
+        )
 
-        gpc = GPC()
-        f1, f2 = GP(x->0.0, EQ(), gpc), GP(x->0.0, RQ(1.0), gpc)
-
-        K11, K12 = kernel(f1, f1).(xs1, x1'), kernel(f1, f2).(xs1, x2')
-        K21, K22 = kernel(f2, f1).(xs2, x1'), kernel(f2, f2).(xs2, x2')
-
-        K_manual = vcat(hcat(K11, K12), hcat(K21, K22))
-        @test K_manual == full(cov([f1(xs1), f2(xs2)], [f1(x1), f2(x2)]))
+        K = Matrix{Float64}(P1 + P2, Q1 + Q2)
+        ks = [k11 k12; k21 k22]
+        @test cov!(K, ks) == vcat(hcat(cov(k11), cov(k12)), hcat(cov(k21), cov(k22)))
+        @test cov!(K, ks) == cov(ks)
     end
 end
