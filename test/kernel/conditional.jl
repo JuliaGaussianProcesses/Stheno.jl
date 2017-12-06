@@ -1,6 +1,6 @@
 @testset "posterior" begin
 
-    import Stheno: LeftFinite, ConditionalData, Conditional, Constant
+    import Stheno: LhsFinite, ConditionalData, Conditional, Constant
 
     # Test that ConditionalData works as expected.
     let rng = MersenneTwister(123456)
@@ -18,12 +18,12 @@
 
         x = randn(rng, N)
         k1, k2, k12 = EQ(), RQ(1.0), Constant(0.0)
-        data, k1f̂ = ConditionalData(chol(k1.(x, x') + 1e-9I)), LeftFinite(k1, x)
+        data, k1f̂ = ConditionalData(chol(k1.(x, x') + 1e-9I)), LhsFinite(k1, x)
 
         kpost_1 = Conditional(k1, k1f̂, k1f̂, data)
         @test all(abs.(kpost_1.(x, RowVector(x))) .< 1e-8)
 
-        k2f̂ = LeftFinite(k12, x)
+        k2f̂ = LhsFinite(k12, x)
         kpost_21 = Conditional(k2, k2f̂, k2f̂, data)
         @test all(abs.(kpost_21.(x, RowVector(x)) .- RQ(1.0).(x, RowVector(x))) .< 1e-12)
     end

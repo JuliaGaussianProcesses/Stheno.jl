@@ -40,10 +40,10 @@
         @test typeof(kernel(f4, f4)) <: Finite
         @test typeof(kernel(f4, f3)) <: Finite
         @test typeof(kernel(f3, f4)) <: Finite
-        @test typeof(kernel(f4, f1)) <: LeftFinite
-        @test typeof(kernel(f1, f4)) <: RightFinite
-        @test typeof(kernel(f2, f4)) <: RightFinite
-        @test typeof(kernel(f4, f2)) <: LeftFinite
+        @test typeof(kernel(f4, f1)) <: LhsFinite
+        @test typeof(kernel(f1, f4)) <: RhsFinite
+        @test typeof(kernel(f2, f4)) <: RhsFinite
+        @test typeof(kernel(f4, f2)) <: LhsFinite
 
         # Check that kernels evaluate correctly.
         @test kernel(f4).(idy, idy.') == kernel(f1).(y, y.')
@@ -57,10 +57,10 @@
         @test typeof(kernel(f5, f4)) <: Finite
         @test typeof(kernel(f5, f3)) <: Finite
         @test typeof(kernel(f3, f5)) <: Finite
-        @test typeof(kernel(f5, f2)) <: LeftFinite
-        @test typeof(kernel(f2, f5)) <: RightFinite
-        @test typeof(kernel(f5, f1)) <: LeftFinite
-        @test typeof(kernel(f1, f5)) <: RightFinite
+        @test typeof(kernel(f5, f2)) <: LhsFinite
+        @test typeof(kernel(f2, f5)) <: RhsFinite
+        @test typeof(kernel(f5, f1)) <: LhsFinite
+        @test typeof(kernel(f1, f5)) <: RhsFinite
 
         # Check that the kernels evaluate correctly.
         id5, id4, id3 = eachindex(f5), eachindex(f4), eachindex(f3)

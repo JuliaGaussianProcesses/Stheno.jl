@@ -24,11 +24,11 @@ k_p′(f_q::GP, x::ColOrRowVec) = Finite(k(f_q), x)
 k_p′p(f_p::GP, f_q::GP, x::ColOrRowVec) =
     isfinite(f_p) ?
         Finite(k(f_q, f_p), x, 1:size(k(f_p), 2)) :
-        LeftFinite(k(f_q, f_p), x)
+        LhsFinite(k(f_q, f_p), x)
 k_pp′(f_p::GP, f_q::GP, x::ColOrRowVec) =
     isfinite(f_p) ?
         Finite(k(f_p, f_q), 1:size(k(f_p), 1), x) :
-        RightFinite(k(f_p, f_q), x)
+        RhsFinite(k(f_p, f_q), x)
 dims(::GP, x::ColOrRowVec) = length(x)
 
 # Some syntactic sugar for conditioning.

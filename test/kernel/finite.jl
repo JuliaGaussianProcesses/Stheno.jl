@@ -40,7 +40,7 @@
 
         # Construct kernels.
         x, y = randn(rng, N), randn(rng, N)
-        k1, k2, k3 = LeftFinite(EQ(), x), LeftFinite(EQ(), y), LeftFinite(RQ(1.0), x)
+        k1, k2, k3 = LhsFinite(EQ(), x), LhsFinite(EQ(), y), LhsFinite(RQ(1.0), x)
 
         # Check equality works as expected
         @test k1 == k1
@@ -58,9 +58,9 @@
         if check_mem
 
             # Memory performance tests.
-            @test memory(@benchmark LeftFinite(EQ(), $x) seconds=0.1) == 16
-            @test memory(@benchmark LeftFinite(EQ(), $y) seconds=0.1) == 16
-            @test memory(@benchmark LeftFinite(RQ(1.0), $x) seconds=0.1) == 32
+            @test memory(@benchmark LhsFinite(EQ(), $x) seconds=0.1) == 16
+            @test memory(@benchmark LhsFinite(EQ(), $y) seconds=0.1) == 16
+            @test memory(@benchmark LhsFinite(RQ(1.0), $x) seconds=0.1) == 32
 
             @test memory(@benchmark $k1(1, 2) seconds=0.1) == 0
         end
@@ -71,7 +71,7 @@
 
         # Construct kernels.
         x, y = randn(rng, N), randn(rng, N)
-        k1, k2, k3 = RightFinite(EQ(), x), RightFinite(EQ(), y), RightFinite(RQ(1.0), x)
+        k1, k2, k3 = RhsFinite(EQ(), x), RhsFinite(EQ(), y), RhsFinite(RQ(1.0), x)
 
         # Check equality works as expected
         @test k1 == k1
@@ -89,9 +89,9 @@
         if check_mem
 
             # Memory performance tests.
-            @test memory(@benchmark RightFinite(EQ(), $x) seconds=0.1) == 16
-            @test memory(@benchmark RightFinite(EQ(), $y) seconds=0.1) == 16
-            @test memory(@benchmark RightFinite(RQ(1.0), $x) seconds=0.1) == 32
+            @test memory(@benchmark RhsFinite(EQ(), $x) seconds=0.1) == 16
+            @test memory(@benchmark RhsFinite(EQ(), $y) seconds=0.1) == 16
+            @test memory(@benchmark RhsFinite(RQ(1.0), $x) seconds=0.1) == 32
 
             @test memory(@benchmark $k1(1, 2) seconds=0.1) == 0
         end
@@ -113,35 +113,46 @@
         @test k3.(1:N-1, (1:N-1).') == k1.(2:N, (2:N).')
     end
 
-    # Nest LeftFinite kernels.
+    # Nest LhsFinite kernels.
     let N = 5, rng = MersenneTwister(123456)
 
         # Construct kernels.
         x, y = randn(rng, N), randn(rng, N)
-        k1 = LeftFinite(EQ(), x)
+        k1 = LhsFinite(EQ(), x)
 
         # Nest into Finite.
         k2 = Finite(k1, 1:N, y)
         @test k2.(1:N, (1:N).') == k1.(1:N, y.')
 
-        # Nest into LeftFinite.
-        k3 = LeftFinite(k1, 1:N-1)
+        # Nest into LhsFinite.
+        k3 = LhsFinite(k1, 1:N-1)
         @test k3.(1:N-1, y.') == k1.(1:N-1, y.')
     end
 
-    # Nest RightFinite kenrels.
+    # Nest RhsFinite kenrels.
     let N = 5, rng = MersenneTwister(123456)
 
         # Construct kernels.
         x, y = randn(rng, N), randn(rng, N)
-        k1 = RightFinite(EQ(), y)
+        k1 = RhsFinite(EQ(), y)
 
         # Nest into Finite.
         k2 = Finite(k1, x, 1:N)
         @test k2.(1:N, (1:N).') == k1.(x, (1:N).')
 
-        # Nest into RightFinite.
-        k3 = RightFinite(k1, 2:N)
+        # Nest into RhsFinite.
+        k3 = RhsFinite(k1, 2:N)
         @test k3.(x, (1:N-1).') == k1.(x, (2:N).')
+    end
+
+    # Construct Finite from LhsFinite and RhsFinite and test for consistency.
+    let N = 5, rng = MersenneTwister(123456)
+
+        x, y = randn(rng, N), randn(rng, N)
+        k_lhs, k_rhs = LhsFinite(EQ(), x), RhsFinite(EQ(), y)
+        k_fin_lhs, k_fin_rhs = Finite(k_lhs, y), Finite(k_rhs, x)
+
+        @test k_fin_lhs.(1:N, (1:N)') == k_lhs.(1:N, y')
+        @test k_fin_rhs.(1:N, (1:N)') == k_rhs.(x, (1:N)')
     end
 end
