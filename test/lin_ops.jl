@@ -80,6 +80,9 @@
         fpost_gp = posterior(f, f(x), f̂)
 
         # Test finite GP posterior.
+        println(kernel(fpost_d))
+        println(kernel(fpost_d).k_f̂f)
+        println(kernel(fpost_d).k_f̂f′)
         idx = collect(eachindex(fpost_d))
         @test dims(fpost_d) == length(x)
         @test mean(fpost_d).(idx) ≈ f̂

@@ -14,10 +14,7 @@ end
 @inline (k::LhsFinite)(p::Int, q) = k.k(k.x[p], q)
 ==(a::LhsFinite, b::LhsFinite) = a.k == b.k && a.x == b.x
 show(io::IO, k::LhsFinite) = print(io, "LhsFinite, size = $(length(k.x)), kernel = $(k.k)")
-size(k::LhsFinite, n::Int) =
-    n == 1 ?
-        length(k.x) :
-        error("size(k::LhsFinite, 2) undefined.")
+size(k::LhsFinite, n::Int) = n == 1 ? length(k.x) : size(k.k, n)
 
 """
     RhsFinite <: Kernel{NonStationary}
@@ -32,10 +29,7 @@ end
 ==(a::RhsFinite, b::RhsFinite) = a.k == b.k && a.y == b.y
 show(io::IO, k::RhsFinite) =
     print(io, "RhsFinite of size $(length(k.y)) with base kernel $(k.k)")
-size(k::RhsFinite, n::Int) =
-    n == 1 ?
-        error("size(k::RhsFinite, 1) undefined.") :
-        length(k.y)
+size(k::RhsFinite, n::Int) = n == 1 ? size(k.k, n) : length(k.y)
 
 """
     Finite <: Kernel{NonStationary}

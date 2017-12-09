@@ -17,15 +17,25 @@ ConditionalData(U::UpperTriangular) =
 
 A kernel for use in conditional distributions.
 """
-struct Conditional{Tk} <: Kernel{NonStationary}
+struct Conditional{Tk<:Kernel} <: Kernel{NonStationary}
     k_ff′::Tk
-    k_f̂f::Any
-    k_f̂f′::Any
+    k_f̂f::Vector{Kernel}
+    k_f̂f′::Vector{Kernel}
     data::ConditionalData
 end
-function (k::Conditional)(x, x′)
-    a = At_ldiv_B!(k.data.U, broadcast!(k.k_f̂f, k.data.tmp, k.data.idx, x))
-    b = At_ldiv_B!(k.data.U, broadcast!(k.k_f̂f′, k.data.tmp′, k.data.idx, x′))
+Conditional(k_ff′::Kernel, k_f̂f::Kernel, k_f̂f′::Kernel, data::ConditionalData) = 
+    Conditional(k_ff′, Vector{Kernel}([k_f̂f]), Vector{Kernel}([k_f̂f]), data)
+Conditional(k_ff′::Kernel, k_f̂f::Kernel, k_f̂f′::Vector{<:Kernel}, data::ConditionalData) =
+    Conditional(k_ff′, Vector{Kernel}([k_f̂f]), k_f̂f, data)
+Conditional(k_ff′::Kernel, k_f̂f::Vector{<:Kernel}, k_f̂f′::Kernel, data::ConditionalData) =
+    Conditional(k_ff′, k_f̂f, Vector{Kernel}([k_f̂f]), data)
+function (k::Conditional)(x::Real, x′::Real)
+
+    kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k, k.x, [k.y[x]]) for k in k.k_f̂f]
+    kf′s = [k isa LhsFinite ? Finite(k, [x]) : Finite(k, k.x, [k.y[x]]) for k in k.k_f̂f′]
+
+    a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
+    b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
     return k.k_ff′(x, x′) - dot(a, b)
 end
 ==(a::Conditional{Tk}, b::Conditional{Tk}) where Tk =

@@ -31,34 +31,35 @@ k_pp′(f_p::GP, f_q::GP, x::ColOrRowVec) =
         RhsFinite(k(f_p, f_q), x)
 dims(::GP, x::ColOrRowVec) = length(x)
 
-# Some syntactic sugar for conditioning.
-struct Assignment
-    f::GP
-    y::ColOrRowVec
-end
-←(f, y) = Assignment(f, y)
-|(f::GP, c::Assignment) = posterior(f, c.f, c.y)
-
 """
-    posterior(f::GP, f_obs::GP, f̂::ColOrRowVec)
+    posterior(f::GP, f_obs::GP, f̂::Vector)
 
 Compute the posterior of the process `f` have observed that `f_obs` equals `f̂`.
 """
-posterior(f::GP, f_obs::GP, f̂::ColOrRowVec) =
+posterior(f::GP, f_obs::GP, f̂::Vector) =
     GP(posterior, f, f_obs, f̂, ConditionalData(chol(cov(f_obs))))
-posterior(f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:ColOrRowVec}) =
+posterior(f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}) =
     GP(posterior, f, f_obs, f̂, ConditionalData(chol(cov(f_obs))))
 
-function μ_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::ColOrRowVec, data::ConditionalData)
+function μ_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData)
     μ, k_ff̂ = mean(f), k(f, f_obs)
     α = A_ldiv_B!(data.U, At_ldiv_B!(data.U, f̂ .- mean_vector(f_obs)))
     return x::Number->μ(x) + RowVector(broadcast!(k_ff̂, data.tmp, x, data.idx)) * α
 end
-k_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::ColOrRowVec, data::ConditionalData) =
+k_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData) =
     Conditional(k(f), k(f_obs, f), k(f_obs, f), data)
-k_p′p(f_p::GP, ::typeof(posterior), f::GP, f_obs::GP, f̂::ColOrRowVec, data::ConditionalData) =
+k_p′p(f_p::GP, ::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData) =
     Conditional(k(f, f_p), k(f_obs, f), k(f_obs, f_p), data)
-k_pp′(f_p::GP, ::typeof(posterior), f::GP, f_obs::GP, f̂::ColOrRowVec, data::ConditionalData) =
+k_pp′(f_p::GP, ::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData) =
     Conditional(k(f_p, f), k(f_obs, f_p), k(f_obs, f), data)
-dims(::typeof(posterior), f::GP, ::GP, f̂::ColOrRowVec) = dims(f)
+dims(::typeof(posterior), f::GP, ::GP, f̂::Vector) = dims(f)
+
+# Some syntactic sugar for conditioning.
+struct Assignment
+    f::GP
+    y::Vector
+end
+←(f, y) = Assignment(f, y)
+|(f::GP, c::Assignment) = posterior(f, c.f, c.y)
+|(f::GP, c::Vector{Assignment}) = posterior(f, [c̄.f for c̄ in c], [c̄.y for c̄ in c])
 
