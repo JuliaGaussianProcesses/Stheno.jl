@@ -31,8 +31,8 @@ Conditional(k_ff′::Kernel, k_f̂f::Vector{<:Kernel}, k_f̂f′::Kernel, data::
     Conditional(k_ff′, k_f̂f, Vector{Kernel}([k_f̂f]), data)
 function (k::Conditional)(x::Real, x′::Real)
 
-    kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k, k.x, [k.y[x]]) for k in k.k_f̂f]
-    kf′s = [k isa LhsFinite ? Finite(k, [x]) : Finite(k, k.x, [k.y[x]]) for k in k.k_f̂f′]
+    kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k.k_f̂f]
+    kf′s = [k isa LhsFinite ? Finite(k, [x′]) : Finite(k.k, k.x, [k.y[x′]]) for k in k.k_f̂f′]
 
     a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
     b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))

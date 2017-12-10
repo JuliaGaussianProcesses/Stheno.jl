@@ -80,18 +80,15 @@
         fpost_gp = posterior(f, f(x), f̂)
 
         # Test finite GP posterior.
-        println(kernel(fpost_d))
-        println(kernel(fpost_d).k_f̂f)
-        println(kernel(fpost_d).k_f̂f′)
         idx = collect(eachindex(fpost_d))
         @test dims(fpost_d) == length(x)
         @test mean(fpost_d).(idx) ≈ f̂
-        @test all(kernel(fpost_d).(idx, RowVector(idx)) .- diagm(2e-9 * ones(x)) .< 1e-12)
+        @test all(kernel(fpost_d).(idx, idx') .- diagm(2e-9 * ones(x)) .< 1e-12)
         @test dims(fpost_d′) == length(x′)
 
         # Test process posterior works.
         @test mean(fpost_gp).(x) ≈ f̂
-        @test all(kernel(fpost_gp).(x, RowVector(x)) .- diagm(2e-9 * ones(x)) .< 1e-12)
+        @test all(kernel(fpost_gp).(x, x') .- diagm(2e-9 * ones(x)) .< 1e-12)
     end
 
     # Test the multiplication of a GP by a constant.
