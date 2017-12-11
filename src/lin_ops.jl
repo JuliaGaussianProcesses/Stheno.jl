@@ -1,7 +1,8 @@
 import Base: +, *, |
-export posterior, ←, |
+export ←, |
 
 const k = kernel
+const CData = ConditionalData
 
 """
     (f_q::GP)(x::ColOrRowVec)
@@ -31,38 +32,27 @@ k_pp′(f_p::GP, f_q::GP, x::ColOrRowVec) =
         RhsFinite(k(f_p, f_q), x)
 dims(::GP, x::ColOrRowVec) = length(x)
 
-# posterior(f::GP, f_obs::Vector{<:GP}, f̂::Vector) =
-#     GP(posterior, f, f_obs, f̂, ConditionalData(chol(cov(f_obs))))
-
-"""
-    posterior(f::GP, f_obs::GP, f̂::Vector)
-
-Compute the posterior of the process `f` have observed that `f_obs` equals `f̂`.
-"""
-posterior(f::GP, f_obs::Vector{GP}, f̂::Vector{<:Vector}) =
-    GP(posterior, f, f_obs, f̂, ConditionalData(chol(cov(f_obs))))
-posterior(f::GP, f_obs::GP, f̂::Vector) = posterior(f, Vector{GP}([f_obs]), [f̂])
-
-function μ_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData)
-    μ, k_ff̂ = mean(f), k(f, f_obs)
-    α = A_ldiv_B!(data.U, At_ldiv_B!(data.U, f̂ .- mean_vector(f_obs)))
-    return x::Number->μ(x) + RowVector(broadcast!(k_ff̂, data.tmp, x, data.idx)) * α
+# Some syntactic sugar for conditioning.
+struct Assignment
+    f::GP
+    y::Vector
 end
-k_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData) =
-    Conditional(k(f), k(f_obs, f), k(f_obs, f), data)
-k_p′p(f_p::GP, ::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData) =
-    Conditional(k(f, f_p), k(f_obs, f), k(f_obs, f_p), data)
-k_pp′(f_p::GP, ::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData) =
-    Conditional(k(f_p, f), k(f_obs, f_p), k(f_obs, f), data)
-dims(::typeof(posterior), f::GP, ::GP, f̂::Vector) = dims(f)
+←(f, y) = Assignment(f, y)
 
-function μ_p′(
-    ::typeof(posterior),
-    f::GP,
-    f_obs::Vector{<:GP},
-    f̂::Vector{<:Vector},
-    data::ConditionalData,
-)
+"""
+    |(f::GP, c::Union{Assignment, Vector{Assignment}})
+
+`|` is NOT bit-wise logical OR in this context, it is the conditioning operator. That is, it
+returns the conditional (posterior) distribution over everything on the left given the
+`Assignment`(s) on the right.
+"""
+|(f::GP, c::Assignment) = f | [c]
+function |(f::GP, c::Vector{Assignment})
+    f_obs = [c̄.f for c̄ in c]
+    return GP(|, f, f_obs, [c̄.y for c̄ in c], CData(chol(cov(f_obs))))
+end
+
+function μ_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData)
     μ, k_ff = mean.(f), Vector{Kernel}(k.(f_obs, f))
     α = A_ldiv_B!(data.U, At_ldiv_B!(data.U, vcat(f̂...) .- mean_vector(f_obs)))
     return function(x::Number)
@@ -70,31 +60,10 @@ function μ_p′(
         return μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), α)
     end
 end
-k_p′(::typeof(posterior), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::ConditionalData) =
+k_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
     Conditional(k(f), k.(f_obs, f), k.(f_obs, f), data)
-k_p′p(
-    f_p::GP,
-    ::typeof(posterior),
-    f::GP,
-    f_obs::Vector{<:GP},
-    f̂::Vector{<:Vector},
-    data::ConditionalData
-) = Conditional(k(f, f_p), k.(f_obs, f), k.(f_obs, f_p), data)
-k_pp′(
-    f_p::GP,
-    ::typeof(posterior),
-    f::GP,
-    f_obs::Vector{<:GP},
-    f̂::Vector{<:Vector},
-    data::ConditionalData
-) = Conditional(k(f_p, f), k.(f_obs, f_p), k.(f_obs, f), data)
-
-# Some syntactic sugar for conditioning.
-struct Assignment
-    f::GP
-    y::Vector
-end
-←(f, y) = Assignment(f, y)
-|(f::GP, c::Assignment) = posterior(f, [c.f], [c.y])
-|(f::GP, c::Vector{Assignment}) = posterior(f, [c̄.f for c̄ in c], [c̄.y for c̄ in c])
-
+k_p′p(f_p::GP, ::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
+    Conditional(k(f, f_p), k.(f_obs, f), k.(f_obs, f_p), data)
+k_pp′(f_p::GP, ::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
+    Conditional(k(f_p, f), k.(f_obs, f_p), k.(f_obs, f), data)
+dims(::typeof(|), f::GP, ::GP, f̂::Vector) = dims(f)

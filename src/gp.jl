@@ -77,15 +77,15 @@ end
 
 Compute the cross-covariance between GPs (or vectors of) `d` and `d′`.
 """
-cov(d::Vector{GP}, d′::Vector{GP}) = cov(kernel.(d, RowVector(d′)))
-cov(d::Vector{GP}, d′::GP) = cov(d, Vector{GP}([d′]))
-cov(d::GP, d′::Vector{GP}) = cov(Vector{GP}([d]), d′)
-cov(d::GP, d′::GP) = cov(Vector{GP}([d]), Vector{GP}([d′]))
+cov(d::Vector{<:GP}, d′::Vector{<:GP}) = cov(kernel.(d, RowVector(d′)))
+cov(d::Vector{<:GP}, d′::GP) = cov(d, [d′])
+cov(d::GP, d′::Vector{<:GP}) = cov([d], d′)
+cov(d::GP, d′::GP) = cov([d], [d′])
 
 """
     cov(d::Union{GP, Vector{GP}})
 
 Compute the marginal covariance matrix for GP (or vector thereof) `d`.
 """
-cov(d::Vector{GP}) = StridedPDMatrix(chol(cov(kernel.(d, RowVector(d))) + __ϵ * I))
+cov(d::Vector{<:GP}) = StridedPDMatrix(chol(cov(kernel.(d, RowVector(d))) + __ϵ * I))
 cov(d::GP) = cov(Vector{GP}([d]))
