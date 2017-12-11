@@ -31,15 +31,17 @@ k_pp′(f_p::GP, f_q::GP, x::ColOrRowVec) =
         RhsFinite(k(f_p, f_q), x)
 dims(::GP, x::ColOrRowVec) = length(x)
 
+# posterior(f::GP, f_obs::Vector{<:GP}, f̂::Vector) =
+#     GP(posterior, f, f_obs, f̂, ConditionalData(chol(cov(f_obs))))
+
 """
     posterior(f::GP, f_obs::GP, f̂::Vector)
 
 Compute the posterior of the process `f` have observed that `f_obs` equals `f̂`.
 """
-posterior(f::GP, f_obs::GP, f̂::Vector) =
+posterior(f::GP, f_obs::Vector{GP}, f̂::Vector{<:Vector}) =
     GP(posterior, f, f_obs, f̂, ConditionalData(chol(cov(f_obs))))
-posterior(f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}) =
-    GP(posterior, f, f_obs, f̂, ConditionalData(chol(cov(f_obs))))
+posterior(f::GP, f_obs::GP, f̂::Vector) = posterior(f, Vector{GP}([f_obs]), [f̂])
 
 function μ_p′(::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::ConditionalData)
     μ, k_ff̂ = mean(f), k(f, f_obs)
@@ -54,12 +56,45 @@ k_pp′(f_p::GP, ::typeof(posterior), f::GP, f_obs::GP, f̂::Vector, data::Condi
     Conditional(k(f_p, f), k(f_obs, f_p), k(f_obs, f), data)
 dims(::typeof(posterior), f::GP, ::GP, f̂::Vector) = dims(f)
 
+function μ_p′(
+    ::typeof(posterior),
+    f::GP,
+    f_obs::Vector{<:GP},
+    f̂::Vector{<:Vector},
+    data::ConditionalData,
+)
+    μ, k_ff = mean.(f), Vector{Kernel}(k.(f_obs, f))
+    α = A_ldiv_B!(data.U, At_ldiv_B!(data.U, vcat(f̂...) .- mean_vector(f_obs)))
+    return function(x::Number)
+        kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k_ff]
+        return μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), α)
+    end
+end
+k_p′(::typeof(posterior), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::ConditionalData) =
+    Conditional(k(f), k.(f_obs, f), k.(f_obs, f), data)
+k_p′p(
+    f_p::GP,
+    ::typeof(posterior),
+    f::GP,
+    f_obs::Vector{<:GP},
+    f̂::Vector{<:Vector},
+    data::ConditionalData
+) = Conditional(k(f, f_p), k.(f_obs, f), k.(f_obs, f_p), data)
+k_pp′(
+    f_p::GP,
+    ::typeof(posterior),
+    f::GP,
+    f_obs::Vector{<:GP},
+    f̂::Vector{<:Vector},
+    data::ConditionalData
+) = Conditional(k(f_p, f), k.(f_obs, f_p), k.(f_obs, f), data)
+
 # Some syntactic sugar for conditioning.
 struct Assignment
     f::GP
     y::Vector
 end
 ←(f, y) = Assignment(f, y)
-|(f::GP, c::Assignment) = posterior(f, c.f, c.y)
+|(f::GP, c::Assignment) = posterior(f, [c.f], [c.y])
 |(f::GP, c::Vector{Assignment}) = posterior(f, [c̄.f for c̄ in c], [c̄.y for c̄ in c])
 

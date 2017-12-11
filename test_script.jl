@@ -54,57 +54,6 @@ f_long_periodic′ = f_long_periodic | [f_long_wiggly(x_wiggly) ← fs[1], f_lon
 f_periodic′ = f_periodic | [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
 f_wiggle′ = f_wiggle | [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
 
-# f_long_post =
-#     posterior(
-#         posterior(
-#             f_long,
-#             f_long_wiggly(x_wiggly),
-#             fs[1],
-#         ),
-#         f_long_periodic(x_periodic),
-#         fs[2],
-#     )
-# long_wiggly_post =
-#     posterior(
-#         posterior(
-#             f_long_wiggly,
-#             f_long_wiggly(x_wiggly),
-#             fs[1],
-#         ),
-#         f_long_periodic(x_periodic),
-#         fs[2],
-#     )
-# long_periodic_post =
-#     posterior(
-#         posterior(
-#             f_long_periodic,
-#             f_long_periodic(x_periodic),
-#             fs[2],
-#         ),
-#         f_long_wiggly(x_wiggly),
-#         fs[1],
-#     )
-# periodic_post =
-#     posterior(
-#         posterior(
-#             f_periodic,
-#             f_long_wiggly(x_wiggly),
-#             fs[1],
-#         ),
-#         f_long_periodic(x_periodic),
-#         fs[2],
-#     )
-# wiggle_post =
-#     posterior(
-#         posterior(
-#             f_wiggle,
-#             f_long_wiggly(x_wiggly),
-#             fs[1],
-#         ),
-#         f_long_periodic(x_periodic),
-#         fs[2],
-#     )
-
 samples = sample(
     rng,
     [f_long′(x),

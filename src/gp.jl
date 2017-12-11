@@ -50,7 +50,7 @@ isfinite(f::GP) = isfinite(f.k)
 
 mean(f::GP) = f.μ
 mean_vector(f::GP) = mean(f).(eachindex(f))
-mean_vector(f::Vector) = vcat(mean_vector.(f)...)
+mean_vector(f::Vector{<:GP}) = vcat(mean_vector.(f)...)
 
 """
     kernel(f::GP)
