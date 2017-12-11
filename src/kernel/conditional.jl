@@ -1,4 +1,4 @@
-import Base: size, show
+import Base: size, show, broadcast!
 export Conditional
 
 # Internal data structure used to cache various quantities to prevent recomputation.
@@ -36,6 +36,19 @@ function (k::Conditional)(x::Real, x′::Real)
     b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
     return k.k_ff′(x, x′) - dot(a, b)
 end
+function broadcast!(
+    k::Conditional,
+    K::AbstractMatrix,
+    x::UnitRange{Int},
+    x′::RowVector{Int, UnitRange{Int}},
+)
+    kfs = [k isa LhsFinite ? Finite(k, x) : Finite(k.k, k.x, k.y[x]) for k in k.k_f̂f]
+    kf′s = [k isa LhsFinite ? Finite(k, x′') : Finite(k.k, k.x, k.y[x′']) for k in k.k_f̂f′]
+    a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
+    b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
+    return BLAS.gemm!('T', 'N', -1.0, a, b, 1.0, cov!(K, Finite(k.k_ff′, x, x′)))
+end
+
 ==(a::Conditional{Tk}, b::Conditional{Tk}) where Tk =
     a.k_ff′ == b.k_ff′ && a.k_ff̂ == b.k_ff̂ && a.k_f̂f′ == b.k_f̂f′ && a.data == b.data
 dims(k::Conditional) = dims(k.k_ff′)

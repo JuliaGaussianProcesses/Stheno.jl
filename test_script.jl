@@ -26,49 +26,58 @@ plot(x′, sample(rng, f2(x′) | (f(x) ← fs), 10), "r");
 
 using Stheno, PyPlot
 rng = MersenneTwister(123456);
-x = linspace(-3.0, 3.0, 100);
+x = linspace(0.0, 6.0, 1000);
 
 # Construct the forward model.
 gpc = GPC();
-f_long = GP(x->0.0, Transform(EQ(), x->0.2x), gpc);
-f_wiggle = GP(x->0.0, Transform(EQ(), x->5.0x), gpc);
+f_long = 5.0 * GP(x->0.0, Transform(RQ(1.0), x->0.5x), gpc);
+f_wiggle = GP(x->0.0, Transform(Wiener(), x->5.0x), gpc);
 f_periodic = GP(x->0.0, Periodic(EQ()), gpc)
 
 f_long_wiggly = f_long + f_wiggle
-f_long_periodic = f_long + f_periodic
-
-# # Sample a bit from the prior.
-# fs = sample(rng, [f_long_wiggly(x), f_long_periodic(x)], 5)
-# figure("wiggly and periodic")
-# plot(x, fs[1], "b")
-# plot(x, fs[2], "g")
+f_long_periodic = f_periodic - f_long
 
 # Do posterior inference and see what it looks like.
-x_wiggly = [-1.0, 1.0]
-x_periodic = [-0.5, 0.5]
+x_wiggly = collect(linspace(0.0, 3.0, 10))
+x_periodic = collect(linspace(0.0, 3.0, 5)) .+ 0.5
 fs = sample(rng, [f_long_wiggly(x_wiggly), f_long_periodic(x_periodic)])
 
-f_long′ = f_long | [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
-f_long_wiggly′ = f_long_wiggly | [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
-f_long_periodic′ = f_long_periodic | [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
-f_periodic′ = f_periodic | [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
-f_wiggle′ = f_wiggle | [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
+assignments = [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
+f_long′ = f_long(x) | assignments
+f_long_wiggly′ = f_long_wiggly(x) | assignments
+f_long_periodic′ = f_long_periodic(x) | assignments
+f_periodic′ = f_periodic(x) | assignments
+f_wiggle′ = f_wiggle(x) | assignments
 
-samples = sample(
-    rng,
-    [f_long′(x),
-    f_long_wiggly′(x),
-    f_long_periodic′(x),
-    f_periodic′(x),
-    f_wiggle′(x)]
-)
+μ_f_long′, σ_f_long′ = mean_vector(f_long′), sqrt.(diag(full(cov(f_long′))))
+μ_f_long_wigg′, σ_f_long_wigg′ = mean_vector(f_long_wiggly′), sqrt.(diag(full(cov(f_long_wiggly′))))
+μ_f_wigg′, σ_f_wigg′ = mean_vector(f_wiggle′), sqrt.(diag(full(cov(f_wiggle′))))
+μ_f_long_per′, σ_f_long_per′ = mean_vector(f_long_periodic′), sqrt.(diag(full(cov(f_long_periodic′))))
+μ_f_per′, σ_f_per′ = mean_vector(f_periodic′), sqrt.(diag(full(cov(f_periodic′))))
 
-# Look at posterior distribution.
-figure("wiggly and periodic posteriors")
+plot(x, μ_f_long′, "r", label="long")
+plot(x, μ_f_long′ .+ 2 .* σ_f_long′, "r--")
+plot(x, μ_f_long′ .- 2 .* σ_f_long′, "r--")
+
+plot(x, μ_f_long_wigg′, "b", label="long + wiggly")
+plot(x, μ_f_long_wigg′ .+ 2 .* σ_f_long_wigg′, "b--")
+plot(x, μ_f_long_wigg′ .- 2 .* σ_f_long_wigg′, "b--")
+
+plot(x, μ_f_long_per′, "g", label="periodic - long")
+plot(x, μ_f_long_per′ .+ 2 .* σ_f_long_per′, "g--")
+plot(x, μ_f_long_per′ .- 2 .* σ_f_long_per′, "g--")
+
+plot(x, μ_f_per′, "k", label="periodic")
+plot(x, μ_f_per′ .+ 2 .* σ_f_per′, "k--")
+plot(x, μ_f_per′ .- 2 .* σ_f_per′, "k--")
+
+plot(x, μ_f_wigg′, "c", label="wiggly")
+plot(x, μ_f_wigg′ .+ 2 .* σ_f_wigg′, "c--")
+plot(x, μ_f_wigg′ .- 2 .* σ_f_wigg′, "c--")
+
 plot(x_wiggly, fs[1], "bx")
 plot(x_periodic, fs[2], "gx")
-plot(x, samples[1], "r")
-plot(x, samples[2], "b")
-plot(x, samples[3], "g")
-plot(x, samples[4] .+ samples[1] .- samples[3], "k")
-plot(x, samples[5] .+ samples[1] .- samples[2], "k--")
+
+legend()
+
+plot(x, sample(rng, f_long′, 5), "r")

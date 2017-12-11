@@ -91,6 +91,8 @@
         @test mean(f′).(x) ≈ f̂
         @test all(kernel(f′).(x, x') .- diagm(2e-9 * ones(x)) .< 1e-12)
 
-        # 
+        # Test that covariances are computed properly.
+        @test maximum(abs.(full(cov(f′x)) .- 2 .* kernel(f′).(x, x'))) < 1e-12
+        @test full(cov(f′x′)) ≈ kernel(f′).(x′, x′')
     end
 end

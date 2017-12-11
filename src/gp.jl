@@ -73,7 +73,7 @@ function get_check_gpc(args...)
 end
 
 """
-    cov(d::Union{GP, Vector{GP}}, d′::Union{GP, Vector{GP}})
+    cov(d::Union{GP, Vector{<:GP}}, d′::Union{GP, Vector{<:GP}})
 
 Compute the cross-covariance between GPs (or vectors of) `d` and `d′`.
 """
@@ -83,9 +83,9 @@ cov(d::GP, d′::Vector{<:GP}) = cov([d], d′)
 cov(d::GP, d′::GP) = cov([d], [d′])
 
 """
-    cov(d::Union{GP, Vector{GP}})
+    cov(d::Union{GP, Vector{<:GP}})
 
 Compute the marginal covariance matrix for GP (or vector thereof) `d`.
 """
-cov(d::Vector{<:GP}) = StridedPDMatrix(chol(cov(kernel.(d, RowVector(d))) + __ϵ * I))
-cov(d::GP) = cov(Vector{GP}([d]))
+cov(d::Vector{<:GP}) = StridedPDMatrix(chol(Symmetric(cov(kernel.(d, RowVector(d))) + __ϵ * I)))
+cov(d::GP) = cov([d])

@@ -45,22 +45,22 @@
     @test Noise() == Noise()
     @test Noise() != RQ(1.0)
 
-    # Tests for Weiner kernel.
-    @test Weiner <: Kernel{NonStationary}
-    @test !issubtype(Weiner, Kernel{Stationary})
-    @test Weiner()(1.0, 1.0) == 1.0
-    @test Weiner()(1.0, 1.5) == 1.0
-    @test Weiner()(1.5, 1.0) == 1.0
-    @test Weiner() == Weiner()
-    @test Weiner() != Noise()
+    # Tests for Wiener kernel.
+    @test Wiener <: Kernel{NonStationary}
+    @test !issubtype(Wiener, Kernel{Stationary})
+    @test Wiener()(1.0, 1.0) == 1.0
+    @test Wiener()(1.0, 1.5) == 1.0
+    @test Wiener()(1.5, 1.0) == 1.0
+    @test Wiener() == Wiener()
+    @test Wiener() != Noise()
 
-    # Tests for WeinerVelocity.
-    @test WeinerVelocity <: Kernel{NonStationary}
-    @test !issubtype(WeinerVelocity, Kernel{Stationary})
-    @test WeinerVelocity()(1.0, 1.0) == 1 / 3
-    @test WeinerVelocity() == WeinerVelocity()
-    @test WeinerVelocity() != Weiner()
-    @test WeinerVelocity() != Noise()
+    # Tests for WienerVelocity.
+    @test WienerVelocity <: Kernel{NonStationary}
+    @test !issubtype(WienerVelocity, Kernel{Stationary})
+    @test WienerVelocity()(1.0, 1.0) == 1 / 3
+    @test WienerVelocity() == WienerVelocity()
+    @test WienerVelocity() != Wiener()
+    @test WienerVelocity() != Noise()
 
     # Tests for Exponential.
     @test Exponential <: Kernel{Stationary}
@@ -92,13 +92,13 @@
         @test memory(@benchmark Noise() seconds=0.1) == 0
         @test memory(@benchmark $(Noise())(1.0, 0.0) seconds=0.1) == 0
 
-        # Performance checks: Weiner process.
-        @test memory(@benchmark Weiner() seconds=0.1) == 0
-        @test memory(@benchmark $(Weiner())(1.0, 0.0) seconds=0.1) == 0
+        # Performance checks: Wiener process.
+        @test memory(@benchmark Wiener() seconds=0.1) == 0
+        @test memory(@benchmark $(Wiener())(1.0, 0.0) seconds=0.1) == 0
 
-        # Performance checks: Weiner process.
-        @test memory(@benchmark WeinerVelocity() seconds=0.1) == 0
-        @test memory(@benchmark $(WeinerVelocity())(1.0, 0.0) seconds=0.1) == 0
+        # Performance checks: Wiener process.
+        @test memory(@benchmark WienerVelocity() seconds=0.1) == 0
+        @test memory(@benchmark $(WienerVelocity())(1.0, 0.0) seconds=0.1) == 0
 
         # Performance checks: Exponential
         @test memory(@benchmark Exponential() seconds=0.1) == 0

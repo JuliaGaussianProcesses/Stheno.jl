@@ -1,5 +1,5 @@
 import Base: +, *, ==
-export KernelType, Kernel, EQ, RQ, Linear, Noise, Weiner, WeinerVelocity, Exponential,
+export KernelType, Kernel, EQ, RQ, Linear, Noise, Wiener, WienerVelocity, Exponential,
     Constant
 
 """
@@ -77,23 +77,23 @@ struct Noise <: Kernel{Stationary} end
 ==(::Noise, ::Noise) = true
 
 """
-    Weiner <: Kernel{NonStationary}
+    Wiener <: Kernel{NonStationary}
 
-The standardised stationary Weiner-process kernel.
+The standardised stationary Wiener-process kernel.
 """
-struct Weiner <: Kernel{NonStationary} end
-@inline (::Weiner)(x::Real, x′::Real) = min(x, x′)
-==(::Weiner, ::Weiner) = true
+struct Wiener <: Kernel{NonStationary} end
+@inline (::Wiener)(x::Real, x′::Real) = min(x, x′)
+==(::Wiener, ::Wiener) = true
 
 """
-    WeinerVelocity <: Kernel{NonStationary}
+    WienerVelocity <: Kernel{NonStationary}
 
-The standardised WeinerVelocity kernel.
+The standardised WienerVelocity kernel.
 """
-struct WeinerVelocity <: Kernel{NonStationary} end
-@inline (::WeinerVelocity)(x::Real, x′::Real) =
+struct WienerVelocity <: Kernel{NonStationary} end
+@inline (::WienerVelocity)(x::Real, x′::Real) =
     min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
-==(::WeinerVelocity, ::WeinerVelocity) = true
+==(::WienerVelocity, ::WienerVelocity) = true
 
 """
     Exponential <: Kernel{Stationary}
