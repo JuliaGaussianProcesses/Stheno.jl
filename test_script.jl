@@ -1,3 +1,13 @@
+using Stheno
+
+rng = MersenneTwister(123456);
+x = randn(25);
+N = length(x);
+f = GP(x->0.0, EQ(), GPC());
+fs = sample(rng, f(x));
+println(lpdf(f(x), fs))
+println(lpdf([f(x)←fs, f(x)←fs]))
+
 using Stheno, PyPlot
 
 rng = MersenneTwister(123456);
