@@ -36,7 +36,6 @@ plot(x′, sample(rng, f2(x′) | (f(x) ← fs), 10), "r");
 
 using Stheno, PyPlot
 rng = MersenneTwister(123456);
-x = linspace(0.0, 6.0, 1000);
 
 # Construct the forward model.
 gpc = GPC();
@@ -45,7 +44,7 @@ f_wiggle = GP(x->0.0, Transform(Wiener(), x->5.0x), gpc);
 f_periodic = GP(x->0.0, Periodic(EQ()), gpc)
 
 f_long_wiggly = f_long + f_wiggle
-f_long_periodic = f_periodic - f_long
+f_long_periodic = f_periodic + -1.0 * f_long
 
 # Do posterior inference and see what it looks like.
 x_wiggly = collect(linspace(0.0, 3.0, 10))
@@ -53,11 +52,14 @@ x_periodic = collect(linspace(0.0, 3.0, 5)) .+ 0.5
 fs = sample(rng, [f_long_wiggly(x_wiggly), f_long_periodic(x_periodic)])
 
 assignments = [f_long_wiggly(x_wiggly) ← fs[1], f_long_periodic(x_periodic) ← fs[2]]
+x = linspace(0.0, 6.0, 1000);
 f_long′ = f_long(x) | assignments
 f_long_wiggly′ = f_long_wiggly(x) | assignments
 f_long_periodic′ = f_long_periodic(x) | assignments
 f_periodic′ = f_periodic(x) | assignments
 f_wiggle′ = f_wiggle(x) | assignments
+
+μ_f′, σ_f′ = mean_vector(f′), sqrt.(diag(full(cov(f′))))
 
 μ_f_long′, σ_f_long′ = mean_vector(f_long′), sqrt.(diag(full(cov(f_long′))))
 μ_f_long_wigg′, σ_f_long_wigg′ = mean_vector(f_long_wiggly′), sqrt.(diag(full(cov(f_long_wiggly′))))
@@ -91,3 +93,21 @@ plot(x_periodic, fs[2], "gx")
 legend()
 
 plot(x, sample(rng, f_long′, 5), "r")
+
+# Probabilistic model for lpdfs.
+μ, σ² = 1.0, 0.5
+g(x) = -0.5 * log(2π * σ²) - 0.5 * (x - μ)^2 / σ²
+ϕ(x) = (x^2, 1.0)
+
+x, x′ = collect(linspace(-3.0, 3.0, 100)), [0.0, 1.0]
+y, y′ = g.(x), g.(x′)
+
+f = GP(x->0.0, Linear(0.0), GPC())
+f′ = f(ϕ.(x)) | (f(ϕ.(x′)) ← y′)
+
+μ_f′, σ_f′ = mean_vector(f′), sqrt.(diag(full(cov(f′))))
+plot(x, μ_f′, "r")
+plot(x, μ_f′ .+ 2 .* σ_f′, "r--")
+plot(x, μ_f′ .- 2 .* σ_f′, "r--")
+plot(x, g.(x), "g")
+

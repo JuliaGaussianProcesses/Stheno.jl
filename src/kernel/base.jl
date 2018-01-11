@@ -1,5 +1,5 @@
 import Base: +, *, ==
-export KernelType, Kernel, EQ, RQ, Linear, Noise, Wiener, WienerVelocity, Exponential,
+export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, Exponential,
     Constant
 
 """
@@ -64,8 +64,20 @@ intercept is `c`.
 struct Linear{T<:Real} <: Kernel{NonStationary}
     c::T
 end
-@inline (k::Linear)(x::Real, y::Real) = (x - k.c) * (y - k.c)
+@inline (k::Linear)(x, y) = dot(x - k.c, y - k.c)
+@inline (k::Linear)(x::Tuple, y::Tuple) = sum(map((x, y)->(x - k.c) * (y - k.c), x, y))
 ==(a::Linear, b::Linear) = a.c == b.c
+
+"""
+    Poly{Tσ<:Real} <: Kernel{NonStationary}
+
+Standardised Polynomial kernel. `Poly(p, σ)` creates a `Poly` `Kernel{NonStationary}`.
+"""
+struct Poly{Tσ<:Real} <: Kernel{NonStationary}
+    p::Int
+    σ::Tσ
+end
+@inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
 
 """
     Noise{T<:Real} <: Kernel{Stationary}

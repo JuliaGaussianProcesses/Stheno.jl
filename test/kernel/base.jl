@@ -36,6 +36,15 @@
     @test Linear(0.0)(0.0, 0.0) == 0
     @test Linear(0.0)(5.0, 4.0) ≈ 20
     @test Linear(2.0)(5.0, 4.0) ≈ 6
+    @test Linear(2.0) == Linear(2.0)
+    @test Linear(1.0) != Linear(2.0)
+
+    # Tests for Polynomial kernel.
+    @test Poly(2, -1.0)(1.0, 1.0) == 0.0
+    @test Poly(5, -1.0)(1.0, 1.0) == 0.0
+    @test Poly(5, 0.0)(1.0, 1.0) == 1.0
+    @test Poly(5, 0.0) == Poly(5, 0.0)
+    @test Poly(2, 1.0) != Poly(5, 1.0)
 
     # Tests for Noise kernel.
     @test Noise <: Kernel{Stationary}
@@ -87,6 +96,10 @@
         # Performance checks: Linear.
         @test memory(@benchmark Linear(1.0) seconds=0.1) == 0
         @test memory(@benchmark $(Linear(1.0))(1.0, 0.0) seconds=0.1) == 0
+
+        # Performance checks: Linear.
+        @test memory(@benchmark Poly(2, 1.0) seconds=0.1) == 0
+        @test memory(@benchmark $(Poly(2, 1.0))(1.0, 0.0) seconds=0.1) == 0
 
         # Performance checks: White noise.
         @test memory(@benchmark Noise() seconds=0.1) == 0
