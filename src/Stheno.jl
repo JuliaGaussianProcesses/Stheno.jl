@@ -22,6 +22,7 @@ module Stheno
     include("lin_ops.jl")
     include("linops/addition.jl")
     include("linops/product.jl")
+    include("linops/integrate.jl")
 
     # Sampling and log probability computations.
     include("sample.jl")
