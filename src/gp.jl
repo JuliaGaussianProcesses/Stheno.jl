@@ -59,7 +59,7 @@ mean_vector(f::Vector{<:GP}) = vcat(mean_vector.(f)...)
 Get the cross-kernel between `GP`s `fa` and `fb`, and `kernel(f) == kernel(f, f)`.
 """
 kernel(f::GP) = f.k
-function kernel(fa::GP, fb::GP)
+function kernel(fa::GP{Ta}, fb::GP{Tb}) where {Ta<:Kernel, Tb<:Kernel}
     @assert fa.gpc === fb.gpc
     return fa === fb ?
         fa.k :
@@ -87,5 +87,10 @@ cov(d::GP, d′::GP) = cov([d], [d′])
 
 Compute the marginal covariance matrix for GP (or vector thereof) `d`.
 """
-cov(d::Vector{<:GP}) = StridedPDMatrix(chol(Symmetric(cov(kernel.(d, RowVector(d))) + __ϵ * I)))
+function cov(d::Vector{<:GP})
+    K = cov(kernel.(d, RowVector(d)))::Matrix{Float64}
+    K[diagind(K)] .+= __ϵ
+    LAPACK.potrf!('U', K)
+    return StridedPDMatrix(UpperTriangular(K))
+end
 cov(d::GP) = cov([d])
