@@ -23,9 +23,9 @@
         # Check mean and marginal covariance under indexing.
         idx, idy = eachindex(x), eachindex(y)
         @test mean(f3).(idx) == mean(f1).(x)
-        @test kernel(f3).(idx, idx') == kernel(f1).(x, RowVector(x))
-        @test kernel(f3, f1).(idx, y') == kernel(f1).(x, RowVector(y))
-        @test kernel(f1, f3).(y, idx') == kernel(f1).(y, RowVector(x))
+        @test kernel(f3).(idx, idx') == kernel(f1).(x, Transpose(x))
+        @test kernel(f3, f1).(idx, y') == kernel(f1).(x, Transpose(y))
+        @test kernel(f1, f3).(y, idx') == kernel(f1).(y, Transpose(x))
         @test all(kernel(f3, f2).(idx, y') .== 0.0)
         @test all(kernel(f2, f3).(y', idx) .== 0.0)
 

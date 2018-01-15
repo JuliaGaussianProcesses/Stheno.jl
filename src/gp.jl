@@ -88,7 +88,7 @@ end
 
 Compute the cross-covariance between GPs (or vectors of) `d` and `d′`.
 """
-cov(d::Vector{<:GP}, d′::Vector{<:GP}) = cov(kernel.(d, RowVector(d′)))
+cov(d::Vector{<:GP}, d′::Vector{<:GP}) = cov(kernel.(d, Transpose(d′)))
 cov(d::Vector{<:GP}, d′::GP) = cov(d, [d′])
 cov(d::GP, d′::Vector{<:GP}) = cov([d], d′)
 cov(d::GP, d′::GP) = cov([d], [d′])
@@ -99,7 +99,7 @@ cov(d::GP, d′::GP) = cov([d], [d′])
 Compute the marginal covariance matrix for GP (or vector thereof) `d`.
 """
 function cov(d::Vector{<:GP})
-    K = cov(kernel.(d, RowVector(d)))::Matrix{Float64}
+    K = cov(kernel.(d, Transpose(d)))::Matrix{Float64}
     K[diagind(K)] .+= __ϵ
     LAPACK.potrf!('U', K)
     return StridedPDMatrix(UpperTriangular(K))

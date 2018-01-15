@@ -1,4 +1,5 @@
 import Base: size, show, broadcast!
+import Base.LinAlg: ldiv!
 export Conditional
 
 # Internal data structure used to cache various quantities to prevent recomputation.
@@ -26,7 +27,7 @@ struct ConditionalMean{Tμ<:μFun, Tk<:Vector{<:Kernel}, Tα<:Vector{<:Real}} <:
     α::Tα
 end
 ConditionalMean(μ::μFun, k_ff′::Vector{<:Kernel}, δ::Vector, data::ConditionalData) =
-    ConditionalMean(μ, k_ff′, A_ldiv_B!(data.U, At_ldiv_B!(data.U, δ)))
+    ConditionalMean(μ, k_ff′, ldiv!(data.U, ldiv!(Transpose(data.U), δ)))
 function (μ::ConditionalMean)(x::Real)
     kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in μ.k_ff′]
     return μ.μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), μ.α)
@@ -52,8 +53,9 @@ Conditional(k_ff′::Kernel, k_f̂f::Vector{<:Kernel}, k_f̂f′::Kernel, data::
 function (k::Conditional)(x::Real, x′::Real)
     kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k.k_f̂f]
     kf′s = [k isa LhsFinite ? Finite(k, [x′]) : Finite(k.k, k.x, [k.y[x′]]) for k in k.k_f̂f′]
-    a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
-    b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
+    Ut = Transpose(k.data.U)
+    a = ldiv!(Ut, cov(reshape(kfs, :, 1)))
+    b = ldiv!(Ut, cov(reshape(kf′s, :, 1)))
     return k.k_ff′(x, x′) - (Transpose(a) * b)[1, 1]
 end
 function broadcast!(
@@ -64,8 +66,9 @@ function broadcast!(
 )
     kfs = [k isa LhsFinite ? Finite(k, x) : Finite(k.k, k.x, k.y[x]) for k in k.k_f̂f]
     kf′s = [k isa LhsFinite ? Finite(k, x′') : Finite(k.k, k.x, k.y[x′']) for k in k.k_f̂f′]
-    a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
-    b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
+    Ut = Tranpose(k.data.U)
+    a = ldiv!(Ut, cov(reshape(kfs, :, 1)))
+    b = ldiv!(Ut, cov(reshape(kf′s, :, 1)))
     return BLAS.gemm!('T', 'N', -1.0, a, b, 1.0, cov!(K, Finite(k.k_ff′, x, x′)))
 end
 

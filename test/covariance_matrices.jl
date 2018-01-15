@@ -11,7 +11,7 @@
 
         # Test invariances.
         @test maximum(abs.(full(K) - K_)) < 1e-10 # Loss of accuracy > machine-ϵ.
-        @test RowVector(x) * (K_ \ x) ≈ invquad(K, x)
+        @test Transpose(x) * (K_ \ x) ≈ invquad(K, x)
         @test logdet(K) ≈ logdet(K_)
 
         @test size(K) == size(K_)
