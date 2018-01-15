@@ -5,13 +5,13 @@
         import Stheno.StridedPDMatrix
         rng = MersenneTwister(123456)
         A = randn(rng, 5, 5)
-        K_ = A.'A + UniformScaling(1e-6)
+        K_ = Transpose(A) * A + UniformScaling(1e-6)
         K = StridedPDMatrix(chol(K_))
         x = randn(rng, 5)
 
         # Test invariances.
         @test maximum(abs.(full(K) - K_)) < 1e-10 # Loss of accuracy > machine-ϵ.
-        @test x.' * (K_ \ x) ≈ invquad(K, x)
+        @test RowVector(x) * (K_ \ x) ≈ invquad(K, x)
         @test logdet(K) ≈ logdet(K_)
 
         @test size(K) == size(K_)
@@ -29,12 +29,12 @@
         k = Finite(EQ(), x, y)
 
         K = Matrix{Float64}(P, Q)
-        @test cov!(K, k) == EQ().(x, y.')
+        @test cov!(K, k) == EQ().(x, y')
         @test cov!(K, k) == cov(k)
 
         k = Finite(RQ(1.0), x)
         K = Matrix{Float64}(P, P)
-        @test cov!(K, k) == RQ(1.0).(x, x.')
+        @test cov!(K, k) == RQ(1.0).(x, x')
         @test cov!(K, k) == cov(k)
     end
 

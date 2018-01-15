@@ -47,16 +47,6 @@ function |(f::GP, c::Vector{Assignment})
     f_obs = [c̄.f for c̄ in c]
     return GP(|, f, f_obs, [c̄.y for c̄ in c], CData(chol(cov(f_obs))))
 end
-
-# function μ_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData)
-#     μ, k_ff = mean.(f), Vector{Kernel}(k.(f_obs, f))
-#     α = A_ldiv_B!(data.U, At_ldiv_B!(data.U, vcat(f̂...) .- mean_vector(f_obs)))
-#     return function(x::Number)
-#         kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k_ff]
-#         return μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), α)
-#     end
-# end
-
 μ_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
     ConditionalMean(mean(f), k.(f_obs, f), vcat(f̂...) .- mean_vector(f_obs), data)
 k_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =

@@ -42,7 +42,6 @@ function GP(op, args...)
     return new_gp
 end
 const SthenoType = Union{Real, Function, GP}
-# GP(μ, k::Tk, gpc::GPC) where {Tk<:Kernel} = GP{CustomMean{typeof(μ)}, Tk}(CustomMean(μ), k, gpc)
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
 transpose(f::GP) = f
 isfinite(f::GP) = isfinite(f.k)

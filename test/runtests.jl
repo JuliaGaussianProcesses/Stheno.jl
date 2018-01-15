@@ -1,4 +1,4 @@
-using Stheno, Base.Test, BenchmarkTools, QuadGK
+using Stheno, Test, BenchmarkTools, QuadGK
 
 const check_mem = false
 

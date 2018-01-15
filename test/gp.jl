@@ -39,7 +39,7 @@
         @test mean(d) == μ
         @test mean(d).(1:N) == μ_vec
         @test dims(d) == N
-        @test kernel(d).(1:N, (1:N).') == EQ().(x, x.')
+        @test kernel(d).(1:N, (1:N)') == EQ().(x, x')
 
         x̂ = sample(rng, d, S)
         @test size(x̂) == (N, S)

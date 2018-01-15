@@ -23,11 +23,11 @@
         # Check mean and marginal covariance under indexing.
         idx, idy = eachindex(x), eachindex(y)
         @test mean(f3).(idx) == mean(f1).(x)
-        @test kernel(f3).(idx, idx.') == kernel(f1).(x, x.')
-        @test kernel(f3, f1).(idx, y.') == kernel(f1).(x, y.')
-        @test kernel(f1, f3).(y, idx.') == kernel(f1).(y, x.')
-        @test all(kernel(f3, f2).(idx, y.') .== 0.0)
-        @test all(kernel(f2, f3).(y.', idx) .== 0.0)
+        @test kernel(f3).(idx, idx') == kernel(f1).(x, RowVector(x))
+        @test kernel(f3, f1).(idx, y') == kernel(f1).(x, RowVector(y))
+        @test kernel(f1, f3).(y, idx') == kernel(f1).(y, RowVector(x))
+        @test all(kernel(f3, f2).(idx, y') .== 0.0)
+        @test all(kernel(f2, f3).(y', idx) .== 0.0)
 
         if check_mem
             @test memory(@benchmark $(mean(f3))(1) seconds=0.1) == 0
@@ -46,9 +46,9 @@
         @test typeof(kernel(f4, f2)) <: LhsFinite
 
         # Check that kernels evaluate correctly.
-        @test kernel(f4).(idy, idy.') == kernel(f1).(y, y.')
-        @test kernel(f3, f4).(idx, idy.') == kernel(f1).(x, y.')
-        @test kernel(f4, f3).(idy, idx.') == kernel(f3, f4).(idx, idy.').'
+        @test kernel(f4).(idy, idy') == kernel(f1).(y, y')
+        @test kernel(f3, f4).(idx, idy') == kernel(f1).(x, y')
+        @test kernel(f4, f3).(idy, idx') == kernel(f3, f4).(idx, idy')'
 
         # Check that nested indexing works as expected.
         f5 = f3(1:2)
@@ -64,11 +64,11 @@
 
         # Check that the kernels evaluate correctly.
         id5, id4, id3 = eachindex(f5), eachindex(f4), eachindex(f3)
-        @test kernel(f5).(id5, id5.') == kernel(f3).(id5, id5.')
-        @test kernel(f5, f4).(id5, id4.') == kernel(f1).(x[id5], y[id4].')
-        @test kernel(f4, f5).(id4, id5.') == kernel(f5, f4).(id5, id4.').'
-        @test kernel(f5, f3).(id5, id3.') == kernel(f1).(x[id5], x[id3].')
-        @test kernel(f3, f5).(id3, id5.') == kernel(f5, f3).(id5, id3.').'
+        @test kernel(f5).(id5, id5') == kernel(f3).(id5, id5')
+        @test kernel(f5, f4).(id5, id4') == kernel(f1).(x[id5], y[id4]')
+        @test kernel(f4, f5).(id4, id5') == kernel(f5, f4).(id5, id4')'
+        @test kernel(f5, f3).(id5, id3') == kernel(f1).(x[id5], x[id3]')
+        @test kernel(f3, f5).(id3, id5') == kernel(f5, f3).(id5, id3')'
     end
 
     # Test inference.

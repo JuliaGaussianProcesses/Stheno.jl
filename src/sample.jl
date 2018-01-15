@@ -4,7 +4,7 @@
 Sample jointly from a single / multiple finite-dimensional GPs.
 """
 function sample(rng::AbstractRNG, ds::Vector{GP}, N::Int)
-    lin_sample = mean_vector(ds) .+ chol(cov(ds)).'randn(rng, sum(dims.(ds)), N)
+    lin_sample = mean_vector(ds) .+ Transpose(chol(cov(ds))) * randn(rng, sum(dims.(ds)), N)
     srt, fin = vcat(1, cumsum(dims.(ds))[1:end-1] .+ 1), cumsum(dims.(ds))
     return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
 end
