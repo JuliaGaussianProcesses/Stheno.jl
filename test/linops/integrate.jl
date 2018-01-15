@@ -1,7 +1,7 @@
 @testset "integrate" begin
 
     # Test basic properties of the prior.
-    let f = GP(x->0.0, EQ(), GPC())
+    let f = GP(ZeroMean(), EQ(), GPC())
         v = ∫(StandardNormal(), f)
         @test mean(v)(1) == 0.0
         @test mean_vector(v) == [0.0]
@@ -11,7 +11,7 @@
     end
 
     # Test properties of the posterior when the integral is observed.
-    let f = GP(x->0.0, EQ(), GPC())
+    let f = GP(ZeroMean(), EQ(), GPC())
         v = ∫(StandardNormal(), f)
         v′, f′ = (v | (v←[1])), (f | (v←[1]))
         x = collect(linspace(-10.0, 10.0, 100))
@@ -20,7 +20,7 @@
     end
 
     # Test properties of the posterior when the function is observed.
-    let rng = MersenneTwister(123456), f = GP(x->0.0, EQ(), GPC())
+    let rng = MersenneTwister(123456), f = GP(ZeroMean(), EQ(), GPC())
         v = ∫(StandardNormal(), f)
         x = collect(linspace(-10.0, 10.0, 100))
         fs = sample(rng, f(x))

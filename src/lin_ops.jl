@@ -16,11 +16,7 @@ A GP on a finite-dimensional index set (i.e. a multivariate Normal) indexed at l
 is a new GP with finite-dimensional index set whose cardinality is at most that of `f_q`.
 """
 (f_q::GP)(x::ColOrRowVec) = GP(f_q, x)
-
-function μ_p′(f_q::GP, x::ColOrRowVec)
-    μ_q = mean(f_q)
-    return n::Int->μ_q(x[n])
-end
+μ_p′(f_q::GP, x::ColOrRowVec) = FiniteMean(mean(f_q), x)
 k_p′(f_q::GP, x::ColOrRowVec) = Finite(k(f_q), x)
 k_p′p(f_p::GP, f_q::GP, x::ColOrRowVec) =
     isfinite(f_p) ?
@@ -52,14 +48,17 @@ function |(f::GP, c::Vector{Assignment})
     return GP(|, f, f_obs, [c̄.y for c̄ in c], CData(chol(cov(f_obs))))
 end
 
-function μ_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData)
-    μ, k_ff = mean.(f), Vector{Kernel}(k.(f_obs, f))
-    α = A_ldiv_B!(data.U, At_ldiv_B!(data.U, vcat(f̂...) .- mean_vector(f_obs)))
-    return function(x::Number)
-        kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k_ff]
-        return μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), α)
-    end
-end
+# function μ_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData)
+#     μ, k_ff = mean.(f), Vector{Kernel}(k.(f_obs, f))
+#     α = A_ldiv_B!(data.U, At_ldiv_B!(data.U, vcat(f̂...) .- mean_vector(f_obs)))
+#     return function(x::Number)
+#         kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k_ff]
+#         return μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), α)
+#     end
+# end
+
+μ_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
+    ConditionalMean(mean(f), k.(f_obs, f), vcat(f̂...) .- mean_vector(f_obs), data)
 k_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
     Conditional(k(f), k.(f_obs, f), k.(f_obs, f), data)
 k_p′p(f_p::GP, ::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =

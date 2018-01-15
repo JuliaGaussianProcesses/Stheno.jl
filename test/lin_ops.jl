@@ -3,7 +3,7 @@
     # Test mean_vector.
     let rng = MersenneTwister(123456)
         x, x′ = randn(rng, 5), randn(rng, 10)
-        f = GP(sin, EQ(), GPC())
+        f = GP(CustomMean(sin), EQ(), GPC())
         @test mean_vector(f(x)) == sin.(x)
         @test mean_vector([f(x), f(x′)]) == vcat(sin.(x), sin.(x′))
     end
@@ -14,7 +14,7 @@
 
         # Set up some GPs.
         x, y = randn(rng, 3), randn(rng, 2)
-        μ1, μ2 = sin, cos
+        μ1, μ2 = CustomMean(sin), CustomMean(cos)
         k1, k2 = EQ(), RQ(10.0)
         gpc = GPC()
         f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
@@ -75,7 +75,7 @@
     let rng = MersenneTwister(123456)
         x, x′, f̂ = randn(rng, 3), randn(rng, 2), randn(rng, 3)
 
-        f = GP(sin, EQ(), GPC())
+        f = GP(CustomMean(sin), EQ(), GPC())
         f′x = f(x) | (f(x) ← f̂)
         f′x′ = f(x′) | (f(x) ← f̂)
         f′ = f | (f(x) ← f̂)

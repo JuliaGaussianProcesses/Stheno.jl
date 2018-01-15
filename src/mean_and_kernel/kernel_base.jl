@@ -23,6 +23,14 @@ abstract type Kernel{T<:KernelType} end
 isfinite(::Kernel) = false
 
 """
+    Zero <: Kernel{Stationary}
+
+A rank 1 kernel that always returns zero. (Not really a kernel, but meh).
+"""
+struct Zero <: Kernel{Stationary} end
+(::Zero)(x::T, x′::T) where T = zero(T)
+
+"""
     Constant{T<:Real} <: Kernel{Stationary}
 
 A rank 1 constant `Kernel`. Useful for consistency when creating composite Kernels,

@@ -8,7 +8,6 @@
         U = chol(x'x + 1e-9I)
         data = Stheno.ConditionalData(U)
         @test data.U == U
-        @test data.idx == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         @test length(data.tmp) == 10
         @test length(data.tmp′) == 10
     end

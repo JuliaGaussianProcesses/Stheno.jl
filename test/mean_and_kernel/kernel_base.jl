@@ -7,13 +7,20 @@
     @test !issubtype(Kernel{Stationary}, Kernel{NonStationary})
     @test !issubtype(Kernel{NonStationary}, Kernel{Stationary})
 
+    import Stheno.Zero
+    let rng = MersenneTwister(123456)
+        @test Zero()(randn(rng), 4.0) == 0.0
+        @test Zero() == Zero()
+    end
+
     # Tests for Constant <: Kernel{Stationary}.
     import Stheno.Constant
-    rng = MersenneTwister(123456)
-    @test Constant(5.0).value == 5.0
-    @test Constant(4.9)(randn(rng), randn(rng)) == 4.9
-    @test Constant(1.0) == Constant(1.0)
-    @test Constant(1.0) != 1.0
+    let rng = MersenneTwister(123456)
+        @test Constant(5.0).value == 5.0
+        @test Constant(4.9)(randn(rng), randn(rng)) == 4.9
+        @test Constant(1.0) == Constant(1.0)
+        @test Constant(1.0) != 1.0
+    end
 
     # Tests for Exponentiated Quadratic (EQ) kernel.
     @test EQ()(5.0, 5.0) == 1

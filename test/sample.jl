@@ -3,7 +3,7 @@
     # Test deterministic features of `sample`.
     let rng = MersenneTwister(123456)
         x, x′ = randn(rng, 10), randn(rng, 11)
-        f = GP(sin, EQ(), GPC())
+        f = GP(CustomMean(sin), EQ(), GPC())
 
         # Check that single-GP samples have the correct dimensions.
         @test length(sample(rng, f(x))) == length(x)
@@ -19,7 +19,7 @@
     # Test some statistical properties of `sample`.
     let rng = MersenneTwister(123456)
         x, x′ = randn(rng, 10), randn(rng, 11)
-        f = GP(sin, EQ(), GPC())
+        f = GP(CustomMean(sin), EQ(), GPC())
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.
         S = 100000

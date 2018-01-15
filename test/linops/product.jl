@@ -7,9 +7,9 @@
         x, y, σ = randn(rng, 3), randn(rng, 2), exp(randn(rng))
 
         # Set three independent GPs.
-        μ, k = sin, RQ(1.0)
+        μ, k = CustomMean(sin), RQ(1.0)
         gpc = GPC()
-        f, fi = GP(μ, k, gpc), GP(x->0, EQ(), gpc)
+        f, fi = GP(μ, k, gpc), GP(ZeroMean(), EQ(), gpc)
         σf = σ * f
         fσ = f * σ
 
@@ -18,8 +18,8 @@
         @test mean(fσ).(x) == mean(f).(x) * σ
 
         # Check the marginal covariance.
-        @test kernel(σf).(x, y') == σ^2 .* kernel(f).(x, y')
-        @test kernel(σf).(x, y') == kernel(f).(x, y') .* σ^2
+        @test kernel(σf).(x, y') ≈ σ^2 .* kernel(f).(x, y')
+        @test kernel(σf).(x, y') ≈ kernel(f).(x, y') .* σ^2
 
         # Check the cross-covariances.
         @test kernel(σf, f).(x, y') == σ .* kernel(f).(x, y')
@@ -39,15 +39,15 @@
         x, y, σ = randn(rng, 3), randn(rng, 2), exp(randn(rng))
 
         # Set three independent GPs.
-        μ, k = sin, RQ(1.0)
+        μ, k = CustomMean(sin), RQ(1.0)
         gpc = GPC()
-        f, fi = GP(μ, k, gpc), GP(x->0, EQ(), gpc)
+        f, fi = GP(μ, k, gpc), GP(ZeroMean(), EQ(), gpc)
         σf = sin * f
         fσ = f * cos
 
         # Check that the mean has been appropriately scaled.
-        @test mean(σf).(x) == sin.(x) .* mean(f).(x)
-        @test mean(fσ).(x) == mean(f).(x) .* cos.(x)
+        @test mean(σf).(x) ≈ sin.(x) .* mean(f).(x)
+        @test mean(fσ).(x) ≈ mean(f).(x) .* cos.(x)
 
         # Check the marginal covariance.
         @test kernel(σf).(x, y') == sin.(x) .* kernel(f).(x, y') .* sin.(y')

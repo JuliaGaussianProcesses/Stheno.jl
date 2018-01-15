@@ -4,13 +4,29 @@ export Conditional
 # Internal data structure used to cache various quantities to prevent recomputation.
 struct ConditionalData
     U::UpperTriangular
-    idx::Vector{Int}
     tmp::Vector{Float64}
     tmp′::Vector{Float64}
 end
 ConditionalData(U::UpperTriangular) =
-    ConditionalData(U, collect(1:size(U, 1)), Vector{Float64}(size(U, 1)), Vector{Float64}(size(U, 1)))
-==(a::ConditionalData, b::ConditionalData) = a.U == b.U && a.idx == b.idx
+    ConditionalData(U, Vector{Float64}(size(U, 1)), Vector{Float64}(size(U, 1)))
+==(a::ConditionalData, b::ConditionalData) = a.U == b.U
+
+"""
+    ConditionalMean{Tμ<:μFun, Tk<:Kernel} <: μFun
+
+A mean function used in conditional distributions.
+"""
+struct ConditionalMean{Tμ<:μFun, Tk<:Vector{<:Kernel}, Tα<:Vector{<:Real}} <: μFun
+    μ::Tμ
+    k_ff′::Tk
+    α::Tα
+end
+ConditionalMean(μ::μFun, k_ff′::Vector{<:Kernel}, δ::Vector, data::ConditionalData) =
+    ConditionalMean(μ, k_ff′, A_ldiv_B!(data.U, At_ldiv_B!(data.U, δ)))
+function (μ::ConditionalMean)(x::Real)
+    kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in μ.k_ff′]
+    return μ.μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), μ.α)
+end
 
 """
     Conditional{Tk} <: Kernel{NonStationary}
