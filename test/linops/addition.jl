@@ -7,9 +7,9 @@
         x, y, σ = randn(rng, 3), randn(rng, 2), exp(randn(rng))
 
         # Set three independent GPs.
-        μ, k = sin, RQ(1.0)
+        μ, k = CustomMean(sin), RQ(1.0)
         gpc = GPC()
-        f, fi = GP(μ, k, gpc), GP(x->0, EQ(), gpc)
+        f, fi = GP(μ, k, gpc), GP(ZeroMean(), EQ(), gpc)
         σf = σ + f
         fσ = f + σ
 
@@ -39,9 +39,9 @@
         x, y, σ = randn(rng, 3), randn(rng, 2), exp(randn(rng))
 
         # Set three independent GPs.
-        μ, k = sin, RQ(1.0)
+        μ, k = CustomMean(sin), RQ(1.0)
         gpc = GPC()
-        f, fi = GP(μ, k, gpc), GP(x->0, EQ(), gpc)
+        f, fi = GP(μ, k, gpc), GP(ZeroMean(), EQ(), gpc)
         σf = sin + f
         fσ = f + cos
 
@@ -71,7 +71,7 @@
         x, y = randn(rng, 3), randn(rng, 2)
 
         # Set three independent GPs.
-        μ1, μ2, μ3 = sin, cos, tan
+        μ1, μ2, μ3 = CustomMean.([sin, cos, tan])
         k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
         gpc = GPC()
         f1, f2, f3 = GP(μ1, k1, gpc), GP(μ2, k2, gpc), GP(μ3, k3, gpc)

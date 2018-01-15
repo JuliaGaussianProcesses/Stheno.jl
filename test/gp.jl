@@ -5,7 +5,7 @@
     let rng = MersenneTwister(123456)
 
         # Specification for three independent GPs.
-        μ1, μ2, μ3 = sin, cos, tan
+        μ1, μ2, μ3 = CustomMean.((sin, cos, tan))
         k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
         f1, f2, f3 = GP.([μ1, μ2, μ3], [k1, k2, k3], GPC())
 
@@ -33,19 +33,18 @@
         rng = MersenneTwister(123456)
         N, S = 5, 100000
         μ_vec, x = randn(rng, N), randn(rng, N)
-        # μ, k = n::Int->μ_vec[n], (m::Int, n::Int)->EQ()(x[m], x[n])
-        μ, k = n::Int->μ_vec[n], Finite(EQ(), x)
+        μ, k = FiniteMean(CustomMean(identity), μ_vec), Finite(EQ(), x)
         d = GP(μ, k, GPC())
 
         @test mean(d) == μ
         @test mean(d).(1:N) == μ_vec
         @test dims(d) == N
-        @test kernel(d).(1:N, (1:N).') == EQ().(x, x.')
+        @test kernel(d).(1:N, (1:N)') == EQ().(x, x')
 
         x̂ = sample(rng, d, S)
         @test size(x̂) == (N, S)
         @test maximum(abs.(mean(x̂, 2) - mean(d).(1:N))) < 1e-2
-        Σ = broadcast(kernel(d), collect(1:N), RowVector(collect(1:N)))
+        Σ = broadcast(kernel(d), collect(1:N), Transpose(collect(1:N)))
         @test maximum(abs.(cov(x̂, 2) - Σ)) < 1e-2
     end
 end

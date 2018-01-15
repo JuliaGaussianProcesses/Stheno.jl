@@ -1,6 +1,17 @@
 # Covariance functions for FiniteGPs / Multivariate Normals.
 import Base: size, show
-export Finite, LhsFinite, RhsFinite
+export FiniteMean, Finite, LhsFinite, RhsFinite
+
+"""
+    FiniteMean{Tμ<:μFun, Tx<:ColOrRowVec} <: μFun
+
+A mean function whose domain is the elements of the vector used to construct it.
+"""
+struct FiniteMean{Tμ<:μFun, Tx<:ColOrRowVec} <: μFun
+    μ::Tμ
+    x::Tx
+end
+(μ::FiniteMean)(n::Int) = μ.μ(μ.x[n])
 
 """
     LhsFinite <: Kernel{NonStationary}

@@ -1,16 +1,37 @@
 import Base: size, show, broadcast!
+import Base.LinAlg: ldiv!
 export Conditional
 
 # Internal data structure used to cache various quantities to prevent recomputation.
 struct ConditionalData
     U::UpperTriangular
-    idx::Vector{Int}
     tmp::Vector{Float64}
     tmp′::Vector{Float64}
 end
 ConditionalData(U::UpperTriangular) =
-    ConditionalData(U, collect(1:size(U, 1)), Vector{Float64}(size(U, 1)), Vector{Float64}(size(U, 1)))
-==(a::ConditionalData, b::ConditionalData) = a.U == b.U && a.idx == b.idx
+    ConditionalData(
+        U,
+        Vector{Float64}(uninitialized, size(U, 1)),
+        Vector{Float64}(uninitialized, size(U, 1)),
+    )
+==(a::ConditionalData, b::ConditionalData) = a.U == b.U
+
+"""
+    ConditionalMean{Tμ<:μFun, Tk<:Kernel} <: μFun
+
+A mean function used in conditional distributions.
+"""
+struct ConditionalMean{Tμ<:μFun, Tk<:Vector{<:Kernel}, Tα<:Vector{<:Real}} <: μFun
+    μ::Tμ
+    k_ff′::Tk
+    α::Tα
+end
+ConditionalMean(μ::μFun, k_ff′::Vector{<:Kernel}, δ::Vector, data::ConditionalData) =
+    ConditionalMean(μ, k_ff′, ldiv!(data.U, ldiv!(Transpose(data.U), δ)))
+function (μ::ConditionalMean)(x::Real)
+    kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in μ.k_ff′]
+    return μ.μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), μ.α)
+end
 
 """
     Conditional{Tk} <: Kernel{NonStationary}
@@ -32,9 +53,10 @@ Conditional(k_ff′::Kernel, k_f̂f::Vector{<:Kernel}, k_f̂f′::Kernel, data::
 function (k::Conditional)(x::Real, x′::Real)
     kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k.k_f̂f]
     kf′s = [k isa LhsFinite ? Finite(k, [x′]) : Finite(k.k, k.x, [k.y[x′]]) for k in k.k_f̂f′]
-    a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
-    b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
-    return k.k_ff′(x, x′) - dot(a, b)
+    Ut = Transpose(k.data.U)
+    a = ldiv!(Ut, cov(reshape(kfs, :, 1)))
+    b = ldiv!(Ut, cov(reshape(kf′s, :, 1)))
+    return k.k_ff′(x, x′) - (Transpose(a) * b)[1, 1]
 end
 function broadcast!(
     k::Conditional,
@@ -44,8 +66,9 @@ function broadcast!(
 )
     kfs = [k isa LhsFinite ? Finite(k, x) : Finite(k.k, k.x, k.y[x]) for k in k.k_f̂f]
     kf′s = [k isa LhsFinite ? Finite(k, x′') : Finite(k.k, k.x, k.y[x′']) for k in k.k_f̂f′]
-    a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
-    b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
+    Ut = Tranpose(k.data.U)
+    a = ldiv!(Ut, cov(reshape(kfs, :, 1)))
+    b = ldiv!(Ut, cov(reshape(kf′s, :, 1)))
     return BLAS.gemm!('T', 'N', -1.0, a, b, 1.0, cov!(K, Finite(k.k_ff′, x, x′)))
 end
 

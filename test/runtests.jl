@@ -1,29 +1,30 @@
-using Stheno
-using Base.Test
-using BenchmarkTools
+using Stheno, Test, BenchmarkTools, QuadGK
 
 const check_mem = false
 
 @testset "Stheno" begin
 
-    @testset "kernel" begin
-        include("kernel/base.jl")
-        include("kernel/compose.jl")
-        include("kernel/transform.jl")
-        include("kernel/input_transform.jl")
-        include("kernel/finite.jl")
+    @testset "mean_and_kernel" begin
+        include("mean_and_kernel/mean_base.jl")
+        include("mean_and_kernel/kernel_base.jl")
+        include("mean_and_kernel/compose.jl")
+        include("mean_and_kernel/transform.jl")
+        include("mean_and_kernel/input_transform.jl")
+        include("mean_and_kernel/finite.jl")
     end
 
     include("covariance_matrices.jl")
-    include("kernel/conditional.jl")
+    include("mean_and_kernel/conditional.jl")
+
     include("gp.jl")
 
+    include("lin_ops.jl")
     @testset "linops" begin
         include("linops/addition.jl")
         include("linops/product.jl")
+        include("linops/integrate.jl")
     end
-    include("lin_ops.jl")
-
+    
     include("sample.jl")
     include("lpdf.jl")
 end
