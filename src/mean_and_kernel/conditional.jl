@@ -53,14 +53,9 @@ Conditional(k_ff′::Kernel, k_f̂f::Vector{<:Kernel}, k_f̂f′::Kernel, data::
 function (k::Conditional)(x::Real, x′::Real)
     kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k.k_f̂f]
     kf′s = [k isa LhsFinite ? Finite(k, [x′]) : Finite(k.k, k.x, [k.y[x′]]) for k in k.k_f̂f′]
-<<<<<<< HEAD:src/mean_and_kernel/conditional.jl
     Ut = Transpose(k.data.U)
     a = ldiv!(Ut, cov(reshape(kfs, :, 1)))
     b = ldiv!(Ut, cov(reshape(kf′s, :, 1)))
-=======
-    a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
-    b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
->>>>>>> mean-functions-0.7:src/mean_and_kernel/conditional.jl
     return k.k_ff′(x, x′) - (Transpose(a) * b)[1, 1]
 end
 function broadcast!(
