@@ -84,12 +84,12 @@
         idx = collect(eachindex(f′x))
         @test dims(f′x) == length(x)
         @test mean(f′x).(idx) ≈ f̂
-        @test all(kernel(f′x).(idx, idx') .- diagm(2e-9 * ones(x)) .< 1e-12)
+        @test all(kernel(f′x).(idx, idx') .- diagm(0 => 2e-9 * fill!(similar(x), 1)) .< 1e-12)
         @test dims(f′x′) == length(x′)
 
         # Test process posterior works.
         @test mean(f′).(x) ≈ f̂
-        @test all(kernel(f′).(x, x') .- diagm(2e-9 * ones(x)) .< 1e-12)
+        @test all(kernel(f′).(x, x') .- diagm(0 => 2e-9 * fill!(similar(x), 1)) .< 1e-12)
 
         # Test that covariances are computed properly.
         @test maximum(abs.(full(cov(f′x)) .- 2 .* kernel(f′).(x, x'))) < 1e-12

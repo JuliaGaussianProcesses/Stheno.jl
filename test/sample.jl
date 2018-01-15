@@ -28,7 +28,7 @@
         μ̂, μ = mean(f̂, 2), sin.(x)
         @test mean(abs.(μ̂ .- μ)) < 1e-2
 
-        Σ̂, Σ = (f̂ .- sin.(x)) * (f̂ .- sin.(x)).' ./ S, cov(kernel(f(x)))
+        Σ̂, Σ = (f̂ .- sin.(x)) * (f̂ .- sin.(x))' ./ S, cov(kernel(f(x)))
         @test mean(abs.(Σ̂ .- Σ)) < 1e-2
     
         # Check mean + covariance estimates approximately converge for multi-GP sampling.
@@ -39,7 +39,7 @@
         μ̂, μ = mean(f̂, 2), sin.(x̂)
         @test mean(abs.(μ̂ .- μ)) < 1e-2
 
-        Σ̂, Σ = (f̂ .- sin.(x̂)) * (f̂ .- sin.(x̂)).' ./ S, cov(kernel(f(x̂)))
+        Σ̂, Σ = (f̂ .- sin.(x̂)) * (f̂ .- sin.(x̂))' ./ S, cov(kernel(f(x̂)))
         @test mean(abs.(Σ̂ .- Σ)) < 1e-2
     end
 end

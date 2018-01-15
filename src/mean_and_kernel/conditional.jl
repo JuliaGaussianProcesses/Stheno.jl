@@ -8,7 +8,11 @@ struct ConditionalData
     tmp′::Vector{Float64}
 end
 ConditionalData(U::UpperTriangular) =
-    ConditionalData(U, Vector{Float64}(size(U, 1)), Vector{Float64}(size(U, 1)))
+    ConditionalData(
+        U,
+        Vector{Float64}(uninitialized, size(U, 1)),
+        Vector{Float64}(uninitialized, size(U, 1)),
+    )
 ==(a::ConditionalData, b::ConditionalData) = a.U == b.U
 
 """
@@ -50,7 +54,7 @@ function (k::Conditional)(x::Real, x′::Real)
     kf′s = [k isa LhsFinite ? Finite(k, [x′]) : Finite(k.k, k.x, [k.y[x′]]) for k in k.k_f̂f′]
     a = At_ldiv_B!(k.data.U, cov(reshape(kfs, :, 1)))
     b = At_ldiv_B!(k.data.U, cov(reshape(kf′s, :, 1)))
-    return k.k_ff′(x, x′) - dot(a, b)
+    return k.k_ff′(x, x′) - (Transpose(a) * b)[1, 1]
 end
 function broadcast!(
     k::Conditional,

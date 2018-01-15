@@ -2,8 +2,8 @@
 
     # Check that the type system works as expected.
     import Stheno: Stationary, NonStationary
-    @test !(Kernel{Stationary} <: Kernel)
-    @test !(Kernel{NonStationary} <: Kernel)
+    @test Kernel{Stationary} <: Kernel
+    @test Kernel{NonStationary} <: Kernel
     @test !(Kernel{Stationary} <: Kernel{NonStationary})
     @test !(Kernel{NonStationary} <: Kernel{Stationary})
 

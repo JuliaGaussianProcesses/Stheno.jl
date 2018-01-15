@@ -5,7 +5,7 @@
     # Test that ConditionalData works as expected.
     let rng = MersenneTwister(123456)
         x = randn(rng, 10, 10)
-        U = chol(x'x + 1e-9I)
+        U = chol(Transpose(x) * x + 1e-9I)
         data = Stheno.ConditionalData(U)
         @test data.U == U
         @test length(data.tmp) == 10
@@ -17,14 +17,14 @@
 
         x = randn(rng, N)
         k1, k2, k12 = EQ(), RQ(1.0), Constant(0.0)
-        data, k1f̂ = ConditionalData(chol(k1.(x, x') + 1e-9I)), LhsFinite(k1, x)
+        data, k1f̂ = ConditionalData(chol(k1.(x, x') .+ 1e-9I)), LhsFinite(k1, x)
 
         kpost_1 = Conditional(k1, Vector{Kernel}([k1f̂]), Vector{Kernel}([k1f̂]), data)
-        @test all(abs.(kpost_1.(x, RowVector(x))) .< 1e-8)
+        @test all(abs.(kpost_1.(x, x')) .< 1e-8)
 
         k2f̂ = LhsFinite(k12, x)
         kpost_21 = Conditional(k2, Vector{Kernel}([k2f̂]), Vector{Kernel}([k2f̂]), data)
-        @test all(abs.(kpost_21.(x, RowVector(x)) .- RQ(1.0).(x, RowVector(x))) .< 1e-12)
+        @test all(abs.(kpost_21.(x, x') .- RQ(1.0).(x, x')) .< 1e-12)
     end
 
     # Test conditioning on multiple input kernels.

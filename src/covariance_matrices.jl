@@ -31,7 +31,7 @@ function cov!(K::AbstractMatrix, k::Matrix)
     cumsum!(view(rs, 2:length(rs_) + 1), rs_)
     cumsum!(view(cs, 2:length(cs_) + 1), cs_)
     rs[1], cs[1] = 0, 0
-    for I in CartesianRange(size(k))
+    for I in CartesianIndices(k)
         cov!(view(K, rs[I[1]]+1:rs[I[1]+1], cs[I[2]]+1:cs[I[2]+1]), k[I[1], I[2]])
     end
     return K
