@@ -1,4 +1,5 @@
-import Base: mean, show, cov, chol, eachindex, transpose
+import Base: mean, show, cov, eachindex
+import LinearAlgebra: chol, transpose
 export mean, mean_vector, kernel, GP, GPC, condition!, predict, lpdf, sample, dims
 
 const __ϵ = 1e-9
@@ -6,8 +7,8 @@ const __ϵ = 1e-9
 # A collection of GPs (GPC == "GP Collection"). Primarily used to track cross-kernels.
 struct GPC
     gps::Set{Any}
-    k_x::ObjectIdDict
-    GPC() = new(Set{Any}(), ObjectIdDict())
+    k_x::IdDict
+    GPC() = new(Set{Any}(), IdDict())
 end
 
 """

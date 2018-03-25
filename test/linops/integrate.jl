@@ -14,7 +14,7 @@
     let f = GP(ZeroMean(), EQ(), GPC())
         v = ∫(StandardNormal(), f)
         v′, f′ = (v | (v←[1])), (f | (v←[1]))
-        x = collect(linspace(-10.0, 10.0, 100))
+        x = collect(range(-10.0, stop=10.0, length=100))
         g(x) = exp(-0.5 * x^2) / sqrt(2π)
         @test abs(quadgk(x->mean(f′)(x) * g(x), -10.0, 10.0)[1] - 1.0) < 1e-6
     end
@@ -22,7 +22,7 @@
     # Test properties of the posterior when the function is observed.
     let rng = MersenneTwister(123456), f = GP(ZeroMean(), EQ(), GPC())
         v = ∫(StandardNormal(), f)
-        x = collect(linspace(-10.0, 10.0, 100))
+        x = collect(range(-10.0, stop=10.0, length=100))
         fs = sample(rng, f(x))
         v′, μf′ = mean(v | (f(x)←fs))(1), mean(f | (f(x)←fs))
         g(x) = exp(-0.5 * x^2) / sqrt(2π)

@@ -1,5 +1,5 @@
 import Base: size, show, broadcast!
-import Base.LinAlg: ldiv!
+import LinearAlgebra: ldiv!
 export Conditional
 
 # Internal data structure used to cache various quantities to prevent recomputation.
@@ -11,8 +11,8 @@ end
 ConditionalData(U::UpperTriangular) =
     ConditionalData(
         U,
-        Vector{Float64}(uninitialized, size(U, 1)),
-        Vector{Float64}(uninitialized, size(U, 1)),
+        Vector{Float64}(undef, size(U, 1)),
+        Vector{Float64}(undef, size(U, 1)),
     )
 ==(a::ConditionalData, b::ConditionalData) = a.U == b.U
 

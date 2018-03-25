@@ -1,6 +1,9 @@
-import Base.BLAS: trsv
 import PDMats: AbstractPDMat, invquad, dim
-import Base: cov, logdet, full, size, chol, ==
+# import Base: cov, logdet, full, size, chol, ==
+
+import Base: size, ==, full
+import LinearAlgebra: cov, logdet, chol
+import LinearAlgebra.BLAS: trsv
 export cov, cov!, invquad, AbstractPDMat
 
 """
@@ -26,8 +29,8 @@ Store in `K` the covariance matrix implied by the finite kernel (matrix thereof)
 cov!(K::AbstractMatrix, k::Kernel) = broadcast!(k, K, 1:size(k, 1), (1:size(k, 2))')
 function cov!(K::AbstractMatrix, k::Matrix)
     rs_, cs_ = size.(k[:, 1], 1), size.(k[1, :], 2)
-    rs = Vector{Int}(uninitialized, length(rs_) + 1)
-    cs = Vector{Int}(uninitialized, length(cs_) + 1)
+    rs = Vector{Int}(undef, length(rs_) + 1)
+    cs = Vector{Int}(undef, length(cs_) + 1)
     cumsum!(view(rs, 2:length(rs_) + 1), rs_)
     cumsum!(view(cs, 2:length(cs_) + 1), cs_)
     rs[1], cs[1] = 0, 0
@@ -42,5 +45,5 @@ end
 
 Compute the covariance matrix implied by the finite kernel (or matrix thereof) `k`.
 """
-cov(k::Kernel) = cov!(Matrix{Float64}(uninitialized, size(k, 1), size(k, 2)), k)
-cov(k::Matrix) = cov!(Matrix{Float64}(uninitialized, sum(size.(k[:, 1], 1)), sum(size.(k[1, :], 2))), k)
+cov(k::Kernel) = cov!(Matrix{Float64}(undef, size(k, 1), size(k, 2)), k)
+cov(k::Matrix) = cov!(Matrix{Float64}(undef, sum(size.(k[:, 1], 1)), sum(size.(k[1, :], 2))), k)

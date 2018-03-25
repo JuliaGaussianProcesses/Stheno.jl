@@ -43,8 +43,8 @@
 
         x̂ = sample(rng, d, S)
         @test size(x̂) == (N, S)
-        @test maximum(abs.(mean(x̂, 2) - mean(d).(1:N))) < 1e-2
+        @test maximum(abs.(mean(x̂, dims=2) - mean(d).(1:N))) < 1e-2
         Σ = broadcast(kernel(d), collect(1:N), Transpose(collect(1:N)))
-        @test maximum(abs.(cov(x̂, 2) - Σ)) < 1e-2
+        @test maximum(abs.(cov(x̂, dims=2) - Σ)) < 1e-2
     end
 end

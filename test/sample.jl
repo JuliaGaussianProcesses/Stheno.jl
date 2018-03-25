@@ -25,7 +25,7 @@
         S = 100000
         f̂ = sample(rng, f(x), S)
 
-        μ̂, μ = mean(f̂, 2), sin.(x)
+        μ̂, μ = mean(f̂, dims=2), sin.(x)
         @test mean(abs.(μ̂ .- μ)) < 1e-2
 
         Σ̂, Σ = (f̂ .- sin.(x)) * (f̂ .- sin.(x))' ./ S, cov(kernel(f(x)))
@@ -36,7 +36,7 @@
         f̂ = sample(rng, Vector{GP}([f(x), f(x′)]), S)
         f̂ = vcat(f̂[1], f̂[2])
 
-        μ̂, μ = mean(f̂, 2), sin.(x̂)
+        μ̂, μ = mean(f̂, dims=2), sin.(x̂)
         @test mean(abs.(μ̂ .- μ)) < 1e-2
 
         Σ̂, Σ = (f̂ .- sin.(x̂)) * (f̂ .- sin.(x̂))' ./ S, cov(kernel(f(x̂)))

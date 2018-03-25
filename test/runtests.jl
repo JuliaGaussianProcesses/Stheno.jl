@@ -1,4 +1,4 @@
-using Stheno, Test, BenchmarkTools, QuadGK
+using Stheno, Test, BenchmarkTools, QuadGK, Random, LinearAlgebra
 
 const check_mem = false
 
