@@ -25,7 +25,7 @@ isfinite(::Kernel) = false
 """
     Zero <: Kernel{Stationary}
 
-A rank 1 kernel that always returns zero. (Not really a kernel, but meh).
+A rank 1 kernel that always returns zero.
 """
 struct Zero <: Kernel{Stationary} end
 (::Zero)(x::T, x′::T) where T = zero(T)
