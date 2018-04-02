@@ -14,11 +14,11 @@ end
 (μ::FiniteMean)(n::Int) = μ.μ(μ.x[n])
 
 """
-    LhsFinite <: Kernel{NonStationary}
+    LhsFinite <: Kernel
 
 A kernel who's first (left) argument is from a finite index set.
 """
-struct LhsFinite{T<:ColOrRowVec, Tk<:Any} <: Kernel{NonStationary}
+struct LhsFinite{T<:ColOrRowVec, Tk<:Any} <: Kernel
     k::Tk
     x::T
 end
@@ -32,7 +32,7 @@ size(k::LhsFinite, n::Int) = n == 1 ? length(k.x) : size(k.k, n)
 
 A kernel who's second (right) argument is from a finite index set.
 """
-struct RhsFinite{T<:ColOrRowVec, Tk<:Any} <: Kernel{NonStationary}
+struct RhsFinite{T<:ColOrRowVec, Tk<:Any} <: Kernel
     k::Tk
     y::T
 end
@@ -47,7 +47,7 @@ size(k::RhsFinite, n::Int) = n == 1 ? size(k.k, n) : length(k.y)
 
 A kernel on a finite index set.
 """
-struct Finite{Tx<:ColOrRowVec, Ty<:ColOrRowVec, Tk<:Any} <: Kernel{NonStationary}
+struct Finite{Tx<:ColOrRowVec, Ty<:ColOrRowVec, Tk<:Any} <: Kernel
     k::Tk
     x::Tx
     y::Ty

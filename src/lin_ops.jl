@@ -48,11 +48,11 @@ function |(f::GP, c::Vector{Assignment})
     return GP(|, f, f_obs, [c̄.y for c̄ in c], CData(chol(cov(f_obs))))
 end
 μ_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
-    ConditionalMean(mean(f), k.(f_obs, f), vcat(f̂...) .- mean_vector(f_obs), data)
+    ConditionalMean(mean(f), k.(f_obs, (f,)), vcat(f̂...) .- mean_vector(f_obs), data)
 k_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
-    Conditional(k(f), k.(f_obs, f), k.(f_obs, f), data)
+    Conditional(k(f), k.(f_obs, (f,)), k.(f_obs, (f,)), data)
 k_p′p(f_p::GP, ::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
-    Conditional(k(f, f_p), k.(f_obs, f), k.(f_obs, f_p), data)
+    Conditional(k(f, f_p), k.(f_obs, (f,)), k.(f_obs, (f_p,)), data)
 k_pp′(f_p::GP, ::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
-    Conditional(k(f_p, f), k.(f_obs, f_p), k.(f_obs, f), data)
+    Conditional(k(f_p, f), k.(f_obs, (f_p,)), k.(f_obs, (f,)), data)
 dims(::typeof(|), f::GP, ::GP, f̂::Vector) = dims(f)

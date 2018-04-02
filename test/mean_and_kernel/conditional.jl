@@ -17,7 +17,7 @@
 
         x = randn(rng, N)
         k1, k2, k12 = EQ(), RQ(1.0), Constant(0.0)
-        data, k1f̂ = ConditionalData(chol(k1.(x, x') .+ 1e-9I)), LhsFinite(k1, x)
+        data, k1f̂ = ConditionalData(chol(k1.(x, x') + 1e-9I)), LhsFinite(k1, x)
 
         kpost_1 = Conditional(k1, Vector{Kernel}([k1f̂]), Vector{Kernel}([k1f̂]), data)
         @test all(abs.(kpost_1.(x, x')) .< 1e-8)

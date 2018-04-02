@@ -1,52 +1,34 @@
-export InputTransformedKernel, input_transform, Index, Periodic, Transform
+export InputTransformedKernel, Index, Periodic, Transform, input_transform
 
 """
-    InputTransformedKernel{T<:KernelType} <: Kernel{T}
+    InputTransformedKernel <: Kernel
 
 An `InputTransformedKernel` kernel is one which applies a transformation `f` to its inputs
 prior to applying a Kernel `k` that it owns.
 """
-struct InputTransformedKernel{T<:KernelType, Tk<:Kernel{T}, Tf} <: Kernel{T}
+struct InputTransformedKernel{Tk<:Kernel, Tf} <: Kernel
     k::Tk
     f::Tf
-    InputTransformedKernel(k::Tk, f::Tf) where {T<:KernelType, Tk<:Kernel{T}, Tf} =
-        new{T, Tk, Tf}(k, f)
 end
 const Transform = InputTransformedKernel
+isstationary(::Type{<:Transform{Tk}}) where Tk<:Kernel = isstationary(Tk)
 
-@inline (k::InputTransformedKernel)(x::Tin, y::Tin) where Tin =
-    kernel(k)(input_transform(k)(x), input_transform(k)(y))
+@inline (k::Transform)(x::Tin, y::Tin) where Tin = k.k(k.f(x), k.f(y))
 
-==(
-    k1::InputTransformedKernel{T, Tk, Tf},
-    k2::InputTransformedKernel{T, Tk, Tf},
-) where {T, Tk, Tf} =
-    kernel(k1) == kernel(k2)
-
-dims(k::InputTransformedKernel) = dims(k.k)
-
-"""
-    kernel(k::InputTransformedKernel)
-
-Get the kernel to whos inputs `k` applies an input domain transform.
-"""
-kernel(k::InputTransformedKernel) = k.k
-
-"""
-    input_transform(k::InputTransformedKernel)
-
-Get the input domain transform which `k` applies to `kernel(k)`.
-"""
-input_transform(k::InputTransformedKernel) = k.f
+==(k1::Transform{Tk, Tf}, k2::Transform{Tk, Tf}) where {Tk, Tf} =
+    (k1.k == k2.k) && (k1.f == k2.f)
+dims(k::Transform) = dims(k.k)
+kernel(k::Transform) = k.k
+input_transform(k::Transform) = k.f
 
 """
     Index{N}
 
 A parametric singleton type used to indicate to which dimension of an input a particular
-`InputTransformedKernel` should be applied. For example,
+`Transform` should be applied. For example,
 ```
 x = [5.0, 4.0]
-kt = InputTransformedKernel(k, Index{2})
+kt = Transform(k, Index{2})
 kt(x, x) == k(x[2], x[2])
 ```
 """
@@ -59,9 +41,7 @@ struct Index{N, Tf}
 end
 @inline (idx::Index)(x) = idx.f(x)
 
-function Index{N}(k::Kernel) where N
-    return InputTransformedKernel(k, Index{N}())
-end
+Index{N}(k::Kernel) where N = Transform(k, Index{N}())
 
 """
     Periodic <: Kernel
@@ -69,10 +49,10 @@ end
 Make a periodic kernel by applying the transformation `T:θ→(cos(2πθ), sin(2πθ))` to inputs
 and computing `k(T(θ)[1], T(θ′)[1]) * k(T(θ)[2], T(θ′)[2])`.
 """
-struct Periodic{T<:KernelType, Tk} <: Kernel{T}
+struct Periodic{Tk} <: Kernel
     k::Tk
-    Periodic(k::Kernel{T}) where T<:KernelType = new{T, typeof(k)}(k)
 end
-==(k1::Periodic{T, Tk}, k2::Periodic{T, Tk}) where {T, Tk} = k1.k == k2.k
+==(k1::Periodic{Tk}, k2::Periodic{Tk}) where Tk = k1.k == k2.k
 @inline (k::Periodic)(θ::Real, θ′::Real) =
     k.k(cos(2π * θ), cos(2π * θ′)) * k.k(sin(2π * θ), sin(2π * θ′))
+

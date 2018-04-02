@@ -1,6 +1,6 @@
 module Stheno
 
-    using PDMats, LinearAlgebra, Random
+    using PDMats, LinearAlgebra, Random, SimpleTraits
 
     const ColOrRowVec = Union{AbstractVector, RowVector}
 

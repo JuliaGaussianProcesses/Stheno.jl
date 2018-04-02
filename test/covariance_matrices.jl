@@ -41,7 +41,7 @@
     # Test covariance matrix construct with multiple kernels.
     let rng = MersenneTwister(123456)
         P1, P2, Q1, Q2 = 3, 4, 5, 6
-        x1, x2, y1, y2 = randn.(rng, [P1, P2, Q1, Q2])
+        x1, x2, y1, y2 = randn.((rng,), [P1, P2, Q1, Q2])
         k11, k12, k21, k22 = Finite.(
             [EQ(), RQ(1.0), Stheno.Constant(2.5), Linear(4.0)],
             [x1, x1, x2, x2],

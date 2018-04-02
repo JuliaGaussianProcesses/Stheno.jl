@@ -1,125 +1,127 @@
-import Base: +, *, ==
+import Base: +, *, ==, show
 export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, Exponential,
-    Constant
+    Constant, isstationary
 
 """
-Determines whether a kernel is stationary or not and enables dispatch on this.
+    Kernel
+
+Supertype for all kernels.
 """
-abstract type KernelType end
-
-""" Indicates that a `Kernel` is non-stationary. """
-abstract type NonStationary <: KernelType end
-
-""" Indicates that a `Kernel` is stationary. """
-abstract type Stationary <: KernelType end
-
-"""
-    Kernel{T<:KernelType}
-
-Supertype for all kernels; `T` indicates whether is `Stationary` or `NonStationary`.
-"""
-abstract type Kernel{T<:KernelType} end
+abstract type Kernel end
 
 isfinite(::Kernel) = false
+isstationary(::Type{<:Kernel}) = false
+isstationary(k::Kernel) = isstationary(typeof(k))
 
 """
-    Zero <: Kernel{Stationary}
+    Zero <: Kernel
 
 A rank 1 kernel that always returns zero.
 """
-struct Zero <: Kernel{Stationary} end
+struct Zero <: Kernel end
 (::Zero)(x::T, x′::T) where T = zero(T)
+isstationary(::Type{<:Zero}) = true
+show(io::IO, ::Zero) = show(io, "Zero")
 
 """
-    Constant{T<:Real} <: Kernel{Stationary}
+    Constant{T<:Real} <: Kernel
 
 A rank 1 constant `Kernel`. Useful for consistency when creating composite Kernels,
 but (almost certainly) shouldn't be used as a base `Kernel`.
 """
-struct Constant{T<:Real} <: Kernel{Stationary}
+struct Constant{T<:Real} <: Kernel
     value::T
 end
 (k::Constant)(::Any, ::Any) = k.value
 ==(a::Constant, b::Constant) = a.value == b.value
+isstationary(::Type{<:Constant}) = true
+show(io::IO, k::Constant) = show(io, "Constant($(k.value))")
 
 """
-    EQ <: Kernel{Stationary}
+    EQ <: Kernel
 
 The standardised Exponentiated Quadratic kernel with no free parameters.
 """
-struct EQ <: Kernel{Stationary} end
+struct EQ <: Kernel end
 @inline (::EQ)(x::Real, y::Real) = exp(-0.5 * abs2(x - y))
-==(::EQ, ::EQ) = true
+isstationary(::Type{<:EQ}) = true
+show(io::IO, ::EQ) = show(io, "EQ")
 
 """
-    RQ{T<:Real} <: Kernel{Stationary}
+    RQ{T<:Real} <: Kernel
 
 The standardised Rational Quadratic. `RQ(α)` creates an `RQ` `Kernel{Stationary}` whose
 kurtosis is `α`.
 """
-struct RQ{T<:Real} <: Kernel{Stationary}
+struct RQ{T<:Real} <: Kernel
     α::T
 end
 @inline (k::RQ)(x::Real, y::Real) = (1 + 0.5 * abs2(x - y) / k.α)^(-k.α)
 ==(a::RQ, b::RQ) = a.α == b.α
+isstationary(::Type{<:RQ}) = true
+show(io::IO, k::RQ) = show(io, "RQ($(k.α))")
 
 """
-    Linear{T<:Real} <: Kernel{NonStationary}
+    Linear{T<:Real} <: Kernel
 
 Standardised linear kernel. `Linear(c)` creates a `Linear` `Kernel{NonStationary}` whose
 intercept is `c`.
 """
-struct Linear{T<:Real} <: Kernel{NonStationary}
+struct Linear{T<:Real} <: Kernel
     c::T
 end
 @inline (k::Linear)(x, y) = dot(x - k.c, y - k.c)
 @inline (k::Linear)(x::Tuple, y::Tuple) = sum(map((x, y)->(x - k.c) * (y - k.c), x, y))
 ==(a::Linear, b::Linear) = a.c == b.c
+show(io::IO, k::Linear) = show(io, "Linear")
 
 """
-    Poly{Tσ<:Real} <: Kernel{NonStationary}
+    Poly{Tσ<:Real} <: Kernel
 
-Standardised Polynomial kernel. `Poly(p, σ)` creates a `Poly` `Kernel{NonStationary}`.
+Standardised Polynomial kernel. `Poly(p, σ)` creates a `Poly`.
 """
-struct Poly{Tσ<:Real} <: Kernel{NonStationary}
+struct Poly{Tσ<:Real} <: Kernel
     p::Int
     σ::Tσ
 end
 @inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
+show(io::IO, k::Poly) = show(io, "Poly($(k.p))")
 
 """
-    Noise{T<:Real} <: Kernel{Stationary}
+    Noise <: Kernel
 
 A standardised stationary white-noise kernel.
 """
-struct Noise <: Kernel{Stationary} end
+struct Noise <: Kernel end
 @inline (::Noise)(x::Real, x′::Real) = x == x′ ? 1.0 : 0.0
-==(::Noise, ::Noise) = true
+isstationary(::Type{<:Noise}) = true
+show(io::IO, ::Noise) = show(io, "Noise")
 
 """
-    Wiener <: Kernel{NonStationary}
+    Wiener <: Kernel
 
 The standardised stationary Wiener-process kernel.
 """
-struct Wiener <: Kernel{NonStationary} end
+struct Wiener <: Kernel end
 @inline (::Wiener)(x::Real, x′::Real) = min(x, x′)
-==(::Wiener, ::Wiener) = true
+show(io::IO, ::Wiener) = show(io, "Wiener")
 
 """
-    WienerVelocity <: Kernel{NonStationary}
+    WienerVelocity <: Kernel
 
 The standardised WienerVelocity kernel.
 """
-struct WienerVelocity <: Kernel{NonStationary} end
+struct WienerVelocity <: Kernel end
 @inline (::WienerVelocity)(x::Real, x′::Real) =
     min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
-==(::WienerVelocity, ::WienerVelocity) = true
+show(io::IO, ::WienerVelocity) = show(io, "WienerVelocity")
 
 """
-    Exponential <: Kernel{Stationary}
+    Exponential <: Kernel
 
 The standardised Exponential kernel.
 """
-struct Exponential <: Kernel{Stationary} end
+struct Exponential <: Kernel end
 @inline (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
-==(::Exponential, ::Exponential) = true
+isstationary(::Type{<:Exponential}) = true
+show(io::IO, ::Exponential) = show(io, "Exp")

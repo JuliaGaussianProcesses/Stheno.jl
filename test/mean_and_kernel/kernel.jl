@@ -1,19 +1,12 @@
 @testset "kernel" begin
 
-    # Check that the type system works as expected.
-    import Stheno: Stationary, NonStationary
-    @test Kernel{Stationary} <: Kernel
-    @test Kernel{NonStationary} <: Kernel
-    @test !(Kernel{Stationary} <: Kernel{NonStationary})
-    @test !(Kernel{NonStationary} <: Kernel{Stationary})
-
     import Stheno.Zero
     let rng = MersenneTwister(123456)
         @test Zero()(randn(rng), 4.0) == 0.0
         @test Zero() == Zero()
     end
 
-    # Tests for Constant <: Kernel{Stationary}.
+    # Tests for Constant <: Kernel.
     import Stheno.Constant
     let rng = MersenneTwister(123456)
         @test Constant(5.0).value == 5.0
@@ -23,6 +16,7 @@
     end
 
     # Tests for Exponentiated Quadratic (EQ) kernel.
+    @test isstationary(EQ)
     @test EQ()(5.0, 5.0) == 1
     @test EQ()(5.0, 100.0) ≈ 0
     @test EQ() == EQ()
@@ -30,6 +24,7 @@
     @test EQ() != 1.0
 
     # Tests for Rational Quadratic (RQ) kernel.
+    @test isstationary(RQ)
     @test RQ(1.0)(1.0, 1.0) == 1
     @test RQ(100.0)(1.0, 1000.0) ≈ 0
     @test RQ(1.0) == RQ(1.0)
@@ -38,6 +33,7 @@
     @test RQ(1000.0) != EQ()
 
     # Tests for Linear kernel.
+    @test !isstationary(Linear)
     @test Linear(0.0)(1.0, 1.0) == 1
     @test Linear(1.0)(1.0, 1.0) == 0
     @test Linear(0.0)(0.0, 0.0) == 0
@@ -47,6 +43,7 @@
     @test Linear(1.0) != Linear(2.0)
 
     # Tests for Polynomial kernel.
+    @test !isstationary(Poly)
     @test Poly(2, -1.0)(1.0, 1.0) == 0.0
     @test Poly(5, -1.0)(1.0, 1.0) == 0.0
     @test Poly(5, 0.0)(1.0, 1.0) == 1.0
@@ -54,16 +51,14 @@
     @test Poly(2, 1.0) != Poly(5, 1.0)
 
     # Tests for Noise kernel.
-    @test Noise <: Kernel{Stationary}
-    @test !(Noise <: Kernel{NonStationary})
+    @test isstationary(Noise)
     @test Noise()(1.0, 1.0) == 1.0
     @test Noise()(0.0, 1e-9) == 0.0
     @test Noise() == Noise()
     @test Noise() != RQ(1.0)
 
     # Tests for Wiener kernel.
-    @test Wiener <: Kernel{NonStationary}
-    @test !(Wiener <: Kernel{Stationary})
+    @test !isstationary(Wiener)
     @test Wiener()(1.0, 1.0) == 1.0
     @test Wiener()(1.0, 1.5) == 1.0
     @test Wiener()(1.5, 1.0) == 1.0
@@ -71,16 +66,14 @@
     @test Wiener() != Noise()
 
     # Tests for WienerVelocity.
-    @test WienerVelocity <: Kernel{NonStationary}
-    @test !(WienerVelocity <: Kernel{Stationary})
+    @test !isstationary(WienerVelocity)
     @test WienerVelocity()(1.0, 1.0) == 1 / 3
     @test WienerVelocity() == WienerVelocity()
     @test WienerVelocity() != Wiener()
     @test WienerVelocity() != Noise()
 
     # Tests for Exponential.
-    @test Exponential <: Kernel{Stationary}
-    @test !(Exponential <: Kernel{NonStationary})
+    @test isstationary(Exponential)
     @test Exponential() == Exponential()
     @test Exponential()(5.0, 5.0) == 1.0
     @test Exponential() != EQ()

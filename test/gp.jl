@@ -7,7 +7,7 @@
         # Specification for three independent GPs.
         μ1, μ2, μ3 = CustomMean.((sin, cos, tan))
         k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-        f1, f2, f3 = GP.([μ1, μ2, μ3], [k1, k2, k3], GPC())
+        f1, f2, f3 = GP.([μ1, μ2, μ3], [k1, k2, k3], Ref(GPC()))
 
         @test mean(f1) == μ1
         @test mean(f2) == μ2

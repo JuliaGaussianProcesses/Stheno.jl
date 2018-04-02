@@ -34,11 +34,11 @@ function (μ::ConditionalMean)(x::Real)
 end
 
 """
-    Conditional{Tk} <: Kernel{NonStationary}
+    Conditional{Tk}
 
 A kernel for use in conditional distributions.
 """
-struct Conditional{Tk<:Kernel} <: Kernel{NonStationary}
+struct Conditional{Tk<:Kernel} <: Kernel
     k_ff′::Tk
     k_f̂f::Vector{<:Kernel}
     k_f̂f′::Vector{<:Kernel}

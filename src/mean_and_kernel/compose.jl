@@ -1,24 +1,39 @@
 import Base: show
 
 """
-    Composite{V, O, T<:Tuple{Any, N} where N} <: Kernel{V}
+    Composite{O, T<:Tuple{Kernel, N} where N} <: Kernel
 
 A `Composite` kernel is generated through the application of `N`-ary operation `O` to a
-collection of objects, one of which is assumed to be a kernel. The result is, of course, not
-guaranteed to be a positive definite kernel. A `Composite` `Kernel` should therefore be
-treated with a degree of care. It is the job of the caller to determine whether the
-resulting pseudo-kernel is stationary or not.
+collection of objects, at least one of which is assumed to be a kernel.
 """
-struct Composite{V, O<:Function, T<:Tuple{Any, N} where N} <: Kernel{V}
+struct Composite{O<:Function, T<:Tuple{Vararg{Kernel}}} <: Kernel
     args::T
 end
+for foo in [:isfinite, :isstationary]
+    @eval function $foo(::Type{<:Composite{<:Function, T}}) where T<:Tuple{Vararg{Kernel}}
+        for n in 1:length(T.parameters)
+            !$foo(T.parameters[n]) && return false
+        end
+        return true
+    end
+end
 
-struct LhsOp{O<:Function, Tf<:Function, Tk<:Kernel} <: Kernel{NonStationary}
+"""
+    LhsOp{O<:Function, Tf<:Function, Tk<:Kernel}
+
+Return the binary function `g(x, x′) = O(f(x), k(x, x′))`.
+"""
+struct LhsOp{O<:Function, Tf<:Function, Tk<:Kernel} <: Kernel
     f::Tf
     k::Tk
 end
 
-struct RhsOp{O<:Function, Tk<:Kernel, Tf<:Function} <: Kernel{NonStationary}
+"""
+    RhsOp{O<:Function, Tk<:Kernel, Tf<:Function}
+
+Return the binary fucntion `g(x, x′) = O(k(x, x′), f(x′))`.
+"""
+struct RhsOp{O<:Function, Tk<:Kernel, Tf<:Function} <: Kernel
     k::Tk
     f::Tf
 end
@@ -31,23 +46,19 @@ for op in (:+, :*)
         # Composite defintions.
         $op(a::Real, b::Kernel) = $op(Constant(a), b)
         $op(a::Kernel, b::Real) = $op(a, Constant(b))
-        $op(a::Ta, b::Tb) where {Ta<:Kernel, Tb<:Kernel} =
-            Composite{NonStationary, typeof($op), Tuple{Ta, Tb}}((a, b))
-        $op(a::Ta, b::Tb) where {Ta<:Kernel{Stationary}, Tb<:Kernel{Stationary}} =
-            Composite{Stationary, typeof($op), Tuple{Ta, Tb}}((a, b))
-        (k::Composite{<:KernelType, $T_op})(x, y) = $op(k.args[1](x, y), k.args[2](x, y))
-        show(io::IO, k::Composite{<:Any, $T_op}) =
-            print(io, "Composite with operator $($op) and args $(k.args).")
+        $op(a::Kernel, b::Kernel) = Composite{$T_op, Tuple{typeof(a), typeof(b)}}((a, b))
+        (k::Composite{$T_op})(x, y) = $op(k.args[1](x, y), k.args[2](x, y))
+        show(io::IO, k::Composite{$T_op}) = show(io, "$($op)($(k.args)...).")
 
         # LhsOp definitions.
         $op(f::Tf, k::Tk) where {Tf<:Function, Tk<:Kernel} = LhsOp{$T_op, Tf, Tk}(f, k)
         @inline (k::LhsOp{$T_op})(x, x′) = $op(k.f(x), k.k(x, x′))
-        show(io::IO, k::LhsOp{$T_op}) = print(io, "LhsOp{$($T_op)}, f=$(k.f), k=$(k.k)")
+        show(io::IO, k::LhsOp{$T_op}) = show(io, "LhsOp{$($T_op)}, f=$(k.f), k=$(k.k)")
 
         # RhsOp definitions.
         $op(k::Tk, f::Tf) where {Tk<:Kernel, Tf<:Function} = RhsOp{$T_op, Tk, Tf}(k, f)
         @inline (k::RhsOp{$T_op})(x, x′) = $op(k.k(x, x′), k.f(x′))
-        show(io::IO, k::RhsOp{$T_op}) = print(op, "RhsOp{$($T_op)}, k=$(k.k), f=$(k.f)")
+        show(io::IO, k::RhsOp{$T_op}) = show(op, "RhsOp{$($T_op)}, k=$(k.k), f=$(k.f)")
     end
 end
 

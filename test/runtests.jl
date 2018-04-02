@@ -24,7 +24,7 @@ const check_mem = false
         include("linops/product.jl")
         include("linops/integrate.jl")
     end
-    
+
     include("sample.jl")
     include("lpdf.jl")
 end
