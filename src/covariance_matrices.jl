@@ -1,5 +1,4 @@
 import PDMats: AbstractPDMat, invquad, dim
-# import Base: cov, logdet, full, size, chol, ==
 
 import Base: size, ==, full
 import LinearAlgebra: cov, logdet, chol
