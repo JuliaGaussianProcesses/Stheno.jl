@@ -5,8 +5,8 @@ const check_mem = false
 @testset "Stheno" begin
 
     @testset "mean_and_kernel" begin
-        include("mean_and_kernel/mean_base.jl")
-        include("mean_and_kernel/kernel_base.jl")
+        include("mean_and_kernel/mean.jl")
+        include("mean_and_kernel/kernel.jl")
         include("mean_and_kernel/compose.jl")
         include("mean_and_kernel/transform.jl")
         include("mean_and_kernel/input_transform.jl")

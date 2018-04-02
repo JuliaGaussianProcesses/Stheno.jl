@@ -5,8 +5,8 @@ module Stheno
     const ColOrRowVec = Union{AbstractVector, RowVector}
 
     # All covariance matrix functionality.
-    include("mean_and_kernel/mean_base.jl")
-    include("mean_and_kernel/kernel_base.jl")
+    include("mean_and_kernel/mean.jl")
+    include("mean_and_kernel/kernel.jl")
     include("mean_and_kernel/compose.jl")
     include("mean_and_kernel/conditional.jl")
     include("mean_and_kernel/transform.jl")
