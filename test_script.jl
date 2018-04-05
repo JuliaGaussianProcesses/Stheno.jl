@@ -112,3 +112,42 @@ plot(x, μ_f′ .+ 2 .* σ_f′, "r--")
 plot(x, μ_f′ .- 2 .* σ_f′, "r--")
 plot(x, g.(x), "g")
 
+
+# Proposed syntax for creating a mean function.
+μ(θ::Vector{<:Real}, x::Vector{<:Real}) = θ[1] * sin(x) + θ[2]
+
+# Basic declaration from EQ kernel which has a length scale.
+struct EQ{T<:Real} <: Kernel
+    β::Tσ
+end
+(k::EQ)(x::T, x′::T) where T<:Union{Real, Vector{<:Real}} = k(SqEuclidean(x, x′))
+(k::EQ)(r²::Real) = exp(-0.5 * k.β * r²)
+(k::EQ)(x::GetDistances, x′::GetDistances) = Set(SqEuclidean())
+
+# Proposed syntax for creating a composite kernel. Use Contextual Dispatch (i.e. with
+# Cassette) to make this work with `GetDistances` types of arguments.
+k(θ::Vector{<:Real}, x::Vector{<:Real}, x′::Vector{<:Real}) =
+    θ[1] * EQ(θ[2])(x, x′) + θ[3] * EQ(θ[4])(x, x′)
+
+# Proposed syntax for GP creation. You have to return whatever arguments you want to be able
+# to inspect the distribution of.
+function f(θ::Vector{<:Real}, x::Real)
+    g = GP(μ_g, k_g(θ[1]))
+    h = GP(μ_h(θ[2]), k_h(θ[3]))
+    return θ[4] * g(x) + h(θ[5] * x), g
+end
+
+# Questions:
+# 1. How can we deduce properties of composite covariance functions if we don't code it in
+#    at compile-time. i.e. what is the best way to determine this dynamically.
+#    (This will probably involve Contextual Dispatch).
+# 2. How will contextual dispatch be used to compute required covariances? i.e. how would
+#    something like
+#        `cov(g, h)`
+#    actually work?
+
+
+
+
+
+

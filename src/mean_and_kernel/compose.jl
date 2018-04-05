@@ -1,5 +1,6 @@
 import Base: show
 
+
 """
     Composite{O, T<:Tuple{Kernel, N} where N} <: Kernel
 
