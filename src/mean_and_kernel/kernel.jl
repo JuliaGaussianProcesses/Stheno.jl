@@ -1,45 +1,40 @@
-import Base: +, *, ==, show
+import Base: +, *, ==
 export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, Exponential,
-    Constant, isstationary
+    ConstantKernel, isstationary, ZeroKernel, xcov
 
-const AM{T} = AbstractMatrix{T}
-
-"""
-    Kernel
-
-Supertype for all kernels.
-"""
-abstract type Kernel end
-
-isfinite(::Kernel) = false
-isstationary(::Type{<:Kernel}) = false
-isstationary(k::Kernel) = isstationary(typeof(k))
+# Fallback definitions.
+isfinite(::CrossKernel) = false
+isstationary(::Type{<:CrossKernel}) = false
+isstationary(k::CrossKernel) = isstationary(typeof(k))
+cov(k::Kernel, X::AM) = StridedPDMatrix(xcov(k, X, X))
+xcov(k::CrossKernel, X::AM) = xcov(k, X, X)
 
 """
-    Zero <: Kernel
+    ZeroKernel <: Kernel
 
 A rank 1 kernel that always returns zero.
 """
-struct Zero <: Kernel end
-isstationary(::Type{<:Zero}) = true
-show(io::IO, ::Zero) = show(io, "Zero")
-(::Zero)(x::T, x′::T) where T = zero(T)
-(::Zero)(X::AM{T}, X′::AM{T}) where T = zeros(T, size(X, 2), size(X′, 2))
+struct ZeroKernel{T<:Real} <: Kernel end
+isstationary(::Type{<:ZeroKernel}) = true
+show(io::IO, ::ZeroKernel) = show(io, "ZeroKernel")
+(::ZeroKernel{T})(x, x′) where T = zero(T)
+xcov(::ZeroKernel{T}, X::AM, X′::AM) where T = zeros(T, size(X, 1), size(X′, 1))
+==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
 """
-    Constant{T<:Real} <: Kernel
+    ConstantKernel{T<:Real} <: Kernel
 
 A rank 1 constant `Kernel`. Useful for consistency when creating composite Kernels,
 but (almost certainly) shouldn't be used as a base `Kernel`.
 """
-struct Constant{T<:Real} <: Kernel
-    value::T
+struct ConstantKernel{T<:Real} <: Kernel
+    c::T
 end
-==(a::Constant, b::Constant) = a.value == b.value
-isstationary(::Type{<:Constant}) = true
-show(io::IO, k::Constant) = show(io, "Constant($(k.value))")
-(k::Constant)(x, x′) = k.value
-(k::Constant)(X::AM, X′::AM) = fill(k.value, size(X, 1), size(X′, 1))
+isstationary(::Type{<:ConstantKernel}) = true
+show(io::IO, k::ConstantKernel) = show(io, "ConstantKernel($(k.c))")
+(k::ConstantKernel)(x::T, x′::T) where T = k.c
+xcov(k::ConstantKernel, X::AM, X′::AM) = fill(k.c, size(X, 1), size(X′, 1))
+==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
 
 """
     EQ <: Kernel
@@ -49,10 +44,9 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 show(io::IO, ::EQ) = show(io, "EQ")
-(::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-(::EQ)(X::AM, X′::AM) = exp.(-0.5 * pairwise(SqEuclidean(), X, X′))
-
-
+(::EQ)(x::T, x′::T) where T = exp(-0.5 * sqeuclidean(x, x′))
+cov(::EQ, X::AM) = StridedPDMatrix(exp.(-0.5 * pairwise(SqEuclidean(), X')))
+xcov(::EQ, X::AM, X′::AM) = exp.(-0.5 * pairwise(SqEuclidean(), X', X′'))
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -68,19 +62,23 @@ show(io::IO, ::EQ) = show(io, "EQ")
 # isstationary(::Type{<:RQ}) = true
 # show(io::IO, k::RQ) = show(io, "RQ($(k.α))")
 
-# """
-#     Linear{T<:Real} <: Kernel
+"""
+    Linear{T<:Real} <: Kernel
 
-# Standardised linear kernel. `Linear(c)` creates a `Linear` `Kernel{NonStationary}` whose
-# intercept is `c`.
-# """
-# struct Linear{T<:Real} <: Kernel
-#     c::T
-# end
-# @inline (k::Linear)(x, y) = dot(x - k.c, y - k.c)
-# @inline (k::Linear)(x::Tuple, y::Tuple) = sum(map((x, y)->(x - k.c) * (y - k.c), x, y))
-# ==(a::Linear, b::Linear) = a.c == b.c
-# show(io::IO, k::Linear) = show(io, "Linear")
+Standardised linear kernel. `Linear(c)` creates a `Linear` `Kernel{NonStationary}` whose
+intercept is `c`.
+"""
+struct Linear{T<:Union{Real, Vector{<:Real}}} <: Kernel
+    c::T
+end
+(k::Linear)(x, x′) = dot(x - k.c, x′ - k.c)
+function cov(k::Linear, X::AM)
+    Δ = X .- k.c
+    return StridedPDMat(Δ * Δ')
+end
+xcov(k::Linear, X::AM, X′::AM) = (X .- k.c) * (X′ .- k.c)'
+==(a::Linear, b::Linear) = a.c == b.c
+show(io::IO, k::Linear) = show(io, "Linear")
 
 # """
 #     Poly{Tσ<:Real} <: Kernel
@@ -111,6 +109,7 @@ show(io::IO, ::EQ) = show(io, "EQ")
 # """
 # struct Wiener <: Kernel end
 # @inline (::Wiener)(x::Real, x′::Real) = min(x, x′)
+# cov(::Wiener, X::AM, X′::AM) =
 # show(io::IO, ::Wiener) = show(io, "Wiener")
 
 # """

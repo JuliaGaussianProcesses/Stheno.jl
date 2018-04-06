@@ -1,50 +1,72 @@
 @testset "gp" begin
 
     # Test the creation of indepenent GPs.
-    import Stheno.Constant
     let rng = MersenneTwister(123456)
 
-        # Specification for three independent GPs.
-        μ1, μ2, μ3 = CustomMean.((sin, cos, tan))
-        k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-        f1, f2, f3 = GP.([μ1, μ2, μ3], [k1, k2, k3], Ref(GPC()))
+        # Specification for two independent GPs.
+        μ1, μ2 = sin, cos
+        k1, k2 = EQ(), Linear(5)
+        f1, f2 = GP.([μ1, μ2], [k1, k2], Ref(GPC()))
 
         @test mean(f1) == μ1
         @test mean(f2) == μ2
-        @test mean(f3) == μ3
 
         @test kernel(f1) == k1
         @test kernel(f2) == k2
-        @test kernel(f3) == k3
 
         @test kernel(f1, f1) == k1
-        @test kernel(f1, f2) == Constant(0.0)
-        @test kernel(f1, f3) == Constant(0.0)
-        @test kernel(f2, f1) == Constant(0.0)
+        @test kernel(f1, f2) == Zero()
+        @test kernel(f2, f1) == Zero()
         @test kernel(f2, f2) == k2
-        @test kernel(f2, f3) == Constant(0.0)
-        @test kernel(f3, f1) == Constant(0.0)
-        @test kernel(f3, f2) == Constant(0.0)
-        @test kernel(f3, f3) == k3
+    end
+end
+
+@testset "logpdf" begin
+    
+end
+
+@testset "rand" begin
+
+    # Test deterministic features of `rand`.
+    let rng = MersenneTwister(123456), N = 10, N′ = 11, D = 2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        f = GP(X->vec(sum(sin.(X); dims=2)), EQ(), GPC())
+
+        # Check that single-GP samples have the correct dimensions.
+        @test length(rand(rng, f(X))) == length(X)
+        @test size(rand(rng, f(X), 10)) == (length(X), 10)
+
+        # Check that multi-GP samples have the correct dimensions.
+        @test length(rand(rng, Vector{GP}([f(X), f(X′)]))[1]) == length(X)
+        @test length(rand(rng, Vector{GP}([f(X), f(X′)]))[2]) == length(X′)
+        @test size(rand(rng, Vector{GP}([f(X), f(X′)]), 10)[1]) == (length(X), 10)
+        @test size(rand(rng, Vector{GP}([f(X), f(X′)]), 10)[2]) == (length(X′), 10)
     end
 
-    # Test a generic toy problem.
-    let
-        rng = MersenneTwister(123456)
-        N, S = 5, 100000
-        μ_vec, x = randn(rng, N), randn(rng, N)
-        μ, k = FiniteMean(CustomMean(identity), μ_vec), Finite(EQ(), x)
-        d = GP(μ, k, GPC())
+    # # Test some statistical properties of `rand`.
+    # let rng = MersenneTwister(123456)
+    #     x, x′ = randn(rng, 10), randn(rng, 11)
+    #     f = GP(CustomMean(sin), EQ(), GPC())
 
-        @test mean(d) == μ
-        @test mean(d).(1:N) == μ_vec
-        @test dims(d) == N
-        @test kernel(d).(1:N, (1:N)') == EQ().(x, x')
+    #     # Check mean + covariance estimates approximately converge for single-GP sampling.
+    #     S = 100000
+    #     f̂ = rand(rng, f(x), S)
 
-        x̂ = sample(rng, d, S)
-        @test size(x̂) == (N, S)
-        @test maximum(abs.(mean(x̂, dims=2) - mean(d).(1:N))) < 1e-2
-        Σ = broadcast(kernel(d), collect(1:N), Transpose(collect(1:N)))
-        @test maximum(abs.(cov(x̂, dims=2) - Σ)) < 1e-2
-    end
+    #     μ̂, μ = mean(f̂, dims=2), sin.(x)
+    #     @test mean(abs.(μ̂ .- μ)) < 1e-2
+
+    #     Σ̂, Σ = (f̂ .- sin.(x)) * (f̂ .- sin.(x))' ./ S, cov(kernel(f(x)))
+    #     @test mean(abs.(Σ̂ .- Σ)) < 1e-2
+    
+    #     # Check mean + covariance estimates approximately converge for multi-GP sampling.
+    #     S, x̂ = 100000, vcat(x, x′)
+    #     f̂ = rand(rng, Vector{GP}([f(x), f(x′)]), S)
+    #     f̂ = vcat(f̂[1], f̂[2])
+
+    #     μ̂, μ = mean(f̂, dims=2), sin.(x̂)
+    #     @test mean(abs.(μ̂ .- μ)) < 1e-2
+
+    #     Σ̂, Σ = (f̂ .- sin.(x̂)) * (f̂ .- sin.(x̂))' ./ S, cov(kernel(f(x̂)))
+    #     @test mean(abs.(Σ̂ .- Σ)) < 1e-2
+    # end
 end

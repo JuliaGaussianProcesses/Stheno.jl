@@ -1,66 +1,73 @@
-# Covariance functions for FiniteGPs / Multivariate Normals.
-import Base: size, show
-export FiniteMean, Finite, LhsFinite, RhsFinite
+export FiniteMean, FiniteKernel, FiniteCrossKernel
 
 """
-    FiniteMean{Tμ<:μFun, Tx<:ColOrRowVec} <: μFun
+    FiniteMean <: Function
 
-A mean function whose domain is the elements of the vector used to construct it.
+A mean function defined on a finite index set. Has a method of `mean` which requires no
+additional data.
 """
-struct FiniteMean{Tμ<:μFun, Tx<:ColOrRowVec} <: μFun
-    μ::Tμ
-    x::Tx
+struct FiniteMean <: MeanFunction
+    μ::MeanFunction
+    X::AbstractMatrix
 end
-(μ::FiniteMean)(n::Int) = μ.μ(μ.x[n])
+(μ::FiniteMean)(p::Int) = μ.μ(view(μ.X, p, :))
+mean(μ::FiniteMean) = mean(μ.μ, μ.X)
+size(μ::FiniteMean) = (size(μ.X, 1),)
+size(μ::FiniteMean, n::Int) = n == 1 ? size(μ.X, 1) : 1
+isfinite(μ::FiniteMean) = true
 
 """
-    LhsFinite <: Kernel
+    FiniteKernel <: Kernel
 
-A kernel who's first (left) argument is from a finite index set.
+A kernel valued on a finite index set. Has a method of `cov` which requires no additional
+data.
 """
-struct LhsFinite{T<:ColOrRowVec, Tk<:Any} <: Kernel
-    k::Tk
-    x::T
+struct FiniteKernel <: Kernel
+    k::Kernel
+    X::AM
 end
-@inline (k::LhsFinite)(p::Int, q) = k.k(k.x[p], q)
-==(a::LhsFinite, b::LhsFinite) = a.k == b.k && a.x == b.x
-show(io::IO, k::LhsFinite) = print(io, "LhsFinite, size = $(length(k.x)), kernel = $(k.k)")
-size(k::LhsFinite, n::Int) = n == 1 ? length(k.x) : size(k.k, n)
+(k::FiniteKernel)(p::Int, q::Int) = k.k(view(k.X, p, :), view(k.X, q, :))
+cov(k::FiniteKernel) = cov(k.k, k.X)
+size(k::FiniteKernel) = (size(k.X, 1), size(k.X, 1))
+size(k::FiniteKernel, N::Int) = N ∈ (1, 2) ? size(k.X, 1) : 1
+isfinite(k::FiniteKernel) = true
+isstationary(k::FiniteKernel) = false
+
 
 """
-    RhsFinite <: Kernel{NonStationary}
+    FiniteCrossKernel <: CrossKernel
 
-A kernel who's second (right) argument is from a finite index set.
+A cross kernel valued on a finite index set. Has a method of `xcov` which requires no
+additional data.
 """
-struct RhsFinite{T<:ColOrRowVec, Tk<:Any} <: Kernel
-    k::Tk
-    y::T
+struct FiniteCrossKernel <: CrossKernel
+    k::CrossKernel
+    X::AM
+    X′::AM
 end
-@inline (k::RhsFinite)(p, q::Int) = k.k(p, k.y[q])
-==(a::RhsFinite, b::RhsFinite) = a.k == b.k && a.y == b.y
-show(io::IO, k::RhsFinite) =
-    print(io, "RhsFinite of size $(length(k.y)) with base kernel $(k.k)")
-size(k::RhsFinite, n::Int) = n == 1 ? size(k.k, n) : length(k.y)
+(k::FiniteCrossKernel)(p::Int, q::Int) = k.k(view(k.X, p, :), view(k.X′, q, :))
+xcov(k::FiniteCrossKernel) = xcov(k, X, X′)
+size(k::FiniteCrossKernel) = (size(k.X, 1), size(k.X′, 1))
+size(k::FiniteCrossKernel, N::Int) = N == 1 ? size(k.X, 1) : (N == 2 ? size(k.X′, 1) : 1)
+isfinite(k::FiniteCrossKernel) = true
+isstationary(k::FiniteCrossKernel) = false
 
 """
-    Finite <: Kernel{NonStationary}
+    cov(k::Matrix{<:FiniteKernel})
 
-A kernel on a finite index set.
+Compute the covariance matrix for each of a set of finite kernels. This functionality might
+(will) move elsewhere at some point.
 """
-struct Finite{Tx<:ColOrRowVec, Ty<:ColOrRowVec, Tk<:Any} <: Kernel
-    k::Tk
-    x::Tx
-    y::Ty
-    Finite(k::Tk, x::Tx, y::Ty) where {Tk, Tx, Ty} = new{Tx, Ty, Tk}(k, x, y)
-    Finite(k::Tk, x::Tx) where {Tk, Tx} = new{Tx, Tx, Tk}(k, x, x)
-    Finite(k::LhsFinite{Tx, Tk}, y::Ty) where {Tk, Tx, Ty} = new{Tx, Ty, Tk}(k.k, k.x, y)
-    Finite(k::RhsFinite{Ty, Tk}, x::Tx) where {Tk, Tx, Ty} = new{Tx, Ty, Tk}(k.k, x, k.y)
+function cov(k::Matrix{<:FiniteKernel})
+    rs_, cs_ = size.(k[:, 1], 1), size.(k[1, :], 2)
+    rs = Vector{Int}(undef, length(rs_) + 1)
+    cs = Vector{Int}(undef, length(cs_) + 1)
+    cumsum!(view(rs, 2:length(rs_) + 1), rs_)
+    cumsum!(view(cs, 2:length(cs_) + 1), cs_)
+    rs[1], cs[1] = 0, 0
+    K = Matrix{Float64}(undef, rs[end], cs[end])
+    for I in CartesianIndices(k)
+        K[rs[I[1]]+1:rs[I[1]+1], cs[I[2]]+1:cs[I[2]+1]] = cov(k[I[1], I[2]])
+    end
+    return K
 end
-@inline (k::Finite)(p::Int, q::Int) = k.k(k.x[p], k.y[q])
-==(a::Finite, b::Finite) = a.k == b.k && a.x == b.x && a.y == b.y
-show(io::IO, k::Finite) =
-    print(io, "Finite of size $(length(k.x))x$(length(k.y)) with base kernel $(k.k)")
-size(k::Finite) = (length(k.x), length(k.y))
-size(k::Finite, n::Int) = n == 1 ? length(k.x) : (n == 2 ? length(k.y) : 1)
-dims(k::Finite) = length(k.x) # This is a hack! Needs to me made more robust.
-isfinite(::Finite) = true

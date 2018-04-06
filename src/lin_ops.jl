@@ -28,22 +28,15 @@ k_pp′(f_p::GP, f_q::GP, x::ColOrRowVec) =
         RhsFinite(k(f_p, f_q), x)
 dims(::GP, x::ColOrRowVec) = length(x)
 
-# Some syntactic sugar for conditioning.
-struct Assignment
-    f::GP
-    y::Vector
-end
-←(f, y) = Assignment(f, y)
-
 """
-    |(f::GP, c::Union{Assignment, Vector{Assignment}})
+    |(f::GP, c::Union{Observation, Vector{Observation}})
 
 `|` is NOT bit-wise logical OR in this context, it is the conditioning operator. That is, it
 returns the conditional (posterior) distribution over everything on the left given the
-`Assignment`(s) on the right.
+`Observation`(s) on the right.
 """
-|(f::GP, c::Assignment) = f | [c]
-function |(f::GP, c::Vector{Assignment})
+|(f::GP, c::Observation) = f | [c]
+function |(f::GP, c::Vector{Observation})
     f_obs = [c̄.f for c̄ in c]
     return GP(|, f, f_obs, [c̄.y for c̄ in c], CData(chol(cov(f_obs))))
 end

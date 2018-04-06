@@ -1,60 +1,44 @@
-import Base: mean, show, cov, eachindex
 import LinearAlgebra: chol, transpose
-export mean, mean_vector, kernel, GP, GPC, condition!, predict, lpdf, sample, dims
-
-const __ϵ = 1e-9
+export GP, GPC, kernel, logpdf
 
 # A collection of GPs (GPC == "GP Collection"). Primarily used to track cross-kernels.
-struct GPC
-    gps::Set{Any}
-    k_x::IdDict
-    GPC() = new(Set{Any}(), IdDict())
+mutable struct GPC
+    n::Int
+    GPC() = new(0)
 end
 
 """
-    GP{Tμ<:μFun, Tk<:Kernel}
+    GP{Tμ, Tk<:Kernel}
 
 A Gaussian Process (GP) object. Either constructed using an Affine Transformation of
 existing GPs or by providing a mean function `μ`, a kernel `k`, and a `GPC` `gpc`.
 """
-struct GP{Tμ<:μFun, Tk<:Kernel}
+struct GP{Tμ, Tk<:Kernel}
     f::Any
     args::Any
     μ::Tμ
     k::Tk
+    n::Int
     gpc::GPC
-    GP{Tμ, Tk}(f, args, μ, k::Tk, gpc::GPC) where {Tμ<:μFun, Tk<:Kernel} =
-        new{Tμ, Tk}(f, args, μ, k, gpc)
-    function GP{Tμ, Tk}(μ::Tμ, k::Tk, gpc::GPC) where {Tμ<:μFun, Tk<:Kernel}
-        gp = new(GP, nothing, μ, k, gpc)
-        push!(gpc.gps, gp)
+    function GP{Tμ, Tk}(f, args, μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk<:Kernel}
+        gp = new{Tμ, Tk}(f, args, μ, k, gpc.n, gpc)
+        gpc.n += 1
         return gp
     end
+    GP{Tμ, Tk}(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk<:Kernel} =
+        GP{Tμ, Tk}(GP, nothing, μ, k, gpc)
 end
-GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ<:μFun, Tk<:Kernel} = GP{Tμ, Tk}(μ, k, gpc)
+GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk<:Kernel} = GP{Tμ, Tk}(μ, k, gpc)
 function GP(op, args...)
     μ, k, gpc = μ_p′(op, args...), k_p′(op, args...), get_check_gpc(op, args...)
-    new_gp = GP{typeof(μ), typeof(k)}(op, args, μ, k, gpc)
-    for gp in gpc.gps
-        gpc.k_x[(new_gp, gp)] = k_p′p(gp, op, args...)
-        gpc.k_x[(gp, new_gp)] = k_pp′(gp, op, args...)
-    end
-    push!(gpc.gps, new_gp)
-    return new_gp
+    return GP{typeof(μ), typeof(k)}(op, args, μ, k, gpc)
 end
-const SthenoType = Union{Real, Function, GP}
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
 transpose(f::GP) = f
 isfinite(f::GP) = isfinite(f.k)
 
-@inline dims(d::GP) = dims(kernel(d))
-@inline eachindex(f::GP) = 1:dims(f)
-
-mean(z::Real) = ConstantMean(z)
-mean(f::Function) = CustomMean(f)
 mean(f::GP) = f.μ
-mean_vector(f::GP) = mean(f).(eachindex(f))
-mean_vector(f::Vector{<:GP}) = vcat(mean_vector.(f)...)
+mean(f::GP, X::AM) = mean(f.μ, X)
 
 """
     kernel(f::Union{Real, Function})
@@ -70,13 +54,19 @@ then the zero-kernel is returned.
 kernel(f::GP) = f.k
 function kernel(fa::GP, fb::GP)
     @assert fa.gpc === fb.gpc
-    return fa === fb ?
-        fa.k :
-        (fa, fb) in keys(fa.gpc.k_x) ? fa.gpc.k_x[(fa, fb)] : Constant(0.0)
+    if fa === fb
+        return kernel(fa)
+    elseif fa.args == nothing && fa.n > fb.n || fb.args == nothing && fb.n > fa.n
+        return ZeroKernel()
+    elseif fa.n > fb.n
+        return k_p′p(fb, fa.f, fa.args...)
+    else
+        return k_pp′(fa, fb.f, fb.args...)
+    end
 end
-kernel(::Union{Real, Function}) = Zero()
-kernel(::Union{Real, Function}, ::GP) = Zero()
-kernel(::GP, ::Union{Real, Function}) = Zero()
+kernel(::Union{Real, Function}) = ZeroKernel()
+kernel(::Union{Real, Function}, ::GP) = ZeroKernel()
+kernel(::GP, ::Union{Real, Function}) = ZeroKernel()
 
 function get_check_gpc(args...)
     gpc = args[findfirst(map(arg->arg isa GP, args))].gpc
@@ -99,10 +89,59 @@ cov(d::GP, d′::GP) = cov([d], [d′])
 
 Compute the marginal covariance matrix for GP (or vector thereof) `d`.
 """
-function cov(d::Vector{<:GP})
-    K = cov(kernel.(d, Transpose(d)))::Matrix{Float64}
-    K[diagind(K)] .+= __ϵ
-    LAPACK.potrf!('U', K)
-    return StridedPDMatrix(UpperTriangular(K))
-end
+cov(d::Vector{<:GP}) = cov(d, d)
 cov(d::GP) = cov([d])
+
+# """
+#     cov(d::Union{GP, Vector{<:GP}})
+
+# Compute the marginal covariance matrix for GP (or vector thereof) `d`.
+# """
+# function cov(d::Vector{<:GP})
+#     K = cov(kernel.(d, Transpose(d)))::Matrix{Float64}
+#     K[diagind(K)] .+= __ϵ
+#     LAPACK.potrf!('U', K)
+#     return StridedPDMatrix(UpperTriangular(K))
+# end
+# cov(d::GP) = cov([d])
+
+"""
+    Observation
+
+Represents fixing a paricular (finite) GP to have a particular (vector) value. Yields a very
+pleasing syntax, along the following lines: `f(X) ← y`.
+"""
+struct Observation
+    f::GP
+    y::Vector
+end
+←(f, y) = Observation(f, y)
+
+
+"""
+    logpdf(a::Vector{Observation}})
+
+Returns the log probability density observing the assignments `a` jointly.
+"""
+function logpdf(a::Vector{Observation})
+    f, y = [c̄.f for c̄ in a], [c̄.y for c̄ in a]
+    Σ = cov(f)
+    δΣinvδ = invquad(Σ, vcat(y...) .- mean_vector(f))
+    return -0.5 * (sum(dims.(f)) * log(2π) + logdet(Σ) + δΣinvδ)
+end
+logpdf(a::Observation...) = logpdf([a...])
+
+
+"""
+    rand(rng::AbstractRNG, d::Union{GP, Vector}, N::Int=1)
+
+Sample jointly from a single / multiple finite-dimensional GPs.
+"""
+function rand(rng::AbstractRNG, ds::Vector{GP}, N::Int)
+    lin_sample = mean_vector(ds) .+ Transpose(chol(cov(ds))) * randn(rng, sum(dims.(ds)), N)
+    srt, fin = vcat(1, cumsum(dims.(ds))[1:end-1] .+ 1), cumsum(dims.(ds))
+    return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
+end
+rand(rng::AbstractRNG, ds::Vector{GP}) = reshape.(rand(rng, ds, 1), dims.(ds))
+rand(rng::AbstractRNG, d::GP, N::Int) = rand(rng, Vector{GP}([d]), N)[1]
+rand(rng::AbstractRNG, d::GP) = rand(rng, Vector{GP}([d]))[1]

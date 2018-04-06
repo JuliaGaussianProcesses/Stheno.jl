@@ -1,81 +1,75 @@
-import Base: size, show, broadcast!
-import LinearAlgebra: ldiv!
-export Conditional
-
-# Internal data structure used to cache various quantities to prevent recomputation.
-struct ConditionalData
-    U::UpperTriangular
-    tmp::Vector{Float64}
-    tmp′::Vector{Float64}
-end
-ConditionalData(U::UpperTriangular) =
-    ConditionalData(
-        U,
-        Vector{Float64}(undef, size(U, 1)),
-        Vector{Float64}(undef, size(U, 1)),
-    )
-==(a::ConditionalData, b::ConditionalData) = a.U == b.U
+export ConditionalMean, ConditionalKernel, ConditionalCrossKernel
 
 """
-    ConditionalMean{Tμ<:μFun, Tk<:Kernel} <: μFun
+    ConditionalMean <: Function
 
-A mean function used in conditional distributions.
+The function defining the mean of the process `g | (f(X) ← f)`. `Xf` are observation
+locations, `f` are the observed values, `kff` is the covariance function of `f`, and `kgf`
+is the cross-covariance between `f` and `g`. `μf` and `μg` are the prior mean for `f` and
+`g` resp.
 """
-struct ConditionalMean{Tμ<:μFun, Tk<:Vector{<:Kernel}, Tα<:Vector{<:Real}} <: μFun
-    μ::Tμ
-    k_ff′::Tk
-    α::Tα
+struct ConditionalMean <: Function
+    kff::FiniteKernel
+    μf::Function
+    f::AbstractVector{<:Real}
+    μg::Function
+    kgf::CrossKernel
 end
-ConditionalMean(μ::μFun, k_ff′::Vector{<:Kernel}, δ::Vector, data::ConditionalData) =
-    ConditionalMean(μ, k_ff′, ldiv!(data.U, ldiv!(Transpose(data.U), δ)))
-function (μ::ConditionalMean)(x::Real)
-    kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in μ.k_ff′]
-    return μ.μ(x) + dot(reshape(cov(reshape(kfs, :, 1)), :), μ.α)
+(μ::ConditionalMean)(x) = mean(μ, reshape(x, length(x), 1))
+function mean(μ::ConditionalMean, Xg::AM)
+    U = chol(cov(μ.kff))
+    α = U \ (U' \ (μ.f - μ.μf(X)))
+    return μ.kgf(Xg, μ.kff.X) * α + μ.μg(Xg)
 end
 
 """
-    Conditional{Tk}
+    ConditionalKernel <: Kernel
 
-A kernel for use in conditional distributions.
+A `ConditionalKernel` is used to compute the covariance / xcov betweeen points in a process
+`g` once it has been conditioned on observations from some other process `f`.
 """
-struct Conditional{Tk<:Kernel} <: Kernel
-    k_ff′::Tk
-    k_f̂f::Vector{<:Kernel}
-    k_f̂f′::Vector{<:Kernel}
-    data::ConditionalData
+struct ConditionalKernel <: Kernel
+    kff::FiniteKernel
+    kfg::CrossKernel
+    kgg::Kernel
 end
-Conditional(k_ff′::Kernel, k_f̂f::Kernel, k_f̂f′::Kernel, data::ConditionalData) = 
-    Conditional(k_ff′, Vector{Kernel}([k_f̂f]), Vector{Kernel}([k_f̂f]), data)
-Conditional(k_ff′::Kernel, k_f̂f::Kernel, k_f̂f′::Vector{<:Kernel}, data::ConditionalData) =
-    Conditional(k_ff′, Vector{Kernel}([k_f̂f]), k_f̂f, data)
-Conditional(k_ff′::Kernel, k_f̂f::Vector{<:Kernel}, k_f̂f′::Kernel, data::ConditionalData) =
-    Conditional(k_ff′, k_f̂f, Vector{Kernel}([k_f̂f]), data)
-function (k::Conditional)(x::Real, x′::Real)
-    kfs = [k isa LhsFinite ? Finite(k, [x]) : Finite(k.k, k.x, [k.y[x]]) for k in k.k_f̂f]
-    kf′s = [k isa LhsFinite ? Finite(k, [x′]) : Finite(k.k, k.x, [k.y[x′]]) for k in k.k_f̂f′]
-    Ut = Transpose(k.data.U)
-    a = ldiv!(Ut, cov(reshape(kfs, :, 1)))
-    b = ldiv!(Ut, cov(reshape(kf′s, :, 1)))
-    return k.k_ff′(x, x′) - (Transpose(a) * b)[1, 1]
+isstationary(k::ConditionalKernel) = false
+isfinite(k::ConditionalKernel) = isfinite(k.kgg)
+function cov(k::ConditionalKernel, X::AM)
+    Σff, Σgg, Σfg = cov(k.kff), cov(k.kgg, X), xcov(k.kfg, args(k.kff), X)
+    return Σgg - Xt_invA_X(Σff, Σfg)
 end
-function broadcast!(
-    k::Conditional,
-    K::AbstractMatrix,
-    x::UnitRange{Int},
-    x′::RowVector{Int, UnitRange{Int}},
-)
-    kfs = [k isa LhsFinite ? Finite(k, x) : Finite(k.k, k.x, k.y[x]) for k in k.k_f̂f]
-    kf′s = [k isa LhsFinite ? Finite(k, x′') : Finite(k.k, k.x, k.y[x′']) for k in k.k_f̂f′]
-    Ut = Tranpose(k.data.U)
-    a = ldiv!(Ut, cov(reshape(kfs, :, 1)))
-    b = ldiv!(Ut, cov(reshape(kf′s, :, 1)))
-    return BLAS.gemm!('T', 'N', -1.0, a, b, 1.0, cov!(K, Finite(k.k_ff′, x, x′)))
+function xcov(k::ConditionalKernel, X::AM, X′::AM)
+    Σff, Σgg′ = cov(k.kff), xcov(k.kgg, X, X′)
+    Σfg, Σfg′ = xcov(k.kfg, k.kff.X, X), xcov(k.kfg, k.kff.X, X′)
+    return Σgg′ - Xt_invA_Y(Σfg, Σff, Σfg′)
 end
 
-==(a::Conditional{Tk}, b::Conditional{Tk}) where Tk =
-    a.k_ff′ == b.k_ff′ && a.k_ff̂ == b.k_ff̂ && a.k_f̂f′ == b.k_f̂f′ && a.data == b.data
-dims(k::Conditional) = dims(k.k_ff′)
-size(k::Conditional) = size(k.k_ff′)
-size(k::Conditional, n::Int) = size(k.k_ff′, n)
-show(io::IO, k::Conditional) = print(io, "Conditional with prior kernel $(k.k_ff′)")
-isfinite(k::Conditional) = isfinite(k.k_ff′)
+"""
+    ConditionalCrossKernel <: CrossKernel
+
+A conditional cross kernel is used to compute the xcov between two processes `g` and `h`,
+conditioned on observations of a third process `f`
+"""
+struct ConditionalCrossKernel <: CrossKernel
+    kff::FiniteKernel
+    kfg::CrossKernel
+    kfh::CrossKernel
+    kgh::CrossKernel
+end
+isstationary(k::ConditionalCrossKernel) = false
+isfinite(k::ConditionalCrossKernel) = isfinite(k.kgh)
+xcov(k::ConditionalCrossKernel, X::AM) = xcov(k, X, X)
+function xcov(k::ConditionalCrossKernel, Xg::AM, Xh::AM)
+    Σff, Σgh = cov(k.kff), xcov(k.kgh, Xg, Xh)
+    Σfg, Σfh = xcov(k.kfg, k.kff.X, Xg), xcov(k.kfh, k.kff.X, Xh) 
+    return Σgh - Xt_invA_Y(Σfg, Σff, Σfh)
+end
+
+# The kernel function is defined identically for both types of conditionals.
+for Foo in [:ConditionalKernel, :ConditionalCrossKernel]
+    @eval function (k::$Foo)(x, x′)
+        X, X′ = reshape(x, 1, length(x)), reshape(x′, 1, length(x′))
+        return xcov(k, X, X′)
+    end
+end

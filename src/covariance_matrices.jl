@@ -3,46 +3,30 @@ import PDMats: AbstractPDMat, invquad, dim
 import Base: size, ==, full
 import LinearAlgebra: cov, logdet, chol
 import LinearAlgebra.BLAS: trsv
-export cov, cov!, invquad, AbstractPDMat
+export cov, cov!, invquad, AbstractPDMat, Xt_invA_Y
+
+const __ϵ = 1e-12
 
 """
     StridedPDMatrix
 
-A strided positive definite matrix, represented in terms of it's Cholesky factorization `U`.
+A strided positive definite matrix. This is mutable, but please don't mutate it.
 """
-struct StridedPDMatrix{T<:Real} <: AbstractPDMat{T}
-    U::UpperTriangular{T}
+mutable struct StridedPDMatrix{T<:Real} <: AbstractPDMat{T}
+    Σ::Symmetric{T}
+    U::Union{Nothing, UpperTriangular{T}}
+    StridedPDMatrix(Σ::Symmetric{T}) where T = new{T}(Σ, nothing)
 end
+StridedPDMatrix(Σ::AbstractMatrix) = StridedPDMatrix(Symmetric(Σ))
 dim(Σ::StridedPDMatrix) = size(Σ.U, 1)
 full(Σ::StridedPDMatrix) = Transpose(Σ.U) * Σ.U
 logdet(Σ::StridedPDMatrix) = 2 * sum(log, view(Σ.U, diagind(Σ.U)))
 invquad(Σ::StridedPDMatrix, x::AbstractVector) = sum(abs2, trsv('U', 'T', 'N', Σ.U.data, x))
-chol(Σ::StridedPDMatrix) = Σ.U
-==(Σ1::StridedPDMatrix, Σ2::StridedPDMatrix) = Σ1.U == Σ2.U
-
-"""
-    cov!(K::AbstractMatrix, k::Union{Kernel, Matrix{Kernel}})
-
-Store in `K` the covariance matrix implied by the finite kernel (matrix thereof) `k`.
-"""
-cov!(K::AbstractMatrix, k::Kernel) = broadcast!(k, K, 1:size(k, 1), (1:size(k, 2))')
-function cov!(K::AbstractMatrix, k::Matrix)
-    rs_, cs_ = size.(k[:, 1], 1), size.(k[1, :], 2)
-    rs = Vector{Int}(undef, length(rs_) + 1)
-    cs = Vector{Int}(undef, length(cs_) + 1)
-    cumsum!(view(rs, 2:length(rs_) + 1), rs_)
-    cumsum!(view(cs, 2:length(cs_) + 1), cs_)
-    rs[1], cs[1] = 0, 0
-    for I in CartesianIndices(k)
-        cov!(view(K, rs[I[1]]+1:rs[I[1]+1], cs[I[2]]+1:cs[I[2]+1]), k[I[1], I[2]])
+Xt_invA_Y(X::AVM, A::AbstractPDMat, Y::AVM) = (X' / chol(A)) * (chol(A)' \ Y)
+function chol(Σ::StridedPDMatrix)
+    if Σ.U == nothing
+        Σ.U = chol(Σ.Σ + __ϵI)
     end
-    return K
+    return Σ.U
 end
-
-"""
-    cov(k::Union{Kernel, Matrix{Kernel}})
-
-Compute the covariance matrix implied by the finite kernel (or matrix thereof) `k`.
-"""
-cov(k::Kernel) = cov!(Matrix{Float64}(undef, size(k, 1), size(k, 2)), k)
-cov(k::Matrix) = cov!(Matrix{Float64}(undef, sum(size.(k[:, 1], 1)), sum(size.(k[1, :], 2))), k)
+==(Σ1::StridedPDMatrix, Σ2::StridedPDMatrix) = Σ1.U == Σ2.U
