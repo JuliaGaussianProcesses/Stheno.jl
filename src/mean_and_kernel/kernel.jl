@@ -2,6 +2,21 @@ import Base: +, *, ==
 export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, Exponential,
     ConstantKernel, isstationary, ZeroKernel, xcov
 
+"""
+    CrossKernel
+
+Supertype for all cross-Kernels. There are binary functions, but are not valid Mercer
+kernels as they are not in general symmetric positive semi-definite.
+"""
+abstract type CrossKernel end
+
+"""
+    Kernel <: CrossKernel
+
+Supertype for all (valid Mercer) Kernels.
+"""
+abstract type Kernel <: CrossKernel end
+
 # Fallback definitions.
 isfinite(::CrossKernel) = false
 isstationary(::Type{<:CrossKernel}) = false

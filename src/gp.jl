@@ -1,5 +1,4 @@
-import LinearAlgebra: chol, transpose
-export GP, GPC, kernel, logpdf
+export GP, GPC, kernel, logpdf, mean_function
 
 # A collection of GPs (GPC == "GP Collection"). Primarily used to track cross-kernels.
 mutable struct GPC
@@ -8,12 +7,12 @@ mutable struct GPC
 end
 
 """
-    GP{Tμ, Tk<:Kernel}
+    GP{Tμ<:MeanFunction, Tk<:Kernel}
 
 A Gaussian Process (GP) object. Either constructed using an Affine Transformation of
 existing GPs or by providing a mean function `μ`, a kernel `k`, and a `GPC` `gpc`.
 """
-struct GP{Tμ, Tk<:Kernel}
+struct GP{Tμ<:MeanFunction, Tk<:Kernel}
     f::Any
     args::Any
     μ::Tμ
@@ -34,11 +33,9 @@ function GP(op, args...)
     return GP{typeof(μ), typeof(k)}(op, args, μ, k, gpc)
 end
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
-transpose(f::GP) = f
 isfinite(f::GP) = isfinite(f.k)
-
-mean(f::GP) = f.μ
-mean(f::GP, X::AM) = mean(f.μ, X)
+length(f::GP) = length(f.μ)
+mean_function(f::GP) = f.μ
 
 """
     kernel(f::Union{Real, Function})
@@ -57,16 +54,25 @@ function kernel(fa::GP, fb::GP)
     if fa === fb
         return kernel(fa)
     elseif fa.args == nothing && fa.n > fb.n || fb.args == nothing && fb.n > fa.n
-        return ZeroKernel()
+        return zero_kernel(fa, fb)
     elseif fa.n > fb.n
         return k_p′p(fb, fa.f, fa.args...)
     else
         return k_pp′(fa, fb.f, fb.args...)
     end
 end
-kernel(::Union{Real, Function}) = ZeroKernel()
-kernel(::Union{Real, Function}, ::GP) = ZeroKernel()
-kernel(::GP, ::Union{Real, Function}) = ZeroKernel()
+kernel(::Union{Real, Function}) = ZeroKernel{Float64}()
+kernel(::Union{Real, Function}, ::GP) = ZeroKernel{Float64}()
+kernel(::GP, ::Union{Real, Function}) = ZeroKernel{Float64}()
+
+# Convenience function to return the correct type of Zero kernel for finite dimensional GPs.
+zero_kernel(fa::GP{<:FiniteMean, <:FiniteKernel}, fb::GP{<:FiniteMean, <:FiniteKernel}) =
+    FiniteCrossKernel(ZeroKernel{Float64}(), fa.k.X, fb.k.X)
+zero_kernel(fa::GP{<:FiniteMean, <:FiniteKernel}, fb::GP) =
+    LhsFiniteCrossKernel(ZeroKernel{Float64}(), fa.k.X)
+zero_kernel(fa::GP, fb::GP{<:FiniteMean, <:FiniteKernel}) =
+    RhsFiniteCrossKernel(ZeroKernel{Float64}(), fb.k.X)
+zero_kernel(fa::GP, fb::GP) = ZeroKernel{Float64}()
 
 function get_check_gpc(args...)
     gpc = args[findfirst(map(arg->arg isa GP, args))].gpc
@@ -74,36 +80,15 @@ function get_check_gpc(args...)
     return gpc
 end
 
-"""
-    cov(d::Union{GP, Vector{<:GP}}, d′::Union{GP, Vector{<:GP}})
+mean(f::GP) = mean(f.μ)
+mean(f::GP, X::AM) = mean(f.μ, X)
 
-Compute the cross-covariance between GPs (or vectors of) `d` and `d′`.
-"""
-cov(d::Vector{<:GP}, d′::Vector{<:GP}) = cov(kernel.(d, Transpose(d′)))
-cov(d::Vector{<:GP}, d′::GP) = cov(d, [d′])
-cov(d::GP, d′::Vector{<:GP}) = cov([d], d′)
-cov(d::GP, d′::GP) = cov([d], [d′])
+cov(f::GP) = cov(f.k)
+cov(f::GP, X::AM) = cov(f.k, X)
 
-"""
-    cov(d::Union{GP, Vector{<:GP}})
-
-Compute the marginal covariance matrix for GP (or vector thereof) `d`.
-"""
-cov(d::Vector{<:GP}) = cov(d, d)
-cov(d::GP) = cov([d])
-
-# """
-#     cov(d::Union{GP, Vector{<:GP}})
-
-# Compute the marginal covariance matrix for GP (or vector thereof) `d`.
-# """
-# function cov(d::Vector{<:GP})
-#     K = cov(kernel.(d, Transpose(d)))::Matrix{Float64}
-#     K[diagind(K)] .+= __ϵ
-#     LAPACK.potrf!('U', K)
-#     return StridedPDMatrix(UpperTriangular(K))
-# end
-# cov(d::GP) = cov([d])
+xcov(f::GP, f′::GP) = xcov(kernel(f, f′))
+xcov(f::GP, X::AM, X′::AM) = xcov(f.k, X, X′)
+xcov(f::GP, f′::GP, X::AM, X′::AM) = xcov(kernel(f, f′), X, X′)
 
 """
     Observation
@@ -117,31 +102,72 @@ struct Observation
 end
 ←(f, y) = Observation(f, y)
 
-
 """
     logpdf(a::Vector{Observation}})
 
 Returns the log probability density observing the assignments `a` jointly.
 """
-function logpdf(a::Vector{Observation})
-    f, y = [c̄.f for c̄ in a], [c̄.y for c̄ in a]
-    Σ = cov(f)
-    δΣinvδ = invquad(Σ, vcat(y...) .- mean_vector(f))
-    return -0.5 * (sum(dims.(f)) * log(2π) + logdet(Σ) + δΣinvδ)
+function logpdf(a::Observation...)
+    f, y = vcat(map(a_->a_.f, a)...), vcat(map(a_->a_.y, a)...)
+    μ, Σ = mean(f), cov(f)
+    return -0.5 * (length(f) * log(2π) + logdet(Σ) + invquad(Σ, y - μ))
 end
-logpdf(a::Observation...) = logpdf([a...])
-
 
 """
-    rand(rng::AbstractRNG, d::Union{GP, Vector}, N::Int=1)
+    rand(rng::AbstractRNG, f::GP, N::Int=1)
 
-Sample jointly from a single / multiple finite-dimensional GPs.
+Obtain `N` independent samples from the (finite-dimensional) GP `f` using `rng`.
 """
-function rand(rng::AbstractRNG, ds::Vector{GP}, N::Int)
-    lin_sample = mean_vector(ds) .+ Transpose(chol(cov(ds))) * randn(rng, sum(dims.(ds)), N)
-    srt, fin = vcat(1, cumsum(dims.(ds))[1:end-1] .+ 1), cumsum(dims.(ds))
-    return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
-end
-rand(rng::AbstractRNG, ds::Vector{GP}) = reshape.(rand(rng, ds, 1), dims.(ds))
-rand(rng::AbstractRNG, d::GP, N::Int) = rand(rng, Vector{GP}([d]), N)[1]
-rand(rng::AbstractRNG, d::GP) = rand(rng, Vector{GP}([d]))[1]
+rand(rng::AbstractRNG, f::GP, N::Int) = mean(f) .+ chol(cov(f))' * randn(rng, length(f), N)
+rand(rng::AbstractRNG, f::GP) = vec(rand(rng, f, 1))
+
+
+
+# LEGACY CODE.
+
+# """
+#     logpdf(a::Vector{Observation}})
+
+# Returns the log probability density observing the assignments `a` jointly.
+# """
+# function logpdf(a::Vector{Observation})
+#     f, y = [c̄.f for c̄ in a], [c̄.y for c̄ in a]
+#     Σ = cov(f)
+#     δΣinvδ = invquad(Σ, vcat(y...) .- mean(f))
+#     return -0.5 * (sum(length.(f)) * log(2π) + logdet(Σ) + δΣinvδ)
+# end
+# logpdf(a::Observation...) = logpdf([a...])
+
+# function rand(rng::AbstractRNG, ds::Vector{<:GP}, N::Int)
+#     μ = vcat(mean.(mean.(ds))...) # This looks ridiculous and will be fixed by issue #3.
+#     lin_sample = μ .+ Transpose(chol(cov(ds))) * randn(rng, sum(length.(ds)), N)
+#     @show lin_sample
+#     srt, fin = vcat(1, cumsum(length.(ds))[1:end-1] .+ 1), cumsum(length.(ds))
+#     return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
+# end
+# # rand(rng::AbstractRNG, ds::Vector{<:GP}) = reshape.(rand(rng, ds, 1), length.(ds))
+# rand(rng::AbstractRNG, d::GP, N::Int) = rand(rng, [d], N)[1]
+# rand(rng::AbstractRNG, d::GP) = rand(rng, [d])[1]
+
+# """
+#     cov(d::Union{GP, Vector{<:GP}}, d′::Union{GP, Vector{<:GP}})
+
+# Compute the cross-covariance between GPs (or vectors of) `d` and `d′`.
+# """
+# function cov(
+#     d::Vector{GP{FiniteMean, FiniteKernel}},
+#     d′::Vector{GP{FiniteMean, FiniteKernel}},
+# )
+#     return cov(broadcast((f, f′)->kernel(f, f′), d, permutedims(d′)))
+# end
+# cov(d::Vector{<:GP}, d′::GP) = cov(d, [d′])
+# cov(d::GP, d′::Vector{<:GP}) = cov([d], d′)
+# cov(d::GP, d′::GP) = cov([d], [d′])
+
+# """
+#     cov(d::Union{GP, Vector{<:GP}})
+
+# Compute the marginal covariance matrix for GP (or vector thereof) `d`.
+# """
+# cov(d::Vector{<:GP}) = cov(d, d)
+# cov(d::GP) = cov([d])

@@ -14,6 +14,7 @@ end
 mean(μ::FiniteMean) = mean(μ.μ, μ.X)
 size(μ::FiniteMean) = (size(μ.X, 1),)
 size(μ::FiniteMean, n::Int) = n == 1 ? size(μ.X, 1) : 1
+length(μ::FiniteMean) = size(μ.X, 1)
 isfinite(μ::FiniteMean) = true
 
 """
@@ -46,28 +47,33 @@ struct FiniteCrossKernel <: CrossKernel
     X′::AM
 end
 (k::FiniteCrossKernel)(p::Int, q::Int) = k.k(view(k.X, p, :), view(k.X′, q, :))
-xcov(k::FiniteCrossKernel) = xcov(k, X, X′)
+xcov(k::FiniteCrossKernel) = xcov(k.k, k.X, k.X′)
 size(k::FiniteCrossKernel) = (size(k.X, 1), size(k.X′, 1))
 size(k::FiniteCrossKernel, N::Int) = N == 1 ? size(k.X, 1) : (N == 2 ? size(k.X′, 1) : 1)
 isfinite(k::FiniteCrossKernel) = true
 isstationary(k::FiniteCrossKernel) = false
 
 """
-    cov(k::Matrix{<:FiniteKernel})
+    LhsFiniteCrossKernel <: CrossKernel
 
-Compute the covariance matrix for each of a set of finite kernels. This functionality might
-(will) move elsewhere at some point.
+A cross kernel whose first argument is defined on a finite index set. You can't really do
+anything with this object other than use it to construct other objects.
 """
-function cov(k::Matrix{<:FiniteKernel})
-    rs_, cs_ = size.(k[:, 1], 1), size.(k[1, :], 2)
-    rs = Vector{Int}(undef, length(rs_) + 1)
-    cs = Vector{Int}(undef, length(cs_) + 1)
-    cumsum!(view(rs, 2:length(rs_) + 1), rs_)
-    cumsum!(view(cs, 2:length(cs_) + 1), cs_)
-    rs[1], cs[1] = 0, 0
-    K = Matrix{Float64}(undef, rs[end], cs[end])
-    for I in CartesianIndices(k)
-        K[rs[I[1]]+1:rs[I[1]+1], cs[I[2]]+1:cs[I[2]+1]] = cov(k[I[1], I[2]])
-    end
-    return K
+struct LhsFiniteCrossKernel <: CrossKernel
+    k::CrossKernel
+    X::AM
 end
+
+"""
+    RhsFiniteCrossKernel <: CrossKernel
+
+A cross kernel whose second argument is defined on a finite index set. You can't really do
+anything with this object other than use it to construct other objects.
+"""
+struct RhsFiniteCrossKernel <: CrossKernel
+    k::CrossKernel
+    X::AM
+end
+
+==(k::T, k′::T) where T<:Union{LhsFiniteCrossKernel, RhsFiniteCrossKernel} =
+    (k.k == k′.k) && (k.X == k′.X)

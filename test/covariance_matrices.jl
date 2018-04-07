@@ -6,7 +6,7 @@
         rng = MersenneTwister(123456)
         A = randn(rng, 5, 5)
         K_ = Transpose(A) * A + UniformScaling(1e-6)
-        K = StridedPDMatrix(chol(K_))
+        K = StridedPDMatrix(K_)
         x = randn(rng, 5)
 
         # Test invariances.
@@ -19,13 +19,6 @@
         @test size(K, 2) == size(K_, 2)
 
         @test K == K
-        @test chol(K) == chol(K_)
-    end
-
-    # Test covariance matrix construction with a single kernel.
-    let rng = MersenneTwister(123456), P = 5, Q = 6, D = 2
-        X, X′ = randn(rng, P, D), randn(rng, Q, D)
-        k = FiniteKernel(EQ(), X, X′)
-        @test cov([k k; k k]) == [cov(k) cov(k); cov(k) cov(k)]
+        @test chol(K) == chol(K_ + Stheno.__ϵ * I)
     end
 end

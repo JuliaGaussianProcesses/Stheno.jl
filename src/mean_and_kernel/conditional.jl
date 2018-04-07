@@ -1,6 +1,25 @@
 export ConditionalMean, ConditionalKernel, ConditionalCrossKernel
 
 """
+    CondCache
+
+Cache for use by `ConditionalMean`s, `ConditionalKernel`s and `ConditionalCrossKernel`s.
+"""
+struct CondCache
+    kff::Kernel
+    μf::MeanFunction
+    f::AV{<:Real}
+    α::AV{<:Real}
+    function CondCache(kff::Kernel, μf::MeanFunction, f::AV{<:Real})
+        @assert isfinite(kff)
+        @assert isfinite(μf)
+        @assert length(μf) == length(f)
+        @assert size(kff, 1) == size(μf)
+        return new(kff, μf, f, kff \ (f - μf))
+    end
+end
+
+"""
     ConditionalMean <: Function
 
 The function defining the mean of the process `g | (f(X) ← f)`. `Xf` are observation
@@ -9,18 +28,21 @@ is the cross-covariance between `f` and `g`. `μf` and `μg` are the prior mean 
 `g` resp.
 """
 struct ConditionalMean <: Function
-    kff::FiniteKernel
-    μf::Function
-    f::AbstractVector{<:Real}
-    μg::Function
+    c::CondCache
+    μg::MeanFunction
     kgf::CrossKernel
+    function ConditionalMean(c::CondCache, μg::MeanFunction, kgf::CrossKernel)
+        if isfinite(μg)
+            @assert length(μg) == size(kgf, 1)
+        else
+            return ConditionalMean(c, μg, kgf)
+        end
+    end
 end
+isfinite(μ::ConditionalMean) = isfinite(μ.μg)
 (μ::ConditionalMean)(x) = mean(μ, reshape(x, length(x), 1))
-function mean(μ::ConditionalMean, Xg::AM)
-    U = chol(cov(μ.kff))
-    α = U \ (U' \ (μ.f - μ.μf(X)))
-    return μ.kgf(Xg, μ.kff.X) * α + μ.μg(Xg)
-end
+mean(μ::ConditionalMean, Xg::AM) = xcov(μ.kgf, Xg, μ.kff.X) * μ.c.α + mean(μ.μg, Xg)
+mean(μ::ConditionalMean) = xcov(μ.kgf) * μ.c.α + mean(μ.μg)
 
 """
     ConditionalKernel <: Kernel
