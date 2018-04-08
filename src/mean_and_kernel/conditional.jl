@@ -14,25 +14,27 @@ struct CondCache
         return new(Σff, Σff \ (f - mean(μf)))
     end
 end
+show(io::IO, ::CondCache) = show(io, "CondCache")
 
 """
-    ConditionalMean <: Function
+    ConditionalMean <: MeanFunction
 
 The function defining the mean of the process `g | (f(X) ← f)`. `Xf` are observation
 locations, `f` are the observed values, `kff` is the covariance function of `f`, and `kfg`
 is the cross-covariance between `f` and `g`. `μf` and `μg` are the prior mean for `f` and
 `g` resp.
 """
-struct ConditionalMean <: Function
+struct ConditionalMean <: MeanFunction
     c::CondCache
     μg::MeanFunction
     kfg::CrossKernel
     function ConditionalMean(c::CondCache, μg::MeanFunction, kfg::CrossKernel)
-        isfinite(μg) && @assert length(μg) == size(kfg, 1)
-        return ConditionalMean(c, μg, kfg)
+        isfinite(μg) && @assert length(μg) == size(kfg, 2)
+        return new(c, μg, kfg)
     end
 end
 isfinite(μ::ConditionalMean) = isfinite(μ.μg)
+length(μ::ConditionalMean) = length(μ.μg)
 (μ::ConditionalMean)(x) = mean(μ, reshape(x, 1, length(x)))
 mean(μ::ConditionalMean, Xg::AM) = mean(μ.μg, Xg) + xcov(μ.kfg, Xg)' * μ.c.α
 mean(μ::ConditionalMean) = mean(μ.μg) + xcov(μ.kfg)' * μ.c.α

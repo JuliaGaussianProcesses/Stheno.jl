@@ -19,6 +19,7 @@ size(μ::FiniteMean) = (size(μ.X, 1),)
 size(μ::FiniteMean, n::Int) = n == 1 ? size(μ.X, 1) : 1
 length(μ::FiniteMean) = size(μ.X, 1)
 isfinite(μ::FiniteMean) = true
+show(io::IO, μ::FiniteMean) = show(io, "FiniteMean($(μ.μ)")
 
 """
     FiniteKernel <: Kernel
@@ -37,6 +38,7 @@ size(k::FiniteKernel) = (size(k.X, 1), size(k.X, 1))
 size(k::FiniteKernel, N::Int) = N ∈ (1, 2) ? size(k.X, 1) : 1
 isfinite(k::FiniteKernel) = true
 isstationary(k::FiniteKernel) = false
+show(io::IO, k::FiniteKernel) = show(io, "FiniteKernel($(k.k))")
 
 """
     LhsFiniteCrossKernel <: CrossKernel
@@ -84,3 +86,4 @@ size(k::FiniteCrossKernel) = (size(k.X, 1), size(k.X′, 1))
 size(k::FiniteCrossKernel, N::Int) = N == 1 ? size(k.X, 1) : (N == 2 ? size(k.X′, 1) : 1)
 isfinite(k::FiniteCrossKernel) = true
 isstationary(k::FiniteCrossKernel) = false
+show(io::IO, k::FiniteCrossKernel) = show(io, "FiniteCrossKernel($(k.k))")

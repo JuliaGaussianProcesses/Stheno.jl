@@ -50,7 +50,7 @@ size(k::CatCrossKernel, N::Int) = N == 1 ?
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
 
 """
-    cov(k::CatCrossKernel)
+    xcov(k::CatCrossKernel)
 
 Get the xcov matrix of a (finite) CatCrossKernel. Currently uses a dense representation,
 which is problematic from the perspective of retaining structure. Will need change over to
@@ -97,10 +97,10 @@ use `BlockArray`s for efficiency.
 function cov(k::CatKernel)
     Σ, rs = Matrix{Float64}(undef, size(k)), vcat(0, cumsum(size.(k.ks_diag, Ref(1))))
     for c in eachindex(k.ks_diag)
-        Σ[rs[c]+1:rs[c+1], rs[c]+1:rs[c+1]] = full(cov(k.ks_diag[c]))
+        Σ[rs[c]+1:rs[c+1], rs[c]+1:rs[c+1]] = Matrix(cov(k.ks_diag[c]))
         for r in 1:c-1
             Σ[rs[r]+1:rs[r+1], rs[c]+1:rs[c+1]] = xcov(k.ks_off[r, c])
         end
     end
-    return StridedPDMatrix(Symmetric(Σ))
+    return StridedPDMat(Symmetric(Σ))
 end

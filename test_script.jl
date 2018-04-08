@@ -59,13 +59,13 @@ f_long_periodic′ = f_long_periodic(x) | assignments;
 f_periodic′ = f_periodic(x) | assignments;
 f_wiggle′ = f_wiggle(x) | assignments;
 
-# μ_f′, σ_f′ = mean_vector(f′), sqrt.(diag(full(cov(f′))))
+# μ_f′, σ_f′ = mean_vector(f′), sqrt.(diag(Matrix(cov(f′))))
 
-μ_f_long′, σ_f_long′ = mean_vector(f_long′), sqrt.(diag(full(cov(f_long′))));
-μ_f_long_wigg′, σ_f_long_wigg′ = mean_vector(f_long_wiggly′), sqrt.(diag(full(cov(f_long_wiggly′))));
-μ_f_wigg′, σ_f_wigg′ = mean_vector(f_wiggle′), sqrt.(diag(full(cov(f_wiggle′))));
-μ_f_long_per′, σ_f_long_per′ = mean_vector(f_long_periodic′), sqrt.(diag(full(cov(f_long_periodic′))));
-μ_f_per′, σ_f_per′ = mean_vector(f_periodic′), sqrt.(diag(full(cov(f_periodic′))));
+μ_f_long′, σ_f_long′ = mean_vector(f_long′), sqrt.(diag(Matrix(cov(f_long′))));
+μ_f_long_wigg′, σ_f_long_wigg′ = mean_vector(f_long_wiggly′), sqrt.(diag(Matrix(cov(f_long_wiggly′))));
+μ_f_wigg′, σ_f_wigg′ = mean_vector(f_wiggle′), sqrt.(diag(Matrix(cov(f_wiggle′))));
+μ_f_long_per′, σ_f_long_per′ = mean_vector(f_long_periodic′), sqrt.(diag(Matrix(cov(f_long_periodic′))));
+μ_f_per′, σ_f_per′ = mean_vector(f_periodic′), sqrt.(diag(Matrix(cov(f_periodic′))));
 
 plot(x, μ_f_long′, "r", label="long");
 plot(x, μ_f_long′ .+ 2 .* σ_f_long′, "r--");
@@ -106,7 +106,7 @@ y, y′ = g.(x), g.(x′)
 f = GP(x->0.0, Linear(0.0), GPC())
 f′ = f(ϕ.(x)) | (f(ϕ.(x′)) ← y′)
 
-μ_f′, σ_f′ = mean_vector(f′), sqrt.(diag(full(cov(f′))))
+μ_f′, σ_f′ = mean_vector(f′), sqrt.(diag(Matrix(cov(f′))))
 plot(x, μ_f′, "r")
 plot(x, μ_f′ .+ 2 .* σ_f′, "r--")
 plot(x, μ_f′ .- 2 .* σ_f′, "r--")

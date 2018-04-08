@@ -22,6 +22,8 @@
         k22 = FiniteCrossKernel(EQ(), X2, X2′)
         k = CatCrossKernel([k11 k12; k21 k22])
         @test size(k) == (N1 + N2, N1′ + N2′)
+        @test size(k, 1) == size(k)[1]
+        @test size(k, 2) == size(k)[2]
         @test xcov(k) == vcat(hcat(xcov(k11), xcov(k12)), hcat(xcov(k21), xcov(k22)))
     end
 
@@ -40,7 +42,7 @@
         @test size(k) == (N1 + N2, N1 + N2)
         @test size(k, 1) == size(k)[1]
         @test size(k, 1) == size(k, 2)
-        manual = vcat(hcat(full(cov(k11)), xcov(k12)), hcat(zeros(N2, N1), full(cov(k22))))
-        @test cov(k) == StridedPDMatrix(Symmetric(manual))
+        manual = vcat(hcat(Matrix(cov(k11)), xcov(k12)), hcat(zeros(N2, N1), Matrix(cov(k22))))
+        @test cov(k) == Stheno.StridedPDMat(manual)
     end
 end

@@ -43,7 +43,6 @@ returns the conditional (posterior) distribution over everything on the left giv
 |(g::GP, c::Observation) = g | (c,)
 function |(g::GP, c::Tuple{Vararg{Observation}})
     f, y = [getfield.(c, :f)...], vcat(getfield.(c, :y)...)
-    @show f, μ.(f)
     μf, kff = CatMean(μ.(f)), CatKernel(k.(f), k.(f, permutedims(f)))
     return GP(|, g, f, CondCache(kff, μf, y))
 end
