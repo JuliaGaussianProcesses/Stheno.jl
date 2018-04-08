@@ -52,6 +52,6 @@ end
         @test maximum(abs.(mean(f̂, dims=2) - mean(μ))) < 1e-2
 
         Σ′ = (f̂ .- mean(μ)) * (f̂ .- mean(μ))' ./ S
-        @test mean(abs.(Σ′ - Matix(cov(f)))) < 1e-2
+        @test mean(abs.(Σ′ - Matrix(cov(f)))) < 1e-2
     end
 end
