@@ -36,7 +36,6 @@ using Stheno: LhsFiniteCrossKernel, RhsFiniteCrossKernel
         # Check that kernels evaluate correctly.
         @test mean(f4) == mean(f1, X′)
         @test cov(f4) == cov(f1, X′)
-        @show kernel(f3, f4)
         @test xcov(f3, f4) == xcov(f4, f3)'
         @test xcov(f3, f4) == xcov(f1, X, X′)
         @test xcov(f4, f3) == xcov(f1, X′, X)
@@ -63,28 +62,34 @@ using Stheno: LhsFiniteCrossKernel, RhsFiniteCrossKernel
     #     @test kernel(f3, f5).(id3, id5') == kernel(f5, f3).(id5, id3')'
     end
 
-    # # Test inference.
-    # let rng = MersenneTwister(123456)
-    #     x, x′, f̂ = randn(rng, 3), randn(rng, 2), randn(rng, 3)
+    # Test inference.
+    let
+        rng, N, N′, D = MersenneTwister(123456), 5, 6,  2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        y = randn(rng, N)
 
-    #     f = GP(CustomMean(sin), EQ(), GPC())
-    #     f′x = f(x) | (f(x) ← f̂)
-    #     f′x′ = f(x′) | (f(x) ← f̂)
-    #     f′ = f | (f(x) ← f̂)
+        # Test mechanics for finite conditioned process.
+        f = GP(ConstantMean(1), EQ(), GPC())
+        f′X = f(X) | (f(X) ← y)
+        f′X′ = f(X′) | (f(X) ← y)
 
-    #     # Test finite GP posterior.
-    #     idx = collect(eachindex(f′x))
-    #     @test dims(f′x) == length(x)
-    #     @test mean(f′x).(idx) ≈ f̂
-    #     @test all(kernel(f′x).(idx, idx') .- diagm(0 => 2e-9 * fill!(similar(x), 1)) .< 1e-12)
-    #     @test dims(f′x′) == length(x′)
+        # f′x = f(x) | (f(x) ← f̂)
+        # f′x′ = f(x′) | (f(x) ← f̂)
+        # f′ = f | (f(x) ← f̂)
 
-    #     # Test process posterior works.
-    #     @test mean(f′).(x) ≈ f̂
-    #     @test all(kernel(f′).(x, x') .- diagm(0 => 2e-9 * fill!(similar(x), 1)) .< 1e-12)
+        # # Test finite GP posterior.
+        # idx = collect(eachindex(f′x))
+        # @test dims(f′x) == length(x)
+        # @test mean(f′x).(idx) ≈ f̂
+        # @test all(kernel(f′x).(idx, idx') .- diagm(0 => 2e-9 * fill!(similar(x), 1)) .< 1e-12)
+        # @test dims(f′x′) == length(x′)
 
-    #     # Test that covariances are computed properly.
-    #     @test maximum(abs.(full(cov(f′x)) .- 2 .* kernel(f′).(x, x'))) < 1e-12
-    #     @test full(cov(f′x′)) ≈ kernel(f′).(x′, x′')
-    # end
+        # # Test process posterior works.
+        # @test mean(f′).(x) ≈ f̂
+        # @test all(kernel(f′).(x, x') .- diagm(0 => 2e-9 * fill!(similar(x), 1)) .< 1e-12)
+
+        # # Test that covariances are computed properly.
+        # @test maximum(abs.(full(cov(f′x)) .- 2 .* kernel(f′).(x, x'))) < 1e-12
+        # @test full(cov(f′x′)) ≈ kernel(f′).(x′, x′')
+    end
 end

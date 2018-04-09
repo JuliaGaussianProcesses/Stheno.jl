@@ -25,47 +25,35 @@ end
 k_p′(f_q::GP, X::AM) = FiniteKernel(k(f_q), X)
 function k_p′p(f_p::GP, f_q::GP, X::AM)
     kqp = k(f_q, f_p)
-    return isfinite(f_p) ?
-        FiniteCrossKernel(kqp.k, X, kqp.X) :
-        LhsFiniteCrossKernel(kqp, X)
+    return isfinite(f_p) ? FiniteCrossKernel(kqp, X) : LhsFiniteCrossKernel(kqp, X)
 end
 function k_pp′(f_p::GP, f_q::GP, X::AM)
     kpq = kernel(f_p, f_q)
-    return isfinite(f_p) ?
-        FiniteCrossKernel(kpq.k, kpq.X, X) :
-        RhsFiniteCrossKernel(kpq, X)
+    return isfinite(f_p) ? FiniteCrossKernel(kpq, X) : RhsFiniteCrossKernel(kpq, X)
 end
 length(::GP, X::AM) = length(X)
 
 """
-    |(f_cond::GP, c::Observation...)
+    |(g::GP, c::Observation...)
 
 `|` is NOT bit-wise logical OR in this context, it is the conditioning operator. That is, it
 returns the conditional (posterior) distribution over everything on the left given the
 `Observation`(s) on the right.
 """
-function |(f_cond::GP, c::Tuple{Vararg{Observation}})
-    f, y = getfield.(c, :f), getfield.(c, :y)
+|(g::GP, c::Observation) = g | (c,)
+function |(g::GP, c::Tuple{Vararg{Observation}})
+    f, y = [getfield.(c, :f)...], vcat(getfield.(c, :y)...)
+    @show f, μ.(f)
     μf, kff = CatMean(μ.(f)), CatKernel(k.(f), k.(f, permutedims(f)))
-    return GP(|, f_cond, f, y, μf, kff)
+    return GP(|, g, f, CondCache(kff, μf, y))
 end
-μ_p′(::typeof(|), f::GP, f_obs::Tuple{Vararg{<:GP}}, y::Tuple{Vararg{<:AV}}) =
-    ConditionalMean()
-μ_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
-    ConditionalMean(mean(f), k.(f_obs, (f,)), vcat(f̂...) .- mean_vector(f_obs), data)
-k_p′(::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
-    Conditional(k(f), k.(f_obs, (f,)), k.(f_obs, (f,)), data)
-k_p′p(f_p::GP, ::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
-    Conditional(k(f, f_p), k.(f_obs, (f,)), k.(f_obs, (f_p,)), data)
-k_pp′(f_p::GP, ::typeof(|), f::GP, f_obs::Vector{<:GP}, f̂::Vector{<:Vector}, data::CData) =
-    Conditional(k(f_p, f), k.(f_obs, (f_p,)), k.(f_obs, (f,)), data)
+μ_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache) =
+    ConditionalMean(cache, μ(g), CatCrossKernel(kernel.(f, Ref(g))))
+k_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache) =
+    ConditionalKernel(cache, CatCrossKernel(kernel.(f, Ref(g))), kernel(g))
+function k_p′p(g::GP, ::typeof(|), h::GP, f::Vector{<:GP}, cache::CondCache)
+    kfg, kfh = CatCrossKernel(kernel.(f, Ref(g))), CatCrossKernel(kernel.(f, Ref(h)))
+    return ConditionalCrossKernel(cache, kfg, kfh, kernel(g, h))
+end
+k_pp′(h::GP, ::typeof(|), g::GP, f::Vector{<:GP}, c::CondCache) = k_p′p(g, |, h, f, c)
 length(::typeof(|), f::GP, ::GP, f̂::Vector) = length(f)
-
-
-struct ConditionalMean <: Function
-    kff::FiniteKernel
-    μf::Function
-    f::AbstractVector{<:Real}
-    μg::Function
-    kgf::CrossKernel
-end

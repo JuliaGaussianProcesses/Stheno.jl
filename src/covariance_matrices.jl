@@ -1,7 +1,7 @@
 import PDMats: AbstractPDMat, invquad, dim
 
 import Base: size, ==, full
-import LinearAlgebra: cov, logdet, chol
+import LinearAlgebra: cov, logdet, chol, \
 import LinearAlgebra.BLAS: trsv
 export cov, cov!, invquad, AbstractPDMat, Xt_invA_Y
 
@@ -29,4 +29,5 @@ function chol(Σ::StridedPDMatrix)
     end
     return Σ.U
 end
+\(Σ::StridedPDMatrix, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' * X)
 ==(Σ1::StridedPDMatrix, Σ2::StridedPDMatrix) = Σ1.Σ == Σ2.Σ

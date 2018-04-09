@@ -29,16 +29,25 @@ struct CatCrossKernel <: CrossKernel
     ks::Matrix
     function CatCrossKernel(ks::Matrix)
         @assert all(isfinite.(ks))
-        for p in 1:size(ks, 1)
-            @assert foldl((k, k′)->size(k, 1) == size(k′, 1), view(ks, p, :))
+        if size(ks, 2) > 1
+            for p in 1:size(ks, 1)
+                @assert reduce((k, k′)->size(k, 1) == size(k′, 1), view(ks, p, :))
+            end
         end
-        for q in 1:size(ks, 2)
-            @assert foldl((k, k′)->size(k, 2) == size(k′, 2), view(ks, :, q))
+        if size(ks, 1) > 1
+            for q in 1:size(ks, 2)
+                @assert reduce((k, k′)->size(k, 2) == size(k′, 2), view(ks, :, q))
+            end
         end
         return new(ks)
     end
 end
-size(k::CatCrossKernel) = (sum(size.(k.ks[:, 1], Ref(1))), sum(size.(k.ks[1, :], Ref(2))))
+CatCrossKernel(ks::Vector) = CatCrossKernel(reshape(ks, length(ks), 1))
+CatCrossKernel(ks::RowVector) = CatCrossKernel(reshape(ks, 1, length(ks)))
+size(k::CatCrossKernel) = (size(k, 1), size(k, 2))
+size(k::CatCrossKernel, N::Int) = N == 1 ?
+    sum(size.(k.ks[:, 1], Ref(1))) :
+    N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
 
 """
     cov(k::CatCrossKernel)

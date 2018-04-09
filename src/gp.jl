@@ -141,7 +141,6 @@ rand(rng::AbstractRNG, f::GP) = vec(rand(rng, f, 1))
 # function rand(rng::AbstractRNG, ds::Vector{<:GP}, N::Int)
 #     μ = vcat(mean.(mean.(ds))...) # This looks ridiculous and will be fixed by issue #3.
 #     lin_sample = μ .+ Transpose(chol(cov(ds))) * randn(rng, sum(length.(ds)), N)
-#     @show lin_sample
 #     srt, fin = vcat(1, cumsum(length.(ds))[1:end-1] .+ 1), cumsum(length.(ds))
 #     return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
 # end
