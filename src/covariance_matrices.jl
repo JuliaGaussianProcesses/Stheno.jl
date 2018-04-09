@@ -43,5 +43,4 @@ function Xt_invA_X(A::LazyPDMat, X::AM)
     return LazyPDMat(V'V)
 end
 Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
-# Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (X' / chol(A)) * (chol(A)' \ Y)
 \(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
