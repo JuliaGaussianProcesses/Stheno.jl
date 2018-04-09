@@ -2,13 +2,16 @@ __precompile__(true)
 
 module Stheno
 
-    using PDMats, LinearAlgebra, Random, Distances
+    using PDMats, LinearAlgebra, Random, Distances, BlockArrays
     import Base: mean, cov, show, size, length, +, *, isfinite, rand, vcat
 
     const ColOrRowVec = Union{AbstractVector, RowVector}
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
+
+    # Some extensions to BlockArrays.jl.
+    include("block_arrays.jl")
 
     # Useful functionality for defining positive definite matrices.
     include("covariance_matrices.jl")

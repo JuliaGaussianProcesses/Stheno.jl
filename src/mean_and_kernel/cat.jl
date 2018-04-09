@@ -10,6 +10,7 @@ struct CatMean <: MeanFunction
 end
 CatMean(μs::Vararg{<:MeanFunction}) = CatMean([μs...])
 length(μ::CatMean) = sum(length.(μ.μ))
+# mean(μ::CatMean, X::Vector{<:AbstractMatrix}) = 
 mean(μ::CatMean) = vcat(mean.(μ.μ)...)
 isfinite(μ::CatMean) = all(isfinite.(μ.μ))
 ==(μ::CatMean, μ′::CatMean) = μ.μ == μ′.μ
