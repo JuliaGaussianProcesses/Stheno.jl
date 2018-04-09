@@ -5,8 +5,8 @@ const check_mem = false
 
 @testset "Stheno" begin
 
-    include("block_arrays.jl")
     include("covariance_matrices.jl")
+    include("block_arrays.jl")
 
     @testset "mean_and_kernel" begin
         include("mean_and_kernel/mean.jl")

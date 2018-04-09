@@ -1,8 +1,9 @@
-import Base: *, size, getindex, eltype
+import Base: *, size, getindex, eltype, copy
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
-import LinearAlgebra: adjoint, transpose, Adjoint, Transpose, chol, UpperTriangular, \
-export BlockVector, BlockMatrix, SymmetricBlock, blocksizes, blocklengths
+import LinearAlgebra: adjoint, transpose, Adjoint, Transpose, chol, UpperTriangular, \,
+    logdet
+export BlockVector, BlockMatrix, SquareDiagonal, blocksizes, blocklengths
 
 # Do some character saving.
 const BV{T} = BlockVector{T}
@@ -16,8 +17,20 @@ for (u, U) in [(:adjoint, :Adjoint), (:transpose, :Transpose)]
     @eval begin
         getblock(x::$U{T} where T, n::Int) = $u(getblock(x.parent, n))
         getblock(X::$U{T} where T, p::Int, q::Int) = $u(getblock(X.parent, q, p))
+        nblocks(X::$U{<:Any, <:ABM}) = reverse(nblocks(X.parent))
+        function nblocks(X::$U{<:Any, <:ABM}, N::Int)
+            if N == 1
+                return nblocks(X.parent, 2)
+            elseif N == 2
+                return nblocks(X.parent, 1)
+            else
+                throw(error("Booooo Matrices only have two dimensions."))
+            end
+        end
     end
 end
+
+
 
 """
     BlockVector(xs::Vector{<:AbstractVector{T}}) where T
@@ -75,6 +88,23 @@ end
 blocklengths(x::BlockVector) = blocksizes(x, 1)
 blocklengths(x::Union{<:Transpose, <:Adjoint}) = blocklengths(x.parent)
 
+# Copying a BlockVector.
+function copy(a::BV{T}) where T
+    b = BlockVector{T}(uninitialized_blocks, blocksizes(a, 1))
+    for p in 1:nblocks(b, 1)
+        setblock!(b, copy(getblock(a, p)), p)
+    end
+    return b
+end
+
+function copy(A::BM{T}) where T
+    B = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 2))
+    for q in 1:nblocks(B, 2), p in 1:nblocks(B, 1)
+        setblock!(B, copy(getblock(A, p, q)), p, q)
+    end
+    return B
+end
+
 """
     are_conformal(A::BlockVecOrMat, B::BlockVecOrMat)
 
@@ -83,14 +113,14 @@ that for general matrices / vectors as we additionally require that each block b
 with block of the other matrix with which it will be multiplied. This ensures that the
 result is itself straightforwardly representable as `BlockVecOrMat`.
 """
-are_conformal(A::AVM, B::AVM) = A.block_sizes[2] == B.block_sizes[1]
+are_conformal(A::AVM, B::AVM) = blocksizes(A, 2) == blocksizes(B, 1)
 
 """
     *(A::BlockMatrix, x::BlockVector)
 
 Matrix-vector multiplication between `BlockArray`s. Fails if block are not conformal.
 """
-function *(A::Union{<:BM{T}, Transpose{T, BM{T}}, Adjoint{T, BM{T}}}, x::BV{T}) where T
+function *(A::Union{<:ABM{T}, Transpose{T, <:ABM{T}}, Adjoint{T, <:ABM{T}}}, x::ABV{T}) where T
     @assert are_conformal(A, x)
     y = BlockVector{T}(uninitialized_blocks, blocksizes(A, 1))
     P, Q = nblocks(A)
@@ -108,7 +138,7 @@ end
 
 Matrix-matrix multiplication between `BlockArray`s. Fails if blocks are not conformal.
 """
-function *(A::BlockMatrix{T}, B::BlockMatrix{T}) where T
+function *(A::Union{<:ABM{T}, Transpose{T, <:ABM{T}}, Adjoint{T, <:ABM{T}}}, B::Union{<:ABM{T}, Transpose{T, <:ABM{T}}, Adjoint{T, <:ABM{T}}}) where T
     @assert are_conformal(A, B)
     C = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(B, 2))
     P, Q, R = nblocks(A, 1), nblocks(A, 2), nblocks(B, 2)
@@ -122,34 +152,35 @@ function *(A::BlockMatrix{T}, B::BlockMatrix{T}) where T
 end
 
 """
-    SymmetricBlock{T, V<:AM{T}} <: AbstractBlockMatrix{T, V}
+    SquareDiagonal{T, V<:AM{T}} <: AbstractBlockMatrix{T}
 
-A `SymmetricBlock` is endowed with a stronger form of symmetry than usual for a
+A `SquareDiagonal` is endowed with a stronger form of symmetry than usual for a
 `Symmetric`: we require that each block on the diagonal of the `BlockMatrix` that it
-represents be `SymmetricBlock`. This is satisfied trivially by non-block matrices, thus
+represents be `SquareDiagonal`. This is satisfied trivially by non-block matrices, thus
 `Symmetric` matrices wrapping a `Matrix` are also `BlockSymmetric`. If a block on the
-diagonal of a `SymmetricBlock` matrix is itself a `BlockMatrix`, then  we require that it
-also be `SymmetricBlock`.
+diagonal of a `SquareDiagonal` matrix is itself a `BlockMatrix`, then  we require that it
+also be `SquareDiagonal`.
 """
-struct SymmetricBlock{T, TX<:AM{T}} <: AbstractBlockMatrix{T}
+struct SquareDiagonal{T, TX<:ABM{T}} <: AbstractBlockMatrix{T}
     X::TX
-    function SymmetricBlock(X::BlockMatrix)
+    function SquareDiagonal(X::BlockMatrix)
         @assert blocksizes(X, 1) == blocksizes(X, 2)
         return new{eltype(X), typeof(X)}(X)
     end
 end
-const SB{T, TX} = SymmetricBlock{T, TX}
-nblocks(X::SymmetricBlock) = nblocks(X.X)
-nblocks(X::SymmetricBlock, i::Int) = nblocks(X.X, i)
-blocksize(X::SymmetricBlock, N::Int...) = blocksize(X.X, N...)
-getblock(X::SymmetricBlock, p::Int, q::Int) =
-    p > q ? transpose(getblock(X.X, q, p)) : getblock(X.X, p, q)
-size(X::SymmetricBlock) = size(X.X)
-getindex(X::SymmetricBlock, p::Int, q::Int) = getindex(X.X, (p < q ? (p, q) : (q, p))...)
-eltype(X::SymmetricBlock) = eltype(X.X)
+const SD{T, TX} = SquareDiagonal{T, TX}
+nblocks(X::SquareDiagonal) = nblocks(X.X)
+nblocks(X::SquareDiagonal, i::Int) = nblocks(X.X, i)
+blocksize(X::SquareDiagonal, N::Int...) = blocksize(X.X, N...)
+getblock(X::SquareDiagonal, p::Int...) = getblock(X.X, p...)
+setblock!(X::SquareDiagonal, v, p::Int...) = setblock!(X.X, v, p...)
+size(X::SquareDiagonal) = size(X.X)
+getindex(X::SquareDiagonal, p::Int, q::Int) = getindex(X.X, (p < q ? (p, q) : (q, p))...)
+eltype(X::SquareDiagonal) = eltype(X.X)
+copy(X::SquareDiagonal) = SquareDiagonal(copy(X.X))
 
 """
-    getblock(X::UpperTriangular{T, <:SymmetricBlock{T}} where T, p::Int, q::Int)
+    getblock(X::UpperTriangular{T, <:SquareDiagonal{T}} where T, p::Int, q::Int)
 
 Return block of zeros of the appropriate size if p > q.
 """
@@ -157,14 +188,14 @@ getblock(X::UpperTriangular{T}, p::Int, q::Int) where T =
     p > q ? zeros(T, blocksize(X.data, p, q)) : getblock(X.data, p, q)
 
 """
-    chol(A::SymmetricBlock{T, <:BM{T}}) where T<:Real
+    chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
 
 Get the Cholesky decomposition of `A` in the form of a `BlockMatrix`.
 
 Only works for `A` where `is_block_symmetric(A) == true`. Assumes that we want the
 upper triangular version.
 """
-function chol(A::SymmetricBlock{T, <:BM{T}}) where T<:Real
+function chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
     U = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 1))
     for j in 1:nblocks(A, 2)
 
@@ -186,10 +217,10 @@ function chol(A::SymmetricBlock{T, <:BM{T}}) where T<:Real
         end
         setblock!(U, chol(getblock(U, j, j)), j, j)
     end
-    return UpperTriangular(SymmetricBlock(U))
+    return UpperTriangular(SquareDiagonal(U))
 end
 
-function \(U::UpperTriangular{T, <:SB{T}}, x::ABV{T}) where T<:Real
+function \(U::UpperTriangular{T, <:SD}, x::ABV{T}) where T<:Real
     y = BlockVector{T}(uninitialized_blocks, blocksizes(U, 1))
     for p in reverse(1:nblocks(y, 1))
         setblock!(y, getblock(x, p), p)
@@ -201,7 +232,7 @@ function \(U::UpperTriangular{T, <:SB{T}}, x::ABV{T}) where T<:Real
     return y
 end
 
-function \(U::UpperTriangular{T, <:SB{T}}, X::ABM{T}) where T<:Real
+function \(U::UpperTriangular{T, <:SD{T}}, X::ABM{T}) where T<:Real
     Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(U, 1), blocksizes(X, 2))
     for q in 1:nblocks(Y, 2), p in reverse(1:nblocks(Y, 1))
         setblock!(Y, getblock(X, p, q), p, q)
@@ -213,7 +244,7 @@ function \(U::UpperTriangular{T, <:SB{T}}, X::ABM{T}) where T<:Real
     return Y
 end
 
-function \(L::Adjoint{T, <:UpperTriangular{T, <:SB{T}}}, x::ABV{T}) where T<:Real
+function \(L::Adjoint{T, <:UpperTriangular{T, <:SD}}, x::ABV{T}) where T<:Real
     y = BlockVector{T}(uninitialized_blocks, blocksizes(L, 1))
     for p in 1:nblocks(y, 1)
         setblock!(y, getblock(x, p), p)
@@ -225,7 +256,7 @@ function \(L::Adjoint{T, <:UpperTriangular{T, <:SB{T}}}, x::ABV{T}) where T<:Rea
     return y
 end
 
-function \(L::Adjoint{T, <:UpperTriangular{T, <:SB{T}}}, X::ABM{T}) where T<:Real
+function \(L::Adjoint{T, <:UpperTriangular{T, <:SD}}, X::ABM{T}) where T<:Real
     Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(L, 1), blocksizes(X, 2))
     for q in 1:nblocks(Y, 2), p in 1:nblocks(Y, 1)
         setblock!(Y, getblock(X, p, q), p, q)
@@ -237,5 +268,47 @@ function \(L::Adjoint{T, <:UpperTriangular{T, <:SB{T}}}, X::ABM{T}) where T<:Rea
     return Y
 end
 
-\(L::Transpose{T, <:UpperTriangular{T, <:SB{T}}}, X::ABVM{T}) where T<:Real =
+\(L::Transpose{T, <:UpperTriangular{T, <:SD}}, X::ABVM{T}) where T<:Real =
     adjoint(L.parent) \ X
+
+import LinearAlgebra: UniformScaling
+function +(u::UniformScaling, X::SquareDiagonal)
+    Y = copy(X)
+    for p in 1:nblocks(Y, 1)
+        setblock!(Y, getblock(Y, p, p) + u, p, p)
+    end
+    return Y
+end
+function +(X::SquareDiagonal, u::UniformScaling)
+    Y = copy(X)
+    for p in 1:nblocks(Y, 1)
+        setblock!(Y, u + getblock(Y, p, p), p, p)
+    end
+    return Y
+end
+
+# Define addition and subtraction for compatible block matrices and vectors.
+import Base: +, -
+for foo in [:+, :-]
+    @eval function $foo(A::BV{T}, B::BV{T}) where T
+        @assert blocksizes(A, 1) == blocksizes(B, 1)
+        C = BlockVector{T}(uninitialized_blocks, blocksizes(A, 1))
+        for p in 1:nblocks(C, 1)
+            setblock!(C, $foo(getblock(A, p), getblock(B, p)), p)
+        end
+        return C
+    end
+    @eval function $foo(A::BM{T}, B::BM{T}) where T
+        @assert blocksizes(A, 1) == blocksizes(B, 1)
+        @assert blocksizes(A, 2) == blocksizes(B, 2)
+        C = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 2))
+        for q in 1:nblocks(C, 2), p in 1:nblocks(C, 1)
+            setblock!(C, $foo(getblock(A, p, q), getblock(B, p, q)), p, q)
+        end
+        return C
+    end
+end
+
+# Ensure that, if we try to make a `PDMat` from a `BlockMatrix`, we require that the
+# blocks on it's diagonal be square. Otherwise we should definitely error.
+LazyPDMat(X::BM) = LazyPDMat(SquareDiagonal(X))

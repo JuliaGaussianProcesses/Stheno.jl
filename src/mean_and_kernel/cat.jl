@@ -103,5 +103,5 @@ function cov(k::CatKernel)
             Σ[rs[r]+1:rs[r+1], rs[c]+1:rs[c+1]] = xcov(k.ks_off[r, c])
         end
     end
-    return StridedPDMat(Symmetric(Σ))
+    return LazyPDMat(Symmetric(Σ))
 end

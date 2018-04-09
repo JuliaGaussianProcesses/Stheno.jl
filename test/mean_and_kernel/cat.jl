@@ -43,6 +43,6 @@
         @test size(k, 1) == size(k)[1]
         @test size(k, 1) == size(k, 2)
         manual = vcat(hcat(Matrix(cov(k11)), xcov(k12)), hcat(zeros(N2, N1), Matrix(cov(k22))))
-        @test cov(k) == Stheno.StridedPDMat(manual)
+        @test cov(k) == Stheno.LazyPDMat(manual)
     end
 end

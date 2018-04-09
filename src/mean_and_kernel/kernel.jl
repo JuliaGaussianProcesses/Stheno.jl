@@ -21,7 +21,7 @@ abstract type Kernel <: CrossKernel end
 isfinite(::CrossKernel) = false
 isstationary(::Type{<:CrossKernel}) = false
 isstationary(k::CrossKernel) = isstationary(typeof(k))
-cov(k::Kernel, X::AM) = StridedPDMat(xcov(k, X, X))
+cov(k::Kernel, X::AM) = LazyPDMat(xcov(k, X, X))
 xcov(k::CrossKernel, X::AM) = xcov(k, X, X)
 
 """
@@ -60,7 +60,7 @@ struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 show(io::IO, ::EQ) = show(io, "EQ")
 (::EQ)(x::T, x′::T) where T = exp(-0.5 * sqeuclidean(x, x′))
-cov(::EQ, X::AM) = StridedPDMat(exp.(-0.5 * pairwise(SqEuclidean(), X')))
+cov(::EQ, X::AM) = LazyPDMat(exp.(-0.5 * pairwise(SqEuclidean(), X')))
 xcov(::EQ, X::AM, X′::AM) = exp.(-0.5 * pairwise(SqEuclidean(), X', X′'))
 
 # """
@@ -89,7 +89,7 @@ end
 (k::Linear)(x, x′) = dot(x - k.c, x′ - k.c)
 function cov(k::Linear, X::AM)
     Δ = X .- k.c
-    return StridedPDMat(Δ * Δ')
+    return LazyPDMat(Δ * Δ')
 end
 xcov(k::Linear, X::AM, X′::AM) = (X .- k.c) * (X′ .- k.c)'
 ==(a::Linear, b::Linear) = a.c == b.c
