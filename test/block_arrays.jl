@@ -70,7 +70,31 @@
         @test transpose(B) * transpose(A) ≈ transpose(Matrix(B)) * transpose(Matrix(A))
     end
 
-    # Test `chol`.
+    # Test SymmetricBlock matrix construction and util.
+    let
+        rng, P1, P2 = MersenneTwister(123456), 3, 4
+        A11, A12, A22 = randn(rng, P1, P1), randn(rng, P1, P2), randn(rng, P2, P2)
+        A_ = BlockMatrix([A11, zeros(Float64, P2, P1), A12, A22], 2, 2)
+        A = SymmetricBlock(A_)
+        @test nblocks(A) == nblocks(A_)
+        @test nblocks(A, 1) == nblocks(A_, 1)
+        @test nblocks(A, 2) == nblocks(A_, 2)
+        @test blocksize(A, 1, 1) == blocksize(A_, 1, 1) &&
+            blocksize(A, 1, 2) == blocksize(A_, 1, 2) &&
+            blocksize(A, 2, 1) == blocksize(A_, 2, 1) &&
+            blocksize(A, 2, 2) == blocksize(A_, 2, 2)
+        @test size(A) == size(A_)
+        @test getindex(A, 1, 2) == getindex(A_, 1, 2)
+        @test getindex(A, 2, 1) == getindex(A, 1, 2)
+        @test eltype(A) == eltype(A_)
+
+        # UpperTriangular functionality.
+        @test getblock(UpperTriangular(A), 1, 1) == getblock(A, 1, 1)
+        @test getblock(UpperTriangular(A), 2, 1) == zeros(P2, P1)
+        @test getblock(UpperTriangular(A), 1, 2) == getblock(A, 1, 2)
+    end
+
+    # Test `chol` and backsolving.
     let
         rng, P1, P2 = MersenneTwister(123456), 3, 4
         tmp = randn(rng, P1 + P2, P1 + P2)
@@ -79,7 +103,37 @@
         @assert A_ == A
 
         # Compute chols and compare.
-        U_ = chol(Symmetric(A_))
-        
+        U_, U = chol(Symmetric(A_)), chol(SymmetricBlock(A))
+        @test U_ ≈ U
+
+        # Test backsolving for block vector.
+        x1, x2 = randn(rng, P1), randn(rng, P2)
+        x = BlockVector([x1, x2])
+
+        @test typeof(U \ x) <: AbstractBlockVector
+        @test size(U \ x) == size(U_ \ Vector(x))
+        @test U \ x ≈ U_ \ Vector(x)
+
+        @test typeof(U' \ x) <: AbstractBlockVector
+        @test size(U' \ x) == size(U_' \ Vector(x))
+        @test U' \ x ≈ U_' \ Vector(x)
+
+        @test typeof(transpose(U) \ x) <: AbstractBlockVector
+        @test size(transpose(U) \ x) == size(U_' \ Vector(x))
+        @test transpose(U) \ x ≈ U_' \ Vector(x)
+
+        # Test backsolving for block matrix
+        Q1, Q2 = 7, 6
+        X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
+        X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2) 
+        X = BlockMatrix([X11, X21, X12, X22], 2, 2)
+
+        @test typeof(U \ X) <: AbstractBlockMatrix
+        @test size(U \ X) == size(U_ \ Matrix(X))
+        @test U \ X ≈ U_ \ Matrix(X)
+
+        @test typeof(U' \ X) <: AbstractBlockMatrix
+        @test size(U' \ X) == size(U_' \ Matrix(X))
+        @test U' \ X ≈ U_' \ Matrix(X)
     end
 end
