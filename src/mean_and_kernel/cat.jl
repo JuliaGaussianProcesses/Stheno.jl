@@ -14,8 +14,6 @@ function mean(μ::CatMean, X::BlockMatrix)
     @assert nblocks(X, 2) == 1
     return BlockVector(map(n->mean(μ.μ[n], getblock(X, n, 1)), eachindex(μ.μ)))
 end
-mean(μ::CatMean) = BlockVector(mean.(μ.μ))
-isfinite(μ::CatMean) = all(isfinite.(μ.μ))
 ==(μ::CatMean, μ′::CatMean) = μ.μ == μ′.μ
 
 """
@@ -39,13 +37,6 @@ size(k::CatCrossKernel, N::Int) = N == 1 ?
     sum(size.(k.ks[:, 1], Ref(1))) :
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
 
-function xcov(k::CatCrossKernel)
-    Ω = BlockMatrix{Float64}(uninitialized_blocks, size.(k.ks[:, 1], 1), size.(k.ks[1, :], 2))
-    for q in 1:nblocks(Ω, 2), p in 1:nblocks(Ω, 1)
-        setblock!(Ω, xcov(k.ks[p, q]), p, q)
-    end
-    return Ω
-end
 function xcov(k::CatCrossKernel, X::BlockMatrix, X′::BlockMatrix)
     @assert nblocks(X, 2) == 1 && nblocks(X′, 2) == 1
     @assert nblocks(X, 1) == size(k.ks, 1) && nblocks(X′, 1) == size(k.ks, 2)
@@ -77,17 +68,6 @@ end
 size(k::CatKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
 size(k::CatKernel) = (size(k, 1), size(k, 1))
 
-function cov(k::CatKernel)
-    rs = size.(k.ks_diag, Ref(1))
-    Σ = BlockMatrix{Float64}(uninitialized_blocks, rs, rs)
-    for q in eachindex(k.ks_diag)
-        setblock!(Σ, Matrix(cov(k.ks_diag[q])), q, q)
-        for p in 1:q-1
-            setblock!(Σ, xcov(k.ks_off[p, q]), p, q)
-        end
-    end
-    return LazyPDMat(SquareDiagonal(Σ))
-end
 function cov(k::CatKernel, X::BlockMatrix)
     @assert nblocks(X, 2) == 1 && nblocks(X, 1) == length(k.ks_diag)
     Σ = BlockMatrix{Float64}(uninitialized_blocks, blocksizes(X, 1), blocksizes(X, 1))

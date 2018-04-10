@@ -29,29 +29,26 @@ end
 
     # Test deterministic properties of `rand`.
     let
-        rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
-        X, X′, gpc = randn(rng, N, D), randn(rng, N′, D), GPC()
-        μ, k = FiniteMean(ConstantMean(1), X), FiniteKernel(EQ(), randn(rng, N, D))
-        μ′, k′ = FiniteMean(ConstantMean(1), X′), FiniteKernel(EQ(), randn(rng, N′, D))
-        f, f′ = GP(μ, k, gpc), GP(μ′, k′, gpc)
+        rng, N, D = MersenneTwister(123456), 10, 2
+        X, μ, k = randn(rng, N, D), ConstantMean(1), EQ()
+        f = GP(μ, k, GPC())
 
         # Check that single-GP samples have the correct dimensions.
-        @test length(rand(rng, f)) == size(X, 1)
-        @test size(rand(rng, f, 10)) == (size(X, 1), 10)
+        @test length(rand(rng, f, X)) == size(X, 1)
+        @test size(rand(rng, f, X, 10)) == (size(X, 1), 10)
     end
 
     # Test statistical properties of `rand`.
     let
         rng, N, D, μ0, S = MersenneTwister(123456), 10, 2, 1, 100_000
-        X = randn(rng, N, D)
-        μ, k = FiniteMean(ConstantMean(μ0), X), FiniteKernel(EQ(), X)
+        X, μ, k = randn(rng, N, D), ConstantMean(μ0), EQ()
         f = GP(μ, k, GPC())
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.
-        f̂ = rand(rng, f, S)
-        @test maximum(abs.(mean(f̂, dims=2) - mean(μ))) < 1e-2
+        f̂ = rand(rng, f, X, S)
+        @test maximum(abs.(mean(f̂, dims=2) - mean(μ, X))) < 1e-2
 
-        Σ′ = (f̂ .- mean(μ)) * (f̂ .- mean(μ))' ./ S
-        @test mean(abs.(Σ′ - Matrix(cov(f)))) < 1e-2
+        Σ′ = (f̂ .- mean(μ, X)) * (f̂ .- mean(μ, X))' ./ S
+        @test mean(abs.(Σ′ - Matrix(cov(f, X)))) < 1e-2
     end
 end

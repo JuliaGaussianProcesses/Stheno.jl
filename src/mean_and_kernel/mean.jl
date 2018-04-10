@@ -5,10 +5,8 @@ export CustomMean, ZeroMean, OneMean, ConstantMean, FiniteMean
     MeanFunction
 """
 abstract type MeanFunction end
-
-# Default finite-ness condition.
-isfinite(::MeanFunction) = false
-length(μ::MeanFunction) = isfinite(μ) ? length(μ) : Inf
+length(::MeanFunction) = Inf
+size(::MeanFunction, N::Int) = N == 1 ? Inf : 1
 
 """
     CustomMean <: MeanFunction

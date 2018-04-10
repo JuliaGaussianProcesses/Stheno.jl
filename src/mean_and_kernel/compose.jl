@@ -9,11 +9,9 @@ struct UnaryComposite <: Kernel
     f::Any
     k::Kernel
 end
-isfinite(u::UnaryComposite) = isfinite(u.k)
 isstationary(u::UnaryComposite) = isstationary(u.k)
 (u::UnaryComposite)(x, x′) = u.f(u.k(x, x′))
 cov(u::UnaryComposite, X::AM, X′::AM) = u.f.(cov(u.k, X, X′))
-
 
 """
     BinaryComposite <: Kernel
@@ -27,7 +25,6 @@ struct BinaryComposite <: Kernel
     ka::Kernel
     kb::Kernel
 end
-isfinite(b::BinaryComposite) = isfinite(b.ka) && isfinite(b.kb)
 isstationary(b::BinaryComposite) = isstationary(b.ka) && isstationary(b.kb)
 (b::BinaryComposite)(x, x′) = b.f(b.ka(x, x′), b.kb(x, x′))
 cov(b::BinaryComposite, X::AM, X′::AM) = b.f.(cov(b.ka, X, X′), cov(b.kb, X, X′))
@@ -66,7 +63,6 @@ struct LhsOp <: CrossKernel
     f::Any
     k::CrossKernel
 end
-isfinite(k::LhsOp) = isfinite(k.k)
 (k::LhsOp)(x, x′) = k.op(k.f(x), k.k(x, x′))
 xcov(k::LhsOp, X::AM, X′::AM) = k.op.(k.f.(X), xcov(k.k, X, X′))
 
@@ -80,7 +76,6 @@ struct RhsOp <: CrossKernel
     f::Any
     k::CrossKernel
 end
-isfinite(k::RhsOp) = isfinite(k.k)
 (k::RhsOp)(x, x′) = k.op(k.k(x, x′), k.f(x′))
 xcov(k::RhsOp, X::AM, X′::AM) = k.op.(xcov(k.k, X, X′), k.f.(X′))
 

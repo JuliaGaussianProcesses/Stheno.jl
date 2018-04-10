@@ -9,9 +9,10 @@ Avoids recomputing the covariance `Σff` and the Kriging vector `α`.
 struct CondCache
     Σff::AbstractPDMat
     α::AV{<:Real}
-    function CondCache(kff::Kernel, μf::MeanFunction, f::AV{<:Real})
-        Σff = cov(kff)
-        return new(Σff, Σff \ (f - mean(μf)))
+    X::AM
+    function CondCache(kff::Kernel, μf::MeanFunction, X::AM, f::AV{<:Real})
+        Σff = cov(kff, X)
+        return new(Σff, Σff \ (f - mean(μf, X)), X)
     end
 end
 show(io::IO, ::CondCache) = show(io, "CondCache")
@@ -28,16 +29,10 @@ struct ConditionalMean <: MeanFunction
     c::CondCache
     μg::MeanFunction
     kfg::CrossKernel
-    function ConditionalMean(c::CondCache, μg::MeanFunction, kfg::CrossKernel)
-        isfinite(μg) && @assert length(μg) == size(kfg, 2)
-        return new(c, μg, kfg)
-    end
 end
-isfinite(μ::ConditionalMean) = isfinite(μ.μg)
 length(μ::ConditionalMean) = length(μ.μg)
 (μ::ConditionalMean)(x) = mean(μ, reshape(x, 1, length(x)))
-mean(μ::ConditionalMean, Xg::AM) = mean(μ.μg, Xg) + xcov(μ.kfg, Xg)' * μ.c.α
-mean(μ::ConditionalMean) = mean(μ.μg) + xcov(μ.kfg)' * μ.c.α
+mean(μ::ConditionalMean, Xg::AM) = mean(μ.μg, Xg) + xcov(μ.kfg, μ.c.X, Xg)' * μ.c.α
 
 """
     ConditionalKernel <: Kernel
@@ -52,12 +47,9 @@ struct ConditionalKernel <: Kernel
     kgg::Kernel
 end
 isstationary(k::ConditionalKernel) = false
-isfinite(k::ConditionalKernel) = isfinite(k.kgg)
-cov(k::ConditionalKernel) = cov(k.kgg) - Xt_invA_X(k.c.Σff, xcov(k.kfg))
-xcov(k::ConditionalKernel) = Matrix(cov(k))
-cov(k::ConditionalKernel, X::AM) = cov(k.kgg, X) - Xt_invA_X(k.c.Σff, xcov(k.kfg, X))
+cov(k::ConditionalKernel, X::AM) = cov(k.kgg, X) - Xt_invA_X(k.c.Σff, xcov(k.kfg, k.c.X, X))
 xcov(k::ConditionalKernel, X::AM, X′::AM) =
-    xcov(k.kgg, X, X′) - Xt_invA_Y(xcov(k.kfg, X), k.c.Σff, xcov(k.kfg, X′))
+    xcov(k.kgg, X, X′) - Xt_invA_Y(xcov(k.kfg, k.c.X, X), k.c.Σff, xcov(k.kfg, k.c.X, X′))
 
 """
     ConditionalCrossKernel <: CrossKernel
@@ -72,11 +64,9 @@ struct ConditionalCrossKernel <: CrossKernel
     kgh::CrossKernel
 end
 isstationary(k::ConditionalCrossKernel) = false
-isfinite(k::ConditionalCrossKernel) = isfinite(k.kgh)
-xcov(k::ConditionalCrossKernel) = xcov(k.kgh) - Xt_invA_Y(xcov(k.kfg), k.c.Σff, xcov(k.kfh))
 xcov(k::ConditionalCrossKernel, X::AM) = xcov(k, X, X)
 xcov(k::ConditionalCrossKernel, Xg::AM, Xh::AM) =
-    xcov(k.kgh, Xg, Xh) - Xt_invA_Y(xcov(k.kfg, Xg), k.c.Σff, xcov(k.kfh, Xh))
+    xcov(k.kgh, Xg, Xh) - Xt_invA_Y(xcov(k.kfg, k.c.X, Xg), k.c.Σff, xcov(k.kfh, k.c.X, Xh))
 
 # The kernel function is defined identically for both types of conditionals.
 for Foo in [:ConditionalKernel, :ConditionalCrossKernel]

@@ -18,11 +18,12 @@ Supertype for all (valid Mercer) Kernels.
 abstract type Kernel <: CrossKernel end
 
 # Fallback definitions.
-isfinite(::CrossKernel) = false
 isstationary(::Type{<:CrossKernel}) = false
 isstationary(k::CrossKernel) = isstationary(typeof(k))
 cov(k::Kernel, X::AM) = LazyPDMat(xcov(k, X, X))
 xcov(k::CrossKernel, X::AM) = xcov(k, X, X)
+size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
+size(::CrossKernel) = (Inf, Inf)
 
 """
     ZeroKernel <: Kernel

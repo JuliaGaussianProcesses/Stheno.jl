@@ -33,7 +33,6 @@ function GP(op, args...)
     return GP{typeof(μ), typeof(k)}(op, args, μ, k, gpc)
 end
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
-isfinite(f::GP) = isfinite(f.k)
 length(f::GP) = length(f.μ)
 mean_function(f::GP) = f.μ
 
@@ -54,7 +53,7 @@ function kernel(fa::GP, fb::GP)
     if fa === fb
         return kernel(fa)
     elseif fa.args == nothing && fa.n > fb.n || fb.args == nothing && fb.n > fa.n
-        return zero_kernel(fa, fb)
+        return ZeroKernel{Float64}()
     elseif fa.n > fb.n
         return k_p′p(fb, fa.f, fa.args...)
     else
@@ -65,28 +64,14 @@ kernel(::Union{Real, Function}) = ZeroKernel{Float64}()
 kernel(::Union{Real, Function}, ::GP) = ZeroKernel{Float64}()
 kernel(::GP, ::Union{Real, Function}) = ZeroKernel{Float64}()
 
-# Convenience function to return the correct type of Zero kernel for finite dimensional GPs.
-zero_kernel(fa::GP{<:FiniteMean, <:FiniteKernel}, fb::GP{<:FiniteMean, <:FiniteKernel}) =
-    FiniteCrossKernel(ZeroKernel{Float64}(), fa.k.X, fb.k.X)
-zero_kernel(fa::GP{<:FiniteMean, <:FiniteKernel}, fb::GP) =
-    LhsFiniteCrossKernel(ZeroKernel{Float64}(), fa.k.X)
-zero_kernel(fa::GP, fb::GP{<:FiniteMean, <:FiniteKernel}) =
-    RhsFiniteCrossKernel(ZeroKernel{Float64}(), fb.k.X)
-zero_kernel(fa::GP, fb::GP) = ZeroKernel{Float64}()
-
 function get_check_gpc(args...)
     gpc = args[findfirst(map(arg->arg isa GP, args))].gpc
     @assert all([!(arg isa GP) || arg.gpc == gpc for arg in args])
     return gpc
 end
 
-mean(f::GP) = mean(f.μ)
 mean(f::GP, X::AM) = mean(f.μ, X)
-
-cov(f::GP) = cov(f.k)
 cov(f::GP, X::AM) = cov(f.k, X)
-
-xcov(f::GP, f′::GP) = xcov(kernel(f, f′))
 xcov(f::GP, X::AM, X′::AM) = xcov(f.k, X, X′)
 xcov(f::GP, f′::GP, X::AM, X′::AM) = xcov(kernel(f, f′), X, X′)
 
@@ -114,59 +99,10 @@ function logpdf(a::Observation...)
 end
 
 """
-    rand(rng::AbstractRNG, f::GP, N::Int=1)
+    rand(rng::AbstractRNG, f::GP, X::AM N::Int=1)
 
-Obtain `N` independent samples from the (finite-dimensional) GP `f` using `rng`.
+Obtain `N` independent samples from the GP `f` at `X` using `rng`.
 """
-rand(rng::AbstractRNG, f::GP, N::Int) = mean(f) .+ chol(cov(f))' * randn(rng, length(f), N)
-rand(rng::AbstractRNG, f::GP) = vec(rand(rng, f, 1))
-
-
-
-# LEGACY CODE.
-
-# """
-#     logpdf(a::Vector{Observation}})
-
-# Returns the log probability density observing the assignments `a` jointly.
-# """
-# function logpdf(a::Vector{Observation})
-#     f, y = [c̄.f for c̄ in a], [c̄.y for c̄ in a]
-#     Σ = cov(f)
-#     δΣinvδ = invquad(Σ, vcat(y...) .- mean(f))
-#     return -0.5 * (sum(length.(f)) * log(2π) + logdet(Σ) + δΣinvδ)
-# end
-# logpdf(a::Observation...) = logpdf([a...])
-
-# function rand(rng::AbstractRNG, ds::Vector{<:GP}, N::Int)
-#     μ = vcat(mean.(mean.(ds))...) # This looks ridiculous and will be fixed by issue #3.
-#     lin_sample = μ .+ Transpose(chol(cov(ds))) * randn(rng, sum(length.(ds)), N)
-#     srt, fin = vcat(1, cumsum(length.(ds))[1:end-1] .+ 1), cumsum(length.(ds))
-#     return broadcast((srt, fin)->lin_sample[srt:fin, :], srt, fin)
-# end
-# # rand(rng::AbstractRNG, ds::Vector{<:GP}) = reshape.(rand(rng, ds, 1), length.(ds))
-# rand(rng::AbstractRNG, d::GP, N::Int) = rand(rng, [d], N)[1]
-# rand(rng::AbstractRNG, d::GP) = rand(rng, [d])[1]
-
-# """
-#     cov(d::Union{GP, Vector{<:GP}}, d′::Union{GP, Vector{<:GP}})
-
-# Compute the cross-covariance between GPs (or vectors of) `d` and `d′`.
-# """
-# function cov(
-#     d::Vector{GP{FiniteMean, FiniteKernel}},
-#     d′::Vector{GP{FiniteMean, FiniteKernel}},
-# )
-#     return cov(broadcast((f, f′)->kernel(f, f′), d, permutedims(d′)))
-# end
-# cov(d::Vector{<:GP}, d′::GP) = cov(d, [d′])
-# cov(d::GP, d′::Vector{<:GP}) = cov([d], d′)
-# cov(d::GP, d′::GP) = cov([d], [d′])
-
-# """
-#     cov(d::Union{GP, Vector{<:GP}})
-
-# Compute the marginal covariance matrix for GP (or vector thereof) `d`.
-# """
-# cov(d::Vector{<:GP}) = cov(d, d)
-# cov(d::GP) = cov([d])
+rand(rng::AbstractRNG, f::GP, X::AM, N::Int) =
+    mean(f, X) .+ chol(cov(f, X))' * randn(rng, size(X, 1), N)
+rand(rng::AbstractRNG, f::GP, X::AM) = vec(rand(rng, f, X, 1))
