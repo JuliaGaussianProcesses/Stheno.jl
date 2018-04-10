@@ -32,6 +32,7 @@ struct FiniteKernel <: Kernel
     X::AM
 end
 (k::FiniteKernel)(p::Int, q::Int) = k.k(view(k.X, p, :), view(k.X, q, :))
+xcov(k::FiniteKernel) = Matrix(cov(k))
 cov(k::FiniteKernel) = cov(k.k, k.X)
 cov(k::FiniteKernel, X::AM) = error("Attempted index into FiniteKernel.")
 size(k::FiniteKernel) = (size(k.X, 1), size(k.X, 1))
@@ -49,6 +50,9 @@ anything with this object other than use it to construct other objects.
 struct LhsFiniteCrossKernel <: CrossKernel
     k::CrossKernel
     X::AM
+    LhsFiniteCrossKernel(k::CrossKernel, X::AM) = new(k, X)
+    LhsFiniteCrossKernel(k::LhsFiniteCrossKernel, X::AM) =
+        throw(error("Can't nest LhsFiniteCrossKernels"))
 end
 xcov(k::LhsFiniteCrossKernel, X′::AM) = xcov(k.k, k.X, X′)
 ==(k::T, k′::T) where T<:LhsFiniteCrossKernel = (k.k == k′.k) && (k.X == k′.X)

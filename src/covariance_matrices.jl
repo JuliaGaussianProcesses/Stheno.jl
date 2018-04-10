@@ -1,6 +1,6 @@
 import PDMats: AbstractPDMat, invquad, dim, Xt_invA_X
 
-import Base: size, ==, +, -, *
+import Base: size, ==, +, -, *, isapprox
 import LinearAlgebra: cov, logdet, chol, \, Matrix, UpperTriangular
 export cov, invquad, LazyPDMat, Xt_invA_Y, Xt_invA_X
 
@@ -23,6 +23,7 @@ end
 dim(Σ::LazyPDMat) = size(Σ.Σ, 1)
 Matrix(Σ::LazyPDMat) = Matrix(Σ.Σ)
 ==(Σ1::LazyPDMat, Σ2::LazyPDMat) = Σ1.Σ == Σ2.Σ
+isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(Σ1.Σ, Σ2.Σ)
 
 # Unary functions.
 LinearAlgebra.logdet(Σ::LazyPDMat) = 2 * LinearAlgebra.logdet(chol(Σ))

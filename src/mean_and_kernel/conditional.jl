@@ -54,6 +54,7 @@ end
 isstationary(k::ConditionalKernel) = false
 isfinite(k::ConditionalKernel) = isfinite(k.kgg)
 cov(k::ConditionalKernel) = cov(k.kgg) - Xt_invA_X(k.c.Σff, xcov(k.kfg))
+xcov(k::ConditionalKernel) = Matrix(cov(k))
 cov(k::ConditionalKernel, X::AM) = cov(k.kgg, X) - Xt_invA_X(k.c.Σff, xcov(k.kfg, X))
 xcov(k::ConditionalKernel, X::AM, X′::AM) =
     xcov(k.kgg, X, X′) - Xt_invA_Y(xcov(k.kfg, X), k.c.Σff, xcov(k.kfg, X′))
@@ -72,6 +73,7 @@ struct ConditionalCrossKernel <: CrossKernel
 end
 isstationary(k::ConditionalCrossKernel) = false
 isfinite(k::ConditionalCrossKernel) = isfinite(k.kgh)
+xcov(k::ConditionalCrossKernel) = xcov(k.kgh) - Xt_invA_Y(xcov(k.kfg), k.c.Σff, xcov(k.kfh))
 xcov(k::ConditionalCrossKernel, X::AM) = xcov(k, X, X)
 xcov(k::ConditionalCrossKernel, Xg::AM, Xh::AM) =
     xcov(k.kgh, Xg, Xh) - Xt_invA_Y(xcov(k.kfg, Xg), k.c.Σff, xcov(k.kfh, Xh))

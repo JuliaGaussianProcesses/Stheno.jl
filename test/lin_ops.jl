@@ -68,17 +68,20 @@ using Stheno: LhsFiniteCrossKernel, RhsFiniteCrossKernel
         X, X′ = randn(rng, N, D), randn(rng, N′, D)
         y = randn(rng, N)
 
-        # Test mechanics for finite conditioned process with single conditioning.
-        f = GP(ConstantMean(1), EQ(), GPC())
-        f′X = f(X) | (f(X) ← y)
-        f′X′ = f(X′) | (f(X) ← y)
-        @test length(f′X) == N && length(rand(rng, f′X)) == N
-        @test length(f′X′) == N′ && length(rand(rng, f′X′)) == N′
+        # # Test mechanics for finite conditioned process with single conditioning.
+        # f = GP(ConstantMean(1), EQ(), GPC())
+        # f′X = f(X) | (f(X) ← y)
+        # f′X′ = f(X′) | (f(X) ← y)
+        # @test length(f′X) == N && length(rand(rng, f′X)) == N
+        # @test length(f′X′) == N′ && length(rand(rng, f′X′)) == N′
 
         # Test mechanics for infinite conditioned process with single conditioning.
         f = GP(ConstantMean(1), EQ(), GPC())
-        # f′ = f | (f(X) ← y)
-        # @test !isfinite(f′)
+        f′ = f | (f(X) ← y)
+        @test !isfinite(f′)
+        @test mean(f′, BlockMatrix([X], 1, 1)) ≈ y
+
+
 
 
         # f′x = f(x) | (f(x) ← f̂)
