@@ -10,8 +10,11 @@ struct CatMean <: MeanFunction
 end
 CatMean(μs::Vararg{<:MeanFunction}) = CatMean([μs...])
 length(μ::CatMean) = sum(length.(μ.μ))
-# mean(μ::CatMean, X::Vector{<:AbstractMatrix}) = 
-mean(μ::CatMean) = vcat(mean.(μ.μ)...)
+function mean(μ::CatMean, X::BlockMatrix)
+    @assert nblocks(X, 2) == 1
+    return BlockVector(map(n->mean(μ.μ[n], getblock(X, n, 1)), eachindex(μ.μ)))
+end
+mean(μ::CatMean) = BlockVector(mean.(μ.μ))
 isfinite(μ::CatMean) = all(isfinite.(μ.μ))
 ==(μ::CatMean, μ′::CatMean) = μ.μ == μ′.μ
 
@@ -28,20 +31,6 @@ to only create finite `CatCrossKernel`s.
 """
 struct CatCrossKernel <: CrossKernel
     ks::Matrix
-    function CatCrossKernel(ks::Matrix)
-        @assert all(isfinite.(ks))
-        if size(ks, 2) > 1
-            for p in 1:size(ks, 1)
-                @assert reduce((k, k′)->size(k, 1) == size(k′, 1), view(ks, p, :))
-            end
-        end
-        if size(ks, 1) > 1
-            for q in 1:size(ks, 2)
-                @assert reduce((k, k′)->size(k, 2) == size(k′, 2), view(ks, :, q))
-            end
-        end
-        return new(ks)
-    end
 end
 CatCrossKernel(ks::Vector) = CatCrossKernel(reshape(ks, length(ks), 1))
 CatCrossKernel(ks::RowVector) = CatCrossKernel(reshape(ks, 1, length(ks)))
@@ -50,19 +39,19 @@ size(k::CatCrossKernel, N::Int) = N == 1 ?
     sum(size.(k.ks[:, 1], Ref(1))) :
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
 
-"""
-    xcov(k::CatCrossKernel)
-
-Get the xcov matrix of a (finite) CatCrossKernel. Currently uses a dense representation,
-which is problematic from the perspective of retaining structure. Will need change over to
-use `BlockArray`s for efficiency.
-"""
 function xcov(k::CatCrossKernel)
-    Ω = Matrix{Float64}(undef, size(k))
-    rs = vcat(0, cumsum(size.(k.ks[:, 1], Ref(1))))
-    cs = vcat(0, cumsum(size.(k.ks[1, :], Ref(2))))
-    for I in CartesianIndices(k.ks)
-        Ω[rs[I[1]]+1:rs[I[1]+1], cs[I[2]]+1:cs[I[2]+1]] = xcov(k.ks[I[1], I[2]])
+    Ω = BlockMatrix{Float64}(uninitialized_blocks, size.(k.ks[:, 1], 1), size.(k.ks[1, :], 2))
+    for q in 1:nblocks(Ω, 2), p in 1:nblocks(Ω, 1)
+        setblock!(Ω, xcov(k.ks[p, q]), p, q)
+    end
+    return Ω
+end
+function xcov(k::CatCrossKernel, X::BlockMatrix, X′::BlockMatrix)
+    @assert nblocks(X, 2) == 1 && nblocks(X′, 2) == 1
+    @assert nblocks(X, 1) == size(k.ks, 1) && nblocks(X′, 1) == size(k.ks, 2)
+    Ω = BlockMatrix{Float64}(uninitialized_blocks, blocksizes(X, 1), blocksizes(X′, 1))
+    for q in 1:nblocks(Ω, 2), p in 1:nblocks(Ω, 1)
+        setblock!(Ω, xcov(k.ks[p, q], getblock(X, p, 1), getblock(X′, q, 1)), p, q)
     end
     return Ω
 end
@@ -88,20 +77,40 @@ end
 size(k::CatKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
 size(k::CatKernel) = (size(k, 1), size(k, 1))
 
-"""
-    cov(k::CatKernel)
-
-Get the covariance matrix of a (finite) CatKernel. Currently uses a dense representation,
-which is problematic from the perspective of retaining structure. Will need change over to
-use `BlockArray`s for efficiency.
-"""
 function cov(k::CatKernel)
-    Σ, rs = Matrix{Float64}(undef, size(k)), vcat(0, cumsum(size.(k.ks_diag, Ref(1))))
-    for c in eachindex(k.ks_diag)
-        Σ[rs[c]+1:rs[c+1], rs[c]+1:rs[c+1]] = Matrix(cov(k.ks_diag[c]))
-        for r in 1:c-1
-            Σ[rs[r]+1:rs[r+1], rs[c]+1:rs[c+1]] = xcov(k.ks_off[r, c])
+    rs = size.(k.ks_diag, Ref(1))
+    Σ = BlockMatrix{Float64}(uninitialized_blocks, rs, rs)
+    for q in eachindex(k.ks_diag)
+        setblock!(Σ, Matrix(cov(k.ks_diag[q])), q, q)
+        for p in 1:q-1
+            setblock!(Σ, xcov(k.ks_off[p, q]), p, q)
         end
     end
-    return LazyPDMat(Symmetric(Σ))
+    return LazyPDMat(SquareDiagonal(Σ))
+end
+function cov(k::CatKernel, X::BlockMatrix)
+    @assert nblocks(X, 2) == 1 && nblocks(X, 1) == length(k.ks_diag)
+    Σ = BlockMatrix{Float64}(uninitialized_blocks, blocksizes(X, 1), blocksizes(X, 1))
+    for q in eachindex(k.ks_diag)
+        setblock!(Σ, Matrix(cov(k.ks_diag[q], getblock(X, q, 1))), q, q)
+        for p in 1:q-1
+            setblock!(Σ, xcov(k.ks_off[p, q], getblock(X, p, 1), getblock(X, q, 1)), p, q)
+        end
+    end
+    return LazyPDMat(SquareDiagonal(Σ))
+end
+function xcov(k::CatKernel, X::BlockMatrix, X′::BlockMatrix)
+    @assert nblocks(X, 2) == 1 && nblocks(X′, 2) == 1
+    @assert nblocks(X, 1) == length(k.ks_diag) && nblocks(X′, 1) == length(k.ks_diag)
+    Ω = BlockMatrix{Float64}(uninitialized_blocks, blocksizes(X, 1), blocksizes(X′, 1))
+    for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
+        if p == q
+            setblock!(Ω, xcov(k.ks_diag[p], getblock(X, p, 1), getblock(X′, p, 1)), p, p)
+        elseif p < q
+            setblock!(Ω, xcov(k.ks_off[p, q], getblock(X, p, 1), getblock(X′, q, 1)), p, q)
+        else
+            setblock!(Ω, xcov(k.ks_off[q, p], getblock(X, p, 1), getblock(X′, q, 1)), p, q)
+        end
+    end
+    return Ω
 end

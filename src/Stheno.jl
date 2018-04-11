@@ -10,11 +10,11 @@ module Stheno
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
 
-    # Some extensions to BlockArrays.jl.
-    include("block_arrays.jl")
-
     # Useful functionality for defining positive definite matrices.
     include("covariance_matrices.jl")
+
+    # Some extensions to BlockArrays.jl.
+    include("block_arrays.jl")
 
     # All mean function and kernel related functionality.
     include("mean_and_kernel/mean.jl")
@@ -33,5 +33,5 @@ module Stheno
     include("lin_ops.jl")
     # include("linops/addition.jl")
     # include("linops/product.jl")
-    # # include("linops/integrate.jl")
+    # include("linops/integrate.jl")
 end # module

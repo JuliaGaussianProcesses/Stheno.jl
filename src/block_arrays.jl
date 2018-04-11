@@ -30,8 +30,6 @@ for (u, U) in [(:adjoint, :Adjoint), (:transpose, :Transpose)]
     end
 end
 
-
-
 """
     BlockVector(xs::Vector{<:AbstractVector{T}}) where T
 
