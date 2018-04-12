@@ -1,3 +1,6 @@
+# This file is named as such because, for some reason, Julia is unable to load a file
+# called compose.jl or composite.jl
+
 @testset "compose" begin
 
     # Tests for UnaryComposite kernel.
