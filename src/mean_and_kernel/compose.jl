@@ -11,7 +11,7 @@ struct UnaryComposite <: Kernel
 end
 isstationary(u::UnaryComposite) = isstationary(u.k)
 (u::UnaryComposite)(x, x′) = u.f(u.k(x, x′))
-cov(u::UnaryComposite, X::AM, X′::AM) = u.f.(cov(u.k, X, X′))
+cov(u::UnaryComposite, X::AVM, X′::AVM) = u.f.(cov(u.k, X, X′))
 
 """
     BinaryComposite <: Kernel
@@ -27,7 +27,7 @@ struct BinaryComposite <: Kernel
 end
 isstationary(b::BinaryComposite) = isstationary(b.ka) && isstationary(b.kb)
 (b::BinaryComposite)(x, x′) = b.f(b.ka(x, x′), b.kb(x, x′))
-cov(b::BinaryComposite, X::AM, X′::AM) = b.f.(cov(b.ka, X, X′), cov(b.kb, X, X′))
+cov(b::BinaryComposite, X::AVM, X′::AVM) = b.f.(cov(b.ka, X, X′), cov(b.kb, X, X′))
 
 for op in [:+, :*]
     @eval begin
@@ -64,7 +64,7 @@ struct LhsOp <: CrossKernel
     k::CrossKernel
 end
 (k::LhsOp)(x, x′) = k.op(k.f(x), k.k(x, x′))
-xcov(k::LhsOp, X::AM, X′::AM) = k.op.(k.f.(X), xcov(k.k, X, X′))
+xcov(k::LhsOp, X::AVM, X′::AVM) = k.op.(k.f.(X), xcov(k.k, X, X′))
 
 """
     RhsOp <: CrossKernel
@@ -77,7 +77,7 @@ struct RhsOp <: CrossKernel
     k::CrossKernel
 end
 (k::RhsOp)(x, x′) = k.op(k.k(x, x′), k.f(x′))
-xcov(k::RhsOp, X::AM, X′::AM) = k.op.(xcov(k.k, X, X′), k.f.(X′))
+xcov(k::RhsOp, X::AVM, X′::AVM) = k.op.(xcov(k.k, X, X′), k.f.(X′))
 
 # for op in (:+, :*)
 #     T_op = typeof(eval(op))

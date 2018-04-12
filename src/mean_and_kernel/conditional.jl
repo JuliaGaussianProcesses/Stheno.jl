@@ -9,8 +9,8 @@ Avoids recomputing the covariance `Σff` and the Kriging vector `α`.
 struct CondCache
     Σff::AbstractPDMat
     α::AV{<:Real}
-    X::AM
-    function CondCache(kff::Kernel, μf::MeanFunction, X::AM, f::AV{<:Real})
+    X::AVM
+    function CondCache(kff::Kernel, μf::MeanFunction, X::AVM, f::AV{<:Real})
         Σff = cov(kff, X)
         return new(Σff, Σff \ (f - mean(μf, X)), X)
     end
@@ -32,7 +32,7 @@ struct ConditionalMean <: MeanFunction
 end
 length(μ::ConditionalMean) = length(μ.μg)
 (μ::ConditionalMean)(x) = mean(μ, reshape(x, 1, length(x)))
-mean(μ::ConditionalMean, Xg::AM) = mean(μ.μg, Xg) + xcov(μ.kfg, μ.c.X, Xg)' * μ.c.α
+mean(μ::ConditionalMean, Xg::AVM) = mean(μ.μg, Xg) + xcov(μ.kfg, μ.c.X, Xg)' * μ.c.α
 
 """
     ConditionalKernel <: Kernel
@@ -47,8 +47,8 @@ struct ConditionalKernel <: Kernel
     kgg::Kernel
 end
 isstationary(k::ConditionalKernel) = false
-cov(k::ConditionalKernel, X::AM) = cov(k.kgg, X) - Xt_invA_X(k.c.Σff, xcov(k.kfg, k.c.X, X))
-xcov(k::ConditionalKernel, X::AM, X′::AM) =
+cov(k::ConditionalKernel, X::AVM) = cov(k.kgg, X) - Xt_invA_X(k.c.Σff, xcov(k.kfg, k.c.X, X))
+xcov(k::ConditionalKernel, X::AVM, X′::AVM) =
     xcov(k.kgg, X, X′) - Xt_invA_Y(xcov(k.kfg, k.c.X, X), k.c.Σff, xcov(k.kfg, k.c.X, X′))
 
 """
@@ -64,8 +64,8 @@ struct ConditionalCrossKernel <: CrossKernel
     kgh::CrossKernel
 end
 isstationary(k::ConditionalCrossKernel) = false
-xcov(k::ConditionalCrossKernel, X::AM) = xcov(k, X, X)
-xcov(k::ConditionalCrossKernel, Xg::AM, Xh::AM) =
+xcov(k::ConditionalCrossKernel, X::AVM) = xcov(k, X, X)
+xcov(k::ConditionalCrossKernel, Xg::AVM, Xh::AVM) =
     xcov(k.kgh, Xg, Xh) - Xt_invA_Y(xcov(k.kfg, k.c.X, Xg), k.c.Σff, xcov(k.kfh, k.c.X, Xh))
 
 # The kernel function is defined identically for both types of conditionals.

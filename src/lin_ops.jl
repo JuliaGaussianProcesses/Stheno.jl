@@ -4,34 +4,18 @@ export ←, |
 const μ = mean_function
 const k = kernel
 
-# """
-#     (f_q::GP)(X::AbstractMatrix)
+"""
+    (f_q::GP)(X::AbstractMatrix)
 
-# A GP evaluated at `X` is a multivariate finite-dimensional GP whose mean and covariance
-# are fully specified by `X` and the mean function and kernel of `f_q`.
-
-#     (f_q::GP{<:Finite})(X::AbstractMatrix)
-
-# A GP on a finite-dimensional index set (i.e. a multivariate Normal) indexed at locations `X`
-# is a new GP with finite-dimensional index set whose cardinality is at most that of `f_q`.
-
-# Note that nested indexing is currently not supported.
-# """
-# function (f_q::GP)(X::AM)
-#     isfinite(f_q) && throw(error("Nested indexing not currently supported."))
-#     return GP(f_q, X)
-# end
-# μ_p′(f_q::GP, X::AM) = FiniteMean(μ(f_q), X)
-# k_p′(f_q::GP, X::AM) = FiniteKernel(k(f_q), X)
-# function k_p′p(f_p::GP, f_q::GP, X::AM)
-#     kqp = k(f_q, f_p)
-#     return isfinite(f_p) ? FiniteCrossKernel(kqp, X) : LhsFiniteCrossKernel(kqp, X)
-# end
-# function k_pp′(f_p::GP, f_q::GP, X::AM)
-#     kpq = kernel(f_p, f_q)
-#     return isfinite(f_p) ? FiniteCrossKernel(kpq, X) : RhsFiniteCrossKernel(kpq, X)
-# end
-# length(::GP, X::AM) = length(X)
+A GP evaluated at `X` is a multivariate finite-dimensional GP whose mean and covariance
+are fully specified by `X` and the mean function and kernel of `f_q`.
+"""
+(f_q::GP)(X::AM) = GP(f_q, X)
+μ_p′(f_q::GP, X::AM) = FiniteMean(μ(f_q), X)
+k_p′(f_q::GP, X::AM) = FiniteKernel(k(f_q), X)
+k_p′p(f_p::GP, f_q::GP, X::AM) = LhsFiniteCrossKernel(k(f_q, f_p), X)
+k_pp′(f_p::GP, f_q::GP, X′::AM) = RhsFiniteCrossKernel(k(f_p, f_q), X′)
+length(::GP, X::AM) = length(X)
 
 """
     |(g::GP, c::Observation...)
@@ -40,11 +24,15 @@ const k = kernel
 returns the conditional (posterior) distribution over everything on the left given the
 `Observation`(s) on the right.
 """
-|(g::GP, c::Observation) = g | (c,)
-function |(g::GP, c::Tuple{Vararg{Observation}})
-    f, y = [getfield.(c, :f)...], vcat(getfield.(c, :y)...)
-    μf, kff = CatMean(μ.(f)), CatKernel(k.(f), k.(f, permutedims(f)))
-    return GP(|, g, f, CondCache(kff, μf, y))
+|(g::GP, c::Observation) = ((g,) | (c,))[1]
+|(g::GP, c::Tuple{Vararg{Observation}}) = ((g,) | c)[1]
+|(g::Tuple{Vararg{<:GP}}, c::Observation) = g | (c,)
+function |(g::Tuple{Vararg{<:GP}}, c::Tuple{Vararg{Observation}})
+    f, y = [getfield.(c, :f)...], BlockVector([getfield.(c, :y)...])
+    f_qs, Xs = [f_.f for f_ in f], [f_.args[1] for f_ in f]
+    μf, kff = CatMean(μ.(f_qs)), CatKernel(k.(f_qs), k.(f_qs, permutedims(f_qs)))
+    cache = CondCache(kff, μf, Xs, y)
+    return map(g_->GP(|, g_, f_qs, cache), g)
 end
 μ_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache) =
     ConditionalMean(cache, μ(g), CatCrossKernel(kernel.(f, Ref(g))))

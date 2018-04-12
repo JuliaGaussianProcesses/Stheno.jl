@@ -20,10 +20,10 @@ abstract type Kernel <: CrossKernel end
 # Fallback definitions.
 isstationary(::Type{<:CrossKernel}) = false
 isstationary(k::CrossKernel) = isstationary(typeof(k))
-cov(k::Kernel, X::AM) = LazyPDMat(xcov(k, X, X))
-xcov(k::CrossKernel, X::AM) = xcov(k, X, X)
+cov(k::Kernel, X::AVM) = LazyPDMat(xcov(k, X, X))
+xcov(k::CrossKernel, X::AVM) = xcov(k, X, X)
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
-size(::CrossKernel) = (Inf, Inf)
+size(k::CrossKernel) = (size(k, 1), size(k, 2))
 
 """
     ZeroKernel <: Kernel
@@ -34,7 +34,7 @@ struct ZeroKernel{T<:Real} <: Kernel end
 isstationary(::Type{<:ZeroKernel}) = true
 show(io::IO, ::ZeroKernel) = show(io, "ZeroKernel")
 (::ZeroKernel{T})(x, x′) where T = zero(T)
-xcov(::ZeroKernel{T}, X::AM, X′::AM) where T = zeros(T, size(X, 1), size(X′, 1))
+xcov(::ZeroKernel{T}, X::AVM, X′::AVM) where T = zeros(T, size(X, 1), size(X′, 1))
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
 """
@@ -49,7 +49,7 @@ end
 isstationary(::Type{<:ConstantKernel}) = true
 show(io::IO, k::ConstantKernel) = show(io, "ConstantKernel($(k.c))")
 (k::ConstantKernel)(x::T, x′::T) where T = k.c
-xcov(k::ConstantKernel, X::AM, X′::AM) = fill(k.c, size(X, 1), size(X′, 1))
+xcov(k::ConstantKernel, X::AVM, X′::AVM) = fill(k.c, size(X, 1), size(X′, 1))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
 
 """
@@ -61,8 +61,8 @@ struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 show(io::IO, ::EQ) = show(io, "EQ")
 (::EQ)(x::T, x′::T) where T = exp(-0.5 * sqeuclidean(x, x′))
-cov(::EQ, X::AM) = LazyPDMat(exp.(-0.5 * pairwise(SqEuclidean(), X')))
-xcov(::EQ, X::AM, X′::AM) = exp.(-0.5 * pairwise(SqEuclidean(), X', X′'))
+cov(::EQ, X::AVM) = LazyPDMat(exp.(-0.5 * pairwise(SqEuclidean(), X')))
+xcov(::EQ, X::AVM, X′::AVM) = exp.(-0.5 * pairwise(SqEuclidean(), X', X′'))
 
 # """
 #     RQ{T<:Real} <: Kernel

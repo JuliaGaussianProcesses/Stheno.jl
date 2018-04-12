@@ -55,6 +55,7 @@ function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
     end
     return X
 end
+BlockMatrix(Xs::Vector{<:AbstractVecOrMat}) = BlockMatrix(reshape(Xs, length(Xs), 1))
 
 """
     BlockMatrix(xs::Vector{<:AM}, P::Int, Q::Int)

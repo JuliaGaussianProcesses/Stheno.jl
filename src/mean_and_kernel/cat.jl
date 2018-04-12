@@ -10,10 +10,8 @@ struct CatMean <: MeanFunction
 end
 CatMean(μs::Vararg{<:MeanFunction}) = CatMean([μs...])
 length(μ::CatMean) = sum(length.(μ.μ))
-function mean(μ::CatMean, X::BlockMatrix)
-    @assert nblocks(X, 2) == 1
-    return BlockVector(map(n->mean(μ.μ[n], getblock(X, n, 1)), eachindex(μ.μ)))
-end
+mean(μ::CatMean, X::AV{<:AVM}) = BlockVector(mean.(μ.μ, X))
+mean(μ::CatMean, X::AVM) = mean(μ, [X])
 ==(μ::CatMean, μ′::CatMean) = μ.μ == μ′.μ
 
 """
@@ -36,13 +34,10 @@ size(k::CatCrossKernel) = (size(k, 1), size(k, 2))
 size(k::CatCrossKernel, N::Int) = N == 1 ?
     sum(size.(k.ks[:, 1], Ref(1))) :
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
-
-function xcov(k::CatCrossKernel, X::BlockMatrix, X′::BlockMatrix)
-    @assert nblocks(X, 2) == 1 && nblocks(X′, 2) == 1
-    @assert nblocks(X, 1) == size(k.ks, 1) && nblocks(X′, 1) == size(k.ks, 2)
-    Ω = BlockMatrix{Float64}(uninitialized_blocks, blocksizes(X, 1), blocksizes(X′, 1))
+function xcov(k::CatCrossKernel, X::AV{<:AVM}, X′::AV{<:AVM})
+    Ω = BlockMatrix{Float64}(uninitialized_blocks, size.(X, 1), size.(X′, 1))
     for q in 1:nblocks(Ω, 2), p in 1:nblocks(Ω, 1)
-        setblock!(Ω, xcov(k.ks[p, q], getblock(X, p, 1), getblock(X′, q, 1)), p, q)
+        setblock!(Ω, xcov(k.ks[p, q], X[p], X′[q]), p, q)
     end
     return Ω
 end
@@ -68,29 +63,31 @@ end
 size(k::CatKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
 size(k::CatKernel) = (size(k, 1), size(k, 1))
 
-function cov(k::CatKernel, X::BlockMatrix)
-    @assert nblocks(X, 2) == 1 && nblocks(X, 1) == length(k.ks_diag)
-    Σ = BlockMatrix{Float64}(uninitialized_blocks, blocksizes(X, 1), blocksizes(X, 1))
+function cov(k::CatKernel, X::AV{<:AVM})
+    Σ = BlockMatrix{Float64}(uninitialized_blocks, size.(X, 1), size.(X, 1))
     for q in eachindex(k.ks_diag)
-        setblock!(Σ, Matrix(cov(k.ks_diag[q], getblock(X, q, 1))), q, q)
+        setblock!(Σ, Matrix(cov(k.ks_diag[q], X[q])), q, q)
         for p in 1:q-1
-            setblock!(Σ, xcov(k.ks_off[p, q], getblock(X, p, 1), getblock(X, q, 1)), p, q)
+            setblock!(Σ, xcov(k.ks_off[p, q], X[p], X[q]), p, q)
         end
     end
     return LazyPDMat(SquareDiagonal(Σ))
 end
-function xcov(k::CatKernel, X::BlockMatrix, X′::BlockMatrix)
-    @assert nblocks(X, 2) == 1 && nblocks(X′, 2) == 1
-    @assert nblocks(X, 1) == length(k.ks_diag) && nblocks(X′, 1) == length(k.ks_diag)
-    Ω = BlockMatrix{Float64}(uninitialized_blocks, blocksizes(X, 1), blocksizes(X′, 1))
+cov(k::CatKernel, X::AVM) = cov(k, [X])
+function xcov(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM})
+    Ω = BlockMatrix{Float64}(uninitialized_blocks, size.(X, 1), size.(X′, 1))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
         if p == q
-            setblock!(Ω, xcov(k.ks_diag[p], getblock(X, p, 1), getblock(X′, p, 1)), p, p)
+            setblock!(Ω, xcov(k.ks_diag[p], X[p], X′[p]), p, p)
         elseif p < q
-            setblock!(Ω, xcov(k.ks_off[p, q], getblock(X, p, 1), getblock(X′, q, 1)), p, q)
+            setblock!(Ω, xcov(k.ks_off[p, q], X[p], X′[q]), p, q)
         else
-            setblock!(Ω, xcov(k.ks_off[q, p], getblock(X, p, 1), getblock(X′, q, 1)), p, q)
+            setblock!(Ω, xcov(k.ks_off[q, p], X[p], X′[q]), p, q)
         end
     end
     return Ω
 end
+
+xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AVM, X′::AVM) = xcov(k, [X], [X′])
+xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AV{<:AVM}, X′::AVM) = xcov(k, X, [X′])
+xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AVM, X′::AV{<:AVM}) = xcov(k, [X], X′)

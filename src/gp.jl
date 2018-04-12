@@ -70,10 +70,10 @@ function get_check_gpc(args...)
     return gpc
 end
 
-mean(f::GP, X::AM) = mean(f.μ, X)
-cov(f::GP, X::AM) = cov(f.k, X)
-xcov(f::GP, X::AM, X′::AM) = xcov(f.k, X, X′)
-xcov(f::GP, f′::GP, X::AM, X′::AM) = xcov(kernel(f, f′), X, X′)
+mean(f::GP, X::AVM) = mean(f.μ, X)
+cov(f::GP, X::AVM) = cov(f.k, X)
+xcov(f::GP, X::AVM, X′::AVM) = xcov(f.k, X, X′)
+xcov(f::GP, f′::GP, X::AVM, X′::AVM) = xcov(kernel(f, f′), X, X′)
 
 """
     Observation
@@ -103,6 +103,6 @@ end
 
 Obtain `N` independent samples from the GP `f` at `X` using `rng`.
 """
-rand(rng::AbstractRNG, f::GP, X::AM, N::Int) =
+rand(rng::AbstractRNG, f::GP, X::AVM, N::Int) =
     mean(f, X) .+ chol(cov(f, X))' * randn(rng, size(X, 1), N)
-rand(rng::AbstractRNG, f::GP, X::AM) = vec(rand(rng, f, X, 1))
+rand(rng::AbstractRNG, f::GP, X::AVM) = vec(rand(rng, f, X, 1))
