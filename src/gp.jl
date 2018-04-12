@@ -1,6 +1,6 @@
 export GP, GPC, kernel, logpdf, mean_function
 
-# A collection of GPs (GPC == "GP Collection"). Primarily used to track cross-kernels.
+# A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
 mutable struct GPC
     n::Int
     GPC() = new(0)
