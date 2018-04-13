@@ -3,31 +3,59 @@
 
 @testset "compose" begin
 
-    # Tests for UnaryComposite kernel.
-    using Stheno: UnaryComposite
-    @test isstationary(UnaryComposite(x->5x, EQ()))
-    @test !isstationary(UnaryComposite(x->5x, Linear(1)))     
+    # Check that basic GP-independent functionality works.
+    using Stheno: Composite
+    let
+        @test Composite(sin, 5.0).f == sin
+        @test Composite(sin, 5.0).x == (5.0,)
+        @test Composite(sin, 3, 2).x == (3, 2)
+        @test typeof(Composite(cos, 5)) == Composite{typeof(cos), 1}
+        @test typeof(Composite(sin, 5, 4)) == Composite{typeof(sin), 2}
+        @test Composite(sin, cos)(5.0) == sin(cos(5.0))
+        @test Composite(+, sin, cos)(4.0) == sin(4.0) + cos(4.0)
+    end
 
-    # Tests for BinaryComposite kernel.
-    using Stheno: BinaryComposite
-    @test isstationary(BinaryComposite(+, EQ(), EQ()))
-    @test !isstationary(BinaryComposite(+, EQ(), Linear(1)))
+    # Check that mean-function functionality works.
+    let
+        rng, μ1, μ2 = MersenneTwister(123456), ConstantMean(1.0), ZeroMean{Float64}()
+        N, D = 100, 2
+        x, X = randn(rng, N), randn(rng, N, D)
+        @test mean(Composite(+, μ1, μ2), x) == ones(N)
+        @test mean(Composite(+, μ1, μ2), X) == ones(N)
+        @test mean(Composite(*, μ1, μ2), x) == zeros(N)
+        @test mean(Composite(*, μ1, μ2), X) == zeros(N)
+    end
 
-    # Test addition.
-    @test isstationary(EQ() + EQ())
-    @test !isstationary(EQ() + Linear(5))
-    @test isstationary(5 * EQ())
-    @test (EQ() + EQ())(5.0, 4.0) == EQ()(5.0, 4.0) + EQ()(5.0, 4.0)
-    @test (EQ() + 5.0)(3.0, 3.5) == EQ()(3.0, 3.5) + 5.0
-    @test (5.0 + EQ())(3.0, 3.5) == 5.0 + EQ()(3.0, 3.5)
+    # Check that cov functionality works.
+    let
+        rng, k1
+    end
 
-    # Test multiplication.
-    @test isstationary(EQ() * EQ())
-    @test isstationary(EQ() * 5.0)
-    @test isstationary(5.0 * EQ())
-    @test !isstationary(EQ() * Linear(5.0))
-    @test (EQ() * EQ())(5.0, 4.0) == EQ()(5.0, 4.0) * EQ()(5.0, 4.0)
-    @test (EQ() * 5.0)(3.0, 3.5) == EQ()(3.0, 3.5) * 5.0
+    # # Tests for UnaryComposite kernel.
+    # using Stheno: UnaryComposite
+    # @test isstationary(UnaryComposite(x->5x, EQ()))
+    # @test !isstationary(UnaryComposite(x->5x, Linear(1)))     
+
+    # # Tests for BinaryComposite kernel.
+    # using Stheno: BinaryComposite
+    # @test isstationary(BinaryComposite(+, EQ(), EQ()))
+    # @test !isstationary(BinaryComposite(+, EQ(), Linear(1)))
+
+    # # Test addition.
+    # @test isstationary(EQ() + EQ())
+    # @test !isstationary(EQ() + Linear(5))
+    # @test isstationary(5 * EQ())
+    # @test (EQ() + EQ())(5.0, 4.0) == EQ()(5.0, 4.0) + EQ()(5.0, 4.0)
+    # @test (EQ() + 5.0)(3.0, 3.5) == EQ()(3.0, 3.5) + 5.0
+    # @test (5.0 + EQ())(3.0, 3.5) == 5.0 + EQ()(3.0, 3.5)
+
+    # # Test multiplication.
+    # @test isstationary(EQ() * EQ())
+    # @test isstationary(EQ() * 5.0)
+    # @test isstationary(5.0 * EQ())
+    # @test !isstationary(EQ() * Linear(5.0))
+    # @test (EQ() * EQ())(5.0, 4.0) == EQ()(5.0, 4.0) * EQ()(5.0, 4.0)
+    # @test (EQ() * 5.0)(3.0, 3.5) == EQ()(3.0, 3.5) * 5.0
 
     # import Stheno: LhsOp, RhsOp
     # @test !isstationary(LhsOp{typeof(+), typeof(sin), EQ})
