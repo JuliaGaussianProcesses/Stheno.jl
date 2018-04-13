@@ -99,7 +99,7 @@ function logpdf(a::Observation...)
 end
 
 """
-    rand(rng::AbstractRNG, f::GP, X::AM N::Int=1)
+    rand(rng::AbstractRNG, f::GP, X::AM, N::Int=1)
 
 Obtain `N` independent samples from the GP `f` at `X` using `rng`.
 """
