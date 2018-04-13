@@ -11,8 +11,6 @@
         @test size(μ̂, 2) == 1
         @test length(μ̂) == N
         @test eachindex(μ̂) == 1:N
-        @test μ̂(1) == 1.5
-        @test μ̂(N) == 1.5
         @test mean(μ̂) == mean(μ̂, eachindex(μ̂))
         @test mean(μ̂) == mean(μ, X)
         @test mean(μ̂, 1:N-1) == mean(μ, X[1:N-1, :])
@@ -41,9 +39,6 @@
         @test size(k′, 2) == N
         @test isstationary(k′) == false
         @test eachindex(k′) == 1:N
-        @test k′(3, 4) == k(X[3, :], X[4, :])
-        @test k′(1, 1) == k(X[1, :], X[1, :])
-        @test k′(N, N) == k(X[N, :], X[N, :])
         @test cov(k′) == cov(k′, eachindex(k′))
         @test Matrix(cov(k′)) == xcov(k′, eachindex(k′), eachindex(k′))
         @test cov(k′) == cov(k, X)
@@ -71,7 +66,6 @@
         @test size(k′, 2) == Inf
         @test isstationary(k′) == false
         @test eachindex(k′, 1) == 1:N
-        @test k′(3, X′[4, :]) == k(X[3, :], X′[4, :])
         @test xcov(k′, eachindex(k′, 1), X′) == xcov(k, X, X′)
         @test xcov(k′, 1:N-1, X′) == xcov(k, X[1:N-1, :], X′)
     end
@@ -87,7 +81,6 @@
         @test size(k′, 2) == N′
         @test isstationary(k′) == false
         @test eachindex(k′, 2) == 1:N′
-        @test k′(X[3, :], 4) == k(X[3, :], X′[4, :])
         @test xcov(k′, X, eachindex(k′, 2)) == xcov(k, X, X′)
         @test xcov(k′, X, 1:N′-1) == xcov(k, X, X′[1:N′-1, :])
     end
@@ -104,9 +97,6 @@
         @test isstationary(k′) == false
         @test eachindex(k′, 1) == 1:N
         @test eachindex(k′, 2) == 1:N′
-        @test k′(3, 4) == k(X[3, :], X′[4, :])
-        @test k′(1, 1) == k(X[1, :], X′[1, :])
-        @test k′(N, N′) == k(X[N, :], X′[N′, :])
         @test xcov(k′) == xcov(k′, eachindex(k′, 1), eachindex(k′, 2))
         @test xcov(k′) == xcov(k, X, X′)
         @test xcov(k′, 1:N-1, 2:N) == xcov(k, X[1:N-1, :], X′[2:N, :])

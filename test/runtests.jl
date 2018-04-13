@@ -11,7 +11,7 @@ const check_mem = false
     @testset "mean_and_kernel" begin
         include("mean_and_kernel/mean.jl")
         include("mean_and_kernel/kernel.jl")
-        include("mean_and_kernel/foo.jl")
+        include("mean_and_kernel/compose.jl")
         include("mean_and_kernel/conditional.jl")
         include("mean_and_kernel/finite.jl")
         include("mean_and_kernel/cat.jl")
@@ -23,7 +23,7 @@ const check_mem = false
 
     @testset "linops" begin
         include("lin_ops.jl")
-    #     include("linops/addition.jl")
+        include("linops/addition.jl")
     #     include("linops/product.jl")
     #     include("linops/integrate.jl")
     end

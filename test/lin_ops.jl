@@ -15,7 +15,7 @@ using Stheno: LhsFiniteCrossKernel, RhsFiniteCrossKernel
         f3 = f1(X)
 
         # Check mean and marginal covariance under indexing.
-        @test mean_function(f3) == FiniteMean(μ1, X)
+        @test mean(f3) == FiniteMean(μ1, X)
         @test kernel(f3) == FiniteKernel(k1, X)
         @test kernel(f3, f1) == LhsFiniteCrossKernel(kernel(f1), X)
         @test kernel(f1, f3) == RhsFiniteCrossKernel(kernel(f1), X)
@@ -67,7 +67,7 @@ using Stheno: LhsFiniteCrossKernel, RhsFiniteCrossKernel
         @test length(f′) == Inf
         @test length(rand(rng, f′, X)) == N
         @test maximum(rand(rng, f′, X) - y) < 1e-5
-        @test mean(mean_function(f′), X) ≈ y
+        @test mean(f′, X) ≈ y
         @test all(abs.(Matrix(cov(kernel(f′), X))) .< 1e-9)
     end
 end

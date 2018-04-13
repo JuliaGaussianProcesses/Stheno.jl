@@ -5,12 +5,8 @@
         @test CustomMean(sin) == CustomMean(sin)
         @test CustomMean(cos) == CustomMean(cos)
         @test CustomMean(sin) != CustomMean(cos)
-        @test CustomMean(sin)(1.0) == sin(1.0)
-        @test CustomMean(cos)(1.0) == cos(1.0)
         @test ZeroMean{Float64}() == ZeroMean{Int}()
-        @test ZeroMean{Float64}()(5.0) == 0.0
         @test ConstantMean(1.0) == ConstantMean(1.0)
-        @test ConstantMean(2)(1.0) == 2
     end
 
     # # Test that composition works as expected.

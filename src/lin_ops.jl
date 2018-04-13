@@ -1,7 +1,7 @@
 import Base: +, *, |
 export ←, |
 
-const μ = mean_function
+const μ = mean
 const k = kernel
 
 """

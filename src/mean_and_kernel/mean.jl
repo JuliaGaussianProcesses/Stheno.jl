@@ -18,8 +18,6 @@ A user-defined mean function. `f` should be defined such that when applied to a 
 struct CustomMean{T} <: MeanFunction
     f::T
 end
-(μ::CustomMean)(x::Real) = mean(μ, fill(x, 1, 1))[1]
-(μ::CustomMean)(x) = mean(μ, reshape(x, 1, length(x)))
 mean(μ::CustomMean, X::AVM) = μ.f(X)
 
 """
@@ -28,7 +26,6 @@ mean(μ::CustomMean, X::AVM) = μ.f(X)
 Returns zero (of the appropriate type) everywhere.
 """
 struct ZeroMean{T<:Real} <: MeanFunction end
-(::ZeroMean{T})(x) where T = zero(T)
 mean(::ZeroMean{T}, X::AVM) where T = zeros(T, size(X, 1))
 ==(::ZeroMean{<:Any}, ::ZeroMean{<:Any}) = true
 
@@ -40,7 +37,6 @@ Returns `c` (of the appropriate type) everywhere.
 struct ConstantMean{T<:Real} <: MeanFunction
     c::T
 end
-(μ::ConstantMean)(x) = μ.c
 mean(μ::ConstantMean, X::AVM) = fill(μ.c, size(X, 1))
 ==(μ::ConstantMean{<:Any}, μ′::ConstantMean{<:Any}) = μ.c == μ′.c 
 

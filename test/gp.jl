@@ -8,8 +8,8 @@
         k1, k2 = EQ(), Linear(5)
         f1, f2 = GP.([μ1, μ2], [k1, k2], Ref(GPC()))
 
-        @test mean_function(f1) == μ1
-        @test mean_function(f2) == μ2
+        @test mean(f1) == μ1
+        @test mean(f2) == μ2
 
         @test kernel(f1) == k1
         @test kernel(f2) == k2

@@ -1,4 +1,4 @@
-export GP, GPC, kernel, logpdf, mean_function
+export GP, GPC, kernel, logpdf
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
 mutable struct GPC
@@ -35,7 +35,7 @@ end
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
 ==(f::GP, g::GP) = (f.μ == g.μ) && (f.k == g.k)
 length(f::GP) = length(f.μ)
-mean_function(f::GP) = f.μ
+mean(f::GP) = f.μ
 
 # Conversion and promotion of non-GPs to GPs.
 promote(f::GP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
@@ -102,7 +102,7 @@ Returns the log probability density observing the assignments `a` jointly.
 function logpdf(a::Observation...)
     f, y = vcat(map(a_->a_.f, a)...), vcat(map(a_->a_.y, a)...)
     μ, Σ = mean(f), cov(f)
-    return -0.5 * (length(f) * log(2π) + logdet(Σ) + invquad(Σ, y - μ))
+    return -0.5 * (length(f) * log(2π) + logdet(Σ) + Xt_invA_X(Σ, y - μ))
 end
 
 """

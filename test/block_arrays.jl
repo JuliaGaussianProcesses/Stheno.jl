@@ -185,7 +185,7 @@
         @test Matrix(A - A) == A_ - A_
         # @test Matrix(A * A) == A_ * A_
         @test typeof(chol(A).data) <: AbstractBlockMatrix
-        @test x' * (Matrix(A_) \ x) ≈ invquad(A, x)
+        @test x' * (Matrix(A_) \ x) ≈ Xt_invA_X(A, x)
         @test typeof(Xt_invA_X(A, X)) <: LazyPDMat
         @test typeof(chol(Xt_invA_X(A, X)).data) <: AbstractBlockMatrix
         @test X' * (Matrix(A_) \ X) ≈ Matrix(Xt_invA_X(A, X))

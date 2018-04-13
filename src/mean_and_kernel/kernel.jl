@@ -32,8 +32,7 @@ A rank 1 kernel that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
 isstationary(::Type{<:ZeroKernel}) = true
-show(io::IO, ::ZeroKernel) = show(io, "ZeroKernel")
-(::ZeroKernel{T})(x, x′) where T = zero(T)
+show(io::IO, ::ZeroKernel) = print(io, "ZeroKernel")
 xcov(::ZeroKernel{T}, X::AVM, X′::AVM) where T = zeros(T, size(X, 1), size(X′, 1))
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
@@ -47,8 +46,7 @@ struct ConstantKernel{T<:Real} <: Kernel
     c::T
 end
 isstationary(::Type{<:ConstantKernel}) = true
-show(io::IO, k::ConstantKernel) = show(io, "ConstantKernel($(k.c))")
-(k::ConstantKernel)(x::T, x′::T) where T = k.c
+show(io::IO, k::ConstantKernel) = print(io, "ConstantKernel($(k.c))")
 xcov(k::ConstantKernel, X::AVM, X′::AVM) = fill(k.c, size(X, 1), size(X′, 1))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
 
@@ -59,8 +57,7 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 """
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
-show(io::IO, ::EQ) = show(io, "EQ")
-(::EQ)(x::T, x′::T) where T = exp(-0.5 * sqeuclidean(x, x′))
+show(io::IO, ::EQ) = print(io, "EQ")
 cov(::EQ, X::AVM) = LazyPDMat(exp.(-0.5 * pairwise(SqEuclidean(), X')))
 xcov(::EQ, X::AVM, X′::AVM) = exp.(-0.5 * pairwise(SqEuclidean(), X', X′'))
 
@@ -87,14 +84,13 @@ intercept is `c`.
 struct Linear{T<:Union{Real, Vector{<:Real}}} <: Kernel
     c::T
 end
-(k::Linear)(x, x′) = dot(x - k.c, x′ - k.c)
-function cov(k::Linear, X::AM)
+function cov(k::Linear, X::AVM)
     Δ = X .- k.c
     return LazyPDMat(Δ * Δ')
 end
-xcov(k::Linear, X::AM, X′::AM) = (X .- k.c) * (X′ .- k.c)'
+xcov(k::Linear, X::AVM, X′::AVM) = (X .- k.c) * (X′ .- k.c)'
 ==(a::Linear, b::Linear) = a.c == b.c
-show(io::IO, k::Linear) = show(io, "Linear")
+show(io::IO, k::Linear) = print(io, "Linear")
 
 # """
 #     Poly{Tσ<:Real} <: Kernel

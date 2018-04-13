@@ -1,22 +1,18 @@
 @testset "kernel" begin
 
     let rng = MersenneTwister(123456)
-        @test ZeroKernel{Float64}()(randn(rng), 4.0) == 0.0
         @test ZeroKernel{Float32}() == ZeroKernel{Float64}()
     end
 
     # Tests for Constant kernel.
     let rng = MersenneTwister(123456)
         @test ConstantKernel(5.0).c == 5.0
-        @test ConstantKernel(4.9)(randn(rng), randn(rng)) == 4.9
         @test ConstantKernel(1.0) == ConstantKernel(1.0)
         @test ConstantKernel(1.0) != 1.0
     end
 
     # Tests for Exponentiated Quadratic (EQ) kernel.
     @test isstationary(EQ)
-    @test EQ()(5.0, 5.0) == 1
-    @test EQ()(5.0, 100.0) ≈ 0
     @test EQ() == EQ()
     @test EQ() != ConstantKernel(1.0)
     @test EQ() != 1.0
