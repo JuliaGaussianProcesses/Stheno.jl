@@ -33,8 +33,15 @@ function GP(op, args...)
     return GP{typeof(μ), typeof(k)}(op, args, μ, k, gpc)
 end
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
+==(f::GP, g::GP) = (f.μ == g.μ) && (f.k == g.k)
 length(f::GP) = length(f.μ)
 mean_function(f::GP) = f.μ
+
+# Conversion and promotion of non-GPs to GPs.
+promote(f::GP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
+promote(x::Union{Real, Function}, f::GP) = reverse(promote(f, x))
+convert(::Type{GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), ZeroKernel{Float64}(), gpc)
+convert(::Type{GP}, f::Function, gpc::GPC) = GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
 
 """
     kernel(f::Union{Real, Function})

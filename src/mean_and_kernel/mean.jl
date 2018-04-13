@@ -1,5 +1,5 @@
 import Base: +, *
-export CustomMean, ZeroMean, OneMean, ConstantMean, FiniteMean
+export MeanFunction, CustomMean, ZeroMean, OneMean, ConstantMean, FiniteMean
 
 """
     MeanFunction
@@ -15,8 +15,8 @@ size(::MeanFunction, N::Int) = N == 1 ? Inf : 1
 A user-defined mean function. `f` should be defined such that when applied to a `N x D`
 (`Abstract`)`Matrix`, an `N`-`AbstractVector` is returned.
 """
-struct CustomMean <: MeanFunction
-    f
+struct CustomMean{T} <: MeanFunction
+    f::T
 end
 (μ::CustomMean)(x::Real) = mean(μ, fill(x, 1, 1))[1]
 (μ::CustomMean)(x) = mean(μ, reshape(x, 1, length(x)))

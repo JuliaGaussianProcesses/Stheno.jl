@@ -3,9 +3,8 @@ __precompile__(true)
 module Stheno
 
     using PDMats, LinearAlgebra, Random, Distances, BlockArrays
-    import Base: mean, cov, show, size, length, +, *, isfinite, rand, vcat
+    import Base: mean, cov, show, size, length, +, *, isfinite, rand, vcat, convert, promote
 
-    const ColOrRowVec = Union{AbstractVector, RowVector}
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}

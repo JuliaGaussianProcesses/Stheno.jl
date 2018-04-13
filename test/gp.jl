@@ -19,6 +19,16 @@
         @test kernel(f2, f1) == ZeroKernel{Float64}()
         @test kernel(f2, f2) == k2
     end
+
+    # Test conversion and promotion of non-GPs to GPs.
+    let
+        gpc = GPC()
+        x, f, g = 5.0, sin, GP(ConstantMean(1.0), EQ(), gpc)
+        @test convert(GP, x, gpc) == GP(ConstantMean(x), ZeroKernel{Float64}(), gpc)
+        @test convert(GP, f, gpc) == GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
+        @test promote(x, g) == (convert(GP, x, gpc), g)
+        @test promote(f, g) == (convert(GP, f, gpc), g)
+    end
 end
 
 @testset "logpdf" begin
