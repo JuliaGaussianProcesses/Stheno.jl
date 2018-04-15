@@ -1,7 +1,7 @@
 @testset "addition" begin
 
     # Test addition of GPs.
-    let rng = MersenneTwister(123456)
+    let
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = randn(rng, N, D), randn(rng, N′, D)
         μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)
@@ -11,65 +11,18 @@
         f5 = f3 + f4
 
         for (n, (fp, fa, fb)) in enumerate([(f3, f1, f2), (f4, f1, f3), (f5, f3, f4)])
-            @show n
-            @test mean(fp) == CompositeMean(+, mean(fa), mean(fb))
+            Σp = cov(fa, X) + cov(fb, X) + xcov(fa, fb, X) + xcov(fb, fa, X)
+            ΣpXX′ = xcov(fa, X, X′) + xcov(fb, X, X′) + xcov(fa, fb, X, X′) +
+                xcov(fa, fb, X, X′)
+            @test mean(fp) == Stheno.CompositeMean(+, mean(fa), mean(fb))
             @test mean(fp, X) ≈ mean(fa, X) + mean(fb, X)
-            @test cov(fp, X) ≈ cov(fa, X) + cov(fb, X)
-            @test xcov(fp, X, X′) ≈ xcov(fa, X, X′) + xcov(fb, X, X′)
+            @test cov(fp, X) ≈ Σp
+            @test xcov(fp, X, X′) ≈ ΣpXX′
+            @test xcov(fp, X′, X) ≈ transpose(ΣpXX′)                
             @test xcov(fp, fa, X, X′) ≈ xcov(fa, X, X′) + xcov(fb, fa, X, X′)
             @test xcov(fp, fa, X′, X) ≈ xcov(fa, X′, X) + xcov(fb, fa, X′, X)
             @test xcov(fa, fp, X, X′) ≈ xcov(fb, fa, X, X′) + xcov(fa, X, X′)
             @test xcov(fa, fp, X′, X) ≈ xcov(fb, fa, X′, X) + xcov(fa, X′, X)
         end
-
-    #     # Select some input locations.
-    #     x, y = randn(rng, 3), randn(rng, 2)
-
-    #     # Set three independent GPs.
-    #     μ1, μ2, μ3 = CustomMean.([sin, cos, tan])
-    #     k1, k2, k3 = EQ(), RQ(10.0), RQ(1.0)
-    #     gpc = GPC()
-    #     f1, f2, f3 = GP(μ1, k1, gpc), GP(μ2, k2, gpc), GP(μ3, k3, gpc)
-
-    #     # Compute all four summations between first two GPs.
-    #     f_1p1 = f1 + f1
-    #     f_1p2 = f1 + f2
-    #     f_2p1 = f2 + f1
-    #     f_2p2 = f2 + f2
-
-    #     # Check that the mean functions have been correctly computed.
-    #     @test mean(f_1p1).(x) == μ1.(x) .+ μ1.(x)
-    #     @test mean(f_1p2).(x) == μ1.(x) .+ μ2.(x)
-    #     @test mean(f_2p1).(x) == μ2.(x) .+ μ1.(x)
-    #     @test mean(f_2p2).(x) == μ2.(x) .+ μ2.(x)
-
-    #     # Check that the marginal covariances have been correctly computed.
-    #     @test kernel(f_1p1).(x, x') ≈ 4 .* k1.(x, x')
-    #     @test kernel(f_1p2).(x, x') ≈ k1.(x, x') .+ k2.(x, x')
-    #     @test kernel(f_2p1).(x, x') ≈ k2.(x, x') .+ k1.(x, x')
-    #     @test kernel(f_2p2).(x, x') ≈ 4 .* k2.(x, x')
-
-    #     # Check that the cross-covariances have been correctly computed.
-    #     @test kernel(f1, f_1p1).(x, x') ≈ 2 .* kernel(f1).(x, x')
-    #     @test kernel(f1, f_1p2).(x, x') ≈ kernel(f1).(x, x')
-    #     @test kernel(f1, f_2p1).(x, x') ≈ kernel(f1).(x, x')
-    #     @test kernel(f1, f_2p2).(x, x') ≈ zeros(3, 3)
-
-    #     # Check that the cross-covariances match.
-    #     @test kernel(f1, f_1p1).(x, x') == permutedims(kernel(f_1p1, f1).(x, x'), [2, 1])
-    #     @test kernel(f1, f_1p2).(x, x') == permutedims(kernel(f_1p2, f1).(x, x'), [2, 1])
-    #     @test kernel(f1, f_2p1).(x, x') == permutedims(kernel(f_2p1, f1).(x, x'), [2, 1])
-    #     @test kernel(f1, f_2p2).(x, x') == permutedims(kernel(f_2p2, f1).(x, x'), [2, 1])
-
-    #     if check_mem
-
-    #         # Memory performance tests.
-    #         @test memory(@benchmark $(mean(f_1p1))(1.0) seconds=0.1) == 0
-    #         @test memory(@benchmark $(mean(f_1p2))(0.0) seconds=0.1) == 0
-    #         @test memory(@benchmark $(mean(f_2p1))(-1.0) seconds=0.1) == 0
-    #         @test memory(@benchmark $(mean(f_2p2))(5.0) seconds=0.1) == 0
-    #         @test memory(@benchmark $(kernel(f1, f_1p1))(1.0, 0.0) seconds=0.1) == 0
-    #         @test memory(@benchmark $(kernel(f_2p2))(0.0, 1.0) seconds=0.1) == 0
-    #     end
     end
 end

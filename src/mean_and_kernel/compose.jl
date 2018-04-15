@@ -9,9 +9,10 @@ for (composite_type, parent_type) in [(:CompositeMean, :MeanFunction),
 end
 end
 mean(c::CompositeMean, X::AVM) = c.f.(map(μ->mean(μ, X), c.x)...)
-cov(c::CompositeKernel, X::AVM) = c.f.(map(k->cov(k, X), c.x)...)
+cov(c::CompositeKernel, X::AVM) = LazyPDMat(c.f.(map(k->xcov(k, X), c.x)...))
 xcov(c::Union{CompositeKernel, CompositeCrossKernel}, X::AVM, X′::AVM) =
     map(c.f, map(k->xcov(k, X, X′), c.x)...)
+marginal_cov(k::CompositeKernel, X::AVM) = map(c.f, map(k->marginal_cov(k, X, X′), c.x)...)
 
 """
     LhsCross <: CrossKernel

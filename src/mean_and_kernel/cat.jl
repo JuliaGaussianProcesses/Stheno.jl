@@ -91,3 +91,6 @@ end
 xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AVM, X′::AVM) = xcov(k, [X], [X′])
 xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AV{<:AVM}, X′::AVM) = xcov(k, X, [X′])
 xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AVM, X′::AV{<:AVM}) = xcov(k, [X], X′)
+
+marginal_cov(k::CatKernel, X::AV{<:AVM}) =
+    Diagonal(BlockVector(diag.(marginal_cov.(k.ks_diag, X))))

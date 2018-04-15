@@ -8,5 +8,3 @@ Produces a GP `f` satisfying `f(x) = fa(x) + fb(x)`.
 k_p′(::typeof(+), fa, fb) = CompositeKernel(+, k(fa), k(fb), k(fa, fb), k(fb, fa))
 k_pp′(fp::GP, ::typeof(+), fa, fb) = CompositeCrossKernel(+, k(fp, fa), k(fp, fb))
 k_p′p(fp::GP, ::typeof(+), fa, fb) = CompositeCrossKernel(+, k(fa, fp), k(fb, fp))
-# k_pp′(fp::GP, ::typeof(+), fa, fb) = k(fp, fa) + k(fp, fb)
-# k_p′p(fp::GP, ::typeof(+), fa, fb) = k(fa, fp) + k(fb, fp)

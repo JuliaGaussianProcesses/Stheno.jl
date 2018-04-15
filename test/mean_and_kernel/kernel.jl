@@ -1,21 +1,43 @@
 @testset "kernel" begin
 
-    let rng = MersenneTwister(123456)
+    # Tests for ZeroKernel.
+    let
+        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
         @test ZeroKernel{Float32}() == ZeroKernel{Float64}()
+        @test cov(ZeroKernel{Float64}(), X) == zeros(N, N)
+        @test isstationary(ZeroKernel{Float16}()) == true
+        _generic_kernel_tests(ZeroKernel{Float64}(), X, X′)
+        _generic_kernel_tests(ZeroKernel{Float32}(), X, X′)
     end
 
-    # Tests for Constant kernel.
-    let rng = MersenneTwister(123456)
+    # Tests for ConstantKernel.
+    let
+        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
         @test ConstantKernel(5.0).c == 5.0
-        @test ConstantKernel(1.0) == ConstantKernel(1.0)
-        @test ConstantKernel(1.0) != 1.0
+        @test cov(ConstantKernel(5.0), X) == 5 * ones(N, N)
+        @test isstationary(ConstantKernel(5.0)) == true
+        _generic_kernel_tests(ConstantKernel(4), X, X′)
+        _generic_kernel_tests(ConstantKernel(4.0), X, X′)
     end
 
-    # Tests for Exponentiated Quadratic (EQ) kernel.
-    @test isstationary(EQ)
-    @test EQ() == EQ()
-    @test EQ() != ConstantKernel(1.0)
-    @test EQ() != 1.0
+    # Tests for EQ.
+    let
+        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        @test isstationary(EQ())
+        _generic_kernel_tests(EQ(), X, X′)
+    end
+
+    # Tests for Linear.
+    let
+        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        @test !isstationary(Linear)
+        _generic_kernel_tests(Linear(4), X, X′)
+        _generic_kernel_tests(Linear(-2.1), X, X′)
+    end
 
     # # Tests for Rational Quadratic (RQ) kernel.
     # @test isstationary(RQ)

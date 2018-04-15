@@ -81,6 +81,7 @@ mean(f::GP, X::AVM) = mean(f.μ, X)
 cov(f::GP, X::AVM) = cov(f.k, X)
 xcov(f::GP, X::AVM, X′::AVM) = xcov(f.k, X, X′)
 xcov(f::GP, f′::GP, X::AVM, X′::AVM) = xcov(kernel(f, f′), X, X′)
+xcov(f::GP, f′::GP, X::AVM) = xcov(f, f′, X, X)
 
 """
     Observation

@@ -3,10 +3,12 @@ using Stheno, Test, BenchmarkTools, QuadGK, Random, LinearAlgebra, BlockArrays
 
 const check_mem = false
 
+include("test_util.jl")
+
 @testset "Stheno" begin
 
-    include("covariance_matrices.jl")
-    include("block_arrays.jl")
+    # include("covariance_matrices.jl")
+    # include("block_arrays.jl")
 
     @testset "mean_and_kernel" begin
         include("mean_and_kernel/mean.jl")
@@ -19,12 +21,12 @@ const check_mem = false
         # include("mean_and_kernel/input_transform.jl")
     end
 
-    include("gp.jl")
+    # include("gp.jl")
 
-    @testset "linops" begin
-        include("lin_ops.jl")
-        include("linops/addition.jl")
+    # @testset "linops" begin
+    #     include("lin_ops.jl")
+    #     include("linops/addition.jl")
     #     include("linops/product.jl")
-    #     include("linops/integrate.jl")
-    end
+    # #     include("linops/integrate.jl")
+    # end
 end
