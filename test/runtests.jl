@@ -24,7 +24,7 @@ const check_mem = false
     @testset "linops" begin
         include("lin_ops.jl")
         include("linops/addition.jl")
-    #     include("linops/product.jl")
+        include("linops/product.jl")
     #     include("linops/integrate.jl")
     end
 end

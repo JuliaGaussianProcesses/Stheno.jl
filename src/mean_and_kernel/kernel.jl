@@ -21,6 +21,7 @@ abstract type Kernel <: CrossKernel end
 isstationary(::Type{<:CrossKernel}) = false
 isstationary(k::CrossKernel) = isstationary(typeof(k))
 cov(k::Kernel, X::AVM) = LazyPDMat(xcov(k, X, X))
+xcov(k::Kernel, X::AVM) = Matrix(cov(k, X))
 xcov(k::CrossKernel, X::AVM) = xcov(k, X, X)
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))

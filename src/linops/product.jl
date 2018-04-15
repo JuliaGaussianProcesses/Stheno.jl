@@ -1,19 +1,23 @@
 """
-    *(f::GP, g::Union{Real, Function})
-    *(f::Union{Real, Function}, g::GP)
+    *(f::Real, g::GP)
 
-Construct the process resulting from the element-wise product of `f` and `g`.
+Multiplication of a GP `g` from the left by a scalar `f`.
 """
-*(f::Union{Real, Function}, g::GP) = GP(*, f, g)
-*(f::GP, g::Union{Real, Function}) = GP(*, f, g)
+*(f::Real, g::GP) = GP(*, ConstantMean(f), g)
+# *(f::Function, g::GP) = GP(*, CustomMean(f), g)
+μ_p′(::typeof(*), f::MeanFunction, g::GP) = CompositeMean(*, f, mean(g))
+k_p′(::typeof(*), f::MeanFunction, g::GP) = OuterKernel(f, k(g))
+k_pp′(f_p::GP, ::typeof(*), f::MeanFunction, g::GP) = RhsCross(k(f_p, g), f)
+k_p′p(f_p::GP, ::typeof(*), f::MeanFunction, g::GP) = LhsCross(f, k(g, f_p))
 
-μ_p′(::typeof(*), f::SthenoType, g::SthenoType) = mean(f) * mean(g)
+"""
+    *(g::GP, f::Real)
 
-k_p′(::typeof(*), f::Union{Real, Function}, g::GP) = f * k(g) * f
-k_p′(::typeof(*), f::GP, g::Union{Real, Function}) = g * k(f) * g
-
-k_pp′(f_p::GP, ::typeof(*), f::GP, g::Union{Real, Function}) = k(f_p, f) * g
-k_pp′(f_p::GP, ::typeof(*), f::Union{Real, Function}, g::GP) = k(f_p, g) * f
-
-k_p′p(f_p::GP, ::typeof(*), f::GP, g::Union{Real, Function}) = g * k(f, f_p)
-k_p′p(f_p::GP, ::typeof(*), f::Union{Real, Function}, g::GP) = f * k(g, f_p)
+Multiplication of a GP `g` from the right by a scalar `f`.
+"""
+*(g::GP, f::Real) = GP(*, g, ConstantMean(f))
+# *(g::GP, f::Function) = GP(*, g, CustomMean(f))
+μ_p′(::typeof(*), g::GP, f::MeanFunction) = CompositeMean(*, mean(g), f)
+k_p′(::typeof(*), g::GP, f::MeanFunction) = OuterKernel(f, k(g))
+k_pp′(f_p::GP, ::typeof(*), g::GP, f::MeanFunction) = RhsCross(k(f_p, g), f)
+k_p′p(f_p::GP, ::typeof(*), g::GP, f::MeanFunction) = LhsCross(f, k(g, f_p))
