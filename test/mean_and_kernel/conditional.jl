@@ -36,5 +36,7 @@
         @test xcov(ConditionalCrossKernel(cache, kff, kfg, kfg), X, X) ≈ xcov(kfg, X, X)
         @test xcov(ConditionalCrossKernel(cache, kff, kfg, kfg), X, X′) ≈ xcov(kfg, X, X′)
         @test xcov(ConditionalCrossKernel(cache, kfg, kfg, kgg), X′, X′) ≈ xcov(kgg, X′, X′)
+
+        _generic_kernel_tests(ConditionalKernel(cache, kfg, kgg), X, X′)
     end
 end

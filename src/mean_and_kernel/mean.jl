@@ -1,5 +1,5 @@
 import Base: +, *
-export MeanFunction, CustomMean, ZeroMean, OneMean, ConstantMean, FiniteMean
+export MeanFunction, CustomMean, ZeroMean, ConstantMean, FiniteMean
 
 """
     MeanFunction
@@ -7,7 +7,7 @@ export MeanFunction, CustomMean, ZeroMean, OneMean, ConstantMean, FiniteMean
 abstract type MeanFunction end
 length(::MeanFunction) = Inf
 size(μ::MeanFunction) = (size(μ, 1),)
-size(::MeanFunction, N::Int) = N == 1 ? Inf : 1
+size(μ::MeanFunction, N::Int) = N == 1 ? length(μ) : 1
 
 """
     CustomMean <: MeanFunction
@@ -27,7 +27,7 @@ Returns zero (of the appropriate type) everywhere.
 """
 struct ZeroMean{T<:Real} <: MeanFunction end
 mean(::ZeroMean{T}, X::AVM) where T = zeros(T, size(X, 1))
-==(::ZeroMean{<:Any}, ::ZeroMean{<:Any}) = true
+==(::ZeroMean, ::ZeroMean) = true
 
 """
     ConstantMean{T} <: MeanFunction
@@ -38,19 +38,4 @@ struct ConstantMean{T<:Real} <: MeanFunction
     c::T
 end
 mean(μ::ConstantMean, X::AVM) = fill(μ.c, size(X, 1))
-==(μ::ConstantMean{<:Any}, μ′::ConstantMean{<:Any}) = μ.c == μ′.c 
-
-# # Define composite mean functions.
-# struct CompositeMean{O, T<:Tuple{Any, N} where N} <: μFun
-#     args::T
-# end
-
-# +(μ::μFun, x′::Real) = μ + ConstantMean(x′)
-# +(x::Real, μ′::μFun) = ConstantMean(x) + μ′
-# +(μ::T, μ′::T′) where {T<:μFun, T′<:μFun} = CompositeMean{+, Tuple{T, T′}}((μ, μ′))
-# (c::CompositeMean{+})(x) = c.args[1](x) + c.args[2](x)
-
-# *(μ::μFun, x′::Real) = μ * ConstantMean(x′)
-# *(x::Real, μ′::μFun) = ConstantMean(x) * μ′
-# *(μ::T, μ′::T′) where {T<:μFun, T′<:μFun} = CompositeMean{*, Tuple{T, T′}}((μ, μ′))
-# (c::CompositeMean{*})(x) = c.args[1](x) * c.args[2](x)
+==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c 

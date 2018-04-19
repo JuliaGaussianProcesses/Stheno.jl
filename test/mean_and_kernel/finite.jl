@@ -53,6 +53,10 @@
         @test size(k2) == (N-1, N-1)
         @test eachindex(k2) == r
         @test xcov(k2) == xcov(k′, r)
+
+        _generic_kernel_tests(k′, r, r)
+        _generic_kernel_tests(k′, 1:N-1, r)
+        _generic_kernel_tests(k′, r, 1:N-1)
     end
 
     # Tests for LhsFiniteCrossKernel.

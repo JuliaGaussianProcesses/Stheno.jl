@@ -1,3 +1,4 @@
+import Base: eachindex
 export GP, GPC, kernel, logpdf
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
@@ -36,6 +37,7 @@ show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f)
 ==(f::GP, g::GP) = (f.μ == g.μ) && (f.k == g.k)
 length(f::GP) = length(f.μ)
 mean(f::GP) = f.μ
+eachindex(f::GP) = eachindex(f.μ)
 
 # Conversion and promotion of non-GPs to GPs.
 promote(f::GP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
@@ -83,6 +85,9 @@ xcov(f::GP, X::AVM, X′::AVM) = xcov(f.k, X, X′)
 xcov(f::GP, f′::GP, X::AVM, X′::AVM) = xcov(kernel(f, f′), X, X′)
 xcov(f::GP, f′::GP, X::AVM) = xcov(f, f′, X, X)
 
+mean(f::AV{<:GP}, X::AV{<:AVM}) = mean(CatMean(f), X)
+cov(f::AV{<:GP}, X::AV{<:AVM}) = cov(CatKernel(kernel.(f), kernel.(f, permutedims(f))), X)
+
 """
     Observation
 
@@ -90,21 +95,11 @@ Represents fixing a paricular (finite) GP to have a particular (vector) value. Y
 pleasing syntax, along the following lines: `f(X) ← y`.
 """
 struct Observation
+    X::AVM
     f::GP
     y::Vector
 end
 ←(f, y) = Observation(f, y)
-
-"""
-    logpdf(a::Vector{Observation}})
-
-Returns the log probability density observing the assignments `a` jointly.
-"""
-function logpdf(a::Observation...)
-    f, y = vcat(map(a_->a_.f, a)...), vcat(map(a_->a_.y, a)...)
-    μ, Σ = mean(f), cov(f)
-    return -0.5 * (length(f) * log(2π) + logdet(Σ) + Xt_invA_X(Σ, y - μ))
-end
 
 """
     rand(rng::AbstractRNG, f::GP, X::AM, N::Int=1)
@@ -114,3 +109,29 @@ Obtain `N` independent samples from the GP `f` at `X` using `rng`.
 rand(rng::AbstractRNG, f::GP, X::AVM, N::Int) =
     mean(f, X) .+ chol(cov(f, X))' * randn(rng, size(X, 1), N)
 rand(rng::AbstractRNG, f::GP, X::AVM) = vec(rand(rng, f, X, 1))
+
+"""
+    logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::AV{<:AV})
+
+Returns the log probability density observing the assignments `a` jointly.
+"""
+function logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real})
+    μ, Σ = mean(f, X), cov(f, X)
+    return -0.5 * (length(f) * log(2π) + logdet(Σ) + Xt_invA_X(Σ, y - μ))
+end
+logpdf(f::GP, X::AVM, y::AV{<:Real}) = logpdf([f], [X], BlockVector([y]))
+
+"""
+    elbo(a::Tuple{Observation}, b::Tuple{<:GP}, σ²::Real)
+
+Compute the Titsias-ELBO. Doesn't currently work because I've not implemented `vcat` for
+`GP`s at all. I've also not tested `logpdf` yet, so I should probably do that...
+"""
+function elbo(a::Tuple{Observation}, b::Tuple{<:GP}, σ²::Real)
+    u, f, y = vcat(b), vcat(map(a_->a_.f, a)...), vcat(map(a_->a_.y, a)...)
+    μf, μu, Σuu, Σuf = mean(f), mean(u), cov(u), xcov(u, f)
+    Sff = Xt_invA_X(Σuu, Σuf)
+    Qff = Sff + σ²I
+    return -0.5 * (length(f) * log(2π) + logdet(Qff) + Xt_invA_X(Qff, y - μf) -
+        sum(marginal_cov(f)) / σ² + tr(Sff) / σ²)
+end

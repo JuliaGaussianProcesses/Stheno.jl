@@ -25,6 +25,7 @@
         @test typeof(cov(CompositeKernel(*, k, k), X)) <: LazyPDMat
         @test cov(CompositeKernel(*, k, k), X) == map(*, cov(k, X), cov(k, X))
         @test xcov(CompositeKernel(*, k, k), X, X′) == map(*, xcov(k, X, X′), xcov(k, X, X′))
+        _generic_kernel_tests(k, X, X′)
     end
 
     # Test composite xcov functionality.
@@ -50,6 +51,7 @@
         @test xcov(OuterKernel(f, k), X, X′) ==
             Diagonal(mean(f, X)) * xcov(k, X, X′) * Diagonal(mean(f, X′))
         @test cov(OuterKernel(f, k), X) == Xt_A_X(cov(k, X), Diagonal(mean(f, X)))
+        _generic_kernel_tests(OuterKernel(f, k), X, X′)
     end
 
     # import Stheno: LhsOp, RhsOp

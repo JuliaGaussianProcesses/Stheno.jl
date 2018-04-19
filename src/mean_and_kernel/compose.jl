@@ -8,6 +8,8 @@ for (composite_type, parent_type) in [(:CompositeMean, :MeanFunction),
     $composite_type(f::Tf, x::Vararg{Any, N}) where {Tf, N} = new{Tf, N}(f, x)
 end
 end
+length(c::CompositeMean) = length(c.x[1])
+size(c::Union{CompositeKernel, CompositeCrossKernel}, N::Int) = size(c.x[1], N)
 mean(c::CompositeMean, X::AVM) = c.f.(map(μ->mean(μ, X), c.x)...)
 cov(c::CompositeKernel, X::AVM) = LazyPDMat(c.f.(map(k->xcov(k, X), c.x)...))
 xcov(c::Union{CompositeKernel, CompositeCrossKernel}, X::AVM, X′::AVM) =
@@ -23,6 +25,7 @@ struct LhsCross <: CrossKernel
     f::MeanFunction
     k::CrossKernel
 end
+size(k::LhsCross, N::Int) = size(k.k, N)
 xcov(k::LhsCross, X::AVM, X′::AVM) = Diagonal(mean(k.f, X)) * xcov(k.k, X, X′)
 
 """
@@ -34,6 +37,7 @@ struct RhsCross <: CrossKernel
     k::CrossKernel
     f::MeanFunction
 end
+size(k::RhsCross, N::Int) = size(k.k, N)
 xcov(k::RhsCross, X::AVM, X′::AVM) = xcov(k.k, X, X′) * Diagonal(mean(k.f, X′))
 
 """
@@ -46,6 +50,7 @@ struct OuterCross <: CrossKernel
     k::CrossKernel
     f′::MeanFunction
 end
+size(k::OuterCross, N::Int) = size(k.k, N)
 xcov(k::OuterCross, X::AVM, X′::AVM) =
     Diagonal(mean(k.f, X)) * xcov(k.k, X, X′) * Diagonal(mean(k.f′, X′))
 
@@ -58,6 +63,8 @@ struct OuterKernel <: Kernel
     f::MeanFunction
     k::Kernel
 end
+size(k::OuterKernel, N::Int) = size(k.k, N)
 cov(k::OuterKernel, X::AVM) = Xt_A_X(cov(k.k, X), Diagonal(mean(k.f, X)))
 xcov(k::OuterKernel, X::AVM, X′::AVM) =
     Diagonal(mean(k.f, X)) * xcov(k.k, X, X′) * Diagonal(mean(k.f, X′))
+marginal_cov(k::OuterKernel, X::AVM) = marginal_cov(k.k, X) .* mean(k.f, X).^2

@@ -31,10 +31,6 @@
     end
 end
 
-@testset "logpdf" begin
-    
-end
-
 @testset "rand" begin
 
     # Test deterministic properties of `rand`.
@@ -60,5 +56,16 @@ end
 
         Σ′ = (f̂ .- mean(μ, X)) * (f̂ .- mean(μ, X))' ./ S
         @test mean(abs.(Σ′ - Matrix(cov(f, X)))) < 1e-2
+    end
+end
+
+@testset "logpdf" begin
+    let
+        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        f = GP(ConstantMean(1.0), EQ(), GPC())
+        y = rand(rng, f, X)
+        @test typeof(logpdf([f], [X], BlockVector([y]))) <: Real
+        @test logpdf(f, X, y) == logpdf([f], [X], BlockVector([y]))
     end
 end

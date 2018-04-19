@@ -34,6 +34,7 @@ show(io::IO, k::FiniteKernel) = show(io, "FiniteKernel($(k.k))")
 eachindex(k::FiniteKernel) = 1:size(k.X, 1)
 cov(k::FiniteKernel) = cov(k, eachindex(k))
 xcov(k::FiniteKernel) = Matrix(cov(k))
+marginal_cov(k::FiniteKernel) = marginal_cov(k, eachindex(k))
 cov(k::FiniteKernel, r::AV{<:Integer}) = cov(k.k, r == eachindex(k) ? k.X : k.X[r, :])
 xcov(k::FiniteKernel, r::AVM{<:Integer}, c::AVM{<:Integer}) =
     xcov(k, reshape(r, length(r)), reshape(c, length(c)))
@@ -42,6 +43,8 @@ function xcov(k::FiniteKernel, r::AV{<:Integer}, c::AV{<:Integer})
     X′ = c == eachindex(k) ? k.X : k.X[c, :]
     return xcov(k.k, X, X′)
 end
+marginal_cov(k::FiniteKernel, r::AV{<:Integer}) =
+    marginal_cov(k.k, r == eachindex(k) ? k.X : k.X[r, :])
 
 """
     LhsFiniteCrossKernel <: CrossKernel
