@@ -120,7 +120,7 @@ Returns the log probability density observing the assignments `a` jointly.
 """
 function logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real})
     μ, Σ = mean(f, X), cov(f, X)
-    return -0.5 * (length(f) * log(2π) + logdet(Σ) + Xt_invA_X(Σ, y - μ))
+    return -0.5 * (length(y) * log(2π) + logdet(Σ) + Xt_invA_X(Σ, y - μ))
 end
 logpdf(f::GP, X::AVM, y::AV{<:Real}) = logpdf([f], [X], BlockVector([y]))
 
@@ -145,10 +145,26 @@ function elbo(
     Z::AV{<:AVM},
     σ²::Real,
 )
-    μf, μu, Σuu, Σuf = mean(f, X), mean(u, Z), cov(u, Z), xcov(u, f, Z, X)
+    N, μf, μu, Σuu, Σuf = length(y), mean(f, X), mean(u, Z), cov(u, Z), xcov(u, f, Z, X)
+    δf, Quu = y - μf, Σuf * Σuf'
+    Suu = LazyPDMat(Quu + σ² * Σuu)
+    β = chol(Suu) \ (Σuf * δf)
+
+    # Old implementation.
     Sff = Xt_invA_X(Σuu, Σuf)
     Qff = Sff + σ² * I
-    @show Xt_invA_X(Qff, y - μf), tr(Sff) / σ², sum(marginal_cov(f, X)) / σ²
-    return -0.5 * (length(f) * log(2π) + logdet(Qff) + Xt_invA_X(Qff, y - μf) -
-        sum(marginal_cov(f, X)) / σ² + tr(Sff) / σ²)
+    @show trace_bit_old = -sum(marginal_cov(f, X)) + tr(Sff)
+    @show det_bit_old = 
+    # @show Xt_invA_X(Qff, y - μf), tr(Sff) / σ², sum(marginal_cov(f, X)) / σ²
+    # return -0.5 * (length(f) * log(2π) + logdet(Qff) + Xt_invA_X(Qff, y - μf) -
+    #     sum(marginal_cov(f, X)) / σ² + tr(Sff) / σ²)
+
+    # Better implementation.
+    @show trace_bit_new = -sum(marginal_cov(f, X)) + sum(abs2, chol(Σuu)' \ Σuf)
+    @show sum(abs2, chol(LazyPDMat(Quu)) / chol(Σuu))
+    @show sum(abs2, chol(Σuu)' \ Σuf)
+    @show tr(Sff)
+    return -0.5 * (N * log(2π * σ²) + logdet(Σuu) + logdet(Suu) + (δf' * δf - β' * β -
+        sum(marginal_cov(f, X)) + sum(abs2, chol(Σuu)' \ Σuf)) / σ²)
 end
+
