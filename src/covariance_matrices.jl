@@ -2,7 +2,7 @@ import Base: size, ==, +, -, *, isapprox, getindex, IndexStyle, map, broadcast
 import LinearAlgebra: cov, logdet, chol, \, Matrix, UpperTriangular
 export cov, LazyPDMat, Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X
 
-const __ϵ = 1e-12
+const __ϵ = 1e-9
 
 # Define `logdet` sensibly for `UpperTriangular` matrices.
 LinearAlgebra.logdet(U::UpperTriangular) = sum(LinearAlgebra.logdet, view(U, diagind(U)))
@@ -38,11 +38,7 @@ end
 
 # Binary functions.
 +(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) + Matrix(Σ2))
-function +(Σ1::LazyPDMat, Σ2::UniformScaling)
-    Σ = Σ1.Σ + Σ2
-    @show typeof(Σ)
-    return Σ2.λ > 0 ? LazyPDMat(Σ) : Σ
-end
++(Σ1::LazyPDMat, Σ2::UniformScaling) = (Σ2.λ > 0 ? LazyPDMat : identity)(Σ1.Σ + Σ2)
 -(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) - Matrix(Σ2))
 *(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) * Matrix(Σ2))
 map(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(map(*, Σ1.Σ, Σ2.Σ))

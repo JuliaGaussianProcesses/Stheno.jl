@@ -125,46 +125,14 @@ end
 logpdf(f::GP, X::AVM, y::AV{<:Real}) = logpdf([f], [X], BlockVector([y]))
 
 """
-    elbo(
-        f::AV{<:GP},
-        X::AV{<:AVM},
-        y::BlockVector{<:Real},
-        u::AV{<:GP},
-        Z::AV{<:AVM},
-        σ²::Real,
-    )
+    elbo(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real}, u::AV{<:GP}, Z::AV{<:AVM}, σ::Real)
 
 Compute the Titsias-ELBO. Doesn't currently work because I've not implemented `vcat` for
 `GP`s at all. I've also not tested `logpdf` yet, so I should probably do that...
 """
-function elbo(
-    f::AV{<:GP},
-    X::AV{<:AVM},
-    y::BlockVector{<:Real},
-    u::AV{<:GP},
-    Z::AV{<:AVM},
-    σ²::Real,
-)
-    N, μf, μu, Σuu, Σuf = length(y), mean(f, X), mean(u, Z), cov(u, Z), xcov(u, f, Z, X)
-    δf, Quu = y - μf, Σuf * Σuf'
-    Suu = LazyPDMat(Quu + σ² * Σuu)
-    β = chol(Suu) \ (Σuf * δf)
-
-    # Old implementation.
-    Sff = Xt_invA_X(Σuu, Σuf)
-    Qff = Sff + σ² * I
-    @show trace_bit_old = -sum(marginal_cov(f, X)) + tr(Sff)
-    @show det_bit_old = 
-    # @show Xt_invA_X(Qff, y - μf), tr(Sff) / σ², sum(marginal_cov(f, X)) / σ²
-    # return -0.5 * (length(f) * log(2π) + logdet(Qff) + Xt_invA_X(Qff, y - μf) -
-    #     sum(marginal_cov(f, X)) / σ² + tr(Sff) / σ²)
-
-    # Better implementation.
-    @show trace_bit_new = -sum(marginal_cov(f, X)) + sum(abs2, chol(Σuu)' \ Σuf)
-    @show sum(abs2, chol(LazyPDMat(Quu)) / chol(Σuu))
-    @show sum(abs2, chol(Σuu)' \ Σuf)
-    @show tr(Sff)
-    return -0.5 * (N * log(2π * σ²) + logdet(Σuu) + logdet(Suu) + (δf' * δf - β' * β -
-        sum(marginal_cov(f, X)) + sum(abs2, chol(Σuu)' \ Σuf)) / σ²)
+function elbo(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real}, u::AV{<:GP}, Z::AV{<:AVM}, σ::Real)
+    Γ = (chol(cov(u, Z))' \ xcov(u, f, Z, X)) ./ σ
+    Ω, δ = LazyPDMat(Γ * Γ' + I), y - mean(f, X)
+    return -0.5 * (length(y) * log(2π * σ^2) + logdet(Ω) - sum(abs2, Γ) +
+        (sum(abs2, δ) - sum(abs2, chol(Ω)' \ (Γ * δ)) + sum(marginal_cov(f, X))) / σ^2)
 end
-
