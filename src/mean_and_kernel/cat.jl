@@ -67,6 +67,7 @@ function cov(k::CatKernel, X::AV{<:AVM})
         setblock!(Σ, Matrix(cov(k.ks_diag[q], X[q])), q, q)
         for p in 1:q-1
             setblock!(Σ, xcov(k.ks_off[p, q], X[p], X[q]), p, q)
+            setblock!(Σ, getblock(Σ, p, q)', q, p)
         end
     end
     return LazyPDMat(SquareDiagonal(Σ))

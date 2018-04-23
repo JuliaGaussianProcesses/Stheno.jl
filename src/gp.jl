@@ -1,5 +1,5 @@
 import Base: eachindex
-export GP, GPC, kernel, logpdf
+export GP, GPC, kernel, rand, logpdf, elbo
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
 mutable struct GPC
@@ -81,12 +81,16 @@ end
 
 mean(f::GP, X::AVM) = mean(f.μ, X)
 cov(f::GP, X::AVM) = cov(f.k, X)
+marginal_cov(f::GP, X::AVM) = marginal_cov(f.k, X)
 xcov(f::GP, X::AVM, X′::AVM) = xcov(f.k, X, X′)
 xcov(f::GP, f′::GP, X::AVM, X′::AVM) = xcov(kernel(f, f′), X, X′)
 xcov(f::GP, f′::GP, X::AVM) = xcov(f, f′, X, X)
 
 mean(f::AV{<:GP}, X::AV{<:AVM}) = mean(CatMean(f), X)
 cov(f::AV{<:GP}, X::AV{<:AVM}) = cov(CatKernel(kernel.(f), kernel.(f, permutedims(f))), X)
+xcov(f::AV{<:GP}, f′::AV{<:GP}, X::AV{<:AVM}, X′::AV{<:AVM}) =
+    xcov(CatCrossKernel(kernel.(f, permutedims(f′))), X, X′)
+marginal_cov(f::AV{<:GP}, X::AV{<:AVM}) = vcat(marginal_cov.(f, X)...)
 
 """
     Observation
@@ -95,7 +99,6 @@ Represents fixing a paricular (finite) GP to have a particular (vector) value. Y
 pleasing syntax, along the following lines: `f(X) ← y`.
 """
 struct Observation
-    X::AVM
     f::GP
     y::Vector
 end
@@ -122,16 +125,30 @@ end
 logpdf(f::GP, X::AVM, y::AV{<:Real}) = logpdf([f], [X], BlockVector([y]))
 
 """
-    elbo(a::Tuple{Observation}, b::Tuple{<:GP}, σ²::Real)
+    elbo(
+        f::AV{<:GP},
+        X::AV{<:AVM},
+        y::BlockVector{<:Real},
+        u::AV{<:GP},
+        Z::AV{<:AVM},
+        σ²::Real,
+    )
 
 Compute the Titsias-ELBO. Doesn't currently work because I've not implemented `vcat` for
 `GP`s at all. I've also not tested `logpdf` yet, so I should probably do that...
 """
-function elbo(a::Tuple{Observation}, b::Tuple{<:GP}, σ²::Real)
-    u, f, y = vcat(b), vcat(map(a_->a_.f, a)...), vcat(map(a_->a_.y, a)...)
-    μf, μu, Σuu, Σuf = mean(f), mean(u), cov(u), xcov(u, f)
+function elbo(
+    f::AV{<:GP},
+    X::AV{<:AVM},
+    y::BlockVector{<:Real},
+    u::AV{<:GP},
+    Z::AV{<:AVM},
+    σ²::Real,
+)
+    μf, μu, Σuu, Σuf = mean(f, X), mean(u, Z), cov(u, Z), xcov(u, f, Z, X)
     Sff = Xt_invA_X(Σuu, Σuf)
-    Qff = Sff + σ²I
+    Qff = Sff + σ² * I
+    @show Xt_invA_X(Qff, y - μf), tr(Sff) / σ², sum(marginal_cov(f, X)) / σ²
     return -0.5 * (length(f) * log(2π) + logdet(Qff) + Xt_invA_X(Qff, y - μf) -
-        sum(marginal_cov(f)) / σ² + tr(Sff) / σ²)
+        sum(marginal_cov(f, X)) / σ² + tr(Sff) / σ²)
 end

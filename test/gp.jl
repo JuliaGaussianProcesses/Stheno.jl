@@ -29,9 +29,6 @@
         @test promote(x, g) == (convert(GP, x, gpc), g)
         @test promote(f, g) == (convert(GP, f, gpc), g)
     end
-end
-
-@testset "rand" begin
 
     # Test deterministic properties of `rand`.
     let
@@ -57,15 +54,18 @@ end
         Σ′ = (f̂ .- mean(μ, X)) * (f̂ .- mean(μ, X))' ./ S
         @test mean(abs.(Σ′ - Matrix(cov(f, X)))) < 1e-2
     end
-end
 
-@testset "logpdf" begin
+    # Test logpdf + elbo do something vaguely sensible + that elbo converges to logpdf.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         X, X′ = randn(rng, N, D), randn(rng, N′, D)
         f = GP(ConstantMean(1.0), EQ(), GPC())
-        y = rand(rng, f, X)
-        @test typeof(logpdf([f], [X], BlockVector([y]))) <: Real
+        y, y′ = rand(rng, f, X), rand(rng, f, X′)
+        @test logpdf([f], [X], BlockVector([y])) isa Real
         @test logpdf(f, X, y) == logpdf([f], [X], BlockVector([y]))
+        @test logpdf([f, f], [X, X′], BlockVector([y, y′])) isa Real
+
+        @show logpdf(f, X, y)
+        @show elbo([f], [X], BlockVector([y]), [f], [X], 1e-12)
     end
 end

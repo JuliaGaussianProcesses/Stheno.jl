@@ -24,9 +24,9 @@ include("test_util.jl")
     include("gp.jl")
 
     @testset "linops" begin
-        # include("lin_ops.jl")
-        # include("linops/addition.jl")
-        # include("linops/product.jl")
+        include("lin_ops.jl")
+        include("linops/addition.jl")
+        include("linops/product.jl")
     #     include("linops/integrate.jl")
     end
 end

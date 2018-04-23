@@ -38,6 +38,11 @@ end
 
 # Binary functions.
 +(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) + Matrix(Σ2))
+function +(Σ1::LazyPDMat, Σ2::UniformScaling)
+    Σ = Σ1.Σ + Σ2
+    @show typeof(Σ)
+    return Σ2.λ > 0 ? LazyPDMat(Σ) : Σ
+end
 -(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) - Matrix(Σ2))
 *(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) * Matrix(Σ2))
 map(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(map(*, Σ1.Σ, Σ2.Σ))

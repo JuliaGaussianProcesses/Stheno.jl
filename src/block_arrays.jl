@@ -176,7 +176,7 @@ setblock!(X::SquareDiagonal, v, p::Int...) = setblock!(X.X, v, p...)
 size(X::SquareDiagonal) = size(X.X)
 getindex(X::SquareDiagonal, p::Int, q::Int) = getindex(X.X, (p < q ? (p, q) : (q, p))...)
 eltype(X::SquareDiagonal) = eltype(X.X)
-copy(X::SquareDiagonal) = SquareDiagonal(copy(X.X))
+copy(X::SquareDiagonal{T}) where T = SquareDiagonal(copy(X.X))
 
 """
     getblock(X::UpperTriangular{T, <:SquareDiagonal{T}} where T, p::Int, q::Int)
