@@ -1,42 +1,37 @@
 @testset "kernel" begin
 
-    # Tests for ZeroKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         X, X′ = randn(rng, N, D), randn(rng, N′, D)
+
+        # Tests for ZeroKernel.
         @test ZeroKernel{Float32}() == ZeroKernel{Float64}()
         @test cov(ZeroKernel{Float64}(), X) == zeros(N, N)
         @test isstationary(ZeroKernel{Float16}()) == true
         _generic_kernel_tests(ZeroKernel{Float64}(), X, X′)
         _generic_kernel_tests(ZeroKernel{Float32}(), X, X′)
-    end
 
-    # Tests for ConstantKernel.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        # Tests for ConstantKernel.
         @test ConstantKernel(5.0).c == 5.0
         @test cov(ConstantKernel(5.0), X) == 5 * ones(N, N)
         @test isstationary(ConstantKernel(5.0)) == true
         _generic_kernel_tests(ConstantKernel(4), X, X′)
         _generic_kernel_tests(ConstantKernel(4.0), X, X′)
-    end
 
-    # Tests for EQ.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        # Tests for EQ.
         @test isstationary(EQ())
         _generic_kernel_tests(EQ(), X, X′)
-    end
 
-    # Tests for Linear.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        # Tests for Linear.
         @test !isstationary(Linear)
         _generic_kernel_tests(Linear(4), X, X′)
         _generic_kernel_tests(Linear(-2.1), X, X′)
+
+        # Tests for Noise
+        @show "testing noise"
+        @test isstationary(Noise(randn(rng)))
+        @test Noise(5.0) == Noise(5)
+        _generic_kernel_tests(Noise(randn(rng)), X, X′)
     end
 
     # # Tests for Rational Quadratic (RQ) kernel.

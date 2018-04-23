@@ -57,8 +57,8 @@
 
     # Test logpdf + elbo do something vaguely sensible + that elbo converges to logpdf.
     let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        rng, N, N′, D = MersenneTwister(123456), 5, 100, 2
+        X, X′ = rand(rng, N, D), rand(rng, N′, D)
         f = GP(ConstantMean(1.0), EQ(), GPC())
         y, y′ = rand(rng, f, X), rand(rng, f, X′)
         @test logpdf([f], [X], BlockVector([y])) isa Real
@@ -66,6 +66,6 @@
         @test logpdf([f, f], [X, X′], BlockVector([y, y′])) isa Real
 
         @show logpdf(f, X, y)
-        @show elbo([f], [X], BlockVector([y]), [f], [X], 1e-12)
+        @show elbo([f], [X], BlockVector([y]), [f], [X′], 1e-6)
     end
 end

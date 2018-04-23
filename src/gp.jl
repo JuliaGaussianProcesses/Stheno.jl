@@ -146,9 +146,13 @@ function elbo(
     σ²::Real,
 )
     μf, μu, Σuu, Σuf = mean(f, X), mean(u, Z), cov(u, Z), xcov(u, f, Z, X)
+    δf = y - μf
     Sff = Xt_invA_X(Σuu, Σuf)
     Qff = Sff + σ² * I
     @show Xt_invA_X(Qff, y - μf), tr(Sff) / σ², sum(marginal_cov(f, X)) / σ²
     return -0.5 * (length(f) * log(2π) + logdet(Qff) + Xt_invA_X(Qff, y - μf) -
         sum(marginal_cov(f, X)) / σ² + tr(Sff) / σ²)
+    
+    return -0.5 * (length(f) * log(2π * σ²) + logdet(Σuu) + δf' * δf / σ² -
+        )
 end

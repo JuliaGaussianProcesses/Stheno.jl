@@ -110,15 +110,22 @@ show(io::IO, k::Linear) = print(io, "Linear")
 # @inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
 # show(io::IO, k::Poly) = show(io, "Poly($(k.p))")
 
-# """
-#     Noise <: Kernel
+"""
+    Noise{T<:Real} <: Kernel
 
-# A standardised stationary white-noise kernel.
-# """
-# struct Noise <: Kernel end
-# @inline (::Noise)(x::Real, x′::Real) = x == x′ ? 1.0 : 0.0
-# isstationary(::Type{<:Noise}) = true
-# show(io::IO, ::Noise) = show(io, "Noise")
+A white-noise kernel with a single scalar parameter.
+"""
+struct Noise{T<:Real} <: Kernel
+    σ²::T
+end
+cov(k::Noise, X::AVM) = LazyPDMat(xcov(k, X))
+xcov(k::Noise, X::AVM) = Diagonal(fill(k.σ², size(X, 1)))
+xcov(k::Noise, X::AVM, X′::AVM) =
+    X === X′ || X == X′ ? xcov(k, X) : k.σ² .* (pairwise(SqEuclidean(), X', X′') .== 0)
+marginal_cov(k::Noise, X::AVM) = fill(k.σ², size(X, 1))
+isstationary(::Type{<:Noise}) = true
+==(a::Noise, b::Noise) = a.σ² == b.σ²
+show(io::IO, ::Noise) = show(io, "Noise")
 
 # """
 #     Wiener <: Kernel
