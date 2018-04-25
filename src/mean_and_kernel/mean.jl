@@ -38,10 +38,7 @@ struct ConstantMean{T<:Real} <: MeanFunction
     c::T
 end
 function mean(μ::ConstantMean{T}, X::AVM) where T
-    @show "goo"
     v = fill(one(T), size(X, 1))
-    @show "bar"
-    Core.println(v)
     return μ.c .* v
 end
 # mean(μ::ConstantMean, X::AVM) = fill(μ.c, size(X, 1))

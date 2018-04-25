@@ -1,5 +1,5 @@
 import Base: eachindex
-export GP, GPC, kernel, rand, logpdf, elbo
+export GP, GPC, kernel, rand, logpdf, elbo, marginal_std
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
 mutable struct GPC
@@ -91,6 +91,7 @@ cov(f::AV{<:GP}, X::AV{<:AVM}) = cov(CatKernel(kernel.(f), kernel.(f, permutedim
 xcov(f::AV{<:GP}, f′::AV{<:GP}, X::AV{<:AVM}, X′::AV{<:AVM}) =
     xcov(CatCrossKernel(kernel.(f, permutedims(f′))), X, X′)
 marginal_cov(f::AV{<:GP}, X::AV{<:AVM}) = vcat(marginal_cov.(f, X)...)
+marginal_std(f::Union{GP, AV{<:GP}}, X::AVM) = sqrt.(marginal_cov(f, X))
 
 """
     Observation
