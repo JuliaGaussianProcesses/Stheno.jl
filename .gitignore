@@ -3,3 +3,4 @@
 *.jl.mem
 
 test_dispatch.jl
+examples/vanilla_noisy_regression/*
