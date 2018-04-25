@@ -1,3 +1,5 @@
+function mean_and_kernel_kernel_tests()
+
 @testset "kernel" begin
 
     let
@@ -15,7 +17,7 @@
         @test ConstantKernel(5.0).c == 5.0
         @test cov(ConstantKernel(5.0), X) == 5 * ones(N, N)
         @test isstationary(ConstantKernel(5.0)) == true
-        _generic_kernel_tests(ConstantKernel(4), X, X′)
+        _generic_kernel_tests(ConstantKernel(4.1), X, X′)
         _generic_kernel_tests(ConstantKernel(4.0), X, X′)
 
         # Tests for EQ.
@@ -28,7 +30,6 @@
         _generic_kernel_tests(Linear(-2.1), X, X′)
 
         # Tests for Noise
-        @show "testing noise"
         @test isstationary(Noise(randn(rng)))
         @test Noise(5.0) == Noise(5)
         _generic_kernel_tests(Noise(randn(rng)), X, X′)
@@ -128,4 +129,6 @@
     #     @test memory(@benchmark Exponential() seconds=0.1) == 0
     #     @test memory(@benchmark $(Exponential())(1.0, 0.0) seconds=0.1) == 0
     # end
+end
+
 end

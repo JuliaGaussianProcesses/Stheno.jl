@@ -1,3 +1,5 @@
+function mean_and_kernel_cat_tests()
+
 @testset "cat" begin
 
     # Test CatMean.
@@ -55,4 +57,6 @@
 
         _generic_kernel_tests(k, [X1, X2], [X1′, X2′])
     end
+end
+
 end

@@ -1,4 +1,6 @@
-@testset "strided_covmat" begin
+function covariance_matrices_tests()
+
+@testset "covariance_matrices" begin
 
     let
         rng, N, P, Q = MersenneTwister(123456), 5, 6, 2
@@ -37,7 +39,7 @@
 
         # Test unary operations.
         @test logdet(A) ≈ logdet(A_)
-        @test chol(A) == chol(A_ + Stheno.__ϵ * I)
+        @test chol(A) == chol(A_ + A.ϵ * I)
 
         # Test binary operations.
         @test typeof(A + A) <: LazyPDMat
@@ -60,4 +62,6 @@
         @test X' * (A_ \ Y) ≈ Xt_invA_Y(X, A, Y)
         @test A_ \ X ≈ A \ X
     end
+end
+
 end

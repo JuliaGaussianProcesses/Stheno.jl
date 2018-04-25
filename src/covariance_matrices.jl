@@ -2,8 +2,6 @@ import Base: size, ==, +, -, *, isapprox, getindex, IndexStyle, map, broadcast
 import LinearAlgebra: cov, logdet, chol, \, Matrix, UpperTriangular
 export cov, LazyPDMat, Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X
 
-const __ϵ = 1e-9
-
 # Define `logdet` sensibly for `UpperTriangular` matrices.
 LinearAlgebra.logdet(U::UpperTriangular) = sum(LinearAlgebra.logdet, view(U, diagind(U)))
 
@@ -16,7 +14,9 @@ Please don't mutate it this object: `setindex!` isn't defined for a reason.
 mutable struct LazyPDMat{T<:Real} <: AbstractMatrix{T}
     Σ::AbstractMatrix{T}
     U::Union{Nothing, UpperTriangular{T}}
-    LazyPDMat(Σ::AbstractMatrix{T}) where T = new{T}(Σ, nothing)
+    ϵ::T
+    LazyPDMat(Σ::AbstractMatrix{T}) where T = new{T}(Σ, nothing, 1e-12)
+    LazyPDMat(Σ::AbstractMatrix{T}, ϵ::Real) where T = new{T}(Σ, nothing, ϵ)
 end
 LazyPDMat(Σ::LazyPDMat) = Σ
 LazyPDMat(σ::Real) = σ
@@ -31,7 +31,7 @@ isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(Σ1.Σ, Σ2.Σ)
 LinearAlgebra.logdet(Σ::LazyPDMat) = 2 * LinearAlgebra.logdet(chol(Σ))
 function LinearAlgebra.chol(Σ::LazyPDMat)
     if Σ.U == nothing
-        Σ.U = chol(Σ.Σ + __ϵ * I)
+        Σ.U = chol(Σ.Σ + Σ.ϵ * I)
     end
     return Σ.U
 end

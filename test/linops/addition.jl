@@ -1,7 +1,5 @@
-@testset "addition" begin
-
-    # Test addition of GPs.
-    let
+function linops_addition_tests()
+    @testset "addition" begin
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = randn(rng, N, D), randn(rng, N′, D)
         μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)

@@ -1,10 +1,11 @@
-# This file is named as such because, for some reason, Julia is unable to load a file
-# called compose.jl or composite.jl
+using Stheno: CompositeMean, CompositeCrossKernel, CompositeKernel, LhsCross, RhsCross,
+    OuterCross, OuterKernel
+
+function mean_and_kernel_compose_tests()
 
 @testset "compose" begin
 
     # Test composite mean functionality.
-    using Stheno: CompositeMean
     let
         rng, μ1, μ2 = MersenneTwister(123456), ConstantMean(1.0), ZeroMean{Float64}()
         N, D = 100, 2
@@ -16,7 +17,6 @@
     end
 
     # Test composite cov functionality.
-    using Stheno: CompositeKernel
     let
         rng, k, f = MersenneTwister(123456), EQ(), sin
         N, N′, D = 100, 105, 2
@@ -29,7 +29,6 @@
     end
 
     # Test composite xcov functionality.
-    using Stheno: CompositeCrossKernel
     let
         rng, k, f = MersenneTwister(123456), EQ(), sin
         N, N′, D = 100, 105, 2
@@ -39,7 +38,6 @@
     end
 
     # Test LhsCross, RhsCross, OuterCross and OuterKernel functionality.
-    using Stheno: LhsCross, RhsCross, OuterCross, OuterKernel
     let
         rng, k, N, N′, D = MersenneTwister(123456), EQ(), 5, 6, 2
         f, f′ = ConstantMean(1.0), ConstantMean(2.0)
@@ -61,4 +59,6 @@
     # @test sin + EQ() != sin + RQ(1.0)
     # @test (sin + EQ())(5.0, 4.0) == sin(5.0) + EQ()(5.0, 4.0)
     # @test (cos * RQ(1.0))(3.3, 6.7) == cos(3.3) * RQ(1.0)(3.3, 6.7)
+end
+
 end

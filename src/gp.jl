@@ -132,7 +132,7 @@ Compute the Titsias-ELBO. Doesn't currently work because I've not implemented `v
 """
 function elbo(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real}, u::AV{<:GP}, Z::AV{<:AVM}, σ::Real)
     Γ = (chol(cov(u, Z))' \ xcov(u, f, Z, X)) ./ σ
-    Ω, δ = LazyPDMat(Γ * Γ' + I), y - mean(f, X)
+    Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean(f, X)
     return -0.5 * (length(y) * log(2π * σ^2) + logdet(Ω) - sum(abs2, Γ) +
         (sum(abs2, δ) - sum(abs2, chol(Ω)' \ (Γ * δ)) + sum(marginal_cov(f, X))) / σ^2)
 end
