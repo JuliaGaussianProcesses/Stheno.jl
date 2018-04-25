@@ -1,3 +1,5 @@
+function gp_tests()
+
 @testset "gp" begin
 
     # Test the creation of indepenent GPs.
@@ -75,4 +77,6 @@
         @test elbo_y < logpdf_y
         @test elbo_yy′ < logpdf_yy′
     end
+end
+
 end

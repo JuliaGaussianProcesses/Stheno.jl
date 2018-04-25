@@ -1,3 +1,5 @@
+# This code doesn't currently work. Nothing to see here. Perhaps try another example file.
+
 using Stheno
 
 rng = MersenneTwister(123456);

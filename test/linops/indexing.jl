@@ -1,13 +1,4 @@
-using Stheno: LhsFiniteCrossKernel, RhsFiniteCrossKernel
-
-function linops_tests()
-    @testset "lin_ops" begin
-        lin_ops_indexing_tests()
-        lin_ops_conditioning_tests()
-    end
-end
-
-function lin_ops_indexing_tests()
+function linops_indexing_tests()
 
     # Set up some GPs.
     rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
@@ -56,19 +47,4 @@ function lin_ops_indexing_tests()
 #     @test kernel(f4, f5).(id4, id5') == kernel(f5, f4).(id5, id4')'
 #     @test kernel(f5, f3).(id5, id3') == kernel(f1).(x[id5], x[id3]')
 #     @test kernel(f3, f5).(id3, id5') == kernel(f5, f3).(id5, id3')'
-end
-
-function lin_ops_conditioning_tests()
-    rng, N, N′, D = MersenneTwister(123456), 5, 6,  2
-    X, X′ = randn(rng, N, D), randn(rng, N′, D)
-    y = randn(rng, N)
-
-    # Test mechanics for finite conditioned process with single conditioning.
-    f = GP(ConstantMean(1), EQ(), GPC())
-    f′ = f | (f(X) ← y)
-    @test length(f′) == Inf
-    @test length(rand(rng, f′, X)) == N
-    @test maximum(rand(rng, f′, X) - y) < 1e-5
-    @test mean(f′, X) ≈ y
-    @test all(abs.(Matrix(cov(kernel(f′), X))) .< 1e-9)
 end

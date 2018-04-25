@@ -17,13 +17,7 @@ mean(μ::CatMean, X::AVM) = mean(μ, [X])
 """
     CatCrossKernel <: CrossKernel
 
-A cross kernel comprising lots of other kernels. 
-
-Doesn't currently implement a three- argument method for `xcov` since, in the absence of
-`BlockArray` usage, there is no obvious way to elegantly determine uniquely which rows of
-`X` and `X′` should be passed to which kernel. This may be implemented in the future when
-`BlockArrays` is used as an integral part of Stheno, but until then we simply for the user
-to only create finite `CatCrossKernel`s.
+A cross kernel comprising lots of other kernels.
 """
 struct CatCrossKernel <: CrossKernel
     ks::Matrix

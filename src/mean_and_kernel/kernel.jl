@@ -17,7 +17,7 @@ Supertype for all (valid Mercer) Kernels.
 """
 abstract type Kernel <: CrossKernel end
 
-# Fallback definitions.
+# Some fallback definitions.
 isstationary(::Type{<:CrossKernel}) = false
 isstationary(k::CrossKernel) = isstationary(typeof(k))
 cov(k::Kernel, X::AVM) = LazyPDMat(xcov(k, X, X))
@@ -29,7 +29,7 @@ size(k::CrossKernel) = (size(k, 1), size(k, 2))
 """
     ZeroKernel <: Kernel
 
-A rank 1 kernel that always returns zero.
+A rank 1 `Kernel` that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
 isstationary(::Type{<:ZeroKernel}) = true

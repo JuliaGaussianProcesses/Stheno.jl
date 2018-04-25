@@ -2,8 +2,13 @@ import Base: size, ==, +, -, *, isapprox, getindex, IndexStyle, map, broadcast
 import LinearAlgebra: cov, logdet, chol, \, Matrix, UpperTriangular
 export cov, LazyPDMat, Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X
 
-# Define `logdet` sensibly for `UpperTriangular` matrices.
-LinearAlgebra.logdet(U::UpperTriangular) = sum(LinearAlgebra.logdet, view(U, diagind(U)))
+"""
+    logdet(U::UpperTriangular)
+
+Compute the log determinant by summing the logdet of the diagonal of an `UpperTriangular`
+matrix. Implementing this here is a horrible bit of type piracy, but it's necessary.
+"""
+logdet(U::UpperTriangular) = sum(logdet, view(U, diagind(U)))
 
 """
     LazyPDMat{T<:Real} <: AbstractMatrix{T}
@@ -28,7 +33,7 @@ IndexStyle(::Type{<:LazyPDMat}) = IndexLinear()
 isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(Σ1.Σ, Σ2.Σ)
 
 # Unary functions.
-LinearAlgebra.logdet(Σ::LazyPDMat) = 2 * LinearAlgebra.logdet(chol(Σ))
+logdet(Σ::LazyPDMat) = 2 * logdet(chol(Σ))
 function LinearAlgebra.chol(Σ::LazyPDMat)
     if Σ.U == nothing
         Σ.U = chol(Σ.Σ + Σ.ϵ * I)
@@ -56,3 +61,7 @@ function Xt_invA_X(A::LazyPDMat, X::AVM)
 end
 Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
 \(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
+
+# Ensure that, if we try to make a `PDMat` from a `BlockMatrix`, we require that the
+# blocks on it's diagonal be square. Otherwise we should definitely error.
+LazyPDMat(X::BM) = LazyPDMat(SquareDiagonal(X))
