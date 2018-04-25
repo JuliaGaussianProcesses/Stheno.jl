@@ -1,4 +1,7 @@
-import Base: *, size, getindex, eltype, copy
+# This file contains a number of additions to BlockArrays.jl. These are completely
+# independent of Stheno.jl, and will (hopefully) move over to BlockArrays.jl at some point.
+
+import Base: +, *, size, getindex, eltype, copy
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
 import LinearAlgebra: adjoint, transpose, Adjoint, Transpose, chol, UpperTriangular, \,
@@ -307,7 +310,3 @@ for foo in [:+, :-]
         return C
     end
 end
-
-# Ensure that, if we try to make a `PDMat` from a `BlockMatrix`, we require that the
-# blocks on it's diagonal be square. Otherwise we should definitely error.
-LazyPDMat(X::BM) = LazyPDMat(SquareDiagonal(X))

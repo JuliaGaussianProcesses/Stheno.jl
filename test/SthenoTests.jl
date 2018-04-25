@@ -16,7 +16,10 @@ module SthenoTests
     include("mean_and_kernel/transform.jl")
     include("mean_and_kernel/input_transform.jl")
 
-    include("lin_ops.jl")
+    include("gp.jl")
+
+    include("linops/indexing.jl")
+    include("linops/conditioning.jl")
     include("linops/addition.jl")
     include("linops/product.jl")
     include("linops/integrate.jl")
@@ -24,7 +27,7 @@ module SthenoTests
     function run()
         @testset "Stheno" begin
             covariance_matrices_tests()
-            run_block_arrays_tests()
+            block_arrays_tests()
 
             @testset "mean_and_kernel" begin
                 mean_and_kernel_mean_tests()
@@ -37,8 +40,11 @@ module SthenoTests
                 # mean_and_kernel_input_transform_tests()
             end
 
+            gp_tests()
+
             @testset "LinOps" begin
-                linops_tests()
+                linops_indexing_tests()
+                linops_conditioning_tests()
                 linops_addition_tests()
                 linops_product_tests()
                 # linops_integrate_tests()

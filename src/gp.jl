@@ -36,7 +36,6 @@ end
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
 ==(f::GP, g::GP) = (f.μ == g.μ) && (f.k == g.k)
 length(f::GP) = length(f.μ)
-mean(f::GP) = f.μ
 eachindex(f::GP) = eachindex(f.μ)
 
 # Conversion and promotion of non-GPs to GPs.
@@ -53,8 +52,7 @@ convert(::Type{GP}, f::Function, gpc::GPC) = GP(CustomMean(f), ZeroKernel{Float6
     kernel(fa::GP, fb::GP)
 
 Get the cross-kernel between `GP`s `fa` and `fb`, and . If either argument is deterministic
-then the zero-kernel is returned.
-`kernel(f) === kernel(f, f)`
+then the zero-kernel is returned. Also, `kernel(f) === kernel(f, f)`.
 """
 kernel(f::GP) = f.k
 function kernel(fa::GP, fb::GP)
@@ -79,25 +77,75 @@ function get_check_gpc(args...)
     return gpc
 end
 
+"""
+    mean(f::GP)
+
+The mean function of `f`.
+"""
+mean(f::GP) = f.μ
+
+"""
+    mean(f::GP, X::AVM)
+
+The mean function of `f` evaluated at `X` is a vector whose length is `size(X, 1)`.
+"""
 mean(f::GP, X::AVM) = mean(f.μ, X)
+
+
+"""
+    cov(f::GP, X::AVM)
+
+The covariance of `f` evaluated at `X` is an `size(X, 1) x size(X, 1)` `LazyPDMat`.
+"""
 cov(f::GP, X::AVM) = cov(f.k, X)
+
+"""
+    marginal_cov(f::GP, X::AVM)
+
+Yields the same result as `diag(cov(f, X))`, but with `O(size(X, 1))` complexity.
+"""
 marginal_cov(f::GP, X::AVM) = marginal_cov(f.k, X)
-xcov(f::GP, X::AVM, X′::AVM) = xcov(f.k, X, X′)
+
+"""
+    xcov(f::GP, f′::GP, X::AVM, X′::AVM)
+
+
+The cross-covariance between `f` at `X` and `f′` at `X′`.
+"""
 xcov(f::GP, f′::GP, X::AVM, X′::AVM) = xcov(kernel(f, f′), X, X′)
+
+"""
+    xcov(f::GP, f′::GP, X::AVM)
+
+The cross-covariance between `f` at `X` and `f′` at `X`.
+"""
 xcov(f::GP, f′::GP, X::AVM) = xcov(f, f′, X, X)
 
+"""
+    xcov(f::GP, X::AVM, X′::AVM)
+
+The cross-covariance between `f` at `X` and `f` at `X′`.
+"""
+xcov(f::GP, X::AVM, X′::AVM) = xcov(f.k, X, X′)
+
+# Definitions of `mean`, `cov`, `xcov`, and `marginal_cov` for vectors of `GP`s.
 mean(f::AV{<:GP}, X::AV{<:AVM}) = mean(CatMean(f), X)
 cov(f::AV{<:GP}, X::AV{<:AVM}) = cov(CatKernel(kernel.(f), kernel.(f, permutedims(f))), X)
 xcov(f::AV{<:GP}, f′::AV{<:GP}, X::AV{<:AVM}, X′::AV{<:AVM}) =
     xcov(CatCrossKernel(kernel.(f, permutedims(f′))), X, X′)
 marginal_cov(f::AV{<:GP}, X::AV{<:AVM}) = vcat(marginal_cov.(f, X)...)
+
+"""
+    marginal_std(f::Union{GP, AV{<:GP}}, X::AVM)
+
+Broadcasts `sqrt` over `marginal_cov(f, X)`.
+"""
 marginal_std(f::Union{GP, AV{<:GP}}, X::AVM) = sqrt.(marginal_cov(f, X))
 
 """
     Observation
 
-Represents fixing a paricular (finite) GP to have a particular (vector) value. Yields a very
-pleasing syntax, along the following lines: `f(X) ← y`.
+Represents fixing a paricular (finite) GP to have a particular (vector) value.
 """
 struct Observation
     f::GP

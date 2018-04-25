@@ -3,6 +3,8 @@ export MeanFunction, CustomMean, ZeroMean, ConstantMean, FiniteMean
 
 """
     MeanFunction
+
+Used to represent the mean of a `GP`.
 """
 abstract type MeanFunction end
 length(::MeanFunction) = Inf
@@ -37,9 +39,5 @@ Returns `c` (of the appropriate type) everywhere.
 struct ConstantMean{T<:Real} <: MeanFunction
     c::T
 end
-function mean(μ::ConstantMean{T}, X::AVM) where T
-    v = fill(one(T), size(X, 1))
-    return μ.c .* v
-end
-# mean(μ::ConstantMean, X::AVM) = fill(μ.c, size(X, 1))
+mean(μ::ConstantMean, X::AVM) = fill(μ.c, size(X, 1))
 ==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c 

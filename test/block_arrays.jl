@@ -193,7 +193,7 @@ function block_arrays_cov_mat()
     @test Matrix(A_) \ X ≈ A \ X
 end
 
-function run_block_arrays_tests()
+function block_arrays_tests()
     block_arrays_from_vector_of_vectors()
     block_arrays_from_matrix_of_matrices()
     block_arrays_mv_mul()
