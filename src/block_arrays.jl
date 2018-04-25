@@ -203,7 +203,7 @@ function chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
             setblock!(U, getblock(A, i, j), i, j)
             for k in 1:i-1
                 Uki, Ukj = getblock(U, k, i), getblock(U, k, j)
-                setblock!(U, getblock(U, i, j) - Xki' * Xkj, i, j)
+                setblock!(U, getblock(U, i, j) - Uki' * Ukj, i, j)
             end
             setblock!(U, getblock(U, i, i)' \ getblock(U, i, j), i, j)
         end

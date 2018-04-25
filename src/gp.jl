@@ -109,9 +109,11 @@ end
 
 Obtain `N` independent samples from the GP `f` at `X` using `rng`.
 """
-rand(rng::AbstractRNG, f::GP, X::AVM, N::Int) =
-    mean(f, X) .+ chol(cov(f, X))' * randn(rng, size(X, 1), N)
-rand(rng::AbstractRNG, f::GP, X::AVM) = vec(rand(rng, f, X, 1))
+rand(rng::AbstractRNG, f::AV{<:GP}, X::AV{<:AVM}, N::Int) =
+    mean(f, X) .+ chol(cov(f, X))' * randn(rng, sum(size.(X, 1)), N)
+rand(rng::AbstractRNG, f::AV{<:GP}, X::AV{<:AVM}) = vec(rand(rng, f, X, 1))
+rand(rng::AbstractRNG, f::GP, X::AVM, N::Int) = rand(rng, [f], [X], N)
+rand(rng::AbstractRNG, f::GP, X::AVM) = rand(rng, [f], [X])
 
 """
     logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::AV{<:AV})
