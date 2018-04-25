@@ -1,6 +1,6 @@
 import Base: +, *, ==
 export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, Exponential,
-    ConstantKernel, isstationary, ZeroKernel, xcov
+    ConstantKernel, isstationary, ZeroKernel, xcov, marginal_cov
 
 """
     CrossKernel
@@ -21,6 +21,7 @@ abstract type Kernel <: CrossKernel end
 isstationary(::Type{<:CrossKernel}) = false
 isstationary(k::CrossKernel) = isstationary(typeof(k))
 cov(k::Kernel, X::AVM) = LazyPDMat(xcov(k, X, X))
+xcov(k::Kernel, X::AVM) = Matrix(cov(k, X))
 xcov(k::CrossKernel, X::AVM) = xcov(k, X, X)
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
@@ -32,10 +33,11 @@ A rank 1 kernel that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
 isstationary(::Type{<:ZeroKernel}) = true
-show(io::IO, ::ZeroKernel) = show(io, "ZeroKernel")
-(::ZeroKernel{T})(x, x′) where T = zero(T)
+show(io::IO, ::ZeroKernel) = print(io, "ZeroKernel")
 xcov(::ZeroKernel{T}, X::AVM, X′::AVM) where T = zeros(T, size(X, 1), size(X′, 1))
+marginal_cov(::ZeroKernel{T}, X::AVM) where T = zeros(T, size(X, 1))
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
+
 
 """
     ConstantKernel{T<:Real} <: Kernel
@@ -47,9 +49,9 @@ struct ConstantKernel{T<:Real} <: Kernel
     c::T
 end
 isstationary(::Type{<:ConstantKernel}) = true
-show(io::IO, k::ConstantKernel) = show(io, "ConstantKernel($(k.c))")
-(k::ConstantKernel)(x::T, x′::T) where T = k.c
+show(io::IO, k::ConstantKernel) = print(io, "ConstantKernel($(k.c))")
 xcov(k::ConstantKernel, X::AVM, X′::AVM) = fill(k.c, size(X, 1), size(X′, 1))
+marginal_cov(k::ConstantKernel, X::AVM) = fill(k.c, size(X, 1))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
 
 """
@@ -59,10 +61,10 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 """
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
-show(io::IO, ::EQ) = show(io, "EQ")
-(::EQ)(x::T, x′::T) where T = exp(-0.5 * sqeuclidean(x, x′))
+show(io::IO, ::EQ) = print(io, "EQ")
 cov(::EQ, X::AVM) = LazyPDMat(exp.(-0.5 * pairwise(SqEuclidean(), X')))
 xcov(::EQ, X::AVM, X′::AVM) = exp.(-0.5 * pairwise(SqEuclidean(), X', X′'))
+marginal_cov(::EQ, X::AVM) = fill(1, size(X, 1))
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -87,14 +89,14 @@ intercept is `c`.
 struct Linear{T<:Union{Real, Vector{<:Real}}} <: Kernel
     c::T
 end
-(k::Linear)(x, x′) = dot(x - k.c, x′ - k.c)
-function cov(k::Linear, X::AM)
+function cov(k::Linear, X::AVM)
     Δ = X .- k.c
     return LazyPDMat(Δ * Δ')
 end
-xcov(k::Linear, X::AM, X′::AM) = (X .- k.c) * (X′ .- k.c)'
+xcov(k::Linear, X::AVM, X′::AVM) = (X .- k.c) * (X′ .- k.c)'
+marginal_cov(k::Linear, X::AVM) = vec(sum(abs2, X .- k.c; dims=2))
 ==(a::Linear, b::Linear) = a.c == b.c
-show(io::IO, k::Linear) = show(io, "Linear")
+show(io::IO, k::Linear) = print(io, "Linear")
 
 # """
 #     Poly{Tσ<:Real} <: Kernel
@@ -108,15 +110,22 @@ show(io::IO, k::Linear) = show(io, "Linear")
 # @inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
 # show(io::IO, k::Poly) = show(io, "Poly($(k.p))")
 
-# """
-#     Noise <: Kernel
+"""
+    Noise{T<:Real} <: Kernel
 
-# A standardised stationary white-noise kernel.
-# """
-# struct Noise <: Kernel end
-# @inline (::Noise)(x::Real, x′::Real) = x == x′ ? 1.0 : 0.0
-# isstationary(::Type{<:Noise}) = true
-# show(io::IO, ::Noise) = show(io, "Noise")
+A white-noise kernel with a single scalar parameter.
+"""
+struct Noise{T<:Real} <: Kernel
+    σ²::T
+end
+cov(k::Noise, X::AVM) = LazyPDMat(xcov(k, X))
+xcov(k::Noise, X::AVM) = Diagonal(fill(k.σ², size(X, 1)))
+xcov(k::Noise, X::AVM, X′::AVM) =
+    X === X′ || X == X′ ? xcov(k, X) : k.σ² .* (pairwise(SqEuclidean(), X', X′') .== 0)
+marginal_cov(k::Noise, X::AVM) = fill(k.σ², size(X, 1))
+isstationary(::Type{<:Noise}) = true
+==(a::Noise, b::Noise) = a.σ² == b.σ²
+show(io::IO, ::Noise) = show(io, "Noise")
 
 # """
 #     Wiener <: Kernel

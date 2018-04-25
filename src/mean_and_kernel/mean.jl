@@ -1,5 +1,5 @@
 import Base: +, *
-export MeanFunction, CustomMean, ZeroMean, OneMean, ConstantMean, FiniteMean
+export MeanFunction, CustomMean, ZeroMean, ConstantMean, FiniteMean
 
 """
     MeanFunction
@@ -7,7 +7,7 @@ export MeanFunction, CustomMean, ZeroMean, OneMean, ConstantMean, FiniteMean
 abstract type MeanFunction end
 length(::MeanFunction) = Inf
 size(μ::MeanFunction) = (size(μ, 1),)
-size(::MeanFunction, N::Int) = N == 1 ? Inf : 1
+size(μ::MeanFunction, N::Int) = N == 1 ? length(μ) : 1
 
 """
     CustomMean <: MeanFunction
@@ -18,8 +18,6 @@ A user-defined mean function. `f` should be defined such that when applied to a 
 struct CustomMean{T} <: MeanFunction
     f::T
 end
-(μ::CustomMean)(x::Real) = mean(μ, fill(x, 1, 1))[1]
-(μ::CustomMean)(x) = mean(μ, reshape(x, 1, length(x)))
 mean(μ::CustomMean, X::AVM) = μ.f(X)
 
 """
@@ -28,9 +26,8 @@ mean(μ::CustomMean, X::AVM) = μ.f(X)
 Returns zero (of the appropriate type) everywhere.
 """
 struct ZeroMean{T<:Real} <: MeanFunction end
-(::ZeroMean{T})(x) where T = zero(T)
 mean(::ZeroMean{T}, X::AVM) where T = zeros(T, size(X, 1))
-==(::ZeroMean{<:Any}, ::ZeroMean{<:Any}) = true
+==(::ZeroMean, ::ZeroMean) = true
 
 """
     ConstantMean{T} <: MeanFunction
@@ -40,21 +37,9 @@ Returns `c` (of the appropriate type) everywhere.
 struct ConstantMean{T<:Real} <: MeanFunction
     c::T
 end
-(μ::ConstantMean)(x) = μ.c
-mean(μ::ConstantMean, X::AVM) = fill(μ.c, size(X, 1))
-==(μ::ConstantMean{<:Any}, μ′::ConstantMean{<:Any}) = μ.c == μ′.c 
-
-# # Define composite mean functions.
-# struct CompositeMean{O, T<:Tuple{Any, N} where N} <: μFun
-#     args::T
-# end
-
-# +(μ::μFun, x′::Real) = μ + ConstantMean(x′)
-# +(x::Real, μ′::μFun) = ConstantMean(x) + μ′
-# +(μ::T, μ′::T′) where {T<:μFun, T′<:μFun} = CompositeMean{+, Tuple{T, T′}}((μ, μ′))
-# (c::CompositeMean{+})(x) = c.args[1](x) + c.args[2](x)
-
-# *(μ::μFun, x′::Real) = μ * ConstantMean(x′)
-# *(x::Real, μ′::μFun) = ConstantMean(x) * μ′
-# *(μ::T, μ′::T′) where {T<:μFun, T′<:μFun} = CompositeMean{*, Tuple{T, T′}}((μ, μ′))
-# (c::CompositeMean{*})(x) = c.args[1](x) * c.args[2](x)
+function mean(μ::ConstantMean{T}, X::AVM) where T
+    v = fill(one(T), size(X, 1))
+    return μ.c .* v
+end
+# mean(μ::ConstantMean, X::AVM) = fill(μ.c, size(X, 1))
+==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c 

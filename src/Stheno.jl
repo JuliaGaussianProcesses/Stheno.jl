@@ -2,7 +2,7 @@ __precompile__(true)
 
 module Stheno
 
-    using PDMats, LinearAlgebra, Random, Distances, BlockArrays
+    using LinearAlgebra, Random, Distances, BlockArrays
     import Base: mean, cov, show, size, length, +, *, isfinite, rand, vcat, convert, promote
 
     const AV{T} = AbstractVector{T}
@@ -30,7 +30,7 @@ module Stheno
 
     # Affine transformations.
     include("lin_ops.jl")
-    # include("linops/addition.jl")
-    # include("linops/product.jl")
+    include("linops/addition.jl")
+    include("linops/product.jl")
     # include("linops/integrate.jl")
 end # module

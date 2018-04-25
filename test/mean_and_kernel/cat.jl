@@ -1,3 +1,5 @@
+function mean_and_kernel_cat_tests()
+
 @testset "cat" begin
 
     # Test CatMean.
@@ -52,5 +54,9 @@
         manual = vcat(hcat(xcov(k11, X1, X1′), xcov(k12, X1, X2′)),
                       hcat(xcov(k12, X2, X1′), xcov(k22, X2, X2′)),)
         @test xcov(k, [X1, X2], [X1′, X2′]) == manual
+
+        _generic_kernel_tests(k, [X1, X2], [X1′, X2′])
     end
+end
+
 end

@@ -176,7 +176,7 @@ setblock!(X::SquareDiagonal, v, p::Int...) = setblock!(X.X, v, p...)
 size(X::SquareDiagonal) = size(X.X)
 getindex(X::SquareDiagonal, p::Int, q::Int) = getindex(X.X, (p < q ? (p, q) : (q, p))...)
 eltype(X::SquareDiagonal) = eltype(X.X)
-copy(X::SquareDiagonal) = SquareDiagonal(copy(X.X))
+copy(X::SquareDiagonal{T}) where T = SquareDiagonal(copy(X.X))
 
 """
     getblock(X::UpperTriangular{T, <:SquareDiagonal{T}} where T, p::Int, q::Int)
@@ -203,7 +203,7 @@ function chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
             setblock!(U, getblock(A, i, j), i, j)
             for k in 1:i-1
                 Uki, Ukj = getblock(U, k, i), getblock(U, k, j)
-                setblock!(U, getblock(U, i, j) - Xki' * Xkj, i, j)
+                setblock!(U, getblock(U, i, j) - Uki' * Ukj, i, j)
             end
             setblock!(U, getblock(U, i, i)' \ getblock(U, i, j), i, j)
         end

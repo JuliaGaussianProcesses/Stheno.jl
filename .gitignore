@@ -4,4 +4,6 @@
 
 test_dispatch.jl
 
-examples
+examples/vanilla_noisy_regression/*
+examples/simple_sensor_fusion/*
+

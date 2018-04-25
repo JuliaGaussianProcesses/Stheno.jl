@@ -1,25 +1,39 @@
+function mean_and_kernel_kernel_tests()
+
 @testset "kernel" begin
 
-    let rng = MersenneTwister(123456)
-        @test ZeroKernel{Float64}()(randn(rng), 4.0) == 0.0
+    let
+        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+
+        # Tests for ZeroKernel.
         @test ZeroKernel{Float32}() == ZeroKernel{Float64}()
-    end
+        @test cov(ZeroKernel{Float64}(), X) == zeros(N, N)
+        @test isstationary(ZeroKernel{Float16}()) == true
+        _generic_kernel_tests(ZeroKernel{Float64}(), X, X′)
+        _generic_kernel_tests(ZeroKernel{Float32}(), X, X′)
 
-    # Tests for Constant kernel.
-    let rng = MersenneTwister(123456)
+        # Tests for ConstantKernel.
         @test ConstantKernel(5.0).c == 5.0
-        @test ConstantKernel(4.9)(randn(rng), randn(rng)) == 4.9
-        @test ConstantKernel(1.0) == ConstantKernel(1.0)
-        @test ConstantKernel(1.0) != 1.0
-    end
+        @test cov(ConstantKernel(5.0), X) == 5 * ones(N, N)
+        @test isstationary(ConstantKernel(5.0)) == true
+        _generic_kernel_tests(ConstantKernel(4.1), X, X′)
+        _generic_kernel_tests(ConstantKernel(4.0), X, X′)
 
-    # Tests for Exponentiated Quadratic (EQ) kernel.
-    @test isstationary(EQ)
-    @test EQ()(5.0, 5.0) == 1
-    @test EQ()(5.0, 100.0) ≈ 0
-    @test EQ() == EQ()
-    @test EQ() != ConstantKernel(1.0)
-    @test EQ() != 1.0
+        # Tests for EQ.
+        @test isstationary(EQ())
+        _generic_kernel_tests(EQ(), X, X′)
+
+        # Tests for Linear.
+        @test !isstationary(Linear)
+        _generic_kernel_tests(Linear(4), X, X′)
+        _generic_kernel_tests(Linear(-2.1), X, X′)
+
+        # Tests for Noise
+        @test isstationary(Noise(randn(rng)))
+        @test Noise(5.0) == Noise(5)
+        _generic_kernel_tests(Noise(randn(rng)), X, X′)
+    end
 
     # # Tests for Rational Quadratic (RQ) kernel.
     # @test isstationary(RQ)
@@ -115,4 +129,6 @@
     #     @test memory(@benchmark Exponential() seconds=0.1) == 0
     #     @test memory(@benchmark $(Exponential())(1.0, 0.0) seconds=0.1) == 0
     # end
+end
+
 end

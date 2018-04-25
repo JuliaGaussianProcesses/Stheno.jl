@@ -8,8 +8,8 @@
         k1, k2 = EQ(), Linear(5)
         f1, f2 = GP.([μ1, μ2], [k1, k2], Ref(GPC()))
 
-        @test mean_function(f1) == μ1
-        @test mean_function(f2) == μ2
+        @test mean(f1) == μ1
+        @test mean(f2) == μ2
 
         @test kernel(f1) == k1
         @test kernel(f2) == k2
@@ -29,13 +29,6 @@
         @test promote(x, g) == (convert(GP, x, gpc), g)
         @test promote(f, g) == (convert(GP, f, gpc), g)
     end
-end
-
-@testset "logpdf" begin
-    
-end
-
-@testset "rand" begin
 
     # Test deterministic properties of `rand`.
     let
@@ -60,5 +53,26 @@ end
 
         Σ′ = (f̂ .- mean(μ, X)) * (f̂ .- mean(μ, X))' ./ S
         @test mean(abs.(Σ′ - Matrix(cov(f, X)))) < 1e-2
+    end
+
+    # Test logpdf + elbo do something vaguely sensible + that elbo converges to logpdf.
+    let
+        rng, N, N′, D, gpc = MersenneTwister(123456), 25, 10, 2, GPC()
+        X, X′ = rand(rng, N, D), rand(rng, N′, D)
+        f = GP(ConstantMean(1.0), EQ(), gpc) + GP(ZeroMean{Float64}(), Noise(1e-1), gpc)
+        y, y′ = rand(rng, f, X), rand(rng, f, X′)
+
+        logpdf_y = logpdf([f], [X], BlockVector([y]))
+        logpdf_yy′ = logpdf([f, f], [X, X′], BlockVector([y, y′]))
+
+        @test logpdf_y isa Real
+        @test logpdf(f, X, y) == logpdf_y
+        @test logpdf_yy′ isa Real
+
+        elbo_y = elbo([f], [X], BlockVector([y]), [f], [X], 2e-5)
+        elbo_yy′ = elbo([f, f], [X, X′], BlockVector([y, y′]), [f, f], [X, X′], 2e-5)
+
+        @test elbo_y < logpdf_y
+        @test elbo_yy′ < logpdf_yy′
     end
 end

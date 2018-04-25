@@ -1,107 +1,71 @@
-"""
-    UnaryComposite <: Kernel
+# Create CompositeMean, CompositeKernel and CompositeCrossKernel.
+for (composite_type, parent_type) in [(:CompositeMean, :MeanFunction),
+                                      (:CompositeKernel, :Kernel),
+                                      (:CompositeCrossKernel, :CrossKernel),]
+@eval struct $composite_type{Tf, N} <: $parent_type
+    f::Tf
+    x::Tuple{Vararg{Any, N}}
+    $composite_type(f::Tf, x::Vararg{Any, N}) where {Tf, N} = new{Tf, N}(f, x)
+end
+end
+length(c::CompositeMean) = length(c.x[1])
+size(c::Union{CompositeKernel, CompositeCrossKernel}, N::Int) = size(c.x[1], N)
+mean(c::CompositeMean, X::AVM) = c.f.(map(μ->mean(μ, X), c.x)...)
+cov(c::CompositeKernel, X::AVM) = LazyPDMat(c.f.(map(k->xcov(k, X), c.x)...))
+cov(c::CompositeKernel{typeof(+)}, X::AVM) = LazyPDMat(sum(map(k->xcov(k, X), c.x)))
+xcov(c::Union{CompositeKernel, CompositeCrossKernel}, X::AVM, X′::AVM) =
+    map(c.f, map(k->xcov(k, X, X′), c.x)...)
+marginal_cov(c::CompositeKernel, X::AVM) = map(c.f, map(k->marginal_cov(k, X), c.x)...)
 
-A composite kernel comprising a unary (scalar) operator `f` and one kernel `k`. A covariance
-matrix is constructed by first constructing `cov(k, X, X′)`, then applying `f` element-wise
-to this.
 """
-struct UnaryComposite <: Kernel
-    f::Any
+    LhsCross <: CrossKernel
+
+A cross-kernel given by `k(x, x′) = f(x) * k(x, x′)`.
+"""
+struct LhsCross <: CrossKernel
+    f::MeanFunction
+    k::CrossKernel
+end
+size(k::LhsCross, N::Int) = size(k.k, N)
+xcov(k::LhsCross, X::AVM, X′::AVM) = Diagonal(mean(k.f, X)) * xcov(k.k, X, X′)
+
+"""
+    RhsCross <: CrossKernel
+
+A cross-kernel given by `k(x, x′) = k(x, x′) * f(x′)`.
+"""
+struct RhsCross <: CrossKernel
+    k::CrossKernel
+    f::MeanFunction
+end
+size(k::RhsCross, N::Int) = size(k.k, N)
+xcov(k::RhsCross, X::AVM, X′::AVM) = xcov(k.k, X, X′) * Diagonal(mean(k.f, X′))
+
+"""
+    OuterCross <: CrossKernel
+
+A cross-kernel given by `k(x, x′) = f(x) * k(x, x′) * f′(x′)`.
+"""
+struct OuterCross <: CrossKernel
+    f::MeanFunction
+    k::CrossKernel
+    f′::MeanFunction
+end
+size(k::OuterCross, N::Int) = size(k.k, N)
+xcov(k::OuterCross, X::AVM, X′::AVM) =
+    Diagonal(mean(k.f, X)) * xcov(k.k, X, X′) * Diagonal(mean(k.f′, X′))
+
+"""
+    OuterKernel <: Kernel
+
+A kernel given by `k(x, x′) = f(x) * k(x, x′) * f(x′)`.
+"""
+struct OuterKernel <: Kernel
+    f::MeanFunction
     k::Kernel
 end
-isstationary(u::UnaryComposite) = isstationary(u.k)
-(u::UnaryComposite)(x, x′) = u.f(u.k(x, x′))
-cov(u::UnaryComposite, X::AVM, X′::AVM) = u.f.(cov(u.k, X, X′))
-
-"""
-    BinaryComposite <: Kernel
-
-A composite kernel comprising a binary operator `f` and two other kernels `ka` and `kb`. A
-covariance matrix is constructed by first constructing the covariance matrix for each kernel
-`ka` and `kb`, and then combining them element-wise with f.
-"""
-struct BinaryComposite <: Kernel
-    f::Any
-    ka::Kernel
-    kb::Kernel
-end
-isstationary(b::BinaryComposite) = isstationary(b.ka) && isstationary(b.kb)
-(b::BinaryComposite)(x, x′) = b.f(b.ka(x, x′), b.kb(x, x′))
-cov(b::BinaryComposite, X::AVM, X′::AVM) = b.f.(cov(b.ka, X, X′), cov(b.kb, X, X′))
-
-for op in [:+, :*]
-    @eval begin
-        $op(k::Kernel, x::Real) = UnaryComposite(k->$op(k, x), k)
-        $op(x::Real, k::Kernel) = UnaryComposite(k->$op(x, k), k)
-        $op(k::Kernel, k′::Kernel) = BinaryComposite($op, k, k′)     
-    end
-end
-
-# THIS MAYBE WORKS. IT'S NOT CURRENTLY TESTED AND IS THEREFORE DISABLED.
-# """
-#     MapReduce <: Kernel
-
-# A composite kernel comprising a binary (scalar) reduction operator `f` and a vector of
-# kernels `ks`. 
-# """
-# struct MapReduce <: Kernel
-#     f::Any
-#     ks::Vector{<:Kernel}
-# end
-# isfinite(k::MapReduce) = all(isfinite.(k.ks))
-# isstationary(k::MapReduce) = all(isstationary.(k.ks))
-# (k::MapReduce)(x, x′) = mapreduce(k->k(x, x′), k.f, f.ks)
-# cov(k::MapReduce, X::AM, X′::AM) = mapreduce(k->cov(k, X, X′), (K, K′)->k.f.(K, K′), k.ks)
-
-"""
-    LhsOp <: CrossKernel
-
-Return the binary function `g(x, x′) = op(f(x), k(x, x′))`.
-"""
-struct LhsOp <: CrossKernel
-    op::Any
-    f::Any
-    k::CrossKernel
-end
-(k::LhsOp)(x, x′) = k.op(k.f(x), k.k(x, x′))
-xcov(k::LhsOp, X::AVM, X′::AVM) = k.op.(k.f.(X), xcov(k.k, X, X′))
-
-"""
-    RhsOp <: CrossKernel
-
-Defines a `CrossKernel` `g(x, x′) = op(k(x, x′), f(x′))`.
-"""
-struct RhsOp <: CrossKernel
-    op::Any
-    f::Any
-    k::CrossKernel
-end
-(k::RhsOp)(x, x′) = k.op(k.k(x, x′), k.f(x′))
-xcov(k::RhsOp, X::AVM, X′::AVM) = k.op.(xcov(k.k, X, X′), k.f.(X′))
-
-# for op in (:+, :*)
-#     T_op = typeof(eval(op))
-
-#     @eval begin
-
-#         # Composite defintions.
-#         $op(a::Real, b::Kernel) = $op(Constant(a), b)
-#         $op(a::Kernel, b::Real) = $op(a, Constant(b))
-#         $op(a::Kernel, b::Kernel) = Composite{$T_op, Tuple{typeof(a), typeof(b)}}((a, b))
-#         (k::Composite{$T_op})(x, y) = $op(k.args[1](x, y), k.args[2](x, y))
-#         show(io::IO, k::Composite{$T_op}) = show(io, "$($op)($(k.args)...).")
-
-#         # LhsOp definitions.
-#         $op(f::Tf, k::Tk) where {Tf<:Function, Tk<:Kernel} = LhsOp{$T_op, Tf, Tk}(f, k)
-#         @inline (k::LhsOp{$T_op})(x, x′) = $op(k.f(x), k.k(x, x′))
-#         show(io::IO, k::LhsOp{$T_op}) = show(io, "LhsOp{$($T_op)}, f=$(k.f), k=$(k.k)")
-
-#         # RhsOp definitions.
-#         $op(k::Tk, f::Tf) where {Tk<:Kernel, Tf<:Function} = RhsOp{$T_op, Tk, Tf}(k, f)
-#         @inline (k::RhsOp{$T_op})(x, x′) = $op(k.k(x, x′), k.f(x′))
-#         show(io::IO, k::RhsOp{$T_op}) = show(op, "RhsOp{$($T_op)}, k=$(k.k), f=$(k.f)")
-#     end
-# end
-
-# ==(a::T, b::T) where T<:Composite = a.args[1] == b.args[1] && a.args[2] == b.args[2]
-# ==(a::T, b::T) where T<:Union{LhsOp, RhsOp} = a.k == b.k
+size(k::OuterKernel, N::Int) = size(k.k, N)
+cov(k::OuterKernel, X::AVM) = Xt_A_X(cov(k.k, X), Diagonal(mean(k.f, X)))
+xcov(k::OuterKernel, X::AVM, X′::AVM) =
+    Diagonal(mean(k.f, X)) * xcov(k.k, X, X′) * Diagonal(mean(k.f, X′))
+marginal_cov(k::OuterKernel, X::AVM) = marginal_cov(k.k, X) .* mean(k.f, X).^2

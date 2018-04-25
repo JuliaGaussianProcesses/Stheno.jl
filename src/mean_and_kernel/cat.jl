@@ -30,7 +30,6 @@ struct CatCrossKernel <: CrossKernel
 end
 CatCrossKernel(ks::Vector) = CatCrossKernel(reshape(ks, length(ks), 1))
 CatCrossKernel(ks::RowVector) = CatCrossKernel(reshape(ks, 1, length(ks)))
-size(k::CatCrossKernel) = (size(k, 1), size(k, 2))
 size(k::CatCrossKernel, N::Int) = N == 1 ?
     sum(size.(k.ks[:, 1], Ref(1))) :
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
@@ -61,7 +60,6 @@ struct CatKernel <: Kernel
     ks_off::Matrix{<:CrossKernel}
 end
 size(k::CatKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
-size(k::CatKernel) = (size(k, 1), size(k, 1))
 
 function cov(k::CatKernel, X::AV{<:AVM})
     Σ = BlockMatrix{Float64}(uninitialized_blocks, size.(X, 1), size.(X, 1))
@@ -69,6 +67,7 @@ function cov(k::CatKernel, X::AV{<:AVM})
         setblock!(Σ, Matrix(cov(k.ks_diag[q], X[q])), q, q)
         for p in 1:q-1
             setblock!(Σ, xcov(k.ks_off[p, q], X[p], X[q]), p, q)
+            setblock!(Σ, getblock(Σ, p, q)', q, p)
         end
     end
     return LazyPDMat(SquareDiagonal(Σ))
@@ -91,3 +90,5 @@ end
 xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AVM, X′::AVM) = xcov(k, [X], [X′])
 xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AV{<:AVM}, X′::AVM) = xcov(k, X, [X′])
 xcov(k::Union{<:CatCrossKernel, <:CrossKernel}, X::AVM, X′::AV{<:AVM}) = xcov(k, [X], X′)
+
+marginal_cov(k::CatKernel, X::AV{<:AVM}) = BlockVector(marginal_cov.(k.ks_diag, X))

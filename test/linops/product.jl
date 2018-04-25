@@ -1,66 +1,46 @@
+function linops_product_tests()
+
 @testset "product" begin
 
     # Test the multiplication of a GP by a constant.
-    let rng = MersenneTwister(123456)
+    let
+        rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
+        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        g1, c, c′ = GP(ConstantMean(1.0), EQ(), GPC()), -4.3, 2.1
+        g2, g2′ = c * g1, g1 * c′
+        g3, g3′ = c * g2, g2′ * c′
+        g4, g4′ = c * g3, g3′ * c′
 
-        # Select some input locations.
-        x, y, σ = randn(rng, 3), randn(rng, 2), exp(randn(rng))
+        @test mean(g2, X) == c .* mean(g1, X)
+        @test mean(g3, X) == c .* mean(g2, X)
+        @test mean(g4, X) == c .* mean(g3, X)
+        @test mean(g2′, X) == mean(g1, X) .* c′
+        @test mean(g3′, X) == mean(g2′, X) .* c′
+        @test mean(g4′, X) == mean(g3′, X) .* c′
 
-        # Set three independent GPs.
-        μ, k = CustomMean(sin), RQ(1.0)
-        gpc = GPC()
-        f, fi = GP(μ, k, gpc), GP(ZeroMean(), EQ(), gpc)
-        σf = σ * f
-        fσ = f * σ
+        @test cov(g2, X) ≈ c^2 .* cov(g1, X)
+        @test cov(g3, X) ≈ c^2 .* cov(g2, X)
+        @test cov(g4, X) ≈ c^2 .* cov(g3, X)
+        @test cov(g2′, X) ≈ c′^2 .* cov(g1, X)
+        @test cov(g3′, X) ≈ c′^2 .* cov(g2′, X)
+        @test cov(g4′, X) ≈ c′^2 .* cov(g3′, X)
 
-        # Check that the mean has been appropriately scaled.
-        @test mean(σf).(x) == σ * mean(f).(x)
-        @test mean(fσ).(x) == mean(f).(x) * σ
+        @test xcov(g2, g1, X, X′) ≈ c .* xcov(g1, X, X′)
+        @test xcov(g3, g1, X, X′) ≈ c^2 .* xcov(g1, X, X′)
+        @test xcov(g4, g1, X, X′) ≈ c^3 .* xcov(g1, X, X′)
+        @test xcov(g2′, g1, X, X′) ≈ c′ .* xcov(g1, X, X′)
+        @test xcov(g3′, g1, X, X′) ≈ c′^2 .* xcov(g1, X, X′)
+        @test xcov(g4′, g1, X, X′) ≈ c′^3 .* xcov(g1, X, X′)
 
-        # Check the marginal covariance.
-        @test kernel(σf).(x, y') ≈ σ^2 .* kernel(f).(x, y')
-        @test kernel(σf).(x, y') ≈ kernel(f).(x, y') .* σ^2
+        @test xcov(g2, g2′, X, X′) ≈ (c * c′) .* xcov(g1, X, X′)
+        @test xcov(g3, g3′, X, X′) ≈ (c * c′)^2 .* xcov(g1, X, X′)
+        @test xcov(g4, g4′, X, X′) ≈ (c * c′)^3 .* xcov(g1, X, X′)
 
-        # Check the cross-covariances.
-        @test kernel(σf, f).(x, y') == σ .* kernel(f).(x, y')
-        @test kernel(f, σf).(x, y') == kernel(f).(x, y') .* σ
-        @test kernel(fσ, f).(x, y') == σ .* kernel(f).(x, y')
-        @test kernel(f, fσ).(x, y') == kernel(f).(x, y') .* σ
-
-        # Check still independent.
-        @test kernel(σf, fi).(x, y') == kernel(f, fi).(x, y')
-        @test kernel(fσ, fi).(x, y') == kernel(f, fi).(x, y')
+        @test xcov(g2, g3′, X, X′) ≈ (c * c′^2) .* xcov(g1, X, X′)
+        @test xcov(g3, g2′, X, X′) ≈ (c^2 * c′) .* xcov(g1, X, X′)
+        @test xcov(g2, g4′, X, X′) ≈ (c * c′^3) .* xcov(g1, X, X′)
+        @test xcov(g4, g2′, X, X′) ≈ (c^3 * c′) .* xcov(g1, X, X′)
     end
+end
 
-    # Test the elementwise multiplication of a GP by a known function.
-    let rng = MersenneTwister(123456)
-
-        # Select some input locations.
-        x, y, σ = randn(rng, 3), randn(rng, 2), exp(randn(rng))
-
-        # Set three independent GPs.
-        μ, k = CustomMean(sin), RQ(1.0)
-        gpc = GPC()
-        f, fi = GP(μ, k, gpc), GP(ZeroMean(), EQ(), gpc)
-        σf = sin * f
-        fσ = f * cos
-
-        # Check that the mean has been appropriately scaled.
-        @test mean(σf).(x) ≈ sin.(x) .* mean(f).(x)
-        @test mean(fσ).(x) ≈ mean(f).(x) .* cos.(x)
-
-        # Check the marginal covariance.
-        @test kernel(σf).(x, y') == sin.(x) .* kernel(f).(x, y') .* sin.(y')
-        @test kernel(fσ).(x, y') == cos.(x) .* kernel(f).(x, y') .* cos.(y')
-
-        # Check the cross-covariances.
-        @test kernel(σf, f).(x, y') == sin.(x) .* kernel(f).(x, y')
-        @test kernel(f, σf).(x, y') == kernel(f).(x, y') .* sin.(y')
-        @test kernel(fσ, f).(x, y') == cos.(x) .* kernel(f).(x, y')
-        @test kernel(f, fσ).(x, y') == kernel(f).(x, y') .* cos.(y')
-
-        # Check still independent.
-        @test kernel(σf, fi).(x, y') == kernel(f, fi).(x, y')
-        @test kernel(fσ, fi).(x, y') == kernel(f, fi).(x, y')
-    end
 end

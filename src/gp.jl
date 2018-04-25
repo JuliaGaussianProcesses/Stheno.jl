@@ -1,4 +1,5 @@
-export GP, GPC, kernel, logpdf, mean_function
+import Base: eachindex
+export GP, GPC, kernel, rand, logpdf, elbo, marginal_std
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
 mutable struct GPC
@@ -35,7 +36,8 @@ end
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)) f=($(gp.f))")
 ==(f::GP, g::GP) = (f.μ == g.μ) && (f.k == g.k)
 length(f::GP) = length(f.μ)
-mean_function(f::GP) = f.μ
+mean(f::GP) = f.μ
+eachindex(f::GP) = eachindex(f.μ)
 
 # Conversion and promotion of non-GPs to GPs.
 promote(f::GP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
@@ -79,8 +81,17 @@ end
 
 mean(f::GP, X::AVM) = mean(f.μ, X)
 cov(f::GP, X::AVM) = cov(f.k, X)
+marginal_cov(f::GP, X::AVM) = marginal_cov(f.k, X)
 xcov(f::GP, X::AVM, X′::AVM) = xcov(f.k, X, X′)
 xcov(f::GP, f′::GP, X::AVM, X′::AVM) = xcov(kernel(f, f′), X, X′)
+xcov(f::GP, f′::GP, X::AVM) = xcov(f, f′, X, X)
+
+mean(f::AV{<:GP}, X::AV{<:AVM}) = mean(CatMean(f), X)
+cov(f::AV{<:GP}, X::AV{<:AVM}) = cov(CatKernel(kernel.(f), kernel.(f, permutedims(f))), X)
+xcov(f::AV{<:GP}, f′::AV{<:GP}, X::AV{<:AVM}, X′::AV{<:AVM}) =
+    xcov(CatCrossKernel(kernel.(f, permutedims(f′))), X, X′)
+marginal_cov(f::AV{<:GP}, X::AV{<:AVM}) = vcat(marginal_cov.(f, X)...)
+marginal_std(f::Union{GP, AV{<:GP}}, X::AVM) = sqrt.(marginal_cov(f, X))
 
 """
     Observation
@@ -95,21 +106,36 @@ end
 ←(f, y) = Observation(f, y)
 
 """
-    logpdf(a::Vector{Observation}})
-
-Returns the log probability density observing the assignments `a` jointly.
-"""
-function logpdf(a::Observation...)
-    f, y = vcat(map(a_->a_.f, a)...), vcat(map(a_->a_.y, a)...)
-    μ, Σ = mean(f), cov(f)
-    return -0.5 * (length(f) * log(2π) + logdet(Σ) + invquad(Σ, y - μ))
-end
-
-"""
     rand(rng::AbstractRNG, f::GP, X::AM, N::Int=1)
 
 Obtain `N` independent samples from the GP `f` at `X` using `rng`.
 """
-rand(rng::AbstractRNG, f::GP, X::AVM, N::Int) =
-    mean(f, X) .+ chol(cov(f, X))' * randn(rng, size(X, 1), N)
-rand(rng::AbstractRNG, f::GP, X::AVM) = vec(rand(rng, f, X, 1))
+rand(rng::AbstractRNG, f::AV{<:GP}, X::AV{<:AVM}, N::Int) =
+    mean(f, X) .+ chol(cov(f, X))' * randn(rng, sum(size.(X, 1)), N)
+rand(rng::AbstractRNG, f::AV{<:GP}, X::AV{<:AVM}) = vec(rand(rng, f, X, 1))
+rand(rng::AbstractRNG, f::GP, X::AVM, N::Int) = rand(rng, [f], [X], N)
+rand(rng::AbstractRNG, f::GP, X::AVM) = rand(rng, [f], [X])
+
+"""
+    logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::AV{<:AV})
+
+Returns the log probability density observing the assignments `a` jointly.
+"""
+function logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real})
+    μ, Σ = mean(f, X), cov(f, X)
+    return -0.5 * (length(y) * log(2π) + logdet(Σ) + Xt_invA_X(Σ, y - μ))
+end
+logpdf(f::GP, X::AVM, y::AV{<:Real}) = logpdf([f], [X], BlockVector([y]))
+
+"""
+    elbo(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real}, u::AV{<:GP}, Z::AV{<:AVM}, σ::Real)
+
+Compute the Titsias-ELBO. Doesn't currently work because I've not implemented `vcat` for
+`GP`s at all. I've also not tested `logpdf` yet, so I should probably do that...
+"""
+function elbo(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real}, u::AV{<:GP}, Z::AV{<:AVM}, σ::Real)
+    Γ = (chol(cov(u, Z))' \ xcov(u, f, Z, X)) ./ σ
+    Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean(f, X)
+    return -0.5 * (length(y) * log(2π * σ^2) + logdet(Ω) - sum(abs2, Γ) +
+        (sum(abs2, δ) - sum(abs2, chol(Ω)' \ (Γ * δ)) + sum(marginal_cov(f, X))) / σ^2)
+end

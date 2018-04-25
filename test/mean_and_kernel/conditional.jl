@@ -1,6 +1,8 @@
-@testset "posterior" begin
+using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKernel
+function mean_and_kernel_conditional_tests()
 
-    using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKernel
+@testset "conditional" begin
+
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
         X, X′ = randn(rng, N, D), randn(rng, N′, D)
@@ -36,5 +38,9 @@
         @test xcov(ConditionalCrossKernel(cache, kff, kfg, kfg), X, X) ≈ xcov(kfg, X, X)
         @test xcov(ConditionalCrossKernel(cache, kff, kfg, kfg), X, X′) ≈ xcov(kfg, X, X′)
         @test xcov(ConditionalCrossKernel(cache, kfg, kfg, kgg), X′, X′) ≈ xcov(kgg, X′, X′)
+
+        _generic_kernel_tests(ConditionalKernel(cache, kfg, kgg), X, X′)
     end
+end
+
 end
