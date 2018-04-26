@@ -1,4 +1,4 @@
-using Stheno: AV, AVM
+import Stheno: AV, AVM
 
 # A collection of tests that any kernel should definitely be able to pass.
 function _generic_kernel_tests(k::Kernel, X::AVM, X′::AVM)

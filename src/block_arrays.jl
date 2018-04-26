@@ -1,11 +1,10 @@
 # This file contains a number of additions to BlockArrays.jl. These are completely
 # independent of Stheno.jl, and will (hopefully) move over to BlockArrays.jl at some point.
 
-import Base: +, *, size, getindex, eltype, copy
+import Base: +, *, size, getindex, eltype, copy, ctranspose, transpose, chol,
+    UpperTriangular, \, logdet
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
-import LinearAlgebra: adjoint, transpose, Adjoint, Transpose, chol, UpperTriangular, \,
-    logdet
 export BlockVector, BlockMatrix, SquareDiagonal, blocksizes, blocklengths
 
 # Do some character saving.
@@ -15,23 +14,23 @@ const ABV{T} = AbstractBlockVector{T}
 const ABM{T} = AbstractBlockMatrix{T}
 const ABVM{T} = AbstractBlockVecOrMat{T}
 
-# Functionality for lazy `transpose` / `adjoint` of block matrix / vector.
-for (u, U) in [(:adjoint, :Adjoint), (:transpose, :Transpose)]
-    @eval begin
-        getblock(x::$U{T} where T, n::Int) = $u(getblock(x.parent, n))
-        getblock(X::$U{T} where T, p::Int, q::Int) = $u(getblock(X.parent, q, p))
-        nblocks(X::$U{<:Any, <:ABM}) = reverse(nblocks(X.parent))
-        function nblocks(X::$U{<:Any, <:ABM}, N::Int)
-            if N == 1
-                return nblocks(X.parent, 2)
-            elseif N == 2
-                return nblocks(X.parent, 1)
-            else
-                throw(error("Booooo Matrices only have two dimensions."))
-            end
-        end
-    end
-end
+# # Functionality for lazy `transpose` / `adjoint` of block matrix / vector.
+# for (u, U) in [(:adjoint, :Adjoint), (:transpose, :Transpose)]
+#     @eval begin
+#         getblock(x::$U{T} where T, n::Int) = $u(getblock(x.parent, n))
+#         getblock(X::$U{T} where T, p::Int, q::Int) = $u(getblock(X.parent, q, p))
+#         nblocks(X::$U{<:Any, <:ABM}) = reverse(nblocks(X.parent))
+#         function nblocks(X::$U{<:Any, <:ABM}, N::Int)
+#             if N == 1
+#                 return nblocks(X.parent, 2)
+#             elseif N == 2
+#                 return nblocks(X.parent, 1)
+#             else
+#                 throw(error("Booooo Matrices only have two dimensions."))
+#             end
+#         end
+#     end
+# end
 
 """
     BlockVector(xs::Vector{<:AbstractVector{T}}) where T
