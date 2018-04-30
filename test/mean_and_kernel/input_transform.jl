@@ -1,5 +1,3 @@
-# function mean_and_kernel_input_transform_tests()
-
 # @testset "input_transform" begin
 
 #     # Test construction.
@@ -93,7 +91,5 @@
 #             @test memory(@benchmark $(Periodic(RQ(1.0)))(1.0, 0.0) seconds=0.1) == 0
 #         end
 #     end
-
-# end
 
 # end

@@ -1,5 +1,3 @@
-function mean_and_kernel_finite_tests()
-
 @testset "finite" begin
 
     # Tests for FiniteMean.
@@ -117,6 +115,4 @@ function mean_and_kernel_finite_tests()
         @test xcov(k2) == xcov(k′, r, c)
         @test xcov(k2, 2:N-1, c) == xcov(k′, 2:N-1, c)
     end
-end
-
 end

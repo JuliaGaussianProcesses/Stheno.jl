@@ -1,5 +1,3 @@
-function covariance_matrices_tests()
-
 @testset "covariance_matrices" begin
 
     let
@@ -62,6 +60,4 @@ function covariance_matrices_tests()
         @test X' * (A_ \ Y) ≈ Xt_invA_Y(X, A, Y)
         @test A_ \ X ≈ A \ X
     end
-end
-
 end

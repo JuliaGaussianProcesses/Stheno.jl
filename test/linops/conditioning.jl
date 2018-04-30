@@ -1,4 +1,4 @@
-function linops_conditioning_tests()
+let
     rng, N, N′, D = MersenneTwister(123456), 5, 6,  2
     X, X′ = randn(rng, N, D), randn(rng, N′, D)
     y = randn(rng, N)

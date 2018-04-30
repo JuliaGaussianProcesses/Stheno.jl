@@ -1,5 +1,3 @@
-# function linops_integrate_tests()
-
 # @testset "integrate" begin
 
 #     # Test basic properties of the prior.
@@ -30,6 +28,4 @@
 #         g(x) = exp(-0.5 * x^2) / sqrt(2π)
 #         @test abs(quadgk(x->μf′(x) * g(x), -10.0, 10.0)[1] - v′) < 1e-6
 #     end
-# end
-
 # end

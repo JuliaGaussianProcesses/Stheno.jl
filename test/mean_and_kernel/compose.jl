@@ -1,8 +1,6 @@
 using Stheno: CompositeMean, CompositeCrossKernel, CompositeKernel, LhsCross, RhsCross,
     OuterCross, OuterKernel
 
-function mean_and_kernel_compose_tests()
-
 @testset "compose" begin
 
     # Test composite mean functionality.
@@ -59,6 +57,4 @@ function mean_and_kernel_compose_tests()
     # @test sin + EQ() != sin + RQ(1.0)
     # @test (sin + EQ())(5.0, 4.0) == sin(5.0) + EQ()(5.0, 4.0)
     # @test (cos * RQ(1.0))(3.3, 6.7) == cos(3.3) * RQ(1.0)(3.3, 6.7)
-end
-
 end

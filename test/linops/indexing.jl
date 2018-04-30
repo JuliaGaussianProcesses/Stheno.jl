@@ -1,5 +1,4 @@
-function linops_indexing_tests()
-
+let
     # Set up some GPs.
     rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
     X, X′ = randn(rng, N, D), randn(rng, N′, D)

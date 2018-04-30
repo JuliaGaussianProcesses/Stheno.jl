@@ -1,5 +1,5 @@
-import Base: size, ==, +, -, *, isapprox, getindex, IndexStyle, map, broadcast
-import LinearAlgebra: cov, logdet, chol, \, Matrix, UpperTriangular
+import Base: size, ==, +, -, *, isapprox, getindex, IndexStyle, map, broadcast,
+    cov, logdet, chol, \, Matrix, UpperTriangular
 export cov, LazyPDMat, Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X
 
 """
@@ -18,7 +18,7 @@ Please don't mutate it this object: `setindex!` isn't defined for a reason.
 """
 mutable struct LazyPDMat{T<:Real} <: AbstractMatrix{T}
     Σ::AbstractMatrix{T}
-    U::Union{Nothing, UpperTriangular{T}}
+    U::Union{Void, UpperTriangular{T}}
     ϵ::T
     LazyPDMat(Σ::AbstractMatrix{T}) where T = new{T}(Σ, nothing, 1e-12)
     LazyPDMat(Σ::AbstractMatrix{T}, ϵ::Real) where T = new{T}(Σ, nothing, ϵ)
@@ -34,7 +34,7 @@ isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(Σ1.Σ, Σ2.Σ)
 
 # Unary functions.
 logdet(Σ::LazyPDMat) = 2 * logdet(chol(Σ))
-function LinearAlgebra.chol(Σ::LazyPDMat)
+function chol(Σ::LazyPDMat)
     if Σ.U == nothing
         Σ.U = chol(Σ.Σ + Σ.ϵ * I)
     end

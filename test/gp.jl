@@ -1,5 +1,3 @@
-function gp_tests()
-
 @testset "gp" begin
 
     # Test the creation of indepenent GPs.
@@ -51,7 +49,7 @@ function gp_tests()
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.
         f̂ = rand(rng, f, X, S)
-        @test maximum(abs.(mean(f̂, dims=2) - mean(μ, X))) < 1e-2
+        @test maximum(abs.(mean(f̂, 2) - mean(μ, X))) < 1e-2
 
         Σ′ = (f̂ .- mean(μ, X)) * (f̂ .- mean(μ, X))' ./ S
         @test mean(abs.(Σ′ - Matrix(cov(f, X)))) < 1e-2
@@ -77,6 +75,4 @@ function gp_tests()
         @test elbo_y < logpdf_y
         @test elbo_yy′ < logpdf_yy′
     end
-end
-
 end

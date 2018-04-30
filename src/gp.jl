@@ -1,5 +1,7 @@
-import Base: eachindex
+import Base: eachindex, permutedims
 export GP, GPC, kernel, rand, logpdf, elbo, marginal_std
+
+permutedims(v::Vector) = reshape(v, 1, length(v))
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
 mutable struct GPC

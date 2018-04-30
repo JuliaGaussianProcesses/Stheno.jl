@@ -1,5 +1,3 @@
-function mean_and_kernel_cat_tests()
-
 @testset "cat" begin
 
     # Test CatMean.
@@ -38,7 +36,7 @@ function mean_and_kernel_cat_tests()
 
         # Construct CatKernel.
         k11, k22, k12 = EQ(), EQ(), ZeroKernel{Float64}()
-        ks_off = Matrix{Stheno.CrossKernel}(undef, 2, 2)
+        ks_off = Matrix{Stheno.CrossKernel}(2, 2)
         ks_off[1, 2] = k12
         k = CatKernel([k11, k22], ks_off)
 
@@ -57,6 +55,4 @@ function mean_and_kernel_cat_tests()
 
         _generic_kernel_tests(k, [X1, X2], [X1′, X2′])
     end
-end
-
 end

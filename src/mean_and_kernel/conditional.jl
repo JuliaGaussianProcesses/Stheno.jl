@@ -51,7 +51,7 @@ function xcov(k::ConditionalKernel, X::AVM, X′::AVM)
 end
 function marginal_cov(k::ConditionalKernel, X::AVM)
     Σfg, Σgg = xcov(k.kfg, k.c.X, X), marginal_cov(k.kgg, X)
-    return Σgg - vec(sum(abs2, Σfg' / chol(k.c.Σff), dims=2))
+    return Σgg - vec(sum(abs2, Σfg' / chol(k.c.Σff), 2))
 end
 
 """

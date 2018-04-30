@@ -1,5 +1,3 @@
-function mean_and_kernel_mean_tests()
-
 @testset "mean" begin
 
     # Test base kernels.
@@ -30,6 +28,4 @@ function mean_and_kernel_mean_tests()
     #     @test FiniteMean(CustomMean(sin), [5.0, 6.0, 7.0])(2) == sin(6.0)
     #     @test FiniteMean(CustomMean(cos), [1.0, 2.0, 3.0]).([1, 2, 3]) == cos.([1.0, 2.0, 3.0])
     # end
-end
-
 end

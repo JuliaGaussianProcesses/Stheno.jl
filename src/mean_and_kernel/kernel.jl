@@ -94,7 +94,7 @@ function cov(k::Linear, X::AVM)
     return LazyPDMat(Δ * Δ')
 end
 xcov(k::Linear, X::AVM, X′::AVM) = (X .- k.c) * (X′ .- k.c)'
-marginal_cov(k::Linear, X::AVM) = vec(sum(abs2, X .- k.c; dims=2))
+marginal_cov(k::Linear, X::AVM) = vec(sum(abs2, X .- k.c, 2))
 ==(a::Linear, b::Linear) = a.c == b.c
 show(io::IO, k::Linear) = print(io, "Linear")
 

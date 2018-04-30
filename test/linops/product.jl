@@ -1,5 +1,3 @@
-function linops_product_tests()
-
 @testset "product" begin
 
     # Test the multiplication of a GP by a constant.
@@ -41,6 +39,4 @@ function linops_product_tests()
         @test xcov(g2, g4′, X, X′) ≈ (c * c′^3) .* xcov(g1, X, X′)
         @test xcov(g4, g2′, X, X′) ≈ (c^3 * c′) .* xcov(g1, X, X′)
     end
-end
-
 end

@@ -1,5 +1,3 @@
-function mean_and_kernel_kernel_tests()
-
 @testset "kernel" begin
 
     let
@@ -129,6 +127,4 @@ function mean_and_kernel_kernel_tests()
     #     @test memory(@benchmark Exponential() seconds=0.1) == 0
     #     @test memory(@benchmark $(Exponential())(1.0, 0.0) seconds=0.1) == 0
     # end
-end
-
 end

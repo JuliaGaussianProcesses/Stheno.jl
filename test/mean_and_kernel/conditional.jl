@@ -1,5 +1,4 @@
 using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKernel
-function mean_and_kernel_conditional_tests()
 
 @testset "conditional" begin
 
@@ -41,6 +40,4 @@ function mean_and_kernel_conditional_tests()
 
         _generic_kernel_tests(ConditionalKernel(cache, kfg, kgg), X, X′)
     end
-end
-
 end

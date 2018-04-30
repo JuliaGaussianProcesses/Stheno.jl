@@ -1,5 +1,3 @@
-# function mean_and_kernel_transform_tests()
-
 # @testset "transform" begin
 
 #     # Tests for Circularised Kernels.
@@ -19,6 +17,4 @@
 #         @test k(0.0, 0.2) ≈ k(1.0, 0.8)
 #         @test k(0.0, 1e-5) ≈ k(1.0 - 1e-5, 1.0)
 #     end
-# end
-
 # end
