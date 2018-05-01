@@ -20,7 +20,7 @@ mutable struct LazyPDMat{T<:Real} <: AbstractMatrix{T}
     Σ::AbstractMatrix{T}
     U::Union{Void, UpperTriangular{T}}
     ϵ::T
-    LazyPDMat(Σ::AbstractMatrix{T}) where T = new{T}(Σ, nothing, 1e-12)
+    LazyPDMat(Σ::AbstractMatrix{T}) where T = new{T}(Σ, nothing, 1e-9)
     LazyPDMat(Σ::AbstractMatrix{T}, ϵ::Real) where T = new{T}(Σ, nothing, ϵ)
 end
 LazyPDMat(Σ::LazyPDMat) = Σ
@@ -51,8 +51,9 @@ broadcast(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Σ1.Σ .* Σ2
 
 # Specialised operations to exploit the Cholesky.
 function Xt_A_X(A::LazyPDMat, X::AVM)
-    V = chol(A) * X
-    return LazyPDMat(Symmetric(V'V))
+    return LazyPDMat(Symmetric(X' * A * X))
+    # V = chol(A) * X
+    # return LazyPDMat(Symmetric(V'V), 1e-9)
 end
 Xt_A_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A) * x)
 Xt_A_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A) * X)' * (chol(A) * Y)

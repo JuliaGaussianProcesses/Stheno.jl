@@ -365,7 +365,7 @@ end
 # \(L::Transpose{T, <:UpperTriangular{T, <:SD}}, X::ABVM{T}) where T<:Real =
 #     adjoint(L.parent) \ X
 
-import LinearAlgebra: UniformScaling
+import Base: UniformScaling
 function +(u::UniformScaling, X::SquareDiagonal)
     Y = copy(X)
     for p in 1:nblocks(Y, 1)

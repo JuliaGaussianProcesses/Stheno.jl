@@ -34,4 +34,7 @@ module Stheno
     include("linops/addition.jl")
     include("linops/product.jl")
     # include("linops/integrate.jl")
+
+    # Ad-hoc utility for Turing.jl interop. Doesn't really fit in with anything else.
+    include("turing_util.jl")
 end # module
