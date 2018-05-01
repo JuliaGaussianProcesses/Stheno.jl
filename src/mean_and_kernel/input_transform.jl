@@ -1,58 +1,50 @@
-export InputTransformedKernel, Index, Periodic, Transform, input_transform
+export ITMean, ITKernel, pick_dims, periodic
 
 """
-    InputTransformedKernel <: Kernel
+    ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
 
-An `InputTransformedKernel` kernel is one which applies a transformation `f` to its inputs
-prior to applying a Kernel `k` that it owns.
+"InputTransformationMean": A `MeanFunction` `μ_it` defined by applying the function `f` to
+the inputs to another `MeanFunction` `μ`. Concretely, `mean(μ_it, X) = mean(μ, f(X))`.
 """
-struct InputTransformedKernel{Tk<:Kernel, Tf} <: Kernel
+struct ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
+    μ::Tμ
+    f::Tf
+end
+ITMean(μ::MeanFunction, ::typeof(identity)) = μ
+length(μ::ITMean) = length(μ.μ)
+mean(μ::ITMean, X::AVM) = mean(μ.μ, μ.f(X))
+
+"""
+    ITKernel{Tk<:Kernel, Tf} <: Kernel
+
+"InputTransformationKernel": An `ITKernel` `kit` is the kernel defined by applying a
+transform `f` to the argument to a kernel `k`. Concretely:
+`xcov(kit, X, X′) = xcov(k, f(X), f(X′))`, and by analogy `cov(kit, X) = cov(k, f(X))`.
+"""
+struct ITKernel{Tk<:Kernel, Tf} <: Kernel
     k::Tk
     f::Tf
 end
-const Transform = InputTransformedKernel
-isstationary(::Type{<:Transform{Tk}}) where Tk<:Kernel = isstationary(Tk)
-
-@inline (k::Transform)(x::Tin, y::Tin) where Tin = k.k(k.f(x), k.f(y))
-
-==(k1::Transform{Tk, Tf}, k2::Transform{Tk, Tf}) where {Tk, Tf} =
-    (k1.k == k2.k) && (k1.f == k2.f)
-dims(k::Transform) = dims(k.k)
-kernel(k::Transform) = k.k
-input_transform(k::Transform) = k.f
+ITKernel(k::Kernel, ::typeof(identity)) = k
+size(k::ITKernel, N::Int...) = size(k.k, N...)
+isstationary(k::ITKernel) = isstationary(k.k)
+cov(k::ITKernel, X::AVM) = cov(k.k, k.f(X))
+marginal_cov(k::ITKernel, X::AVM) = marginal_cov(k.k, k.f(X))
+xcov(k::ITKernel, X::AVM, X′::AVM) = xcov(k.k, k.f(X), k.f(X′))
 
 """
-    Index{N}
+    pick_dims(x::Union{MeanFunction, Kernel}, I)
 
-A parametric singleton type used to indicate to which dimension of an input a particular
-`Transform` should be applied. For example,
-```
-x = [5.0, 4.0]
-kt = Transform(k, Index{2})
-kt(x, x) == k(x[2], x[2])
-```
+Returns either an `ITMean` or `ITKernel` which uses the columns of the input matrix `X`
+specified by `I`.
 """
-struct Index{N, Tf}
-    f::Tf
-    function Index{N}() where N
-        f = x->x[N]
-        return new{N, typeof(f)}(f)
-    end
-end
-@inline (idx::Index)(x) = idx.f(x)
-
-Index{N}(k::Kernel) where N = Transform(k, Index{N}())
+pick_dims(μ::MeanFunction, I) = ITMean(μ, X::AVM->X[:, I])
+pick_dims(k::Kernel, I) = ITKernel(k, X::AVM->X[:, I])
 
 """
-    Periodic <: Kernel
+    periodic(k::Kernel, θ::Real)
 
-Make a periodic kernel by applying the transformation `T:θ→(cos(2πθ), sin(2πθ))` to inputs
-and computing `k(T(θ)[1], T(θ′)[1]) * k(T(θ)[2], T(θ′)[2])`.
+Make `k` periodic with period `f`.
 """
-struct Periodic{Tk} <: Kernel
-    k::Tk
-end
-==(k1::Periodic{Tk}, k2::Periodic{Tk}) where Tk = k1.k == k2.k
-@inline (k::Periodic)(θ::Real, θ′::Real) =
-    k.k(cos(2π * θ), cos(2π * θ′)) * k.k(sin(2π * θ), sin(2π * θ′))
-
+periodic(k::Kernel, f::Real) =
+    ITKernel(k, t::AV->hcat(cos.((2π * f) .* t), sin.((2π * f) .* t)))

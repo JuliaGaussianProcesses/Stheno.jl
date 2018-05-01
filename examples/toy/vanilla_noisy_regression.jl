@@ -1,5 +1,4 @@
-using Revise
-using Stheno, Random, DelimitedFiles
+using Stheno, Plots
 
 
 
@@ -23,7 +22,7 @@ end
 
 # Generate some input locations and sample from the prior.
 rng, N = MersenneTwister(123546), 500;
-X = sort(rand(rng, N) * 10);
+X_prior = sort(rand(rng, N) * 10);
 f, noise, y = model(GPC());
 
 # Take a look at the mean function and kernel of y.
@@ -40,14 +39,7 @@ f, noise, y = model(GPC());
 ###########################  Sample jointly from the prior  ###########################
 
 # Sample jointly from the prior distribution over the three processes.
-out = rand(rng, [f, noise, y], [X, X, X]);
-fX, noiseX, yX = out[1:N], out[N+1:2N], out[2N+1:end];
-
-# Write results to file and run from Julia-0.6 because 0.7 can't plot anything yet...
-open("vanilla_noisy_regression/prior.csv", "w") do io
-    writedlm(io, hcat(X, fX, noiseX, yX), ',')
-end
-
+fX, noiseX, yX = rand(rng, [f, noise, y], [X_prior, X_prior, X_prior]);
 
 
 #######################  Do posterior inference give a few samples  #######################
@@ -61,61 +53,34 @@ f′, noise′, y′ = (f, noise, y) | (y(X) ← ŷ);
 # There appear to be some substantial numerical problems associated with generating samples
 # jointly from all three processes, thus only f′ and noise′ are considered.
 Nplot, S = 500, 100;
-Xplot = range(-2.0, stop=12.0, length=Nplot);
-out = rand(rng, [f′, noise′], [Xplot, Xplot], S);
-
-open("vanilla_noisy_regression/posterior.csv", "w") do io
-    writedlm(io, hcat(Xplot, out[1:Nplot, :], out[Nplot+1:end, :]), ',')
-end
-open("vanilla_noisy_regression/observations.csv", "w") do io
-    writedlm(io, hcat(X, ŷ), ',')
-end
+Xplot = linspace(-2.0, 12.0, Nplot);
+f′Xp, noise′Xp = rand(rng, [f′, noise′], [Xplot, Xplot], S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
 μf′, σf′, σy′ = mean(f′, Xplot), marginal_std(f′, Xplot), marginal_std(y′, Xplot);
 
-open("vanilla_noisy_regression/posterior_marginals.csv", "w") do io
-    writedlm(io, hcat(μf′, σf′, σy′), ',')
-end
 
 
+####################################  Plot results  ####################################
 
-
-###########################  Plot results - USE ONLY Julia-0.6!  ###########################
-
-# Only run me from Julia-0.6. Plots doesn't work on 0.7 at the minute.
-using Plots
 plotly();
 
-# Plot results from prior sampling.
-data = readcsv("vanilla_noisy_regression/prior.csv");
-X, fX, noiseX, yX = data[:, 1], data[:, 2], data[:, 3], data[:, 4];
-
-prior_plot = plot(X, fX, label="f");
-scatter!(a, X, noiseX,
+prior_plot = plot(X_prior, fX, label="f");
+scatter!(prior_plot, X_prior, noiseX,
     label="noise",
     markershape=:xcross,
     markerstrokewidth=0.0,
     markersize=2);
-scatter!(prior_plot, X, yX,
+scatter!(prior_plot, X_prior, yX,
     label="y",
     markershape=:xcross,
     markerstrokewidth=0.0,
     markersize=2);
-plot!(prior_plot, X, fX + noiseX - yX,
+plot!(prior_plot, X_prior, fX + noiseX - yX,
     label="f + noise - y",
     linecolor=:red);
 
-# Plot results from posterior inference.
-data_post = readcsv("vanilla_noisy_regression/posterior.csv");
-marginals = readcsv("vanilla_noisy_regression/posterior_marginals.csv");
-obs = readcsv("vanilla_noisy_regression/observations.csv");
-S = 100;
-Xplot, f′Xplot, noise′Xplot = data_post[:, 1], data_post[:, 2:S+1], data_post[:, S+2:end];
-Xobs, yobs = obs[:, 1], obs[:, 2];
-μf′, σf′, σy′ = marginals[:, 1], marginals[:, 2], marginals[:, 3];
-
-posterior_plot = plot(Xplot, f′Xplot;
+posterior_plot = plot(Xplot, f′Xp;
     linecolor=:blue,
     linealpha=0.2,
     legend=false);
@@ -132,7 +97,7 @@ plot!(posterior_plot, Xplot, [μf′ μf′];
     fillrange=[μf′.- 3  .* σf′ μf′ .+ 3 .* σf′],
     fillalpha=0.5,
     fillcolor=:blue);
-scatter!(posterior_plot, Xobs, yobs;
+scatter!(posterior_plot, X, ŷ;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,

@@ -1,5 +1,5 @@
-using Revise
-using Stheno, Random, DelimitedFiles
+using Stheno, Plots
+plotly();
 
 
 
@@ -37,74 +37,32 @@ X1, X2 = sort(rand(rng, N1) * 10), sort(rand(rng, N2) * 10);
 f, noise1, noise2, y1, y2 = model(GPC());
 
 # Generate some toy observations of `y1` and `y2`.
-observations = rand(rng, [y1, y2], [X1, X2]);
-ŷ1, ŷ2 = observations[1:N1], observations[N1+1:N1+N2];
+ŷ1, ŷ2 = rand(rng, [y1, y2], [X1, X2]);
 
 # Compute the posterior process.
 (f′, y1′, y2′) = (f, y1, y2) | (y1(X1)←ŷ1, y2(X2)←ŷ2);
 
 # Define some plotting stuff.
 Nplot, S = 500, 100;
-Xplot = range(-2.5, stop=12.5, length=Nplot);
+Xp = linspace(-2.5, 12.5, Nplot);
 
 # Sample from posterior and write directly to file.
-open("simple_sensor_fusion/posterior_samples.csv", "w") do io
-    writedlm(io, rand(rng, f′, Xplot, S), ',')
-end
+f′Xp = rand(rng, f′, Xp, S);
+y1′Xp = rand(rng, y1′, Xp, S);
+y2′Xp = rand(rng, y2′, Xp, S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-μf′, σf′ = mean(f′, Xplot), marginal_std(f′, Xplot);
-μy1′, σy1′ = mean(y1′, Xplot), marginal_std(y1′, Xplot);
-μy2′, σy2′ = mean(y2′, Xplot), marginal_std(y2′, Xplot);
-open("simple_sensor_fusion/posterior_marginals.csv", "w") do io
-    writedlm(io, hcat(Xplot, μf′, σf′, μy1′, σy1′, μy2′, σy2′), ',')
-end
-
-# Write observations to file.
-open("simple_sensor_fusion/observations_1.csv", "w") do io
-    writedlm(io, hcat(X1, ŷ1), ',')
-end
-open("simple_sensor_fusion/observations_2.csv", "w") do io
-    writedlm(io, hcat(X2, ŷ2), ',')
-end
+μf′, σf′ = mean(f′, Xp), marginal_std(f′, Xp);
+μy1′, σy1′ = mean(y1′, Xp), marginal_std(y1′, Xp);
+μy2′, σy2′ = mean(y2′, Xp), marginal_std(y2′, Xp);
 
 
 
 ###########################  Plot results - USE ONLY Julia-0.6!  ###########################
 
-# Only run me from Julia-0.6. Plots doesn't work on 0.7 at the minute.
-using Plots
-plotly();
+posterior_plot = plot();
 
-# Load posterior predictive quantities.
-f′Xp = readcsv("simple_sensor_fusion/posterior_samples.csv");
-posterior_marginals = readcsv("simple_sensor_fusion/posterior_marginals.csv");
-obs1 = readcsv("simple_sensor_fusion/observations_1.csv");
-obs2 = readcsv("simple_sensor_fusion/observations_2.csv");
-
-Xp = posterior_marginals[:, 1]
-μf′, σf′ = posterior_marginals[:, 2], posterior_marginals[:, 3];
-μy1′, σy1′ = posterior_marginals[:, 4], posterior_marginals[:, 5];
-μy2′, σy2′ = posterior_marginals[:, 6], posterior_marginals[:, 7];
-X1, ŷ1 = obs1[:, 1], obs1[:, 2];
-X2, ŷ2 = obs2[:, 1], obs2[:, 2];
-
-# Visualise posterior distribution and observational data.
-posterior_plot = plot(Xp, f′Xp;
-    linecolor=:blue,
-    linealpha=0.2,
-    label="");
-plot!(posterior_plot, Xp, μf′;
-    linecolor=:blue,
-    linewidth=2.0,
-    label="");
-plot!(posterior_plot, Xp, [μf′ μf′];
-    linewidth=0.0,
-    fillrange=[μf′.- 3  .* σf′ μf′ .+ 3 .* σf′],
-    fillalpha=0.5,
-    fillcolor=:blue,
-    label="");
-
+# Plot posterior of first noise process.
 plot!(posterior_plot, Xp, μy1′;
     linecolor=:red,
     linewidth=2.0,
@@ -120,9 +78,17 @@ scatter!(posterior_plot, X1, ŷ1;
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
-    markeralpha=0.7,
+    markeralpha=0.8,
     label="Sensor 1");
+scatter!(posterior_plot, Xp, y1′Xp,
+    markercolor=:red,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=0.5,
+    markeralpha=0.3,
+    label="");
 
+# Plot posterior of second noise process.
 plot!(posterior_plot, Xp, μy2′;
     linecolor=:green,
     linewidth=2.0,
@@ -138,9 +104,31 @@ scatter!(posterior_plot, X2, ŷ2;
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
-    markeralpha=0.7,
+    markeralpha=0.8,
     label="Sensor 2");
+scatter!(posterior_plot, Xp, y2′Xp,
+    markercolor=:green,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=0.5,
+    markeralpha=0.3,
+    label="");
+
+# Plot posterior of smooth latent function.
+plot!(posterior_plot, Xp, f′Xp;
+    linecolor=:blue,
+    linealpha=0.2,
+    label="");
+plot!(posterior_plot, Xp, μf′;
+    linecolor=:blue,
+    linewidth=2.0,
+    label="");
+plot!(posterior_plot, Xp, [μf′ μf′];
+    linewidth=0.0,
+    fillrange=[μf′.- 3  .* σf′ μf′ .+ 3 .* σf′],
+    fillalpha=0.5,
+    fillcolor=:blue,
+    label="");
+
+
 display(posterior_plot);
-
-
-

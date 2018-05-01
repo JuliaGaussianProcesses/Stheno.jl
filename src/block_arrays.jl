@@ -4,7 +4,7 @@
 import Base: +, *, size, getindex, eltype, copy, ctranspose, transpose, chol,
     UpperTriangular, LowerTriangular, \, logdet, Ac_mul_B, A_mul_Bc, Ac_mul_Bc, At_mul_B,
     A_mul_Bt, At_mul_Bt, Ac_rdiv_B, A_rdiv_Bc, Ac_rdiv_Bc, At_rdiv_B, A_rdiv_Bt, At_rdiv_Bt,
-    Ac_ldiv_B, A_ldiv_Bc, Ac_ldiv_Bc, At_ldiv_B, A_ldiv_Bt, At_ldiv_Bt
+    Ac_ldiv_B, A_ldiv_Bc, Ac_ldiv_Bc, At_ldiv_B, A_ldiv_Bt, At_ldiv_Bt, Symmetric
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
 export BlockVector, BlockMatrix, SquareDiagonal, blocksizes, blocklengths
@@ -233,6 +233,7 @@ struct SquareDiagonal{T, TX<:ABM{T}} <: AbstractBlockMatrix{T}
     end
 end
 const SD{T, TX} = SquareDiagonal{T, TX}
+SquareDiagonal(X::SquareDiagonal) = X
 nblocks(X::SquareDiagonal) = nblocks(X.X)
 nblocks(X::SquareDiagonal, i::Int) = nblocks(X.X, i)
 blocksize(X::SquareDiagonal, N::Int...) = blocksize(X.X, N...)
@@ -259,6 +260,13 @@ function ctranspose(Xu::LowerTriangular{T, <:SD{T}}) where T<:Number
     sdt = ctranspose(LowerTriangular(Xu.data.X)).data
     return UpperTriangular(SquareDiagonal(sdt))
 end
+
+"""
+    Symmetric(X::AbstractBlockMatrix)
+A type-piratic hack. Although a `SquareDiagonal` is necessarily `Symmetric`, the reverse
+doesn't hold.
+"""
+Symmetric(X::AbstractBlockMatrix) = SquareDiagonal(X)
 
 """
     getblock(X::UpperTriangular{T, <:SquareDiagonal{T}} where T, p::Int, q::Int)
@@ -302,6 +310,8 @@ function chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
     end
     return UpperTriangular(SquareDiagonal(U))
 end
+chol(A::Symmetric{T, <:SD}) where T<:Real = chol(A.data)
+chol(A::ABM) = chol(SquareDiagonal(A))
 
 function \(U::UpperTriangular{T, <:SD}, x::ABV{T}) where T<:Real
     y = BlockVector{T}(uninitialized_blocks, blocksizes(U, 1))

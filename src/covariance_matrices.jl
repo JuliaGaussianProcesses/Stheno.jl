@@ -36,7 +36,7 @@ isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(Σ1.Σ, Σ2.Σ)
 logdet(Σ::LazyPDMat) = 2 * logdet(chol(Σ))
 function chol(Σ::LazyPDMat)
     if Σ.U == nothing
-        Σ.U = chol(Σ.Σ + Σ.ϵ * I)
+        Σ.U = chol(Symmetric(Σ.Σ + Σ.ϵ * I))
     end
     return Σ.U
 end
@@ -52,13 +52,15 @@ broadcast(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Σ1.Σ .* Σ2
 # Specialised operations to exploit the Cholesky.
 function Xt_A_X(A::LazyPDMat, X::AVM)
     V = chol(A) * X
-    return LazyPDMat(V'V)
+    return LazyPDMat(Symmetric(V'V))
 end
+Xt_A_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A) * x)
 Xt_A_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A) * X)' * (chol(A) * Y)
 function Xt_invA_X(A::LazyPDMat, X::AVM)
     V = chol(A)' \ X
-    return LazyPDMat(V'V)
+    return LazyPDMat(Symmetric(V'V))
 end
+Xt_invA_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A)' \ x)
 Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
 \(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
 
