@@ -8,7 +8,7 @@ let
     f′ = f | (f(X) ← y)
     @test length(f′) == Inf
     @test length(rand(rng, f′, X)) == N
-    @test maximum(rand(rng, f′, X) - y) < 1e-5
+    @test maximum(rand(rng, f′, X) - y) < 1e-3
     @test mean(f′, X) ≈ y
-    @test all(abs.(Matrix(cov(kernel(f′), X))) .< 1e-9)
+    @test all(abs.(Matrix(cov(kernel(f′), X))) .< 1e-8)
 end

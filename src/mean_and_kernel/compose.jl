@@ -69,3 +69,17 @@ cov(k::OuterKernel, X::AVM) = Xt_A_X(cov(k.k, X), Diagonal(mean(k.f, X)))
 xcov(k::OuterKernel, X::AVM, X′::AVM) =
     Diagonal(mean(k.f, X)) * xcov(k.k, X, X′) * Diagonal(mean(k.f, X′))
 marginal_cov(k::OuterKernel, X::AVM) = marginal_cov(k.k, X) .* mean(k.f, X).^2
+
+############################## Convenience definitions ##############################
+
+import Base: +, *, promote_rule, convert
+
+promote_rule(::Type{<:MeanFunction}, ::Type{<:Union{Real, Function}}) = MeanFunction
+convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
+convert(::Type{MeanFunction}, f::Function) = CustomMean(x->f.(x))
+
+promote(μ::MeanFunction, x::Union{Real, Function}) = (μ, convert())
++(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(+, μ, μ′)
+
+
+

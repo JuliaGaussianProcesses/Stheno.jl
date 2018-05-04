@@ -50,6 +50,30 @@ using Stheno: CompositeMean, CompositeCrossKernel, CompositeKernel, LhsCross, Rh
         _generic_kernel_tests(OuterKernel(f, k), X, X′)
     end
 
+    # Test mean function composition.
+    let
+        rng, N, D = MersenneTwister(123456), 5, 2
+        X = randn(rng, N, D)
+        μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->randn(rng) .* sin.(x))
+
+        # Test conversion and promotion.
+        c = randn(rng)
+        @test convert(MeanFunction, c) == ConstantMean(c)
+        @test mean(convert(MeanFunction, sin), X) == mean(CustomMean(x->sin.(x)), X)
+
+        # # Test addition.
+        # @test μ + μ′ == CompositeMean(+, μ, μ′)
+        # @test mean(μ + μ′)(X) == mean(μ)(X) + mean(μ′)(X)
+        # @test μ + 5 == CompositeMean(+, μ, ConstantMean(5))
+        # @test 2.34 + μ′ == CompositeMean(+, 2.34, μ′)
+
+        # # Test multiplication.
+        # @test μ * μ′ == CompositeMean(*, μ, μ′)
+        # @test mean(μ * μ′)(X) == mean(μ)(X) .* mean(μ′)(X)
+        # @test μ * 4.32 == CompositeMean(*, μ, ConstantMean(4.32))
+        # @test 4.23 * μ′ == CompositeMean(*, ConstantMean(4.23), μ′)
+    end
+
     # import Stheno: LhsOp, RhsOp
     # @test !isstationary(LhsOp{typeof(+), typeof(sin), EQ})
     # @test sin + EQ() == sin + EQ()
