@@ -170,7 +170,7 @@ rand(rng::AbstractRNG, f::GP, X::AVM, N::Int) = rand(rng, [f], [X], N)[1]
 rand(rng::AbstractRNG, f::GP, X::AVM) = rand(rng, [f], [X])[1]
 
 """
-    logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::AV{<:AV})
+    logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real})
 
 Returns the log probability density observing the assignments `a` jointly.
 """
