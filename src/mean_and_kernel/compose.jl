@@ -10,7 +10,7 @@ end
 end
 length(c::CompositeMean) = length(c.x[1])
 size(c::Union{CompositeKernel, CompositeCrossKernel}, N::Int) = size(c.x[1], N)
-mean(c::CompositeMean, X::AVM) = c.f.(map(μ->mean(μ, X), c.x)...)
+mean(c::CompositeMean, X::AVM) = map(c.f, map(μ->mean(μ, X), c.x)...)
 cov(c::CompositeKernel, X::AVM) = LazyPDMat(c.f.(map(k->xcov(k, X), c.x)...))
 cov(c::CompositeKernel{typeof(+)}, X::AVM) = LazyPDMat(sum(map(k->xcov(k, X), c.x)))
 xcov(c::Union{CompositeKernel, CompositeCrossKernel}, X::AVM, X′::AVM) =
@@ -70,16 +70,31 @@ xcov(k::OuterKernel, X::AVM, X′::AVM) =
     Diagonal(mean(k.f, X)) * xcov(k.k, X, X′) * Diagonal(mean(k.f, X′))
 marginal_cov(k::OuterKernel, X::AVM) = marginal_cov(k.k, X) .* mean(k.f, X).^2
 
-############################## Convenience definitions ##############################
+
+############################## Convenience functionality ##############################
 
 import Base: +, *, promote_rule, convert
 
 promote_rule(::Type{<:MeanFunction}, ::Type{<:Union{Real, Function}}) = MeanFunction
 convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
-convert(::Type{MeanFunction}, f::Function) = CustomMean(x->f.(x))
 
-promote(μ::MeanFunction, x::Union{Real, Function}) = (μ, convert())
+promote_rule(::Type{<:Kernel}, ::Type{<:Union{Real, Function}}) = Kernel
+convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
+
+# Composing mean functions.
 +(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(+, μ, μ′)
++(μ::MeanFunction, μ′::Real) = +(promote(μ, μ′)...)
++(μ::Real, μ′::MeanFunction) = +(promote(μ, μ′)...)
 
+*(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(*, μ, μ′)
+*(μ::MeanFunction, μ′::Real) = *(promote(μ, μ′)...)
+*(μ::Real, μ′::MeanFunction) = *(promote(μ, μ′)...)
 
+# Composing kernels.
++(k::Kernel, k′::Kernel) = CompositeKernel(+, k, k′)
++(k::Kernel, k′::Real) = +(promote(k, k′)...)
++(k::Real, k′::Kernel) = +(promote(k, k′)...)
 
+*(k::Kernel, k′::Kernel) = CompositeKernel(*, k, k′)
+*(k::Kernel, k′::Real) = *(promote(k, k′)...)
+*(k::Real, k′::Kernel) = *(promote(k, k′)...)

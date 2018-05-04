@@ -9,7 +9,7 @@ In this example we consider three functions: f1, f2, and f3, where f3(x) = f1(x)
 =#
 function model(gpc)
     f1 = GP(ConstantMean(randn()), EQ(), gpc)
-    f2 = GP(ZeroMean{Float64}(), EQ(), gpc)
+    f2 = GP(EQ(), gpc)
     f3 = f1 + f2
     return f1, f2, f3
 end

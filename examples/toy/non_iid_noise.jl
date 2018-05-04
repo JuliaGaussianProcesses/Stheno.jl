@@ -18,15 +18,15 @@ function rather than `model` to see the results of this. Note the example of seq
 conditioning.
 =#
 function model(gpc)
-    f = GP(ZeroMean{Float64}(), EQ(), gpc)
-    ω = GP(ZeroMean{Float64}(), periodic(EQ(), 1), gpc)
-    return f, ω, ω + f, ω + f + GP(ZeroMean{Float64}(), Noise(0.1), gpc)
+    f = GP(EQ(), gpc)
+    ω = GP(periodic(EQ(), 1), gpc)
+    return f, ω, ω + f, ω + f + GP(Noise(0.1), gpc)
 end
 function model_identifiable(gpc)
-    f = GP(ZeroMean{Float64}(), EQ(), gpc)
-    t = GP(ZeroMean{Float64}(), periodic(EQ(), 1), gpc)
+    f = GP(EQ(), gpc)
+    t = GP(periodic(EQ(), 1), gpc)
     ω = t | (t([0])←[0.0])
-    return f, ω, ω + f, ω + f + GP(ZeroMean{Float64}(), Noise(0.001), gpc)
+    return f, ω, ω + f, ω + f + GP(Noise(0.001), gpc)
 end
 
 # Select some input locations and sample from the prior.

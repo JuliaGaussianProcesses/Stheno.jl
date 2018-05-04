@@ -8,10 +8,10 @@ using Stheno, Plots
 function model(gpc)
 
     # Define a smooth latent process.
-    f = 1.5 * GP(ZeroMean{Float64}(), EQ(), gpc)
+    f = 1.5 * GP(EQ(), gpc)
 
     # Define a latent noise process.
-    noise = GP(ZeroMean{Float64}(), Noise(1e-2), gpc)
+    noise = GP(Noise(1e-2), gpc)
 
     # Sum them to get the process of which we shall make observations.
     y = f + noise
@@ -59,8 +59,8 @@ f′Xp, noise′Xp = rand(rng, [f′, noise′], [Xplot, Xplot], S);
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
 # μf′, σf′, σy′ = mean(f′, Xplot), marginal_std(f′, Xplot), marginal_std(y′, Xplot);
 μf′ = mean(f′, Xplot);
-σf′ = sqrt.(diag(cov(f′, Xplot)))
-σy′ = sqrt.(diag(cov(y′, Xplot)))
+σf′ = sqrt.(diag(cov(f′, Xplot)));
+σy′ = sqrt.(diag(cov(y′, Xplot)));
 
 
 ####################################  Plot results  ####################################

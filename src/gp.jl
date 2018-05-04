@@ -31,6 +31,7 @@ struct GP{Tμ<:MeanFunction, Tk<:Kernel} <: ContinuousMultivariateDistribution
         GP{Tμ, Tk}(nothing, μ, k, gpc)
 end
 GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk<:Kernel} = GP{Tμ, Tk}(μ, k, gpc)
+GP(k::Kernel, gpc::GPC) = GP(ZeroMean{Float64}(), k, gpc)
 function GP(args...)
     μ, k, gpc = μ_p′(args...), k_p′(args...), get_check_gpc(args...)
     return GP{typeof(μ), typeof(k)}(args, μ, k, gpc)

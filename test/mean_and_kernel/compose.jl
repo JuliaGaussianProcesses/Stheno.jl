@@ -53,32 +53,47 @@ using Stheno: CompositeMean, CompositeCrossKernel, CompositeKernel, LhsCross, Rh
     # Test mean function composition.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        X = randn(rng, N, D)
-        μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->randn(rng) .* sin.(x))
+        X, s = randn(rng, N, D), randn(rng)
+        μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->vec(s .* sum(sin.(x), 2)))
 
         # Test conversion and promotion.
         c = randn(rng)
         @test convert(MeanFunction, c) == ConstantMean(c)
-        @test mean(convert(MeanFunction, sin), X) == mean(CustomMean(x->sin.(x)), X)
+        @test promote(ConstantMean(c), c) == (ConstantMean(c), ConstantMean(c))
 
-        # # Test addition.
-        # @test μ + μ′ == CompositeMean(+, μ, μ′)
-        # @test mean(μ + μ′)(X) == mean(μ)(X) + mean(μ′)(X)
-        # @test μ + 5 == CompositeMean(+, μ, ConstantMean(5))
-        # @test 2.34 + μ′ == CompositeMean(+, 2.34, μ′)
+        # Test addition.
+        @test μ + μ′ == CompositeMean(+, μ, μ′)
+        @test mean(μ + μ′, X) == mean(μ, X) + mean(μ′, X)
+        @test μ + 5 == CompositeMean(+, μ, ConstantMean(5))
+        @test 2.34 + μ′ == CompositeMean(+, ConstantMean(2.34), μ′)
+        # @test mean(μ′ + sin, X) == mean(μ′, X) + CustomMean()
 
-        # # Test multiplication.
-        # @test μ * μ′ == CompositeMean(*, μ, μ′)
-        # @test mean(μ * μ′)(X) == mean(μ)(X) .* mean(μ′)(X)
-        # @test μ * 4.32 == CompositeMean(*, μ, ConstantMean(4.32))
-        # @test 4.23 * μ′ == CompositeMean(*, ConstantMean(4.23), μ′)
+        # Test multiplication.
+        @test μ * μ′ == CompositeMean(*, μ, μ′)
+        @test mean(μ * μ′, X) == mean(μ, X) .* mean(μ′, X)
+        @test μ * 4.32 == CompositeMean(*, μ, ConstantMean(4.32))
+        @test 4.23 * μ′ == CompositeMean(*, ConstantMean(4.23), μ′)
     end
 
-    # import Stheno: LhsOp, RhsOp
-    # @test !isstationary(LhsOp{typeof(+), typeof(sin), EQ})
-    # @test sin + EQ() == sin + EQ()
-    # @test sin + EQ() != cos + EQ()
-    # @test sin + EQ() != sin + RQ(1.0)
-    # @test (sin + EQ())(5.0, 4.0) == sin(5.0) + EQ()(5.0, 4.0)
-    # @test (cos * RQ(1.0))(3.3, 6.7) == cos(3.3) * RQ(1.0)(3.3, 6.7)
+    # Test kernel composition.
+    let
+        rng, N, D = MersenneTwister(123456), 5, 2
+        X, s = randn(rng, N, D), randn(rng)
+        k, k′ = EQ(), Linear(1)
+
+        # Test conversion and promotion.
+        @test convert(Kernel, s) == ConstantKernel(s)
+        @test promote(k, s) == (k, ConstantKernel(s))
+        @test promote(s, k) == (ConstantKernel(s), k)
+
+        # Test addition.
+        @test k + k′ == CompositeKernel(+, k, k′)
+        @test k + s == CompositeKernel(+, k, ConstantKernel(s))
+        @test s + k′ == CompositeKernel(+, ConstantKernel(s), k′)
+
+        # Test multiplication.
+        @test k * k′ == CompositeKernel(*, k, k′)
+        @test k′ * s == CompositeKernel(*, k′, ConstantKernel(s))
+        @test s * k == CompositeKernel(*, ConstantKernel(s), k)
+    end
 end

@@ -17,7 +17,7 @@ bias is known to be 3.5. The model below specifies a model for this scenario.
 function model(gpc)
 
     # Define a smooth latent process that we wish to infer.
-    f = GP(ZeroMean{Float64}(), EQ(), gpc)
+    f = GP(EQ(), gpc)
 
     # Define the two noise processes described.
     noise1 = GP(CustomMean(x->sin.(x) .- 5.0 .+ sqrt.(abs.(x))), Noise(1e-2), gpc)
