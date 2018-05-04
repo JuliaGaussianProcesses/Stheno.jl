@@ -18,7 +18,7 @@ using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKer
         @test mean(ConditionalMean(cache, μf, kff), X′) ≈ mean(μf, X′)
 
         # Covariance at data should be (close to) zero.
-        @test all(abs.(Matrix(cov(ConditionalKernel(cache, kff, kff), X))) .< 1e-10)
+        @test all(abs.(Matrix(cov(ConditionalKernel(cache, kff, kff), X))) .< 1e-8)
 
         # Posterior covariance of indep. process should be same as prior.
         @test mean(ConditionalMean(cache, μg, kfg), X) ≈ mean(μg, X)
