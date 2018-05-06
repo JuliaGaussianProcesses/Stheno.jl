@@ -51,7 +51,7 @@ broadcast(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Σ1.Σ .* Σ2
 
 # Specialised operations to exploit the Cholesky.
 function Xt_A_X(A::LazyPDMat, X::AVM)
-    return LazyPDMat(Symmetric(X' * A * X))
+    return LazyPDMat(Symmetric(X' * A.Σ * X))
     # V = chol(A) * X
     # return LazyPDMat(Symmetric(V'V), 1e-9)
 end
