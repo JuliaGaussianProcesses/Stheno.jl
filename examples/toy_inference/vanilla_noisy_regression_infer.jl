@@ -8,10 +8,10 @@ function model(θ::Vector{<:Real})
     gpc = GPC()
 
     # Define a smooth latent process.
-    f = GP(ZeroMean{Float64}(), ITKernel(EQ(), x->exp(θ[1]) * x), gpc)
+    f = GP(ITKernel(EQ(), x->exp(θ[1]) * x), gpc)
 
     # Define a latent noise process.
-    noise = GP(ZeroMean{Float64}(), Noise(exp(θ[2])), gpc)
+    noise = GP(Noise(exp(θ[2])), gpc)
 
     # Sum them to get the process of which we shall make observations.
     y = f + noise

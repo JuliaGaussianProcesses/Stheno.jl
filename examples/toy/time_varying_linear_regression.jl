@@ -9,9 +9,9 @@ plotly();
 =#
 function model(gpc)
     g1, g2 = x::AbstractVector->sin.(x), x::AbstractVector->1 .* x
-    w1, w2 = GP(ZeroMean{Float64}(), EQ(), gpc), GP(ZeroMean{Float64}(), EQ(), gpc)
+    w1, w2 = GP(EQ(), gpc), GP(EQ(), gpc)
     f = g1 * w1 + g2 * w2
-    y = f + GP(ZeroMean{Float64}(), Noise(0.001), gpc)
+    y = f + GP(Noise(0.001), gpc)
     return w1, w2, f, y
 end
 

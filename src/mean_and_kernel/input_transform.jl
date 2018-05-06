@@ -19,7 +19,7 @@ mean(μ::ITMean, X::AVM) = mean(μ.μ, μ.f(X))
 
 "InputTransformationKernel": An `ITKernel` `kit` is the kernel defined by applying a
 transform `f` to the argument to a kernel `k`. Concretely:
-`xcov(kit, X, X′) = xcov(k, f(X), f(X′))`, and by analogy `cov(kit, X) = cov(k, f(X))`.
+`xcov(kit, X, X′) = xcov(k, f(X), f(X′))`, and similarly `cov(kit, X) = cov(k, f(X))`.
 """
 struct ITKernel{Tk<:Kernel, Tf} <: Kernel
     k::Tk

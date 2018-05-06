@@ -8,10 +8,10 @@ using Stheno, Plots
 function model(gpc)
 
     # Define a smooth latent process.
-    f = 1.5 * GP(ZeroMean{Float64}(), EQ(), gpc)
+    f = 1.5 * GP(EQ(), gpc)
 
     # Define a latent noise process.
-    noise = GP(ZeroMean{Float64}(), Noise(1e-2), gpc)
+    noise = GP(Noise(1e-2), gpc)
 
     # Sum them to get the process of which we shall make observations.
     y = f + noise
