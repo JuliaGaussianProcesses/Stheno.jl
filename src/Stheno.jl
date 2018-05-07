@@ -21,7 +21,7 @@ module Stheno
     include("mean_and_kernel/mean.jl")
     include("mean_and_kernel/kernel.jl")
     include("mean_and_kernel/compose.jl")
-    # include("mean_and_kernel/finite.jl")
+    include("mean_and_kernel/finite.jl")
     # include("mean_and_kernel/conditional.jl")
     # include("mean_and_kernel/cat.jl")
     # include("mean_and_kernel/transform.jl")

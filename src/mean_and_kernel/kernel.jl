@@ -5,13 +5,43 @@ export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, 
     ConstantKernel, isstationary, ZeroKernel
 
 # Some fallback definitions.
+cov(k::Kernel, X::AMRV) = pairwise(k, X)
+cov(k::Kernel, X::AMRV, X′::AMRV) = pairwise(k, X, X′)
+xcov(k::CrossKernel, X::AMRV) = pairwise(k, X)
+xcov(k::CrossKernel, X::AMRV, X′::AMRV) = pairwise(k, X, X′)
 
-# cov(k::Kernel, X::AVM) = cov(k, X, X)
-# cov(k::Kernel, X::AVM, X′::AVM) = xcov(k, X, X′)
-# xcov(k::Kernel, X::AVM) = xcov(k, X, X)
+# Some fallback definitions.
+size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
+size(k::CrossKernel) = (size(k, 1), size(k, 2))
+isstationary(::Type{<:CrossKernel}) = false
+isstationary(::T) where T = isstationary(T)
 
-size(::Kernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
-size(k::Kernel) = (size(k, 1), size(k, 2))
+"""
+    ZeroKernel <: Kernel
+
+A rank 0 `Kernel` that always returns zero.
+"""
+struct ZeroKernel{T<:Real} <: Kernel end
+(::ZeroKernel{T})(x, x′) where T = zero(T)
+isstationary(::Type{<:ZeroKernel}) = true
+binary_colwise(::ZeroKernel{T}, X::AMRV, ::AMRV) where T = Zeros{T}(size(X, 2))
+pairwise(::ZeroKernel{T}, X::AMRV, X′::AMRV) where T = Zeros{T}(size(X, 2), size(X′, 2))
+==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
+
+"""
+    ConstantKernel{T<:Real} <: Kernel
+
+A rank 1 constant `Kernel`. Useful for consistency when creating composite Kernels,
+but (almost certainly) shouldn't be used as a base `Kernel`.
+"""
+struct ConstantKernel{T<:Real} <: Kernel
+    c::T
+end
+(k::ConstantKernel)(x, x′) = k.c
+isstationary(::Type{<:ConstantKernel}) = true
+binary_colwise(k::ConstantKernel, X::AMRV, ::AMRV) = Fill(k.c, size(X, 2))
+pairwise(k::ConstantKernel, X::AMRV, Y::AMRV) = Fill(k.c, size(X, 2), size(Y, 2))
+==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
 
 """
     EQ <: Kernel

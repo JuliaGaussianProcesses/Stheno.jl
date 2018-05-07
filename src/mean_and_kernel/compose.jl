@@ -1,62 +1,50 @@
-# # Create CompositeMean, CompositeKernel and CompositeCrossKernel.
-# for (composite_type, parent_type) in [(:CompositeMean, :MeanFunction),
-#                                       (:CompositeKernel, :Kernel),
-#                                       (:CompositeCrossKernel, :CrossKernel),]
-# @eval struct $composite_type{Tf, N} <: $parent_type
-#     f::Tf
-#     x::Tuple{Vararg{Any, N}}
-#     $composite_type(f::Tf, x::Vararg{Any, N}) where {Tf, N} = new{Tf, N}(f, x)
-# end
-# end
-# length(c::CompositeMean) = length(c.x[1])
-# size(c::Union{CompositeKernel, CompositeCrossKernel}, N::Int) = size(c.x[1], N)
-# mean(c::CompositeMean, X::AVM) = map(c.f, map(μ->mean(μ, X), c.x)...)
-# cov(c::CompositeKernel, X::AVM) = LazyPDMat(c.f.(map(k->xcov(k, X), c.x)...))
-# cov(c::CompositeKernel{typeof(+)}, X::AVM) = LazyPDMat(sum(map(k->xcov(k, X), c.x)))
-# xcov(c::Union{CompositeKernel, CompositeCrossKernel}, X::AVM, X′::AVM) =
-#     map(c.f, map(k->xcov(k, X, X′), c.x)...)
-# marginal_cov(c::CompositeKernel, X::AVM) = map(c.f, map(k->marginal_cov(k, X), c.x)...)
-
-"""
-    MapReduce{Tf, N} <: MeanFunctionOrKernel
-
-Maps the functions `fs` over the arguments, and reduces using `op`. Note that this is the
-opposite way around to the usual MapReduce.
-"""
-struct MapReduce{N, Top, A} <: MeanFunctionOrKernel
-    op::Top
-    fs::Tuple{Vararg{Any, A}}
-    MapReduce(N::Int, op::Top, fs::Vararg{Any, A}) where {Top, A} = new{N, Top, A}(op, fs)
+# Create CompositeMean, CompositeKernel and CompositeCrossKernel.
+for (composite_type, parent_type) in [(:CompositeMean, :MeanFunction),
+                                      (:CompositeKernel, :Kernel),
+                                      (:CompositeCrossKernel, :CrossKernel),]
+@eval struct $composite_type{Tf, N} <: $parent_type
+    f::Tf
+    x::Tuple{Vararg{Any, N}}
+    $composite_type(f::Tf, x::Vararg{Any, N}) where {Tf, N} = new{Tf, N}(f, x)
 end
-length(c::MapReduce) = length(c.fs[1])
-size(c::MapReduce, n::Int) = size(c.fs[1], n)
-(f::MapReduce{N})(x::Vararg{Any, N}) where N = mapreduce(f->f(x...), f.op, f.fs)
-unary_colwise(f::MapReduce{1}, X::AMRV) = map(f.op, map(f->unary_colwise(f, X), f.fs)...)
-binary_colwise(f::MapReduce{2}, X::AMRV, Y::AMRV) =
-    map(f.op, map(f->binary_colwise(f, X, Y), f.fs)...)
-pairwise(f::MapReduce{2}, X::AMRV) = map(f.op, map(f->pairwise(f, X), f.fs)...)
-pairwise(f::MapReduce{2}, X::AMRV, Y::AMRV) = map(f.op, map(f->pairwise(f, X, Y), f.fs)...)
+end
+
+# CompositeMean definitions.
+length(c::CompositeMean) = length(c.x[1])
+(μ::CompositeMean)(x) = map(μ.f, map(f->f(x), μ.x)...)
+unary_colwise(f::CompositeMean, X::AMRV) = map(f.f, map(f->unary_colwise(f, X), f.x)...)
+
+# CompositeKernel and CompositeCrossKernel definitions.
+for T in [:CompositeKernel, :CompositeCrossKernel]
+    @eval (k::$T)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
+    @eval size(k::$T, N::Int) = size(k.x[1], N)
+    @eval isstationary(k::$T) = all(map(isstationary(k.x)))
+    for foo in [:binary_colwise, :pairwise]
+        @eval $foo(f::$T, X::AMRV) = map(f.f, map(f->$foo(f, X), f.x)...)
+        @eval $foo(f::$T, X::AMRV, X′::AMRV) = map(f.f, map(f->$foo(f, X, X′), f.x)...)
+    end
+end
 
 """
-    LhsCross <: Kernel
+    LhsCross <: CrossKernel
 
 A cross-kernel given by `k(x, x′) = f(x) * k(x, x′)`.
 """
-struct LhsCross <: Kernel
+struct LhsCross <: CrossKernel
     f::Any
-    k::Any
+    k::CrossKernel
 end
 (k::LhsCross)(x, x′) = k.f(x) * k.k(x, x′)
 size(k::LhsCross, N::Int) = size(k.k, N)
 pairwise(k::LhsCross, X::AMRV, X′::AMRV) = unary_colwise(k.f, X) .* pairwise(k.k, X, X′)
 
 """
-    RhsCross <: Kernel
+    RhsCross <: CrossKernel
 
 A cross-kernel given by `k(x, x′) = k(x, x′) * f(x′)`.
 """
-struct RhsCross <: Kernel
-    k
+struct RhsCross <: CrossKernel
+    k::CrossKernel
     f
 end
 (k::RhsCross)(x, x′) = k.k(x, x′) * k.f(x′)
@@ -64,18 +52,34 @@ size(k::RhsCross, N::Int) = size(k.k, N)
 pairwise(k::RhsCross, X::AMRV, X′::AMRV) = pairwise(k.k, X, X′) .* unary_colwise(k.f, X′)'
 
 """
-    Outer <: Kernel
+    OuterCross <: CrossKernel
 
 A kernel given by `k(x, x′) = f(x) * k(x, x′) * f(x′)`.
 """
-struct Outer <: Kernel
+struct OuterCross <: CrossKernel
     f
-    k
+    k::CrossKernel
 end
-(k::Outer)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
-size(k::Outer, N::Int) = size(k.k, N)
-pairwise(k::Outer, X::AMRV) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_colwise(k.f, X)))
-pairwise(k::Outer, X::AMRV, X′::AMRV) =
+(k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
+size(k::OuterCross, N::Int) = size(k.k, N)
+pairwise(k::OuterCross, X::AMRV) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_colwise(k.f, X)))
+pairwise(k::OuterCross, X::AMRV, X′::AMRV) =
+    unary_colwise(k.f, X) .* pairwise(k.k, X, X′) .* unary_colwise(k.f, X′)'
+
+"""
+    OuterKernel <: Kernel
+
+A kernel given by `k(x, x′) = f(x) * k(x, x′) * f(x′)`.
+"""
+struct OuterKernel <: Kernel
+    f
+    k::Kernel
+end
+(k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
+size(k::OuterKernel, N::Int) = size(k.k, N)
+cov(k::OuterKernel, X::AVM) = Xt_A_X(cov(k.k, X), Diagonal(mean(k.f, X)))
+pairwise(k::OuterKernel, X::AMRV) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_colwise(k.f, X)))
+pairwise(k::OuterKernel, X::AMRV, X′::AMRV) =
     unary_colwise(k.f, X) .* pairwise(k.k, X, X′) .* unary_colwise(k.f, X′)'
 
 
@@ -84,25 +88,25 @@ pairwise(k::Outer, X::AMRV, X′::AMRV) =
 import Base: +, *, promote_rule, convert
 
 promote_rule(::Type{<:MeanFunction}, ::Type{<:Union{Real, Function}}) = MeanFunction
-convert(::Type{MeanFunction}, x::Real) = Const(1, x)
+convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
 
 promote_rule(::Type{<:Kernel}, ::Type{<:Union{Real, Function}}) = Kernel
-convert(::Type{<:Kernel}, x::Real) = Const(2, x)
+convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
 
 # Composing mean functions.
-+(μ::MeanFunction, μ′::MeanFunction) = MapReduce(1, +, μ, μ′)
++(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(+, μ, μ′)
 +(μ::MeanFunction, μ′::Real) = +(promote(μ, μ′)...)
 +(μ::Real, μ′::MeanFunction) = +(promote(μ, μ′)...)
 
-*(μ::MeanFunction, μ′::MeanFunction) = MapReduce(1, *, μ, μ′)
+*(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(*, μ, μ′)
 *(μ::MeanFunction, μ′::Real) = *(promote(μ, μ′)...)
 *(μ::Real, μ′::MeanFunction) = *(promote(μ, μ′)...)
 
 # Composing kernels.
-+(k::Kernel, k′::Kernel) = MapReduce(2, +, k, k′)
++(k::Kernel, k′::Kernel) = CompositeKernel(+, k, k′)
 +(k::Kernel, k′::Real) = +(promote(k, k′)...)
 +(k::Real, k′::Kernel) = +(promote(k, k′)...)
 
-*(k::Kernel, k′::Kernel) = MapReduce(2, *, k, k′)
+*(k::Kernel, k′::Kernel) = CompositeKernel(*, k, k′)
 *(k::Kernel, k′::Real) = *(promote(k, k′)...)
 *(k::Real, k′::Kernel) = *(promote(k, k′)...)

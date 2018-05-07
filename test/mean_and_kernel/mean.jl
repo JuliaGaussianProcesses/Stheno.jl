@@ -1,3 +1,5 @@
+using Stheno: CustomMean, ZeroMean, ConstantMean
+
 @testset "mean" begin
 
     # Test CustomMean function.
@@ -11,6 +13,41 @@
 
         @test isinf(length(f))
         @test size(f, 1) == Inf && size(f, 2) == 1
+        @test size(f) == (Inf,)
+    end
+
+    # Test ZeroMean.
+    let
+        rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
+        X, x = randn(rng, D, P), RowVector(randn(rng, P))
+        f = ZeroMean{Float64}()
+
+        @test f(randn(rng)) === zero(Float64)
+        @test f == ZeroMean{Float32}()
+
+        unary_colwise_tests(f, x)
+        unary_colwise_tests(f, X)
+
+        @test isinf(length(f))
+        @test isinf(size(f, 1)) && size(f, 2) == 1
+        @test size(f) == (Inf,)
+    end
+
+    # Test Const.
+    let
+        rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
+        X, x = randn(rng, D, P), RowVector(randn(rng, P))
+        c = randn(rng)
+        f = ConstantMean(c)
+
+        @test ConstantMean(1.0) == ConstantMean(1)
+        @test ConstantMean(1.0) ≠ ConstantMean(2)
+        @test f(randn(rng)) == c
+        unary_colwise_tests(f, x)
+        unary_colwise_tests(f, X)
+
+        @test isinf(length(f))
+        @test isinf(size(f, 1)) && size(f, 2) == 1
         @test size(f) == (Inf,)
     end
 end

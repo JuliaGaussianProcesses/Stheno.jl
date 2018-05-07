@@ -1,3 +1,4 @@
+using FillArrays
 export CustomMean
 
 length(::MeanFunction) = Inf
@@ -14,3 +15,25 @@ struct CustomMean{T} <: MeanFunction
     f::T
 end
 @inline (f::CustomMean)(x) = f.f(x)
+
+"""
+    ZeroMean <: MeanFunction
+
+Returns zero (of the appropriate type) everywhere.
+"""
+struct ZeroMean{T<:Real} <: MeanFunction end
+@inline (::ZeroMean{T})(x) where T = zero(T)
+@inline unary_colwise(z::ZeroMean{T}, X::AMRV) where T = Zeros{T}(size(X, 2))
+==(::ZeroMean, ::ZeroMean) = true
+
+"""
+    ConstantMean{T} <: MeanFunction
+
+Returns `c` (of the appropriate type) everywhere.
+"""
+struct ConstantMean{T<:Real} <: MeanFunction
+    c::T
+end
+@inline (μ::ConstantMean)(x) = μ.c
+@inline unary_colwise(μ::ConstantMean, X::AMRV) = Fill(μ.c, size(X, 2))
+==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c 

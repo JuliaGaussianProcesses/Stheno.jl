@@ -21,7 +21,6 @@
         foo = (x, x′)->sum(abs2, x - x′)
         Stheno.isstationary(::typeof(foo)) = true
 
-
         @test binary_colwise_fallback(foo, X, X) ==
             [foo(X[:, 1], X[:, 1]), foo(X[:, 2], X[:, 2]), foo(X[:, 3], X[:, 3])]
         @test binary_colwise_fallback(foo, x, x) ==
@@ -51,62 +50,5 @@
         Stheno.isstationary(::typeof(bar)) = false
         @test binary_colwise(foo, x) == binary_colwise(bar, x)
         @test pairwise(foo, x) == pairwise(bar, x)
-    end
-
-    # Test Zero.
-    let
-        rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, X′ = randn(rng, D, P), randn(rng, D, Q), randn(rng, D, P)
-        x, x′ = RowVector(randn(rng, P)), RowVector(randn(rng, Q))
-        Xr, xr = randn(rng, D, P), RowVector(randn(rng, P))
-        f1, f2 = Stheno.Zero{1, Float64}(), Stheno.Zero{2, Float64}()
-
-        @test f1(randn(rng)) === zero(Float64)
-        @test f2(randn(rng), randn(rng)) === zero(Float64)
-        @test f1 == Stheno.Zero{1, Float32}()
-        @test f1 ≠ Stheno.Zero{2, Float32}()
-
-        unary_colwise_tests(f1, x)
-        unary_colwise_tests(f1, X)
-        binary_colwise_tests(f2, x, xr)
-        binary_colwise_tests(f2, X, Xr)
-        pairwise_tests(f2, x, x′)
-        pairwise_tests(f2, X, X′)
-
-        @test isinf(length(f1))
-        @test isinf(size(f1, 1)) && size(f1, 2) == 1
-        @test size(f1) == (Inf,)
-
-        @test isinf(size(f2, 1)) && isinf(size(f2, 2))
-        @test size(f2) == (Inf, Inf)
-    end
-
-    # Test Const.
-    let
-        rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, X′ = randn(rng, D, P), randn(rng, D, Q), randn(rng, D, P)
-        x, x′ = RowVector(randn(rng, P)), RowVector(randn(rng, Q))
-        Xr, xr = randn(rng, D, P), RowVector(randn(rng, P))
-        c = randn(rng)
-        f1, f2 = Stheno.Const(1, c), Stheno.Const(2, c)
-
-        @test f1 == f1
-        @test f2 == f2
-        @test f1 ≠ f2
-        @test f1(randn(rng)) == c
-        @test f2(randn(rng), randn(rng)) == c
-        unary_colwise_tests(f1, x)
-        unary_colwise_tests(f1, X)
-        binary_colwise_tests(f2, x, xr)
-        binary_colwise_tests(f2, X, Xr)
-        pairwise_tests(f2, x, x′)
-        pairwise_tests(f2, X, X′)
-
-        @test isinf(length(f1))
-        @test isinf(size(f1, 1)) && size(f1, 2) == 1
-        @test size(f1) == (Inf,)
-
-        @test isinf(size(f2, 1)) && isinf(size(f2, 2))
-        @test size(f2) == (Inf, Inf)
     end
 end

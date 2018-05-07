@@ -6,6 +6,27 @@
         x′, X′ = randn(rng, D, N′), RowVector(randn(rng, N′))
         xr, Xr = randn(rng, D, N), RowVector(randn(rng, N))
 
+        # Tests for ZeroKernel.
+        k_zero = ZeroKernel{Float64}()
+        @test isstationary(k_zero)
+        @test k_zero(0, 0) === zero(Float64)
+        binary_colwise_tests(k_zero, x, xr)
+        binary_colwise_tests(k_zero, X, Xr)
+        pairwise_tests(k_zero, x, x′)
+        pairwise_tests(k_zero, X, X′)
+        @test size(k_zero, 1) == Inf && size(k_zero, 2) == Inf
+        @test size(k_zero) == (Inf, Inf)
+
+        # Tests for ConstantKernel.
+        k_const = ConstantKernel(randn(rng))
+        @test isstationary(k_const)
+        binary_colwise_tests(k_const, x, xr)
+        binary_colwise_tests(k_const, X, Xr)
+        pairwise_tests(k_const, x, x′)
+        pairwise_tests(k_const, X, X′)
+        @test size(k_const, 1) == Inf && size(k_const, 2) == Inf
+        @test size(k_const) == (Inf, Inf)
+
         # Tests for EQ.
         @test isstationary(EQ())
         binary_colwise_tests(EQ(), x, xr)
