@@ -28,7 +28,7 @@ mean(μ::CustomMean, X::AVM) = μ.f(X)
 Returns zero (of the appropriate type) everywhere.
 """
 struct ZeroMean{T<:Real} <: MeanFunction end
-mean(::ZeroMean{T}, X::AVM) where T = zeros(T, size(X, 1))
+mean(::ZeroMean{T}, X::AVM) where T = Zeros{T}(size(X, 1))
 ==(::ZeroMean, ::ZeroMean) = true
 
 """

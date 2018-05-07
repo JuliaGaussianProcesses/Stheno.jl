@@ -40,7 +40,6 @@ marginal_cov(::ZeroKernel{T}, X::AVM) where T = Zeros{T}(size(X, 1))
 xcov(::ZeroKernel{T}, X::AVM, X′::AVM) where T = Zeros{T}(size(X, 1), size(X′, 1))
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
-
 """
     ConstantKernel{T<:Real} <: Kernel
 
