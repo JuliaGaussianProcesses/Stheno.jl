@@ -1,59 +1,17 @@
-using FillArrays
+using FillArrays, Distances
 
 import Base: +, *, ==
 export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, Exponential,
-    ConstantKernel, isstationary, ZeroKernel, xcov, marginal_cov
-
-"""
-    CrossKernel
-
-Supertype for all cross-Kernels. There are binary functions, but are not valid Mercer
-kernels as they are not in general symmetric positive semi-definite.
-"""
-abstract type CrossKernel end
-
-"""
-    Kernel <: CrossKernel
-
-Supertype for all (valid Mercer) Kernels.
-"""
-abstract type Kernel <: CrossKernel end
+    ConstantKernel, isstationary, ZeroKernel
 
 # Some fallback definitions.
-isstationary(::Type{<:CrossKernel}) = false
-isstationary(k::CrossKernel) = isstationary(typeof(k))
-cov(k::Kernel, X::AVM) = LazyPDMat(xcov(k, X, X))
-xcov(k::Kernel, X::AVM) = Matrix(cov(k, X))
-xcov(k::CrossKernel, X::AVM) = xcov(k, X, X)
-size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
-size(k::CrossKernel) = (size(k, 1), size(k, 2))
 
-"""
-    ZeroKernel <: Kernel
+# cov(k::Kernel, X::AVM) = cov(k, X, X)
+# cov(k::Kernel, X::AVM, X′::AVM) = xcov(k, X, X′)
+# xcov(k::Kernel, X::AVM) = xcov(k, X, X)
 
-A rank 1 `Kernel` that always returns zero.
-"""
-struct ZeroKernel{T<:Real} <: Kernel end
-isstationary(::Type{<:ZeroKernel}) = true
-show(io::IO, ::ZeroKernel) = print(io, "ZeroKernel")
-marginal_cov(::ZeroKernel{T}, X::AVM) where T = Zeros{T}(size(X, 1))
-xcov(::ZeroKernel{T}, X::AVM, X′::AVM) where T = Zeros{T}(size(X, 1), size(X′, 1))
-==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
-
-"""
-    ConstantKernel{T<:Real} <: Kernel
-
-A rank 1 constant `Kernel`. Useful for consistency when creating composite Kernels,
-but (almost certainly) shouldn't be used as a base `Kernel`.
-"""
-struct ConstantKernel{T<:Real} <: Kernel
-    c::T
-end
-isstationary(::Type{<:ConstantKernel}) = true
-show(io::IO, k::ConstantKernel) = print(io, "ConstantKernel($(k.c))")
-xcov(k::ConstantKernel, X::AVM, X′::AVM) = fill(k.c, size(X, 1), size(X′, 1))
-marginal_cov(k::ConstantKernel, X::AVM) = fill(k.c, size(X, 1))
-==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
+size(::Kernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
+size(k::Kernel) = (size(k, 1), size(k, 2))
 
 """
     EQ <: Kernel
@@ -62,10 +20,9 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 """
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
-show(io::IO, ::EQ) = print(io, "EQ")
-cov(::EQ, X::AVM) = LazyPDMat(exp.(-0.5 * pairwise(SqEuclidean(), X')))
-xcov(::EQ, X::AVM, X′::AVM) = exp.(-0.5 * pairwise(SqEuclidean(), X', X′'))
-marginal_cov(::EQ, X::AVM) = fill(1, size(X, 1))
+(::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
+pairwise(::EQ, X::AMRV) = exp.(-0.5 .* pairwise(SqEuclidean(), X))
+pairwise(::EQ, X::AMRV, X′::AMRV) = exp.(-0.5 .* pairwise(SqEuclidean(), X, X′))
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -90,14 +47,13 @@ intercept is `c`.
 struct Linear{T<:Union{Real, Vector{<:Real}}} <: Kernel
     c::T
 end
-function cov(k::Linear, X::AVM)
-    Δ = X .- k.c
-    return LazyPDMat(Δ * Δ')
-end
-xcov(k::Linear, X::AVM, X′::AVM) = (X .- k.c) * (X′ .- k.c)'
-marginal_cov(k::Linear, X::AVM) = vec(sum(abs2, X .- k.c, 2))
 ==(a::Linear, b::Linear) = a.c == b.c
-show(io::IO, k::Linear) = print(io, "Linear")
+(k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
+function pairwise(k::Linear, X::AMRV)
+    Δ = X .- k.c
+    return Δ' * Δ
+end
+pairwise(k::Linear, X::AMRV, X′::AMRV) = (X .- k.c)' * (X′ .- k.c)
 
 # """
 #     Poly{Tσ<:Real} <: Kernel
@@ -119,14 +75,11 @@ A white-noise kernel with a single scalar parameter.
 struct Noise{T<:Real} <: Kernel
     σ²::T
 end
-cov(k::Noise, X::AVM) = LazyPDMat(xcov(k, X))
-xcov(k::Noise, X::AVM) = Diagonal(fill(k.σ², size(X, 1)))
-xcov(k::Noise, X::AVM, X′::AVM) =
-    X === X′ || X == X′ ? xcov(k, X) : k.σ² .* (pairwise(SqEuclidean(), X', X′') .== 0)
-marginal_cov(k::Noise, X::AVM) = fill(k.σ², size(X, 1))
 isstationary(::Type{<:Noise}) = true
 ==(a::Noise, b::Noise) = a.σ² == b.σ²
-show(io::IO, ::Noise) = show(io, "Noise")
+(k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
+pairwise(k::Noise, X::AMRV) = k.σ² .* (pairwise(SqEuclidean(), X) .== 0)
+pairwise(k::Noise, X::AMRV, X′::AMRV) = k.σ² .* (pairwise(SqEuclidean(), X, X′) .== 0)
 
 # """
 #     Wiener <: Kernel

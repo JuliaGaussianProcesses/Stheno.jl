@@ -50,7 +50,9 @@ map(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(map(*, Σ1.Σ, Σ2.
 broadcast(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Σ1.Σ .* Σ2.Σ)
 
 # Specialised operations to exploit the Cholesky.
-function Xt_A_X(A::LazyPDMat, X::AVM)
+Xt_A_X(A::AbstractMatrix, X::AbstractMatrix) = X' * A * X
+Xt_A_X(A::AbstractMatrix, x::AbstractVector) = x' * A * x
+function Xt_A_X(A::LazyPDMat, X::AbstractMatrix)
     return LazyPDMat(Symmetric(X' * A.Σ * X))
     # V = chol(A) * X
     # return LazyPDMat(Symmetric(V'V), 1e-9)
