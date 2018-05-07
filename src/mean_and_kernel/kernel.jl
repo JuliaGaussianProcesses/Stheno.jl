@@ -1,3 +1,5 @@
+using FillArrays
+
 import Base: +, *, ==
 export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, Exponential,
     ConstantKernel, isstationary, ZeroKernel, xcov, marginal_cov
@@ -34,8 +36,8 @@ A rank 1 `Kernel` that always returns zero.
 struct ZeroKernel{T<:Real} <: Kernel end
 isstationary(::Type{<:ZeroKernel}) = true
 show(io::IO, ::ZeroKernel) = print(io, "ZeroKernel")
-xcov(::ZeroKernel{T}, X::AVM, X′::AVM) where T = zeros(T, size(X, 1), size(X′, 1))
-marginal_cov(::ZeroKernel{T}, X::AVM) where T = zeros(T, size(X, 1))
+marginal_cov(::ZeroKernel{T}, X::AVM) where T = Zeros{T}(size(X, 1))
+xcov(::ZeroKernel{T}, X::AVM, X′::AVM) where T = Zeros{T}(size(X, 1), size(X′, 1))
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
 
