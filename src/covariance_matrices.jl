@@ -70,3 +70,13 @@ Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
 # Ensure that, if we try to make a `PDMat` from a `BlockMatrix`, we require that the
 # blocks on it's diagonal be square. Otherwise we should definitely error.
 LazyPDMat(X::BM) = LazyPDMat(SquareDiagonal(X))
+
+# Some generic operations that are useful for operations involving covariance matrices.
+diag_AᵀA(A::AbstractMatrix) = vec(sum(abs2, A, 1))
+function diag_AᵀB(A::AbstractMatrix, B::AbstractMatrix)
+    @assert size(A) == size(B)
+    return vec(sum(A .* B, 1))
+end
+
+diag_Xᵀ_invA_X(A::LazyPDMat, X::AbstractMatrix) = diag_AᵀA(chol(A)' \ X)
+diag_Xᵀ_invA_Y(X::AM, A::LazyPDMat, Y::AM) = diag_AᵀB(chol(A)' \ X, chol(A)' \ Y)

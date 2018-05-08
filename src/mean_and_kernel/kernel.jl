@@ -1,20 +1,22 @@
 using FillArrays, Distances
 
 import Base: +, *, ==
-export KernelType, Kernel, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity, Exponential,
-    ConstantKernel, isstationary, ZeroKernel
+
+export KernelType, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
+    Exponential, ConstantKernel, isstationary, ZeroKernel
+
+abstract type CrossKernel end
+abstract type Kernel <: CrossKernel end
 
 # Some fallback definitions.
-cov(k::Kernel, X::AMRV) = pairwise(k, X)
-cov(k::Kernel, X::AMRV, X′::AMRV) = pairwise(k, X, X′)
-xcov(k::CrossKernel, X::AMRV) = pairwise(k, X)
-xcov(k::CrossKernel, X::AMRV, X′::AMRV) = pairwise(k, X, X′)
+cov(k::Kernel, X::AVM) = pairwise(k, X)
+cov(k::Kernel, X::AVM, X′::AVM) = pairwise(k, X, X′)
+xcov(k::CrossKernel, X::AVM) = pairwise(k, X)
+xcov(k::CrossKernel, X::AVM, X′::AVM) = pairwise(k, X, X′)
 
 # Some fallback definitions.
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
-isstationary(::Type{<:CrossKernel}) = false
-isstationary(::T) where T = isstationary(T)
 
 """
     ZeroKernel <: Kernel
@@ -24,8 +26,8 @@ A rank 0 `Kernel` that always returns zero.
 struct ZeroKernel{T<:Real} <: Kernel end
 (::ZeroKernel{T})(x, x′) where T = zero(T)
 isstationary(::Type{<:ZeroKernel}) = true
-binary_colwise(::ZeroKernel{T}, X::AMRV, ::AMRV) where T = Zeros{T}(size(X, 2))
-pairwise(::ZeroKernel{T}, X::AMRV, X′::AMRV) where T = Zeros{T}(size(X, 2), size(X′, 2))
+binary_obswise(::ZeroKernel{T}, X::AVM, ::AVM) where T = Zeros{T}(nobs(X))
+pairwise(::ZeroKernel{T}, X::AVM, X′::AVM) where T = Zeros{T}(nobs(X), nobs(X′))
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
 """
@@ -39,8 +41,8 @@ struct ConstantKernel{T<:Real} <: Kernel
 end
 (k::ConstantKernel)(x, x′) = k.c
 isstationary(::Type{<:ConstantKernel}) = true
-binary_colwise(k::ConstantKernel, X::AMRV, ::AMRV) = Fill(k.c, size(X, 2))
-pairwise(k::ConstantKernel, X::AMRV, Y::AMRV) = Fill(k.c, size(X, 2), size(Y, 2))
+binary_obswise(k::ConstantKernel, X::AVM, ::AVM) = Fill(k.c, nobs(X))
+pairwise(k::ConstantKernel, X::AVM, X′::AVM) = Fill(k.c, nobs(X), nobs(X′))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
 
 """
@@ -51,8 +53,8 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-pairwise(::EQ, X::AMRV) = exp.(-0.5 .* pairwise(SqEuclidean(), X))
-pairwise(::EQ, X::AMRV, X′::AMRV) = exp.(-0.5 .* pairwise(SqEuclidean(), X, X′))
+pairwise(::EQ, X::AVM) = exp.(-0.5 .* pairwise(SqEuclidean(), X))
+pairwise(::EQ, X::AVM, X′::AVM) = exp.(-0.5 .* pairwise(SqEuclidean(), X, X′))
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -79,11 +81,15 @@ struct Linear{T<:Union{Real, Vector{<:Real}}} <: Kernel
 end
 ==(a::Linear, b::Linear) = a.c == b.c
 (k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
-function pairwise(k::Linear, X::AMRV)
+
+pairwise(k::Linear, x::AbstractVector) = pairwise(k, RowVector(x))
+pairwise(k::Linear, x::AV, x′::AV) = pairwise(k, RowVector(x), RowVector(x′))
+
+function pairwise(k::Linear, X::AbstractMatrix)
     Δ = X .- k.c
     return Δ' * Δ
 end
-pairwise(k::Linear, X::AMRV, X′::AMRV) = (X .- k.c)' * (X′ .- k.c)
+pairwise(k::Linear, X::AbstractMatrix, X′::AbstractMatrix) = (X .- k.c)' * (X′ .- k.c)
 
 # """
 #     Poly{Tσ<:Real} <: Kernel
@@ -108,8 +114,8 @@ end
 isstationary(::Type{<:Noise}) = true
 ==(a::Noise, b::Noise) = a.σ² == b.σ²
 (k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
-pairwise(k::Noise, X::AMRV) = k.σ² .* (pairwise(SqEuclidean(), X) .== 0)
-pairwise(k::Noise, X::AMRV, X′::AMRV) = k.σ² .* (pairwise(SqEuclidean(), X, X′) .== 0)
+pairwise(k::Noise, X::AVM) = k.σ² .* (pairwise(SqEuclidean(), X) .== 0)
+pairwise(k::Noise, X::AVM, X′::AVM) = k.σ² .* (pairwise(SqEuclidean(), X, X′) .== 0)
 
 # """
 #     Wiener <: Kernel

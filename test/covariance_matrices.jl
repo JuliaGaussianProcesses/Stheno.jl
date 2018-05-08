@@ -60,4 +60,13 @@
         @test X' * (A_ \ Y) ≈ Xt_invA_Y(X, A, Y)
         @test A_ \ X ≈ A \ X
     end
+
+    # Test misc. operations.
+    let
+        rng, N, N′, D = MersenneTwister(123456), 7, 8, 2
+        A, B = randn(rng, D, N), randn(rng, D, N)
+        @test Stheno.diagAᵀA(A) ≈ diag(A'A)
+        @test Stheno.diagAᵀB(A, B) ≈ diag(A'B)
+    end
+
 end

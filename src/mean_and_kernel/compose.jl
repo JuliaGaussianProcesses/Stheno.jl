@@ -12,16 +12,16 @@ end
 # CompositeMean definitions.
 length(c::CompositeMean) = length(c.x[1])
 (μ::CompositeMean)(x) = map(μ.f, map(f->f(x), μ.x)...)
-unary_colwise(f::CompositeMean, X::AMRV) = map(f.f, map(f->unary_colwise(f, X), f.x)...)
+unary_obswise(f::CompositeMean, X::AVM) = map(f.f, map(f->unary_obswise(f, X), f.x)...)
 
 # CompositeKernel and CompositeCrossKernel definitions.
 for T in [:CompositeKernel, :CompositeCrossKernel]
     @eval (k::$T)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
     @eval size(k::$T, N::Int) = size(k.x[1], N)
     @eval isstationary(k::$T) = all(map(isstationary(k.x)))
-    for foo in [:binary_colwise, :pairwise]
-        @eval $foo(f::$T, X::AMRV) = map(f.f, map(f->$foo(f, X), f.x)...)
-        @eval $foo(f::$T, X::AMRV, X′::AMRV) = map(f.f, map(f->$foo(f, X, X′), f.x)...)
+    for foo in [:binary_obswise, :pairwise]
+        @eval $foo(f::$T, X::AVM) = map(f.f, map(f->$foo(f, X), f.x)...)
+        @eval $foo(f::$T, X::AVM, X′::AVM) = map(f.f, map(f->$foo(f, X, X′), f.x)...)
     end
 end
 
@@ -36,7 +36,7 @@ struct LhsCross <: CrossKernel
 end
 (k::LhsCross)(x, x′) = k.f(x) * k.k(x, x′)
 size(k::LhsCross, N::Int) = size(k.k, N)
-pairwise(k::LhsCross, X::AMRV, X′::AMRV) = unary_colwise(k.f, X) .* pairwise(k.k, X, X′)
+pairwise(k::LhsCross, X::AVM, X′::AVM) = unary_obswise(k.f, X) .* pairwise(k.k, X, X′)
 
 """
     RhsCross <: CrossKernel
@@ -49,7 +49,7 @@ struct RhsCross <: CrossKernel
 end
 (k::RhsCross)(x, x′) = k.k(x, x′) * k.f(x′)
 size(k::RhsCross, N::Int) = size(k.k, N)
-pairwise(k::RhsCross, X::AMRV, X′::AMRV) = pairwise(k.k, X, X′) .* unary_colwise(k.f, X′)'
+pairwise(k::RhsCross, X::AVM, X′::AVM) = pairwise(k.k, X, X′) .* unary_obswise(k.f, X′)'
 
 """
     OuterCross <: CrossKernel
@@ -62,9 +62,9 @@ struct OuterCross <: CrossKernel
 end
 (k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 size(k::OuterCross, N::Int) = size(k.k, N)
-pairwise(k::OuterCross, X::AMRV) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_colwise(k.f, X)))
-pairwise(k::OuterCross, X::AMRV, X′::AMRV) =
-    unary_colwise(k.f, X) .* pairwise(k.k, X, X′) .* unary_colwise(k.f, X′)'
+pairwise(k::OuterCross, X::AVM) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_obswise(k.f, X)))
+pairwise(k::OuterCross, X::AVM, X′::AVM) =
+    unary_obswise(k.f, X) .* pairwise(k.k, X, X′) .* unary_obswise(k.f, X′)'
 
 """
     OuterKernel <: Kernel
@@ -78,9 +78,9 @@ end
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 size(k::OuterKernel, N::Int) = size(k.k, N)
 cov(k::OuterKernel, X::AVM) = Xt_A_X(cov(k.k, X), Diagonal(mean(k.f, X)))
-pairwise(k::OuterKernel, X::AMRV) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_colwise(k.f, X)))
-pairwise(k::OuterKernel, X::AMRV, X′::AMRV) =
-    unary_colwise(k.f, X) .* pairwise(k.k, X, X′) .* unary_colwise(k.f, X′)'
+pairwise(k::OuterKernel, X::AVM) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_obswise(k.f, X)))
+pairwise(k::OuterKernel, X::AVM, X′::AVM) =
+    unary_obswise(k.f, X) .* pairwise(k.k, X, X′) .* unary_obswise(k.f, X′)'
 
 
 ############################## Convenience functionality ##############################

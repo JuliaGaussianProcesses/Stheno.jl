@@ -1,35 +1,47 @@
-using IterTools
+using IterTools, FillArrays
 
 import Base: length, size
 import Distances: pairwise
-import Base: ==
 
-abstract type MeanFunction end
-abstract type CrossKernel end
-abstract type Kernel <: CrossKernel end
+@inline isstationary(::Type) = false
+@inline isstationary(x) = isstationary(typeof(x))
 
-# Fallback implementations for `unary_colwise`.
-@inline unary_colwise(f, X::AMRV) = unary_colwise_fallback(f, X)
+# Number of observations.
+@inline nobs(x::AbstractVector) = length(x)
+@inline nobs(X::AbstractMatrix) = size(X, 2)
 
-unary_colwise(f, x::AbstractVector) = unary_colwise(f, RowVector(x))
-unary_colwise_fallback(f, x::RowVector) = map(f, x')
-unary_colwise_fallback(f, X::AbstractMatrix) = [f(view(X, :, n)) for n in 1:size(X, 2)]
+# Dimensionality of observations.
+@inline ndims(x::AbstractVector) = 1
+@inline ndims(X::AbstractMatrix) = size(X, 1)
 
-# Fallback implementations for `binary_colwise`.
-@inline binary_colwise(f, X::AMRV) =
+# Return observation in appropriate way depending upon container type.
+@inline getobs(x::AbstractVector, n) = x[n]
+@inline getobs(X::AbstractMatrix, n) = X[:, n]
+
+# Fallback implementations for `unary_obswise`.
+@inline unary_obswise(f, X::AbstractVecOrMat) = unary_obswise_fallback(f, X)
+
+unary_obswise_fallback(f, x::AbstractVector) = map(f, x)
+unary_obswise_fallback(f, X::AbstractMatrix) = [f(getobs(X, n)) for n in 1:nobs(X)]
+
+# Fallback implementations for `binary_obswise`.
+@inline binary_obswise(f, X::AbstractVecOrMat) =
     isstationary(f) ?
-        Fill(f(X[:, 1], X[:, 1]), size(X, 2)) :
-        binary_colwise(f, X, X)
-@inline binary_colwise(f, X::AMRV, X′::AMRV) = binary_colwise_fallback(f, X, X′)
+        Fill(f(getobs(X, 1), getobs(X, 1)), nobs(X)) :
+        binary_obswise(f, X, X)
+@inline binary_obswise(f, X::AVM, X′::AVM) = binary_obswise_fallback(f, X, X′)
 
-binary_colwise_fallback(f, x::RowVector, x′::RowVector) = map(f, x', x′')
-binary_colwise_fallback(f, X::AbstractMatrix, X′::AbstractMatrix) =
-    [f(view(X, :, n), view(X′, :, n)) for n in 1:size(X, 2)]
+binary_obswise_fallback(f, x::AbstractVector, x′::AbstractVector) = map(f, x, x′)
+binary_obswise_fallback(f, X::AVM, X′::AVM) =
+    [f(getobs(X, n), getobs(X′, n)) for n in 1:nobs(X)]
 
 # Fallback implementation for `pairwise`.
-@inline pairwise(f, X::AMRV) = pairwise(f, X, X)
-@inline pairwise(f, X::AMRV, X′::AMRV) = pairwise_fallback(f, X, X′)
+@inline pairwise(f, X::AbstractVecOrMat) = pairwise(f, X, X)
+@inline pairwise(f, X::AVM, X′::AVM) = pairwise_fallback(f, X, X′)
 
-pairwise_fallback(f, x::RowVector, x′::RowVector) = broadcast(f, x', x′)
-pairwise_fallback(f, X::AbstractMatrix, X′::AbstractMatrix) =
-    [f(view(X, :, p), view(X′, :, q)) for p in 1:size(X, 2), q in 1:size(X′, 2)]
+pairwise_fallback(f, X::AVM, X′::AVM) =
+    [f(getobs(X, p), getobs(X′, q)) for p in 1:nobs(X), q in 1:nobs(X′)]
+
+# COMMITING TYPE PIRACY!
+pairwise(f::PreMetric, x::AbstractVector) = pairwise(f, RowVector(x))
+pairwise(f::PreMetric, x::AV, x′::AV) = pairwise(f, RowVector(x), RowVector(x′))

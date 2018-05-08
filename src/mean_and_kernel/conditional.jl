@@ -11,8 +11,9 @@ struct CondCache
     α::AV{<:Real}
     X::AVM
     function CondCache(kff::Kernel, μf::MeanFunction, X::AVM, f::AV{<:Real})
-        Σff = cov(kff, X)
-        return new(Σff, Σff \ (f - mean(μf, X)), X)
+        μfX, Σff = unary_obswise(μf, X), LazyPDMat(pairwise(kff, X))
+        δ = (f .- μfX) .* .!(f .≈ μfX)
+        return new(Σff, Σff \ δ, X)
     end
 end
 show(io::IO, ::CondCache) = show(io, "CondCache")
@@ -28,7 +29,10 @@ struct ConditionalMean <: MeanFunction
     kfg::CrossKernel
 end
 length(μ::ConditionalMean) = length(μ.μg)
-mean(μ::ConditionalMean, Xg::AVM) = mean(μ.μg, Xg) + xcov(μ.kfg, μ.c.X, Xg)' * μ.c.α
+(μ::ConditionalMean)(x::Number) = unary_obswise(μ, [x])
+(μ::ConditionalMean)(x::AbstractVector) = unary_obswise(μ, reshape(x, length(x), 1))
+unary_obswise(μ::ConditionalMean, Xg::AVM) =
+    unary_obswise(μ.μg, Xg) + pairwise(μ.kfg, μ.c.X, Xg)' * μ.c.α
 
 """
     ConditionalKernel <: Kernel
@@ -40,18 +44,37 @@ struct ConditionalKernel <: Kernel
     kfg::CrossKernel
     kgg::Kernel
 end
+(k::ConditionalKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
+(k::ConditionalKernel)(x::AV, x′::AV) =
+    binary_obswise(k, reshape(x, length(x), 1), reshape(x′, length(x′), 1))[1]
 size(k::ConditionalKernel, N::Int) = size(k.kgg, N)
-function cov(k::ConditionalKernel, X::AVM)
-    Σfg, Σgg = xcov(k.kfg, k.c.X, X), cov(k.kgg, X)
-    return Σgg - Xt_invA_X(k.c.Σff, Σfg)
+
+function binary_obswise(k::ConditionalKernel, X::AVM)
+    σgg = binary_obswise(k.kgg, X)
+    Σfg_X = pairwise(k.kfg, k.c.X, X)
+    σ′gg = diag_Xᵀ_invA_X(k.c.Σff, Σfg_X)
+    return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
 end
-function xcov(k::ConditionalKernel, X::AVM, X′::AVM)
-    Σfg_X, Σfg_X′, Σfg_XX′ = xcov(k.kfg, k.c.X, X), xcov(k.kfg, k.c.X, X′), xcov(k.kgg, X, X′)
-    return Σfg_XX′ - Xt_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
+function binary_obswise(k::ConditionalKernel, X::AVM, X′::AVM)
+    σgg = binary_obswise(k.kgg, X, X′)
+    Σfg_X = pairwise(k.kfg, k.c.X, X)
+    Σfg_X′ = pairwise(k.kfg, k.c.X, X′)
+    σ′gg = diag_Xᵀ_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
+    return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
 end
-function marginal_cov(k::ConditionalKernel, X::AVM)
-    Σfg, Σgg = xcov(k.kfg, k.c.X, X), marginal_cov(k.kgg, X)
-    return Σgg - vec(sum(abs2, Σfg' / chol(k.c.Σff), 2))
+
+function pairwise(k::ConditionalKernel, X::AVM)
+    Σgg = pairwise(k.kgg, X)
+    Σfg_X = pairwise(k.kfg, k.c.X, X)
+    Σ′gg = Xt_invA_X(k.c.Σff, Σfg_X)
+    return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
+end
+function pairwise(k::ConditionalKernel, X::AVM, X′::AVM)
+    Σgg = pairwise(k.kgg, X, X′)
+    Σfg_X = pairwise(k.kfg, k.c.X, X)
+    Σfg_X′ = pairwise(k.kfg, k.c.X, X′)
+    Σ′gg = Xt_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
+    return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
 end
 
 """
@@ -65,8 +88,23 @@ struct ConditionalCrossKernel <: CrossKernel
     kfh::CrossKernel
     kgh::CrossKernel
 end
+(k::ConditionalCrossKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
+(k::ConditionalCrossKernel)(x::AV, x′::AV) =
+    binary_obswise(k, reshape(x, length(x), 1), reshape(x′, length(x′), 1))[1]
 size(k::ConditionalCrossKernel, N::Int) = size(k.kgh, N)
-function xcov(k::ConditionalCrossKernel, Xg::AVM, Xh::AVM)
-    Σfg, Σfh, Σgh = xcov(k.kfg, k.c.X, Xg), xcov(k.kfh, k.c.X, Xh), xcov(k.kgh, Xg, Xh)
-    return Σgh - Xt_invA_Y(Σfg, k.c.Σff, Σfh)
+
+function binary_obswise(k::ConditionalCrossKernel, X::AVM, X′::AVM)
+    σgh = binary_obswise(k.kgh, X, X′)
+    Σfg_X = pairwise(k.kfg, k.c.X, X)
+    Σfh_X′ = pairwise(k.kfh, k.c.X, X′)
+    σ′gh = diag_Xᵀ_invA_Y(Σfg_X, k.c.Σff, Σfh_X′)
+    return (σgh .- σ′gh) .* .!(σgh .≈ σ′gh)
+end
+
+function pairwise(k::ConditionalCrossKernel, Xg::AVM, Xh::AVM)
+    Σgh = pairwise(k.kgh, Xg, Xh)
+    Σfg_Xg = pairwise(k.kfg, k.c.X, Xg)
+    Σfh_Xh = pairwise(k.kfh, k.c.X, Xh)
+    Σ′gh = Xt_invA_Y(Σfg_Xg, k.c.Σff, Σfh_Xh)
+    return (Σgh .- Σ′gh) .* .!(Σgh .≈ Σ′gh)
 end

@@ -3,7 +3,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
 
 @testset "compose" begin
 
-    # Test CompositeMean functionality.
+    # Test CompositeMean.
     let
         rng, N, D = MersenneTwister(123456), 100, 2
         μ1, μ2 = ConstantMean(1.0), ZeroMean{Float64}()
@@ -12,110 +12,88 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         @test ν1(X[:, 1]) == μ1(X[:, 1]) + μ2(X[:, 1])
         @test ν2(X[:, 3]) == μ1(X[:, 3]) .* μ2(X[:, 3])
 
-        unary_colwise_tests(ν1, x)
-        unary_colwise_tests(ν1, X)
-        unary_colwise_tests(ν2, x)
-        unary_colwise_tests(ν2, X)
+        mean_function_tests(ν1, x)
+        mean_function_tests(ν1, X)
+        mean_function_tests(ν2, x)
+        mean_function_tests(ν2, X)
     end
 
-    # Test binary MapReduce functionality.
+    # Test CompositeKernel and CompositeCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x, X = randn(rng, D, N), RowVector(randn(rng, N))
-        x′, X′ = randn(rng, D, N′), RowVector(randn(rng, N′))
-        xr, Xr = randn(rng, D, N), RowVector(randn(rng, N))
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
 
         # Define base kernels and do composition.
         k1, k2 = EQ(), Linear(randn(rng))
         ν1, ν2 = CompositeKernel(+, k1, k2), CompositeCrossKernel(*, k1, k2)
-        @test ν1(X[:, 1], X′[:, 2]) == k1(X[:, 1], X′[:, 2]) + k2(X[:, 1], X′[:, 2])
-        @test ν2(X[:, 1], X′[:, 2]) == k1(X[:, 1], X′[:, 2]) .* k2(X[:, 1], X′[:, 2])
+        @test ν1(X0[:, 1], X1[:, 2]) == k1(X0[:, 1], X1[:, 2]) + k2(X0[:, 1], X1[:, 2])
+        @test ν2(X0[:, 1], X1[:, 2]) == k1(X0[:, 1], X1[:, 2]) .* k2(X0[:, 1], X1[:, 2])
 
-        binary_colwise_tests(ν1, x, xr)
-        binary_colwise_tests(ν1, X, Xr)
-        binary_colwise_tests(ν2, x, xr)
-        binary_colwise_tests(ν2, X, Xr)
-
-        pairwise_tests(ν1, x, x′)
-        pairwise_tests(ν1, X, X′)
-        pairwise_tests(ν2, x, x′)
-        pairwise_tests(ν2, X, X′)
+        cross_kernel_tests(ν2, x0, x1, x2)
+        cross_kernel_tests(ν2, X0, X1, X2)
+        kernel_tests(ν1, x0, x1, x2)
+        kernel_tests(ν1, X0, X1, X2)
     end
 
     # Test LhsCross functionality.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x, X = randn(rng, D, N), RowVector(randn(rng, N))
-        x′, X′ = randn(rng, D, N′), RowVector(randn(rng, N′))
-        xr, Xr = randn(rng, D, N), RowVector(randn(rng, N))
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
 
         f, k = x->sum(abs2, x), EQ()
         ν = LhsCross(f, k)
 
-        @test ν(X[:, 1], X[:, 2]) == f(X[:, 1]) * k(X[:, 1], X[:, 2])
+        @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2])
 
-        binary_colwise_tests(ν, x, xr)
-        binary_colwise_tests(ν, X, Xr)
-
-        pairwise_tests(ν, x, x′)
-        pairwise_tests(ν, X, X′)
+        cross_kernel_tests(ν, x0, x1, x2)
+        cross_kernel_tests(ν, X0, X1, X2)
     end
 
     # Test RhsCross functionality.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x, X = randn(rng, D, N), RowVector(randn(rng, N))
-        x′, X′ = randn(rng, D, N′), RowVector(randn(rng, N′))
-        xr, Xr = randn(rng, D, N), RowVector(randn(rng, N))
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
 
         f, k = x->sum(abs2, x), EQ()
         ν = RhsCross(k, f)
 
-        @test ν(X[:, 1], X[:, 2]) == k(X[:, 1], X[:, 2]) * f(X[:, 2])
+        @test ν(X0[:, 1], X0[:, 2]) == k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
 
-        binary_colwise_tests(ν, x, xr)
-        binary_colwise_tests(ν, X, Xr)
-
-        pairwise_tests(ν, x, x′)
-        pairwise_tests(ν, X, X′)
+        cross_kernel_tests(ν, x0, x1, x2)
+        cross_kernel_tests(ν, X0, X1, X2)
     end
 
     # Test OuterCross.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x, X = randn(rng, D, N), RowVector(randn(rng, N))
-        x′, X′ = randn(rng, D, N′), RowVector(randn(rng, N′))
-        xr, Xr = randn(rng, D, N), RowVector(randn(rng, N))
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
 
         f, k = x->sum(abs2, x), EQ()
         ν = OuterCross(f, k)
 
-        @test ν(X[:, 1], X[:, 2]) == f(X[:, 1]) * k(X[:, 1], X[:, 2]) * f(X[:, 2])
+        @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
 
-        binary_colwise_tests(ν, x, xr)
-        binary_colwise_tests(ν, X, Xr)
-
-        pairwise_tests(ν, x, x′)
-        pairwise_tests(ν, X, X′)
+        cross_kernel_tests(ν, x0, x1, x2)
+        cross_kernel_tests(ν, X0, X1, X2)
     end
 
     # Test OuterKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x, X = randn(rng, D, N), RowVector(randn(rng, N))
-        x′, X′ = randn(rng, D, N′), RowVector(randn(rng, N′))
-        xr, Xr = randn(rng, D, N), RowVector(randn(rng, N))
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
 
         f, k = x->sum(abs2, x), EQ()
         ν = OuterKernel(f, k)
 
-        @test ν(X[:, 1], X[:, 2]) == f(X[:, 1]) * k(X[:, 1], X[:, 2]) * f(X[:, 2])
+        @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
 
-        binary_colwise_tests(ν, x, xr)
-        binary_colwise_tests(ν, X, Xr)
-
-        pairwise_tests(ν, x, x′)
-        pairwise_tests(ν, X, X′)
+        kernel_tests(ν, x0, x1, x2)
+        kernel_tests(ν, X0, X1, X2)
     end
 
     # Test mean function composition.
@@ -131,14 +109,14 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
 
         # Test addition.
         @test μ + μ′ == CompositeMean(+, μ, μ′)
-        @test unary_colwise(μ + μ′, X) == unary_colwise(μ, X) + unary_colwise(μ′, X)
+        @test unary_obswise(μ + μ′, X) == unary_obswise(μ, X) + unary_obswise(μ′, X)
         @test μ + 5 == CompositeMean(+, μ, ConstantMean(5))
         @test 2.34 + μ′ == CompositeMean(+, ConstantMean(2.34), μ′)
         # @test mean(μ′ + sin, X) == mean(μ′, X) + CustomMean()
 
         # Test multiplication.
         @test μ * μ′ == CompositeMean(*, μ, μ′)
-        @test unary_colwise(μ * μ′, X) == unary_colwise(μ, X) .* unary_colwise(μ′, X)
+        @test unary_obswise(μ * μ′, X) == unary_obswise(μ, X) .* unary_obswise(μ′, X)
         @test μ * 4.32 == CompositeMean(*, μ, ConstantMean(4.32))
         @test 4.23 * μ′ == CompositeMean(*, ConstantMean(4.23), μ′)
     end

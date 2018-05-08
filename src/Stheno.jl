@@ -7,7 +7,7 @@ module Stheno
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
-    const AVM{T} = Union{AbstractVecOrMat{T}, RowVector{T}}
+    const AVM{T} = AbstractVecOrMat{T}
     const AMRV{T} = Union{AbstractMatrix{T}, RowVector{T}}
 
     # Some extensions to BlockArrays.jl.
@@ -22,7 +22,7 @@ module Stheno
     include("mean_and_kernel/kernel.jl")
     include("mean_and_kernel/compose.jl")
     include("mean_and_kernel/finite.jl")
-    # include("mean_and_kernel/conditional.jl")
+    include("mean_and_kernel/conditional.jl")
     # include("mean_and_kernel/cat.jl")
     # include("mean_and_kernel/transform.jl")
     # include("mean_and_kernel/input_transform.jl")

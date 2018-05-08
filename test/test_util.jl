@@ -1,89 +1,109 @@
 import Stheno: AV, AVM, AMRV
-using Stheno: unary_colwise, unary_colwise_fallback, binary_colwise,
-    binary_colwise_fallback, pairwise, pairwise_fallback
+using Stheno: unary_obswise, unary_obswise_fallback, binary_obswise,
+    binary_obswise_fallback, pairwise, pairwise_fallback, MeanFunction, Kernel, CrossKernel,
+    nobs, ndims
 
-# A collection of tests that any kernel should definitely be able to pass.
-function _generic_kernel_tests(k::Kernel, X::AVM, X′::AVM)
-    N, N′ = sum(size.(X[:, 1], 1)), sum(size.(X′[:, 1], 1))
+"""
+    unary_obswise_tests(f, X::AVM)
 
-    # Test mechanics.
-    @test k == k
-    @test size(xcov(k, X, X)) == (N, N)
-    @test size(xcov(k, X, X′)) == (N, N′)
-    @test size(xcov(k, X′, X)) == (N′, N)
-    @test typeof(cov(k, X)) <: LazyPDMat
-    @test typeof(marginal_cov(k, X)) <: AbstractVector
-
-    # Test numerical output consistency.
-    @test xcov(k, X, X) ≈ cov(k, X)
-    @test marginal_cov(k, X) ≈ diag(Matrix(cov(k, X)))
-    @test xcov(k, X, X′) ≈ xcov(k, X′, X)'
+Consistency tests intended for use with `MeanFunction`s.
+"""
+function unary_obswise_tests(f, X::AVM)
+    @test unary_obswise(f, X) isa AbstractVector
+    @test length(unary_obswise(f, X)) == nobs(X)
+    @test unary_obswise(f, X) ≈ unary_obswise_fallback(f, X)
 end
 
 """
-    unary_colwise_tests(f, X::AMRV)
+    binary_obswise_tests(f, X::AVM, X′::AVM)
 
-Check that definitions of `unary_colwise` are self-consistent for `f`. Requires both `x` and
-`X` to ensure that optimisations for single input and scalar-valued element cases are
-handled correctly.
+Consistency tests intended for use with `CrossKernel`s.
 """
-function unary_colwise_tests(f, X::AMRV)
-    @test unary_colwise(f, X) isa AbstractVector
-    @test length(unary_colwise(f, X)) == size(X, 2)
-    @test unary_colwise(f, X) ≈ unary_colwise_fallback(f, X)
+function binary_obswise_tests(f, X::AVM, X′::AVM)
+    @test binary_obswise(f, X, X′) isa AbstractVector
+    @test length(binary_obswise(f, X, X′)) == nobs(X)
+    @test binary_obswise(f, X, X′) ≈ binary_obswise_fallback(f, X, X′)
 end
 
 """
-    binary_colwise_tests(f, X::AMRV, X′::AMRV)
+    binary_obswise_tests(f, X::AVM)
 
-Check that definitions of `binary_colwise` are self-consistent for `f`.
+Consistency tests intended for use with `Kernel`s.
 """
-function binary_colwise_tests(f, X::AMRV, X′::AMRV)
+function binary_obswise_tests(f, X::AVM)
+    @test binary_obswise(f, X) isa AbstractVector
+    @test length(binary_obswise(f, X)) == nobs(X)
+    @test binary_obswise(f, X) ≈ binary_obswise_fallback(f, X, X)
+end
+
+"""
+    pairwise_tests(f, X::AVM, X′::AVM)
     
-    @assert size(X) == size(X′)
 
-    @test binary_colwise(f, X) isa AbstractVector
-    @test binary_colwise(f, X, X′) isa AbstractVector
-    @test length(binary_colwise(f, X)) == size(X, 2)
-    @test length(binary_colwise(f, X, X′)) == size(X, 2)
-
-    @test binary_colwise(f, X) ≈ binary_colwise_fallback(f, X, X)
-    @test binary_colwise(f, X, X′) ≈ binary_colwise_fallback(f, X, X′)
-end
-
+Consistency tests intended for use with `CrossKernel`s.
 """
-    pairwise_tests(f, X::AMRV, X′::AMRV)
-
-Check that the definitions of `pairwise` are self-consistent for `f`.
-"""
-function pairwise_tests(f, X::AMRV, X′::AMRV)
-
-    @assert size(X, 1) == size(X′, 1)
-
-    @test pairwise(f, X) isa AbstractMatrix
+function pairwise_tests(f, X::AVM, X′::AVM)
     @test pairwise(f, X, X′) isa AbstractMatrix
-    @test size(pairwise(f, X)) == (size(X, 2), size(X, 2))
-    @test size(pairwise(f, X, X′)) == (size(X, 2), size(X′, 2))
-
-    @test pairwise(f, X) ≈ pairwise_fallback(f, X, X)
+    @test size(pairwise(f, X, X′)) == (nobs(X), nobs(X′))
     @test pairwise(f, X, X′) ≈ pairwise_fallback(f, X, X′)
 end
 
 """
-    mean_function_tests(f, X::AMRV)
+    pairwise_tests(f, X::AVM)
 
-Tests that any mean function `f` should be able to pass.
+Consistency tests intended for use with `Kernel`s.
 """
-function mean_function_tests(f, X::AMRV)
-    unary_colwise_tests(f, X)
+function pairwise_tests(f, X::AVM)
+    @test pairwise(f, X) isa AbstractMatrix
+    @test size(pairwise(f, X)) == (nobs(X), nobs(X))
+    @test pairwise(f, X) ≈ pairwise_fallback(f, X, X)
 end
 
 """
-    kernel_tests(k, X::AMRV)
+    mean_function_tests(μ::MeanFunction, X::AVM)
 
-Tests that any kernel `k` should be able to pass.
+Tests that any mean function `μ` should be able to pass.
 """
-function kernel_tests(k, X::AMRV, X′::AMRV)
-    binary_colwise_tests(k, X, X′)
-    pairwise_tests(k, X, X′)
+function mean_function_tests(μ::MeanFunction, X::AVM)
+    unary_obswise_tests(μ, X)
+end
+
+"""
+    cross_kernel_tests(k::CrossKernel, X::AVM, X′::AVM)
+
+Tests that any kernel `k` should be able to pass. Requires that `nobs(X0) == nobs(X1)` and
+`nobs(X0) ≠ nobs(X2)`.
+"""
+function cross_kernel_tests(k::CrossKernel, X0::AVM, X1::AVM, X2::AVM)
+    @assert nobs(X0) == nobs(X1)
+    @assert nobs(X0) ≠ nobs(X2)
+
+    binary_obswise_tests(k, X0, X1)
+    pairwise_tests(k, X0, X2)
+end
+
+"""
+    kernel_tests(k::Kernel, X0::AVM, X1::AVM, X2::AVM)
+
+Tests that any kernel `k` should be able to pass. Requires that `nobs(X0) == nobs(X1)` and
+`nobs(X0) ≠ nobs(X2)`.
+"""
+function kernel_tests(k::Kernel, X0::AVM, X1::AVM, X2::AVM)
+    @assert nobs(X0) == nobs(X1)
+    @assert nobs(X0) ≠ nobs(X2)
+
+    # Generic tests.
+    cross_kernel_tests(k, X0, X1, X2)
+    binary_obswise(k, X0)
+    pairwise_tests(k, X0)
+
+    # Kernels should be symmetric for same arguments.
+    @test pairwise(k, X0) ≈ pairwise(k, X0)'
+
+    # k(x, x′) == k(x′, x)
+    @test binary_obswise(k, X0, X1) ≈ binary_obswise(k, X1, X0)
+    @test pairwise(k, X0, X2) ≈ pairwise(k, X2, X0)'
+
+    # Should be (approximately) positive definite.
+    @test all(eigvals(Matrix(pairwise(k, X0))) .> -1e-9)
 end

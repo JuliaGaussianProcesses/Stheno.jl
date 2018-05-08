@@ -1,5 +1,10 @@
 using FillArrays
-export CustomMean
+
+import Base: mean, ==
+
+export CustomMean, mean
+
+abstract type MeanFunction end
 
 length(::MeanFunction) = Inf
 size(μ::MeanFunction) = (size(μ, 1),)
@@ -23,7 +28,7 @@ Returns zero (of the appropriate type) everywhere.
 """
 struct ZeroMean{T<:Real} <: MeanFunction end
 @inline (::ZeroMean{T})(x) where T = zero(T)
-@inline unary_colwise(z::ZeroMean{T}, X::AMRV) where T = Zeros{T}(size(X, 2))
+@inline unary_obswise(z::ZeroMean{T}, X::AVM) where T = Zeros{T}(nobs(X))
 ==(::ZeroMean, ::ZeroMean) = true
 
 """
@@ -35,5 +40,5 @@ struct ConstantMean{T<:Real} <: MeanFunction
     c::T
 end
 @inline (μ::ConstantMean)(x) = μ.c
-@inline unary_colwise(μ::ConstantMean, X::AMRV) = Fill(μ.c, size(X, 2))
+@inline unary_obswise(μ::ConstantMean, X::AVM) = Fill(μ.c, nobs(X))
 ==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c 

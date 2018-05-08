@@ -1,57 +1,48 @@
+using Stheno: ZeroKernel, ConstantKernel
+
 @testset "kernel" begin
 
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x, X = randn(rng, D, N), RowVector(randn(rng, N))
-        x′, X′ = randn(rng, D, N′), RowVector(randn(rng, N′))
-        xr, Xr = randn(rng, D, N), RowVector(randn(rng, N))
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
 
         # Tests for ZeroKernel.
         k_zero = ZeroKernel{Float64}()
         @test isstationary(k_zero)
         @test k_zero(0, 0) === zero(Float64)
-        binary_colwise_tests(k_zero, x, xr)
-        binary_colwise_tests(k_zero, X, Xr)
-        pairwise_tests(k_zero, x, x′)
-        pairwise_tests(k_zero, X, X′)
         @test size(k_zero, 1) == Inf && size(k_zero, 2) == Inf
         @test size(k_zero) == (Inf, Inf)
+        kernel_tests(k_zero, x0, x1, x2)
+        kernel_tests(k_zero, X0, X1, X2)
 
         # Tests for ConstantKernel.
         k_const = ConstantKernel(randn(rng))
         @test isstationary(k_const)
-        binary_colwise_tests(k_const, x, xr)
-        binary_colwise_tests(k_const, X, Xr)
-        pairwise_tests(k_const, x, x′)
-        pairwise_tests(k_const, X, X′)
         @test size(k_const, 1) == Inf && size(k_const, 2) == Inf
         @test size(k_const) == (Inf, Inf)
+        kernel_tests(k_const, x0, x1, x2)
+        kernel_tests(k_const, X0, X1, X2)
 
         # Tests for EQ.
         @test isstationary(EQ())
-        binary_colwise_tests(EQ(), x, xr)
-        binary_colwise_tests(EQ(), X, Xr)
-        pairwise_tests(EQ(), x, x′)
-        pairwise_tests(EQ(), X, X′)
         @test size(EQ(), 1) == Inf && size(EQ(), 2) == Inf
         @test size(EQ()) == (Inf, Inf)
+        kernel_tests(EQ(), x0, x1, x2)
+        kernel_tests(EQ(), X0, X1, X2)
 
         # Tests for Linear.
         @test !isstationary(Linear)
         a, b = Linear(randn(rng)), Linear(randn(rng))
         @test a == a && a ≠ b
-        binary_colwise_tests(Linear(randn(rng)), x, xr)
-        binary_colwise_tests(Linear(randn(rng)), X, Xr)
-        pairwise_tests(Linear(randn(rng)), x, x′)
-        pairwise_tests(Linear(randn(rng)), X, X′)
+        kernel_tests(a, x0, x1, x2)
+        kernel_tests(a, X0, X1, X2)
 
         # Tests for Noise
         @test isstationary(Noise(randn(rng)))
         @test Noise(5.0) == Noise(5)
-        binary_colwise_tests(Noise(randn(rng)), x, xr)
-        binary_colwise_tests(Noise(randn(rng)), X, Xr)
-        pairwise_tests(Noise(randn(rng)), x, x′)
-        pairwise_tests(Noise(randn(rng)), X, X′)
+        kernel_tests(Noise(5), x0, x1, x2)
+        kernel_tests(Noise(5), X0, X1, X2)
     end
 
     # # Tests for Rational Quadratic (RQ) kernel.
