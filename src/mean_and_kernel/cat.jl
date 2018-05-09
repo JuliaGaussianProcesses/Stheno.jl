@@ -40,7 +40,7 @@ size(k::CatCrossKernel, N::Int) = N == 1 ?
 (k::CatCrossKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any}) =
     k.ks[x[1], x′[1]](x[2], x′[2])
 function pairwise(k::CatCrossKernel, X::AV{<:AVM}, X′::AV{<:AVM})
-    Ω = BlockMatrix{Float64}(uninitialized_blocks, nobs.(X), nobs.(X′))
+    Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X′))
     for q in 1:nblocks(Ω, 2), p in 1:nblocks(Ω, 1)
         setblock!(Ω, pairwise(k.ks[p, q], X[p], X′[q]), p, q)
     end
@@ -80,8 +80,9 @@ binary_obswise(k::CatKernel, X::AV{<:AVM}) = BlockVector(binary_obswise.(k.ks_di
 binary_obswise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM}) =
     BlockVector(binary_obswise.(k.ks_diag, X, X′))
 
+Base.ctranspose(z::Zeros{T}) where {T} = Zeros{T}(reverse(size(z)))
 function pairwise(k::CatKernel, X::AV{<:AVM})
-    Σ = BlockMatrix{Float64}(uninitialized_blocks, nobs.(X), nobs.(X))
+    Σ = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X))
     for q in eachindex(k.ks_diag)
         setblock!(Σ, Matrix(pairwise(k.ks_diag[q], X[q])), q, q)
         for p in 1:q-1

@@ -1,3 +1,4 @@
+using Revise
 using Stheno, Plots
 
 
@@ -83,17 +84,17 @@ posterior_plot = plot(Xplot, f′Xp;
     linecolor=:blue,
     linealpha=0.2,
     legend=false);
-plot!(posterior_plot, Xplot, μf′;
+plot!(posterior_plot, Xplot, μ′f;
     linewidth=2.0,
     linecolor=:blue);
-plot!(posterior_plot, Xplot, [μf′ μf′];
+plot!(posterior_plot, Xplot, [μ′f μ′f];
     linewidth=0.0,
-    fillrange=[μf′ .- 3 .* σy′, μf′ .+ 3 * σy′],
+    fillrange=[μ′f .- 3 .* σ′y, μ′f .+ 3 * σ′y],
     fillalpha=0.3,
     fillcolor=:red);
-plot!(posterior_plot, Xplot, [μf′ μf′];
+plot!(posterior_plot, Xplot, [μ′f μ′f];
     linewidth=0.0,
-    fillrange=[μf′.- 3  .* σf′ μf′ .+ 3 .* σf′],
+    fillrange=[μ′f.- 3  .* σ′f μ′f .+ 3 .* σ′f],
     fillalpha=0.5,
     fillcolor=:blue);
 scatter!(posterior_plot, X, ŷ;
