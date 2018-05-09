@@ -24,6 +24,7 @@ using FillArrays
         μ = CatMean([μ1, μ2])
 
         @test μ == CatMean(μ1, μ2)
+        @test length(μ) == Inf
         @test unary_obswise(μ, [X1, X2]) == vcat(unary_obswise(μ1, X1), unary_obswise(μ2, X2))
         @test unary_obswise(μ, [x1, x2]) == vcat(unary_obswise(μ1, x1), unary_obswise(μ2, x2))
 
@@ -78,7 +79,5 @@ using FillArrays
         @test pairwise(k, [X1, X2], [X1′, X2′]) == manual
 
         kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
-
-        # _generic_kernel_tests(k, [X1, X2], [X1′, X2′])
     end
 end

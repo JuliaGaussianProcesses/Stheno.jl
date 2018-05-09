@@ -29,8 +29,8 @@ struct ConditionalMean <: MeanFunction
     kfg::CrossKernel
 end
 length(μ::ConditionalMean) = length(μ.μg)
-(μ::ConditionalMean)(x::Number) = unary_obswise(μ, [x])
-(μ::ConditionalMean)(x::AbstractVector) = unary_obswise(μ, reshape(x, length(x), 1))
+(μ::ConditionalMean)(x::Number) = unary_obswise(μ, [x])[1]
+(μ::ConditionalMean)(x::AbstractVector) = unary_obswise(μ, reshape(x, length(x), 1))[1]
 unary_obswise(μ::ConditionalMean, Xg::AVM) =
     unary_obswise(μ.μg, Xg) + pairwise(μ.kfg, μ.c.X, Xg)' * μ.c.α
 

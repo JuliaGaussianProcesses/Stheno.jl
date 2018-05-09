@@ -18,7 +18,7 @@ unary_obswise(f::CompositeMean, X::AVM) = map(f.f, map(f->unary_obswise(f, X), f
 for T in [:CompositeKernel, :CompositeCrossKernel]
     @eval (k::$T)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
     @eval size(k::$T, N::Int) = size(k.x[1], N)
-    @eval isstationary(k::$T) = all(map(isstationary(k.x)))
+    @eval isstationary(k::$T) = all(map(isstationary, k.x))
     for foo in [:binary_obswise, :pairwise]
         @eval $foo(f::$T, X::AVM) = map(f.f, map(f->$foo(f, X), f.x)...)
         @eval $foo(f::$T, X::AVM, X′::AVM) = map(f.f, map(f->$foo(f, X, X′), f.x)...)
@@ -62,7 +62,6 @@ struct OuterCross <: CrossKernel
 end
 (k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 size(k::OuterCross, N::Int) = size(k.k, N)
-pairwise(k::OuterCross, X::AVM) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_obswise(k.f, X)))
 pairwise(k::OuterCross, X::AVM, X′::AVM) =
     unary_obswise(k.f, X) .* pairwise(k.k, X, X′) .* unary_obswise(k.f, X′)'
 
@@ -77,7 +76,6 @@ struct OuterKernel <: Kernel
 end
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 size(k::OuterKernel, N::Int) = size(k.k, N)
-cov(k::OuterKernel, X::AVM) = Xt_A_X(cov(k.k, X), Diagonal(mean(k.f, X)))
 pairwise(k::OuterKernel, X::AVM) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_obswise(k.f, X)))
 pairwise(k::OuterKernel, X::AVM, X′::AVM) =
     unary_obswise(k.f, X) .* pairwise(k.k, X, X′) .* unary_obswise(k.f, X′)'

@@ -38,6 +38,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
         @test unary_obswise(μx, 1:N-1) == unary_obswise(μ, x[1:N-1])
         @test unary_obswise(μx, 2:N) == unary_obswise(μ, x[2:N])
         @test unary_obswise(μx, 2:N-2) == unary_obswise(μ, x[2:N-2])
+
+        show(IOBuffer(), μX)
     end
 
     # Tests for FiniteKernel.
@@ -76,6 +78,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
             binary_obswise_tests(k2, r, r)
             pairwise_tests(k′, r, r)
         end
+
+        show(IOBuffer(), kX)
     end
 
     # Tests for LhsFiniteCrossKernel.
@@ -95,6 +99,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
 
         cross_kernel_tests(k′, eachindex(k′, 1), X, X′)
         cross_kernel_tests(kx, eachindex(kx, 1), x, x′)
+
+        show(IOBuffer(), k′)
     end
 
     # Tests for RhsFiniteCrossKernel.
@@ -115,6 +121,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
 
         cross_kernel_tests(k′, X, 1:N, eachindex(k′, 2))
         cross_kernel_tests(kx, x, 1:N, eachindex(kx, 2))
+
+        show(IOBuffer(), k′)
     end
 
     # Tests for FiniteCrossKernel.
@@ -148,5 +156,7 @@ using Stheno: FiniteMean, ConstantMean, getobs
         @test pairwise(k2, 2:N-1, c) == pairwise(k′, 2:N-1, c)
 
         cross_kernel_tests(k2, r, r, c)
+
+        show(IOBuffer(), k′)
     end
 end

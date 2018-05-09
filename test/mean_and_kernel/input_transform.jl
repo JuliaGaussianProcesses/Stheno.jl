@@ -8,6 +8,8 @@ using Stheno: ConstantMean, ITMean, ITKernel, getobs
         μ, f, X = ConstantMean(randn(rng)), x->sum(abs2, x), randn(rng, D, N)
         μf = ITMean(μ, f)
 
+        @test ITMean(μ, identity) == μ
+        @test length(μf) == Inf
         @test μf(getobs(X, 1)) == (μ ∘ f)(getobs(X, 1))
         mean_function_tests(μf, X)
     end
@@ -18,6 +20,9 @@ using Stheno: ConstantMean, ITMean, ITKernel, getobs
         k, f = EQ(), x->sum(abs2, x)
         X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
         kf = ITKernel(k, f)
+
+        @test ITKernel(k, identity) == k
+        @test size(kf, 1) == Inf && size(kf, 2) == Inf
 
         @test kf(getobs(X0, 1), getobs(X1, 1)) == k(f(getobs(X0, 1)), f(getobs(X1, 1)))
         kernel_tests(kf, X0, X1, X2)

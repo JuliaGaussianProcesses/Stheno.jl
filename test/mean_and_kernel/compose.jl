@@ -11,6 +11,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         ν1, ν2 = CompositeMean(+, μ1, μ2), CompositeMean(*, μ1, μ2)
         @test ν1(X[:, 1]) == μ1(X[:, 1]) + μ2(X[:, 1])
         @test ν2(X[:, 3]) == μ1(X[:, 3]) .* μ2(X[:, 3])
+        @test length(ν1) == Inf && length(ν2) == Inf
 
         mean_function_tests(ν1, x)
         mean_function_tests(ν1, X)
@@ -29,6 +30,9 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         ν1, ν2 = CompositeKernel(+, k1, k2), CompositeCrossKernel(*, k1, k2)
         @test ν1(X0[:, 1], X1[:, 2]) == k1(X0[:, 1], X1[:, 2]) + k2(X0[:, 1], X1[:, 2])
         @test ν2(X0[:, 1], X1[:, 2]) == k1(X0[:, 1], X1[:, 2]) .* k2(X0[:, 1], X1[:, 2])
+        @test size(ν1, 1) == Inf && size(ν1, 2) == Inf
+        @test !isstationary(ν1) && !isstationary(ν2)
+        @test isstationary(CompositeKernel(+, k1, k1)) == true
 
         cross_kernel_tests(ν2, x0, x1, x2)
         cross_kernel_tests(ν2, X0, X1, X2)
@@ -46,6 +50,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         ν = LhsCross(f, k)
 
         @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2])
+        @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
         cross_kernel_tests(ν, x0, x1, x2)
         cross_kernel_tests(ν, X0, X1, X2)
@@ -61,6 +66,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         ν = RhsCross(k, f)
 
         @test ν(X0[:, 1], X0[:, 2]) == k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
+        @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
         cross_kernel_tests(ν, x0, x1, x2)
         cross_kernel_tests(ν, X0, X1, X2)
@@ -76,6 +82,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         ν = OuterCross(f, k)
 
         @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
+        @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
         cross_kernel_tests(ν, x0, x1, x2)
         cross_kernel_tests(ν, X0, X1, X2)
@@ -91,6 +98,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         ν = OuterKernel(f, k)
 
         @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
+        @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
         kernel_tests(ν, x0, x1, x2)
         kernel_tests(ν, X0, X1, X2)
@@ -105,6 +113,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         # Test conversion and promotion.
         c = randn(rng)
         @test convert(MeanFunction, c) == ConstantMean(c)
+        @test promote_rule(ConstantMean, Real) == MeanFunction
         @test promote(ConstantMean(c), c) == (ConstantMean(c), ConstantMean(c))
 
         # Test addition.
@@ -112,7 +121,6 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         @test unary_obswise(μ + μ′, X) == unary_obswise(μ, X) + unary_obswise(μ′, X)
         @test μ + 5 == CompositeMean(+, μ, ConstantMean(5))
         @test 2.34 + μ′ == CompositeMean(+, ConstantMean(2.34), μ′)
-        # @test mean(μ′ + sin, X) == mean(μ′, X) + CustomMean()
 
         # Test multiplication.
         @test μ * μ′ == CompositeMean(*, μ, μ′)
@@ -129,6 +137,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
 
         # Test conversion and promotion.
         @test convert(Kernel, s) == ConstantKernel(s)
+        @test promote_rule(typeof(k), typeof(s)) == Kernel
         @test promote(k, s) == (k, ConstantKernel(s))
         @test promote(s, k) == (ConstantKernel(s), k)
 

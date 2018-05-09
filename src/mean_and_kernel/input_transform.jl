@@ -30,8 +30,8 @@ ITKernel(k::Kernel, ::typeof(identity)) = k
 size(k::ITKernel, N::Int...) = size(k.k, N...)
 isstationary(k::ITKernel) = isstationary(k.k)
 
-binary_colwise(k::ITKernel, X::AVM, X′::AVM) =
-    binary_colwise(k.k, unary_obswise(k.f, X), unary_obswise(k.f, X′))
+binary_obswise(k::ITKernel, X::AVM, X′::AVM) =
+    binary_obswise(k.k, unary_obswise(k.f, X), unary_obswise(k.f, X′))
 pairwise(k::ITKernel, X::AVM) = pairwise(k.k, unary_obswise(k.f, X))
 pairwise(k::ITKernel, X::AVM, X′::AVM) =
     pairwise(k.k, unary_obswise(k.f, X), unary_obswise(k.f, X′))
@@ -45,14 +45,14 @@ specified by `I`.
 pick_dims(μ::MeanFunction, I) = ITMean(μ, X::AV->X[I])
 pick_dims(k::Kernel, I) = ITKernel(k, X::AV->X[I])
 
-"""
-    periodic(k::Kernel, θ::Real)
+# """
+#     periodic(k::Kernel, θ::Real)
 
-Make `k` periodic with period `f`.
-"""
-periodic(k::Kernel, f::Real) = ITKernel(k, _periodic)
+# Make `k` periodic with period `f`.
+# """
+# periodic(k::Kernel, f::Real) = ITKernel(k, _periodic)
 
-_periodic(t::Real, f::Real) = (cos((2π * f) .* t), sin((2π * f) .* t))
-unary_colwise(::typeof(_periodic), t::AV) = 
-    vcat(RowVector(cos.((2π * f) .* t)),
-         RowVector(sin.((2π * f) .* t)))
+# _periodic(t::Real, f::Real) = (cos((2π * f) .* t), sin((2π * f) .* t))
+# unary_colwise(::typeof(_periodic), t::AV) = 
+#     vcat(RowVector(cos.((2π * f) .* t)),
+#          RowVector(sin.((2π * f) .* t)))

@@ -1,6 +1,13 @@
-using Stheno: nobs, ndims
+using Stheno: nobs, ndims, getobs
 
 @testset "generic" begin
+
+    # Test utility.
+    let
+        x, X = randn(5), randn(5, 3)
+        @test nobs(x) == 5 && ndims(x) == 1 && getobs(x, 1) == x[1]
+        @test nobs(X) == 3 && ndims(X) == 5 && getobs(X, 1) == X[:, 1]
+    end
 
     # Test unary_obswise.
     let

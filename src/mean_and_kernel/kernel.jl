@@ -9,12 +9,6 @@ abstract type CrossKernel end
 abstract type Kernel <: CrossKernel end
 
 # Some fallback definitions.
-cov(k::Kernel, X::AVM) = pairwise(k, X)
-cov(k::Kernel, X::AVM, X′::AVM) = pairwise(k, X, X′)
-xcov(k::CrossKernel, X::AVM) = pairwise(k, X)
-xcov(k::CrossKernel, X::AVM, X′::AVM) = pairwise(k, X, X′)
-
-# Some fallback definitions.
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
 

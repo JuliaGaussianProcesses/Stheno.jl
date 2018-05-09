@@ -3,8 +3,8 @@ using Stheno, Base.Test, BenchmarkTools, QuadGK, BlockArrays
 
 @testset "Stheno" begin
 
-    include("block_arrays.jl")
-    include("covariance_matrices.jl")
+    # include("block_arrays.jl")
+    # include("covariance_matrices.jl")
 
     include("test_util.jl")
     include("mean_and_kernel/generic.jl")

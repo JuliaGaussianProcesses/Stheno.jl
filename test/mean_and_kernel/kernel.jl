@@ -13,6 +13,7 @@ using Stheno: ZeroKernel, ConstantKernel
         @test k_zero(0, 0) === zero(Float64)
         @test size(k_zero, 1) == Inf && size(k_zero, 2) == Inf
         @test size(k_zero) == (Inf, Inf)
+        @test ZeroKernel{Float64}() == ZeroKernel{Float32}()
         kernel_tests(k_zero, x0, x1, x2)
         kernel_tests(k_zero, X0, X1, X2)
 
