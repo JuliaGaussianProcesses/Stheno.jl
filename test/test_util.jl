@@ -99,6 +99,7 @@ function kernel_tests(k::Kernel, X0::AVM, X1::AVM, X2::AVM)
 
     # Kernels should be symmetric for same arguments.
     @test pairwise(k, X0) ≈ pairwise(k, X0)'
+    @test pairwise(k, X0) isa LazyPDMat
 
     # k(x, x′) == k(x′, x)
     @test binary_obswise(k, X0, X1) ≈ binary_obswise(k, X1, X0)

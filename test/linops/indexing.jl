@@ -1,7 +1,7 @@
 let
     # Set up some GPs.
     rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
-    X, X′ = randn(rng, N, D), randn(rng, N′, D)
+    X, X′ = randn(rng, D, N), randn(rng, D, N′)
     μ1, μ2 = ConstantMean(1), ConstantMean(-1.5)
     k1, k2 = EQ(), Linear(0.5)
     f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)

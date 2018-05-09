@@ -3,7 +3,7 @@
     # Test the multiplication of a GP by a constant.
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
-        X, X′ = randn(rng, N, D), randn(rng, N′, D)
+        X, X′ = randn(rng, D, N), randn(rng, D, N′)
         g1, c, c′ = GP(ConstantMean(1.0), EQ(), GPC()), -4.3, 2.1
         g2, g2′ = c * g1, g1 * c′
         g3, g3′ = c * g2, g2′ * c′

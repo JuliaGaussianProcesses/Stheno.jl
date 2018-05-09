@@ -5,9 +5,6 @@ import Base: +, *, ==
 export KernelType, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
     Exponential, ConstantKernel, isstationary, ZeroKernel
 
-abstract type CrossKernel end
-abstract type Kernel <: CrossKernel end
-
 # Some fallback definitions.
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
@@ -47,7 +44,7 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-pairwise(::EQ, X::AVM) = exp.(-0.5 .* pairwise(SqEuclidean(), X))
+pairwise(::EQ, X::AVM) = LazyPDMat(exp.(-0.5 .* pairwise(SqEuclidean(), X)))
 pairwise(::EQ, X::AVM, X′::AVM) = exp.(-0.5 .* pairwise(SqEuclidean(), X, X′))
 
 # """
@@ -81,7 +78,7 @@ pairwise(k::Linear, x::AV, x′::AV) = pairwise(k, RowVector(x), RowVector(x′)
 
 function pairwise(k::Linear, X::AbstractMatrix)
     Δ = X .- k.c
-    return Δ' * Δ
+    return LazyPDMat(Δ' * Δ)
 end
 pairwise(k::Linear, X::AbstractMatrix, X′::AbstractMatrix) = (X .- k.c)' * (X′ .- k.c)
 
@@ -108,7 +105,7 @@ end
 isstationary(::Type{<:Noise}) = true
 ==(a::Noise, b::Noise) = a.σ² == b.σ²
 (k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
-pairwise(k::Noise, X::AVM) = k.σ² .* (pairwise(SqEuclidean(), X) .== 0)
+pairwise(k::Noise, X::AVM) = LazyPDMat(k.σ² .* (pairwise(SqEuclidean(), X) .== 0))
 pairwise(k::Noise, X::AVM, X′::AVM) = k.σ² .* (pairwise(SqEuclidean(), X, X′) .== 0)
 
 # """

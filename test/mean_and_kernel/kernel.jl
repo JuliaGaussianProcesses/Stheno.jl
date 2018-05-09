@@ -42,8 +42,8 @@ using Stheno: ZeroKernel, ConstantKernel
         # Tests for Noise
         @test isstationary(Noise(randn(rng)))
         @test Noise(5.0) == Noise(5)
-        kernel_tests(Noise(5), x0, x1, x2)
-        kernel_tests(Noise(5), X0, X1, X2)
+        kernel_tests(Noise(5.0), x0, x1, x2)
+        kernel_tests(Noise(5.0), X0, X1, X2)
     end
 
     # # Tests for Rational Quadratic (RQ) kernel.

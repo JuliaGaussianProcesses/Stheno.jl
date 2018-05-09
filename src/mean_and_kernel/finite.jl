@@ -12,9 +12,7 @@ struct FiniteMean <: MeanFunction
     μ::MeanFunction
     X::AVM
 end
-function (μ::FiniteMean)(n::Int)
-    return μ.μ(getobs(μ.X, n))
-end
+(μ::FiniteMean)(n::Int) = μ.μ(getobs(μ.X, n))
 length(μ::FiniteMean) = nobs(μ.X)
 show(io::IO, μ::FiniteMean) = show(io, "FiniteMean($(μ.μ)")
 eachindex(μ::FiniteMean) = 1:length(μ)

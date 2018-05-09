@@ -10,11 +10,11 @@ module Stheno
     const AVM{T} = AbstractVecOrMat{T}
     const AMRV{T} = Union{AbstractMatrix{T}, RowVector{T}}
 
-    # Some extensions to BlockArrays.jl.
-    include("block_arrays.jl")
-
     # Useful functionality for defining positive definite matrices.
     include("covariance_matrices.jl")
+
+    # Some extensions to BlockArrays.jl.
+    include("block_arrays.jl")
 
     # All mean function and kernel related functionality.
     include("mean_and_kernel/generic.jl")
@@ -27,16 +27,16 @@ module Stheno
     # include("mean_and_kernel/transform.jl")
     include("mean_and_kernel/input_transform.jl")
 
-    # # Gaussian Process defintions.
-    # include("gp.jl")
+    # Gaussian Process defintions.
+    include("gp.jl")
 
-    # # Affine transformations of GPs.
-    # include("linops/indexing.jl")
-    # include("linops/conditioning.jl")
-    # include("linops/addition.jl")
-    # include("linops/product.jl")
-    # # include("linops/integrate.jl")
+    # Affine transformations of GPs.
+    include("linops/indexing.jl")
+    include("linops/conditioning.jl")
+    include("linops/addition.jl")
+    include("linops/product.jl")
+    # include("linops/integrate.jl")
 
-    # # Ad-hoc utility for Turing.jl interop. Doesn't really fit in with anything else.
-    # include("turing_util.jl")
+    # Code to make Stheno work with Turing.
+    include("turing_util.jl")
 end # module

@@ -4,8 +4,6 @@ import Base: mean, ==
 
 export CustomMean, mean
 
-abstract type MeanFunction end
-
 length(::MeanFunction) = Inf
 size(μ::MeanFunction) = (size(μ, 1),)
 size(μ::MeanFunction, N::Int) = N == 1 ? length(μ) : 1

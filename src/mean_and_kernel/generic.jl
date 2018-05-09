@@ -3,8 +3,12 @@ using IterTools, FillArrays
 import Base: length, size
 import Distances: pairwise
 
-@inline isstationary(::Type) = false
-@inline isstationary(x) = isstationary(typeof(x))
+abstract type MeanFunction end
+abstract type CrossKernel end
+abstract type Kernel <: CrossKernel end
+
+@inline isstationary(::Type{<:CrossKernel}) = false
+@inline isstationary(x::CrossKernel) = isstationary(typeof(x))
 
 # Number of observations.
 @inline nobs(x::AbstractVector) = length(x)
@@ -35,6 +39,7 @@ binary_obswise_fallback(f, X::AVM, X′::AVM) =
 
 # Fallback implementation for `pairwise`.
 @inline pairwise(f, X::AbstractVecOrMat) = pairwise(f, X, X)
+@inline pairwise(f::Kernel, X::AbstractVecOrMat) = LazyPDMat(pairwise(f, X, X))
 @inline pairwise(f, X::AVM, X′::AVM) = pairwise_fallback(f, X, X′)
 
 pairwise_fallback(f, X::AVM, X′::AVM) =

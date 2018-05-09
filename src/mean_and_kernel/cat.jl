@@ -32,8 +32,8 @@ A cross kernel comprising lots of other kernels.
 struct CatCrossKernel <: CrossKernel
     ks::Matrix
 end
-# CatCrossKernel(ks::Vector) = CatCrossKernel(reshape(ks, length(ks), 1))
-# CatCrossKernel(ks::RowVector) = CatCrossKernel(reshape(ks, 1, length(ks)))
+CatCrossKernel(ks::Vector) = CatCrossKernel(reshape(ks, length(ks), 1))
+CatCrossKernel(ks::RowVector) = CatCrossKernel(reshape(ks, 1, length(ks)))
 size(k::CatCrossKernel, N::Int) = N == 1 ?
     sum(size.(k.ks[:, 1], Ref(1))) :
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
@@ -89,8 +89,9 @@ function pairwise(k::CatKernel, X::AV{<:AVM})
             setblock!(Σ, getblock(Σ, p, q)', q, p)
         end
     end
-    return SquareDiagonal(Σ)
+    return LazyPDMat(SquareDiagonal(Σ))
 end
+pairwise(k::CatKernel, X::AVM) = ppairwise(k, [X])
 function pairwise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM})
     Ω = BlockMatrix{Float64}(uninitialized_blocks, nobs.(X), nobs.(X′))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
@@ -105,6 +106,6 @@ function pairwise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM})
     return Ω
 end
 
-# xcov(k::Union{<:CatCrossKernel, <:CatKernel}, X::AVM, X′::AVM) = xcov(k, [X], [X′])
-# xcov(k::Union{<:CatCrossKernel, <:CatKernel}, X::AV{<:AVM}, X′::AVM) = xcov(k, X, [X′])
-# xcov(k::Union{<:CatCrossKernel, <:CatKernel}, X::AVM, X′::AV{<:AVM}) = xcov(k, [X], X′)
+pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AVM, X′::AVM) = pairwise(k, [X], [X′])
+pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AV{<:AVM}, X′::AVM) = pairwise(k, X, [X′])
+pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AVM, X′::AV{<:AVM}) = pairwise(k, [X], X′)

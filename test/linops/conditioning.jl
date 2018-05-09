@@ -1,6 +1,6 @@
 let
     rng, N, N′, D = MersenneTwister(123456), 5, 6,  2
-    X, X′ = randn(rng, N, D), randn(rng, N′, D)
+    X, X′ = randn(rng, D, N), randn(rng, D, N′)
     y = randn(rng, N)
 
     # Test mechanics for finite conditioned process with single conditioning.

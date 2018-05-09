@@ -244,6 +244,10 @@ getindex(X::SquareDiagonal, p::Int, q::Int) = getindex(X.X, (p < q ? (p, q) : (q
 eltype(X::SquareDiagonal) = eltype(X.X)
 copy(X::SquareDiagonal{T}) where T = SquareDiagonal(copy(X.X))
 
+# Ensure that, if we try to make a `PDMat` from a `BlockMatrix`, we require that the
+# blocks on it's diagonal be square. Otherwise we should definitely error.
+LazyPDMat(X::BM) = LazyPDMat(SquareDiagonal(X))
+
 function transpose(Xu::UpperTriangular{T, <:SD{T}}) where T<:Number
     sdt = transpose(UpperTriangular(Xu.data.X)).data
     return LowerTriangular(SquareDiagonal(sdt))

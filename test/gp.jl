@@ -1,4 +1,31 @@
+using Stheno: ConstantMean, ZeroMean, ConstantKernel, ZeroKernel, pairwise, unary_obswise,
+    nobs
+
 @testset "gp" begin
+
+    # Test various utility functions.
+    let
+
+        rng, N, N′, D = MersenneTwister(123456), 4, 5, 6
+        x, x′ = randn(rng, N), randn(rng, N′)
+        X, X′ = randn(rng, D, N), randn(rng, D, N′)
+        μ, k = ConstantMean(randn(rng)), EQ()
+        kc = Stheno.LhsCross(x->sum(abs2, x), k)
+
+        @test Stheno.permutedims(x) == x'
+
+        @test mean(μ, x) == unary_obswise(μ, x) && mean(μ, X) == unary_obswise(μ, X)
+
+        @test xcov(kc, x, x′) == pairwise(kc, x, x′) &&
+            xcov(kc, X, X′) == pairwise(kc, X, X′)
+        @test xcov(kc, x) == pairwise(kc, x) && xcov(kc, X) == pairwise(kc, X)
+
+        @test xcov(k, x, x′) == pairwise(k, x, x′) && xcov(k, X, X′) == pairwise(k, X, X′)
+        @test cov(k, x) == pairwise(k, x) && cov(k, X) == pairwise(k, X)
+
+        @test Stheno.diag_cov(k, x) == diag(cov(k, x))
+        @test Stheno.diag_std(k, x) == sqrt.(diag(cov(k, x)))
+    end
 
     # Test the creation of indepenent GPs.
     let rng = MersenneTwister(123456)
@@ -7,6 +34,8 @@
         μ1, μ2 = ConstantMean(1.0), ZeroMean{Float64}()
         k1, k2 = EQ(), Linear(5)
         f1, f2 = GP.([μ1, μ2], [k1, k2], Ref(GPC()))
+
+        @test mean(GP(EQ(), GPC())) == ZeroMean{Float64}()
 
         @test mean(f1) == μ1
         @test mean(f2) == μ2
@@ -33,18 +62,21 @@
     # Test deterministic properties of `rand`.
     let
         rng, N, D = MersenneTwister(123456), 10, 2
-        X, μ, k = randn(rng, N, D), ConstantMean(1), EQ()
+        X, x, μ, k = randn(rng, D, N), randn(rng, N), ConstantMean(1), EQ()
         f = GP(μ, k, GPC())
 
         # Check that single-GP samples have the correct dimensions.
-        @test length(rand(rng, f, X)) == size(X, 1)
-        @test size(rand(rng, f, X, 10)) == (size(X, 1), 10)
+        @test length(rand(rng, f, X)) == nobs(X)
+        @test size(rand(rng, f, X, 10)) == (nobs(X), 10)
+
+        @test length(rand(rng, f, x)) == nobs(x)
+        @test size(rand(rng, f, x, 10)) == (nobs(x), 10)
     end
 
     # Test statistical properties of `rand`.
     let
         rng, N, D, μ0, S = MersenneTwister(123456), 10, 2, 1, 100_000
-        X, μ, k = randn(rng, N, D), ConstantMean(μ0), EQ()
+        X, μ, k = randn(rng, D, N), ConstantMean(μ0), EQ()
         f = GP(μ, k, GPC())
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.
@@ -58,7 +90,7 @@
     # Test logpdf + elbo do something vaguely sensible + that elbo converges to logpdf.
     let
         rng, N, N′, D, gpc = MersenneTwister(123456), 25, 10, 2, GPC()
-        X, X′ = rand(rng, N, D), rand(rng, N′, D)
+        X, X′ = rand(rng, D, N), rand(rng, D, N′)
         f = GP(ConstantMean(1.0), EQ(), gpc) + GP(ZeroMean{Float64}(), Noise(1e-1), gpc)
         y, y′ = rand(rng, f, X), rand(rng, f, X′)
 
