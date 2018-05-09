@@ -57,11 +57,8 @@ Xplot = linspace(-2.0, 12.0, Nplot);
 f′Xp, noise′Xp = rand(rng, [f′, noise′], [Xplot, Xplot], S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-# μf′, σf′, σy′ = mean(f′, Xplot), marginal_std(f′, Xplot), marginal_std(y′, Xplot);
-μf′ = mean(f′, Xplot);
-σf′ = sqrt.(diag(cov(f′, Xplot)));
-σy′ = sqrt.(diag(cov(y′, Xplot)));
-
+μ′f, σ′f = marginals(f′, Xplot);
+σ′y = diag_std(y′, Xplot);
 
 ####################################  Plot results  ####################################
 

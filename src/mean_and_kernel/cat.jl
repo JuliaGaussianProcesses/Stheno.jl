@@ -83,7 +83,7 @@ binary_obswise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM}) =
 function pairwise(k::CatKernel, X::AV{<:AVM})
     Σ = BlockMatrix{Float64}(uninitialized_blocks, nobs.(X), nobs.(X))
     for q in eachindex(k.ks_diag)
-        setblock!(Σ, pairwise(k.ks_diag[q], X[q]), q, q)
+        setblock!(Σ, Matrix(pairwise(k.ks_diag[q], X[q])), q, q)
         for p in 1:q-1
             setblock!(Σ, pairwise(k.ks_off[p, q], X[p], X[q]), p, q)
             setblock!(Σ, getblock(Σ, p, q)', q, p)
@@ -91,7 +91,7 @@ function pairwise(k::CatKernel, X::AV{<:AVM})
     end
     return LazyPDMat(SquareDiagonal(Σ))
 end
-pairwise(k::CatKernel, X::AVM) = ppairwise(k, [X])
+pairwise(k::CatKernel, X::AVM) = pairwise(k, [X])
 function pairwise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM})
     Ω = BlockMatrix{Float64}(uninitialized_blocks, nobs.(X), nobs.(X′))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)

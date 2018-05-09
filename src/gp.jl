@@ -1,6 +1,6 @@
 import Base: eachindex
 import Distributions: logpdf, ContinuousMultivariateDistribution
-export GP, GPC, kernel, rand, logpdf, elbo, diag_cov, diag_std
+export GP, GPC, kernel, rand, logpdf, elbo, diag_cov, diag_std, marginals
 
 # Pre-0.7 hack.
 permutedims(v::Vector) = reshape(v, 1, length(v))

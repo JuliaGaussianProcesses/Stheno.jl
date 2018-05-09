@@ -16,16 +16,19 @@ logdet(U::UpperTriangular) = sum(logdet, view(U, diagind(U)))
 A positive definite matrix which evaluates its Cholesky lazily and caches the result.
 Please don't mutate it this object: `setindex!` isn't defined for a reason.
 """
-mutable struct LazyPDMat{T<:Real} <: AbstractMatrix{T}
-    Σ::AbstractMatrix{T}
+mutable struct LazyPDMat{T<:Real, TΣ<:AbstractMatrix{T}} <: AbstractMatrix{T}
+    Σ::TΣ
     U::Union{Void, UpperTriangular{T}}
     ϵ::T
-    LazyPDMat(Σ::AbstractMatrix{T}) where T = new{T}(Σ, nothing, 1e-12)
-    LazyPDMat(Σ::AbstractMatrix{T}, ϵ::Real) where T = new{T}(Σ, nothing, ϵ)
+    LazyPDMat(Σ::TΣ) where TΣ<:AbstractMatrix{T} where T<:Real =
+        new{T, TΣ}(Σ, nothing, 1e-9)
+    LazyPDMat(Σ::TΣ, ϵ::Real) where TΣ<:AbstractMatrix{T} where T<:Real =
+        new{T, TΣ}(Σ, nothing, ϵ)
 end
 LazyPDMat(Σ::LazyPDMat) = Σ
 LazyPDMat(σ::Real) = σ
 Matrix(Σ::LazyPDMat) = Matrix(Σ.Σ)
+
 AbstractMatrix(Σ::LazyPDMat) = Σ.Σ
 size(Σ::LazyPDMat) = size(Σ.Σ)
 @inline getindex(Σ::LazyPDMat, i::Int...) = getindex(Σ.Σ, i...)

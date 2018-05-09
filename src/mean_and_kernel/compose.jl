@@ -25,12 +25,12 @@ for T in [:CompositeKernel, :CompositeCrossKernel]
     end
 end
 
-function pairwise(k::CompositeKernel, X::AVM)
-    Σs = map(f->pairwise(f, X), k.x)
-    Σout = map(k.f, Σs...)
-    # @show typeof.(Σs), typeof(Σout)
-    return map(k.f, map(f->pairwise(f, X), k.x)...)
-end
+# function pairwise(k::CompositeKernel, X::AVM)
+#     Σs = map(f->pairwise(f, X), k.x)
+#     Σout = map(k.f, Σs...)
+#     # @show typeof.(Σs), typeof(Σout)
+#     return map(k.f, map(f->pairwise(f, X), k.x)...)
+# end
 
 """
     LhsCross <: CrossKernel
