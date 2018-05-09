@@ -1,95 +1,42 @@
-# @testset "input_transform" begin
+using Stheno: ConstantMean, ITMean, ITKernel, getobs
 
-#     # Test construction.
-#     @test InputTransformedKernel(EQ(), identity).k == EQ()
-#     @test memory(@benchmark Transform(EQ(), identity) seconds=0.1) == 0
+@testset "input_transform" begin
 
-#     # Test getter methods.
-#     let k = InputTransformedKernel(EQ(), identity)
-#         @test kernel(k) == EQ()
-#         @test input_transform(k) == identity
-#     end
+    # Test ITMean.
+    let
+        rng, N, D = MersenneTwister(123456), 10, 2
+        μ, f, X = ConstantMean(randn(rng)), x->sum(abs2, x), randn(rng, D, N)
+        μf = ITMean(μ, f)
 
-#     # Test equality.
-#     let
-#         k1 = InputTransformedKernel(EQ(), identity)
-#         k2 = InputTransformedKernel(RQ(1.0), identity)
-#         k3 = InputTransformedKernel(EQ(), sin)
-#         @test k1 == k1
-#         @test k2 == k2
-#         @test k3 == k3
-#         @test k1 != k2
-#         @test k1 != k3
-#         @test k2 != k3
+        @test μf(getobs(X, 1)) == (μ ∘ f)(getobs(X, 1))
+        mean_function_tests(μf, X)
+    end
 
-#         if check_mem
+    # Test ITKernel.
+    let
+        rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
+        k, f = EQ(), x->sum(abs2, x)
+        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        kf = ITKernel(k, f)
 
-#             @test memory(@benchmark $k1(1.0, 0.0) seconds=0.1) == 0
-#             @test memory(@benchmark $k2(1.0, 0.0) seconds=0.1) == 0
-#             @test memory(@benchmark $k3(1.0, 0.0) seconds=0.1) == 0
-#         end
-#     end
+        @test kf(getobs(X0, 1), getobs(X1, 1)) == k(f(getobs(X0, 1)), f(getobs(X1, 1)))
+        kernel_tests(kf, X0, X1, X2)
+    end
 
-#     # Test functionality under equality.
-#     let k = InputTransformedKernel(EQ(), identity)
-#         @test k(5.0, 4.0) == kernel(k)(5.0, 4.0)
-#     end
+    # Test convenience code.
+    let
+        rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
+        m, k = ConstantMean(randn(rng)), EQ()
+        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        m1, k1 = pick_dims(m, 1), pick_dims(k, 1)
 
-#     # Test equivalence between InputTransformedKernel and just applying the function.
-#     let rng = MersenneTwister(123456)
-#         k1 = InputTransformedKernel(EQ(), sin)
-#         k2 = InputTransformedKernel(RQ(5.0), tanh)
-#         x1, x2 = randn.((rng, rng))
-#         @test k1(x1, x2) == EQ()(sin(x1), sin(x2))
-#         @test k2(x1, x2) == RQ(5.0)(tanh(x1), tanh(x2))
-#     end
+        @test m1(getobs(X0, 1)) == m(getobs(X0, 1)[1])
+        @test k1(getobs(X0, 1), getobs(X0, 2)) == k(getobs(X0, 1)[1], getobs(X0, 2)[1])
+        mean_function_tests(m1, X0)
+        kernel_tests(k1, X0, X1, X2)
 
-#     # Test that Index InputTransformedKernel works.
-#     let
-#         k1 = InputTransformedKernel(EQ(), Index{1}())
-#         k2 = InputTransformedKernel(EQ(), Index{2}())
-#         x1, x2 = [5.0, 4.0], [3.0, 2.0]
-#         @test EQ()(x1[1], x2[1]) == k1(x1, x2)
-#         @test EQ()(x1[2], x2[2]) == k2(x1, x2)
+        # mean_function_tests(periodic(m, 0.1), X0)
+        # kernel_tests(periodic(k, 0.1), X0, X1, X2)
+    end
 
-#         x1t, x2t = (5.0, 4.0), (3.0, 2.0)
-#         @test k1(x1, x2) == k1(x1t, x2t)
-#         @test k2(x1, x2) == k2(x1t, x2t)
-
-#         @test k1(x1, x2) == Index{1}(EQ())(x1, x2)
-#         @test k2(x1, x2) == Index{2}(EQ())(x1, x2)
-
-#         if check_mem
-
-#             @test memory(@benchmark Transform(EQ(), Index{1}()) seconds=0.1) == 0
-#             @test memory(@benchmark Transform(EQ(), Index{2}()) seconds=0.1) == 0
-#             @test memory(@benchmark $k1($x1, $x2) seconds=0.1) == 0
-#             @test memory(@benchmark $k2($x1, $x2) seconds=0.1) == 0
-#         end
-#     end
-
-#     let rng = MersenneTwister(123456)
-#         k1, k2 = Periodic(EQ()), Periodic(RQ(1.0))
-
-#         # Check equality operator works as intended.
-#         @test k1 == k1
-#         @test k2 == k2
-#         @test k1 != k2
-
-#         # Check manually applying the input transformation and computing the result has the
-#         # intended results.
-#         x, x′ = randn(rng), randn(rng)
-#         @test EQ()(cos(2π * x), cos(2π * x′)) * EQ()(sin(2π * x), sin(2π * x′)) ==
-#             k1(x, x′)
-#         @test RQ(1.0)(cos(2π * x), cos(2π * x′)) * RQ(1.0)(sin(2π * x), sin(2π * x′)) ==
-#             k2(x, x′)
-
-#         if check_mem
-#             @test memory(@benchmark Periodic($(EQ())) seconds=0.1) == 0
-#             @test memory(@benchmark Periodic($(RQ(1.0))) seconds=0.1) == 0
-#             @test memory(@benchmark $(Periodic(EQ()))(1.0, 0.0) seconds=0.1) == 0
-#             @test memory(@benchmark $(Periodic(RQ(1.0)))(1.0, 0.0) seconds=0.1) == 0
-#         end
-#     end
-
-# end
+end

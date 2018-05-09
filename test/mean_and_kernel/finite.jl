@@ -70,7 +70,7 @@ using Stheno: FiniteMean, ConstantMean, getobs
             k2 = FiniteKernel(k′, r)
             @test size(k2) == (N-1, N-1)
             @test eachindex(k2) == r
-            @test xcov(k2) == xcov(k′, r)
+            @test xcov(k2) == pairwise(k′, r)
 
             # Known issue: offsetting doesn't really work.
             binary_obswise_tests(k2, r, r)
@@ -110,8 +110,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
         @test size(k′, 2) == N′
         @test isstationary(k′) == false
         @test eachindex(k′, 2) == 1:N′
-        @test xcov(k′, X, eachindex(k′, 2)) ≈ xcov(k, X, X′)
-        @test xcov(k′, X, 1:N′-1) ≈ xcov(k, X, X′[:, 1:N′-1])
+        @test pairwise(k′, X, eachindex(k′, 2)) ≈ pairwise(k, X, X′)
+        @test pairwise(k′, X, 1:N′-1) ≈ pairwise(k, X, X′[:, 1:N′-1])
 
         cross_kernel_tests(k′, X, 1:N, eachindex(k′, 2))
         cross_kernel_tests(kx, x, 1:N, eachindex(kx, 2))
@@ -130,11 +130,11 @@ using Stheno: FiniteMean, ConstantMean, getobs
         @test isstationary(k′) == false
         @test eachindex(k′, 1) == 1:N
         @test eachindex(k′, 2) == 1:N′
-        @test xcov(k′) == xcov(k′, eachindex(k′, 1), eachindex(k′, 2))
-        @test xcov(k′) ≈ xcov(k, X, X′)
-        @test xcov(k′, 1:N-1, 2:N) ≈ xcov(k, X[:, 1:N-1], X′[:, 2:N])
-        @test xcov(k′, eachindex(k′, 1), 1:N-1) ≈ xcov(k, X, X′[:, 1:N-1])
-        @test xcov(k′, 2:N, eachindex(k′, 2)) ≈ xcov(k, X[:, 2:N], X′)
+        @test xcov(k′) == pairwise(k′, eachindex(k′, 1), eachindex(k′, 2))
+        @test xcov(k′) ≈ pairwise(k, X, X′)
+        @test pairwise(k′, 1:N-1, 2:N) ≈ pairwise(k, X[:, 1:N-1], X′[:, 2:N])
+        @test pairwise(k′, eachindex(k′, 1), 1:N-1) ≈ pairwise(k, X, X′[:, 1:N-1])
+        @test pairwise(k′, 2:N, eachindex(k′, 2)) ≈ pairwise(k, X[:, 2:N], X′)
 
         cross_kernel_tests(k′, 1:N, 1:N, 1:N′)
         cross_kernel_tests(kx, 1:N, 1:N, 1:N′)
@@ -143,9 +143,9 @@ using Stheno: FiniteMean, ConstantMean, getobs
         r, c = 1:N-1, 1:N′-2
         k2 = FiniteCrossKernel(k′, r, c)
         @test size(k2) == (length(r), length(c))
-        @test xcov(k2) == xcov(k2, r, c)
-        @test xcov(k2) == xcov(k′, r, c)
-        @test xcov(k2, 2:N-1, c) == xcov(k′, 2:N-1, c)
+        @test xcov(k2) == pairwise(k2, r, c)
+        @test xcov(k2) == pairwise(k′, r, c)
+        @test pairwise(k2, 2:N-1, c) == pairwise(k′, 2:N-1, c)
 
         cross_kernel_tests(k2, r, r, c)
     end

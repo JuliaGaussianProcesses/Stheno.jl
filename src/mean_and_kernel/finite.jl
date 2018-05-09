@@ -79,7 +79,7 @@ end
 (k::FiniteCrossKernel)(n::Int, n′::Int) = k.k(getobs(k.X, n), getobs(k.X′, n′))
 size(k::FiniteCrossKernel, N::Int) = N == 1 ? nobs(k.X) : (N == 2 ? nobs(k.X′) : 1)
 show(io::IO, k::FiniteCrossKernel) = show(io, "FiniteCrossKernel($(k.k))")
-xcov(k::FiniteCrossKernel) = xcov(k, eachindex(k, 1), eachindex(k, 2))
+xcov(k::FiniteCrossKernel) = pairwise(k, eachindex(k, 1), eachindex(k, 2))
 
 # General eachindex implementation.
 eachindex(k::CrossKernel, N::Int) = 1:size(k, N)

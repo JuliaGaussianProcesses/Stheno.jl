@@ -21,8 +21,7 @@ import Distances: pairwise
 # Fallback implementations for `unary_obswise`.
 @inline unary_obswise(f, X::AbstractVecOrMat) = unary_obswise_fallback(f, X)
 
-unary_obswise_fallback(f, x::AbstractVector) = map(f, x)
-unary_obswise_fallback(f, X::AbstractMatrix) = [f(getobs(X, n)) for n in 1:nobs(X)]
+unary_obswise_fallback(f, X::AVM) = map(n->f(getobs(X, n)), 1:nobs(X))
 
 # Fallback implementations for `binary_obswise`.
 @inline binary_obswise(f, X::AbstractVecOrMat) =
@@ -31,9 +30,8 @@ unary_obswise_fallback(f, X::AbstractMatrix) = [f(getobs(X, n)) for n in 1:nobs(
         binary_obswise(f, X, X)
 @inline binary_obswise(f, X::AVM, X′::AVM) = binary_obswise_fallback(f, X, X′)
 
-binary_obswise_fallback(f, x::AbstractVector, x′::AbstractVector) = map(f, x, x′)
 binary_obswise_fallback(f, X::AVM, X′::AVM) =
-    [f(getobs(X, n), getobs(X′, n)) for n in 1:nobs(X)]
+    map(n->f(getobs(X, n), getobs(X′, n)), 1:nobs(X))
 
 # Fallback implementation for `pairwise`.
 @inline pairwise(f, X::AbstractVecOrMat) = pairwise(f, X, X)

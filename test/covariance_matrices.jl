@@ -65,8 +65,8 @@
     let
         rng, N, N′, D = MersenneTwister(123456), 7, 8, 2
         A, B = randn(rng, D, N), randn(rng, D, N)
-        @test Stheno.diagAᵀA(A) ≈ diag(A'A)
-        @test Stheno.diagAᵀB(A, B) ≈ diag(A'B)
+        @test Stheno.diag_AᵀA(A) ≈ diag(A'A)
+        @test Stheno.diag_AᵀB(A, B) ≈ diag(A'B)
     end
 
 end
