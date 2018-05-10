@@ -40,8 +40,8 @@ using Stheno: ConstantMean, ITMean, ITKernel, getobs
         mean_function_tests(m1, X0)
         kernel_tests(k1, X0, X1, X2)
 
-        # mean_function_tests(periodic(m, 0.1), X0)
-        # kernel_tests(periodic(k, 0.1), X0, X1, X2)
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        mean_function_tests(periodic(m, 0.1), x0)
+        kernel_tests(periodic(k, 0.1), x0, x1, x2)
     end
-
 end

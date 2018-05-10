@@ -52,10 +52,9 @@ y1′Xp = rand(rng, y1′, Xp, S);
 y2′Xp = rand(rng, y2′, Xp, S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-μf′, σf′ = mean(f′, Xp), marginal_std(f′, Xp);
-μy1′, σy1′ = mean(y1′, Xp), marginal_std(y1′, Xp);
-μy2′, σy2′ = mean(y2′, Xp), marginal_std(y2′, Xp);
-
+μf′, σf′ = marginals(f′, Xp);
+μy1′, σy1′ = marginals(y1′, Xp);
+μy2′, σy2′ = marginals(y2′, Xp);
 
 
 ###########################  Plot results - USE ONLY Julia-0.6!  ###########################

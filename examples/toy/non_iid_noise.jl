@@ -42,7 +42,7 @@ f′ = f | (y(X) ← ŷ);
 f′Xp = rand(rng, f′, Xp, S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-μf′, σf′ = mean(f′, Xp), marginal_std(f′, Xp);
+μf′, σf′ = marginals(f′, Xp);
 
 
 

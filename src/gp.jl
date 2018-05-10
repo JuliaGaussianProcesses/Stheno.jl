@@ -159,7 +159,8 @@ end
 Obtain `N` independent samples from the GP `f` at `X` using `rng`.
 """
 function rand(rng::AbstractRNG, f::AV{<:GP}, X::AV{<:AVM}, N::Int)
-    y = mean(f, X) .+ chol(cov(f, X))' * randn(rng, sum(nobs(X)), N)
+    ϵ = BlockMatrix(randn.(rng, nobs.(X), N))
+    y = mean(f, X) .+ chol(cov(f, X))' * ϵ
     ends = cumsum(nobs.(X))
     starts = ends .- nobs.(X) .+ 1
     return [y[starts[n]:ends[n], :] for n in eachindex(starts)]
@@ -182,8 +183,7 @@ logpdf(f::GP, X::AVM, y::AV{<:Real}) = logpdf([f], [X], BlockVector([y]))
 """
     elbo(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real}, u::AV{<:GP}, Z::AV{<:AVM}, σ::Real)
 
-Compute the Titsias-ELBO. Doesn't currently work because I've not implemented `vcat` for
-`GP`s at all. I've also not tested `logpdf` yet, so I should probably do that...
+Compute the Titsias-ELBO.
 """
 function elbo(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real}, u::AV{<:GP}, Z::AV{<:AVM}, σ::Real)
     Γ = (chol(cov(u, Z))' \ xcov(u, f, Z, X)) ./ σ

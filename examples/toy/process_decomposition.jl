@@ -34,9 +34,9 @@ Xp = linspace(-2.5, 12.5, Nplot);
 f1′Xp, f2′Xp, f3′Xp = rand(rng, [f1′, f2′, f3′], [Xp, Xp, Xp], S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-μf1′, σf1′ = mean(f1′, Xp), marginal_std(f1′, Xp);
-μf2′, σf2′ = mean(f2′, Xp), marginal_std(f2′, Xp);
-μf3′, σf3′ = mean(f3′, Xp), sqrt.(diag(cov(f3′, Xp)));
+μf1′, σf1′ = marginals(f1′, Xp);
+μf2′, σf2′ = marginals(f2′, Xp);
+μf3′, σf3′ = marginals(f3′, Xp);
 
 
 ###########################  Plot results - USE ONLY Julia-0.6!  ###########################

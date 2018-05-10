@@ -45,14 +45,18 @@ specified by `I`.
 pick_dims(μ::MeanFunction, I) = ITMean(μ, X::AV->X[I])
 pick_dims(k::Kernel, I) = ITKernel(k, X::AV->X[I])
 
-# """
-#     periodic(k::Kernel, θ::Real)
+"""
+    periodic(k::Union{MeanFunction, Kernel}, θ::Real)
 
-# Make `k` periodic with period `f`.
-# """
-# periodic(k::Kernel, f::Real) = ITKernel(k, _periodic)
+Make `k` periodic with period `f`.
+"""
+periodic(μ::MeanFunction, f::Real) = ITMean(μ, Periodic(f))
+periodic(k::Kernel, f::Real) = ITKernel(k, Periodic(f))
 
-# _periodic(t::Real, f::Real) = (cos((2π * f) .* t), sin((2π * f) .* t))
-# unary_colwise(::typeof(_periodic), t::AV) = 
-#     vcat(RowVector(cos.((2π * f) .* t)),
-#          RowVector(sin.((2π * f) .* t)))
+struct Periodic{Tf<:Real}
+    f::Tf
+end
+(p::Periodic)(t::Real) = [cos((2π * p.f) * t), sin((2π * p.f) * t)]
+unary_obswise(p::Periodic, t::AV) =
+    vcat(RowVector(cos.((2π * p.f) .* t)),
+         RowVector(sin.((2π * p.f) .* t)))

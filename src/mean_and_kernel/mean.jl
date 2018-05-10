@@ -2,7 +2,7 @@ using FillArrays
 
 import Base: mean, ==
 
-export CustomMean, mean
+export CustomMean, ZeroMean, ConstantMean, mean
 
 length(::MeanFunction) = Inf
 size(μ::MeanFunction) = (size(μ, 1),)

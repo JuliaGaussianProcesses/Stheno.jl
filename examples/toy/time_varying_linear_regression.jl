@@ -8,7 +8,7 @@ plotly();
 
 =#
 function model(gpc)
-    g1, g2 = x::AbstractVector->sin.(x), x::AbstractVector->1 .* x
+    g1, g2 = x::Real->sin(x), x::Real->x
     w1, w2 = GP(EQ(), gpc), GP(EQ(), gpc)
     f = g1 * w1 + g2 * w2
     y = f + GP(Noise(0.001), gpc)
@@ -28,9 +28,9 @@ w1′, w2′, f′ = (w1, w2, f) | (y(X) ← ŷ);
 w1′s, w2′s, f′s = rand(rng, [w1′, w2′, f′], [Xp, Xp, Xp], S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-μw1′, σw1′ = mean(w1′, Xp), marginal_std(w1′, Xp);
-μw2′, σw2′ = mean(w2′, Xp), marginal_std(w2′, Xp); 
-μf′, σf′ = mean(f′, Xp), sqrt.(diag(cov(f′, Xp)));
+μw1′, σw1′ = marginals(w1′, Xp);
+μw2′, σw2′ = marginals(w2′, Xp);
+μf′, σf′ = marginals(f′, Xp);
 
 
 ###########################  Plot results - USE ONLY Julia-0.6!  ###########################

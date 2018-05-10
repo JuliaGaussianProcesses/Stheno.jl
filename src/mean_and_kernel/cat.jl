@@ -94,7 +94,7 @@ function pairwise(k::CatKernel, X::AV{<:AVM})
 end
 pairwise(k::CatKernel, X::AVM) = pairwise(k, [X])
 function pairwise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM})
-    Ω = BlockMatrix{Float64}(uninitialized_blocks, nobs.(X), nobs.(X′))
+    Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X′))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
         if p == q
             setblock!(Ω, pairwise(k.ks_diag[p], X[p], X′[p]), p, p)
