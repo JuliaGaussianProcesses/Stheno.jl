@@ -1,3 +1,4 @@
+using Revise
 using Stheno, Plots, Optim, Distributions
 
 ###########################  Define and inspect our model  ###########################
@@ -8,7 +9,7 @@ function model(θ::Vector{<:Real})
     gpc = GPC()
 
     # Define a smooth latent process.
-    f = GP(ITKernel(EQ(), x->exp(θ[1]) * x), gpc)
+    f = GP(transform(EQ(), x->exp(θ[1]) * x), gpc)
 
     # Define a latent noise process.
     noise = GP(Noise(exp(θ[2])), gpc)

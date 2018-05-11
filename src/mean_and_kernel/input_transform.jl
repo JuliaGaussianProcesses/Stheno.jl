@@ -37,6 +37,14 @@ pairwise(k::ITKernel, X::AVM, X′::AVM) =
     pairwise(k.k, unary_obswise(k.f, X), unary_obswise(k.f, X′))
 
 """
+    transform(f::Union{MeanFunction, Kernel}, ϕ)
+
+Applies the input-transform `ϕ` to `f`.
+"""
+transform(μ::MeanFunction, ϕ) = ITMean(μ, ϕ)
+transform(k::Kernel, ϕ) = ITKernel(k, ϕ)
+
+"""
     pick_dims(x::Union{MeanFunction, Kernel}, I)
 
 Returns either an `ITMean` or `ITKernel` which uses the columns of the input matrix `X`
