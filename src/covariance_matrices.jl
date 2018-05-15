@@ -11,7 +11,7 @@ matrix. Implementing this here is a horrible bit of type piracy, but it's necess
 logdet(U::UpperTriangular) = sum(logdet, view(U, diagind(U)))
 
 """
-    LazyPDMat{T<:Real} <: AbstractMatrix{T}
+    LazyPDMat{T<:Real, TΣ<:AbstractMatrix{T}} <: AbstractMatrix{T}
 
 A positive definite matrix which evaluates its Cholesky lazily and caches the result.
 Please don't mutate it this object: `setindex!` isn't defined for a reason.
@@ -20,46 +20,41 @@ mutable struct LazyPDMat{T<:Real, TΣ<:AbstractMatrix{T}} <: AbstractMatrix{T}
     Σ::TΣ
     U::Union{Void, UpperTriangular{T}}
     ϵ::T
-    LazyPDMat(Σ::TΣ) where TΣ<:AbstractMatrix{T} where T<:Real =
-        new{T, TΣ}(Σ, nothing, 1e-5)
-    LazyPDMat(Σ::TΣ, ϵ::Real) where TΣ<:AbstractMatrix{T} where T<:Real =
-        new{T, TΣ}(Σ, nothing, ϵ)
+    LazyPDMat(Σ::TΣ) where TΣ<:AM{T} where T<:Real = new{T, TΣ}(Σ, nothing, 1e-9)
+    LazyPDMat(Σ::TΣ, ϵ::Real) where TΣ<:AM{T} where T<:Real = new{T, TΣ}(Σ, nothing, ϵ)
 end
 LazyPDMat(Σ::LazyPDMat) = Σ
 LazyPDMat(σ::Real) = σ
-Matrix(Σ::LazyPDMat) = Matrix(Σ.Σ)
+@inline unbox(Σ::LazyPDMat) = Σ.Σ
 
-AbstractMatrix(Σ::LazyPDMat) = Σ.Σ
-size(Σ::LazyPDMat) = size(Σ.Σ)
-@inline getindex(Σ::LazyPDMat, i::Int...) = getindex(Σ.Σ, i...)
+size(Σ::LazyPDMat) = size(unbox(Σ))
+@inline getindex(Σ::LazyPDMat, i::Int...) = getindex(unbox(Σ), i...)
 IndexStyle(::Type{<:LazyPDMat}) = IndexLinear()
-==(Σ1::LazyPDMat, Σ2::LazyPDMat) = Σ1.Σ == Σ2.Σ
-isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(Σ1.Σ, Σ2.Σ)
+==(Σ1::LazyPDMat, Σ2::LazyPDMat) = unbox(Σ1) == unbox(Σ2)
+isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(unbox(Σ1), unbox(Σ2))
 
 # Unary functions.
 logdet(Σ::LazyPDMat) = 2 * logdet(chol(Σ))
 function chol(Σ::LazyPDMat)
     if Σ.U == nothing
-        Σ.U = chol(Symmetric(Σ.Σ + Σ.ϵ * I))
+        Σ.U = chol(Symmetric(unbox(Σ) + Σ.ϵ * I))
     end
     return Σ.U
 end
 
 # Binary functions.
-+(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) + Matrix(Σ2))
-+(Σ1::LazyPDMat, Σ2::UniformScaling) = (Σ2.λ > 0 ? LazyPDMat : identity)(Σ1.Σ + Σ2)
--(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) - Matrix(Σ2))
-*(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Matrix(Σ1) * Matrix(Σ2))
-map(::typeof(+), Σs::LazyPDMat...) = LazyPDMat(map(+, (Σ.Σ for Σ in Σs)...))
-map(::typeof(*), Σs::LazyPDMat...) = LazyPDMat(map(*, (Σ.Σ for Σ in Σs)...))
-# map(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(map(*, Σ1.Σ, Σ2.Σ))
-broadcast(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(Σ1.Σ .* Σ2.Σ)
++(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(unbox(Σ1) + unbox(Σ2))
++(Σ1::LazyPDMat, Σ2::UniformScaling) = (Σ2.λ > 0 ? LazyPDMat : identity)(unbox(Σ1) + Σ2)
+-(Σ1::LazyPDMat, Σ2::LazyPDMat) = unbox(Σ1) - unbox(Σ2)
+*(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(unbox(Σ1) * unbox(Σ2))
+map(::typeof(+), Σs::LazyPDMat...) = LazyPDMat(map(+, map(unbox, Σs)...))
+map(::typeof(*), Σs::LazyPDMat...) = LazyPDMat(map(*, map(unbox, Σs)...))
+
+broadcast(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(unbox(Σ1) .* unbox(Σ2))
 
 # Specialised operations to exploit the Cholesky.
-Xt_A_X(A::AbstractMatrix, X::AbstractMatrix) = X' * A * X
-Xt_A_X(A::AbstractMatrix, x::AbstractVector) = x' * A * x
 function Xt_A_X(A::LazyPDMat, X::AbstractMatrix)
-    return LazyPDMat(Symmetric(X' * A.Σ * X))
+    return LazyPDMat(Symmetric(X' * unbox(A) * X))
     # V = chol(A) * X
     # return LazyPDMat(Symmetric(V'V), 1e-9)
 end

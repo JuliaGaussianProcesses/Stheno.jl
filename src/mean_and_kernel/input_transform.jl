@@ -1,4 +1,4 @@
-export transform, pick_dims, periodic
+export transform, pick_dims, periodic, scale
 
 """
     ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
@@ -43,6 +43,19 @@ Applies the input-transform `ϕ` to `f`.
 """
 transform(μ::MeanFunction, ϕ) = ITMean(μ, ϕ)
 transform(k::Kernel, ϕ) = ITKernel(k, ϕ)
+
+"""
+    scale(f::Union{MeanFunction, Kernel}, l::Real)
+
+Multiply each element of the input by `l`.
+"""
+scale(f::Union{MeanFunction, Kernel}, l::Real) = transform(f, Scale(l))
+
+struct Scale{T<:Real}
+    l::T
+end
+(s::Scale)(x) = s.l * x
+unary_obswise(s::Scale, x::AVM) = s.l .* x
 
 """
     pick_dims(x::Union{MeanFunction, Kernel}, I)

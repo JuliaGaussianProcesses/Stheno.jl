@@ -25,12 +25,7 @@ for T in [:CompositeKernel, :CompositeCrossKernel]
     end
 end
 
-# function pairwise(k::CompositeKernel, X::AVM)
-#     Σs = map(f->pairwise(f, X), k.x)
-#     Σout = map(k.f, Σs...)
-#     # @show typeof.(Σs), typeof(Σout)
-#     return map(k.f, map(f->pairwise(f, X), k.x)...)
-# end
+pairwise(f::CompositeKernel, X::AVM) = LazyPDMat(map(f.f, map(f->pairwise(f, X), f.x)...))
 
 """
     LhsCross <: CrossKernel
