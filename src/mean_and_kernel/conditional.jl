@@ -67,7 +67,6 @@ function pairwise(k::ConditionalKernel, X::AVM)
     Σgg = AbstractMatrix(pairwise(k.kgg, X))
     Σfg_X = pairwise(k.kfg, k.c.X, X)
     Σ′gg = AbstractMatrix(Xt_invA_X(k.c.Σff, Σfg_X))
-    # @show typeof(Σgg), typeof(Σ′gg)
     return LazyPDMat((Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg))
 end
 function pairwise(k::ConditionalKernel, X::AVM, X′::AVM)

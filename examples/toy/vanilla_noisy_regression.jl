@@ -9,7 +9,7 @@ using Stheno, Plots
 function model(gpc)
 
     # Define a smooth latent process.
-    f = 1.5 * GP(transform(EQ(), x->x), gpc)
+    f = 1.5 * GP(EQ(), gpc)
 
     # Define a latent noise process.
     noise = GP(Noise(1e-2), gpc)

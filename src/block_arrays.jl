@@ -52,11 +52,19 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
         end
         return UpperTriangular(Y)
     end
-    @eval function $foo_At_mul_B(A::ABM, B::ABVM)
+    @eval function $foo_At_mul_B(A::ABM, B::AM)
         At = $foo(A)
         return At * B
     end
-    @eval function $foo_A_mul_Bt(A::ABVM, B::ABM)
+    @eval function $foo_At_mul_B(A::ABM, B::AV)
+        At = $foo(A)
+        return At * B
+    end
+    @eval function $foo_A_mul_Bt(A::AM, B::ABM)
+        Bt = $foo(B)
+        return A * Bt
+    end
+    @eval function $foo_A_mul_Bt(A::AV, B::ABM)
         Bt = $foo(B)
         return A * Bt
     end
@@ -76,11 +84,15 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
     #     At, Bt = $foo(A), $foo(B)
     #     return At / Bt
     # end
-    @eval function $foo_At_ldiv_B(A::ABM, B::ABVM)
+    @eval function $foo_At_ldiv_B(A::ABM, B::AM)
         At = $foo(A)
         return At \ B
     end
-    @eval function $foo_At_ldiv_B(A::Union{LowerTriangular, UpperTriangular}, B::ABVM)
+    @eval function $foo_At_ldiv_B(A::ABM, B::AV)
+        At = $foo(A)
+        return At \ B
+    end
+    @eval function $foo_At_ldiv_B(A::Union{LowerTriangular, UpperTriangular}, B::AVM)
         At = $foo(A)
         return At \ B
     end
@@ -196,6 +208,7 @@ function *(A::ABM{T}, x::ABV{T}) where T
     end
     return y
 end
+*(A::ABM{T}, B::AV{T}) where T = A * BlockVector([B])
 
 """
     *(A::BlockMatrix, B::BlockMatrix)
@@ -214,6 +227,8 @@ function *(A::ABM{T}, B::ABM{T}) where T
     end
     return C
 end
+*(A::ABM{T}, B::AM{T}) where T = A * BlockMatrix([B])
+*(A::AM{T}, B::ABM{T}) where T = BlockMatrix([A]) * B
 
 """
     SquareDiagonal{T, V<:AM{T}} <: AbstractBlockMatrix{T}
