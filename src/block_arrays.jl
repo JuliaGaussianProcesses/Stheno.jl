@@ -17,6 +17,36 @@ const ABM{T} = AbstractBlockMatrix{T}
 const ABVM{T} = AbstractBlockVecOrMat{T}
 const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM}
 
+"""
+    SquareDiagonal{T, V<:AM{T}} <: AbstractBlockMatrix{T}
+
+A `SquareDiagonal` is endowed with a stronger form of symmetry than usual for a
+`Symmetric`: we require that each block on the diagonal of the `BlockMatrix` that it
+represents be `SquareDiagonal`. This is satisfied trivially by non-block matrices, thus
+`Symmetric` matrices wrapping a `Matrix` are also `BlockSymmetric`. If a block on the
+diagonal of a `SquareDiagonal` matrix is itself a `BlockMatrix`, then  we require that it
+also be `SquareDiagonal`.
+"""
+struct SquareDiagonal{T, TX<:ABM{T}} <: AbstractBlockMatrix{T}
+    X::TX
+    function SquareDiagonal(X::TX) where TX<:ABM{T} where T
+        @assert blocksizes(X, 1) == blocksizes(X, 2)
+        return new{T, TX}(X)
+    end
+end
+# const SD{T, TX} = SquareDiagonal{T, TX}
+const SD{T} = SquareDiagonal{T, <:ABM{T}}
+SquareDiagonal(X::SquareDiagonal) = X
+nblocks(X::SquareDiagonal) = nblocks(X.X)
+nblocks(X::SquareDiagonal, i::Int) = nblocks(X.X, i)
+blocksize(X::SquareDiagonal, N::Int...) = blocksize(X.X, N...)
+getblock(X::SquareDiagonal, p::Int...) = getblock(X.X, p...)
+setblock!(X::SquareDiagonal, v, p::Int...) = setblock!(X.X, v, p...)
+size(X::SquareDiagonal) = size(X.X)
+getindex(X::SquareDiagonal, p::Int, q::Int) = getindex(X.X, (p < q ? (p, q) : (q, p))...)
+eltype(X::SquareDiagonal) = eltype(X.X)
+copy(X::SquareDiagonal{T}) where T = SquareDiagonal(copy(X.X))
+
 for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
           foo_At_rdiv_B, foo_A_rdiv_Bt, foo_At_rdiv_Bt,
           foo_At_ldiv_B, foo_A_ldiv_Bt, foo_At_ldiv_Bt,) in
@@ -93,6 +123,14 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
         return At \ B
     end
     @eval function $foo_At_ldiv_B(A::Union{LowerTriangular, UpperTriangular}, B::AVM)
+        At = $foo(A)
+        return At \ B
+    end
+    @eval function $foo_At_ldiv_B(A::LowerTriangular{T, <:SD{T}}, B::AVM{T}) where T<:Real
+        At = $foo(A)
+        return At \ B
+    end
+    @eval function $foo_At_ldiv_B(A::UpperTriangular{T, <:SD{T}}, B::AVM{T}) where T<:Real
         At = $foo(A)
         return At \ B
     end
@@ -208,7 +246,9 @@ function *(A::ABM{T}, x::ABV{T}) where T
     end
     return y
 end
-*(A::ABM{T}, B::AV{T}) where T = A * BlockVector([B])
+function *(A::ABM{T}, B::AV{T}) where T
+    return A * BlockVector([B])
+end
 
 """
     *(A::BlockMatrix, B::BlockMatrix)
@@ -229,35 +269,6 @@ function *(A::ABM{T}, B::ABM{T}) where T
 end
 *(A::ABM{T}, B::AM{T}) where T = A * BlockMatrix([B])
 *(A::AM{T}, B::ABM{T}) where T = BlockMatrix([A]) * B
-
-"""
-    SquareDiagonal{T, V<:AM{T}} <: AbstractBlockMatrix{T}
-
-A `SquareDiagonal` is endowed with a stronger form of symmetry than usual for a
-`Symmetric`: we require that each block on the diagonal of the `BlockMatrix` that it
-represents be `SquareDiagonal`. This is satisfied trivially by non-block matrices, thus
-`Symmetric` matrices wrapping a `Matrix` are also `BlockSymmetric`. If a block on the
-diagonal of a `SquareDiagonal` matrix is itself a `BlockMatrix`, then  we require that it
-also be `SquareDiagonal`.
-"""
-struct SquareDiagonal{T, TX<:ABM{T}} <: AbstractBlockMatrix{T}
-    X::TX
-    function SquareDiagonal(X::TX) where TX<:ABM{T} where T
-        @assert blocksizes(X, 1) == blocksizes(X, 2)
-        return new{T, TX}(X)
-    end
-end
-const SD{T, TX} = SquareDiagonal{T, TX}
-SquareDiagonal(X::SquareDiagonal) = X
-nblocks(X::SquareDiagonal) = nblocks(X.X)
-nblocks(X::SquareDiagonal, i::Int) = nblocks(X.X, i)
-blocksize(X::SquareDiagonal, N::Int...) = blocksize(X.X, N...)
-getblock(X::SquareDiagonal, p::Int...) = getblock(X.X, p...)
-setblock!(X::SquareDiagonal, v, p::Int...) = setblock!(X.X, v, p...)
-size(X::SquareDiagonal) = size(X.X)
-getindex(X::SquareDiagonal, p::Int, q::Int) = getindex(X.X, (p < q ? (p, q) : (q, p))...)
-eltype(X::SquareDiagonal) = eltype(X.X)
-copy(X::SquareDiagonal{T}) where T = SquareDiagonal(copy(X.X))
 
 # Ensure that, if we try to make a `PDMat` from a `BlockMatrix`, we require that the
 # blocks on it's diagonal be square. Otherwise we should definitely error.
@@ -329,7 +340,7 @@ function chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
     end
     return UpperTriangular(SquareDiagonal(U))
 end
-chol(A::Symmetric{T, <:SD}) where T<:Real = chol(A.data)
+chol(A::Symmetric{T, <:SD{T}}) where T<:Real = chol(A.data)
 chol(A::ABM) = chol(SquareDiagonal(A))
 
 function \(U::UpperTriangular{T, <:SD}, x::ABV{T}) where T<:Real
@@ -356,7 +367,7 @@ function \(U::UpperTriangular{T, <:SD{T}}, X::ABM{T}) where T<:Real
     return Y
 end
 
-function \(Ll::LowerTriangular{T, <:SD}, x::ABV{T}) where T<:Real
+function \(Ll::LowerTriangular{T, <:SD{T}}, x::ABV{T}) where T<:Real
     L = Ll.data
     y = BlockVector{T}(uninitialized_blocks, blocksizes(L, 1))
     for p in 1:nblocks(y, 1)
@@ -369,7 +380,7 @@ function \(Ll::LowerTriangular{T, <:SD}, x::ABV{T}) where T<:Real
     return y
 end
 
-function \(L::LowerTriangular{T, <:SD}, X::ABM{T}) where T<:Real
+function \(L::LowerTriangular{T, <:SD{T}}, X::ABM{T}) where T<:Real
     Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(L, 1), blocksizes(X, 2))
     for q in 1:nblocks(Y, 2), p in 1:nblocks(Y, 1)
         setblock!(Y, getblock(X, p, q), p, q)

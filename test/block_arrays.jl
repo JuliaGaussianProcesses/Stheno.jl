@@ -229,9 +229,11 @@
         @test x' * (Matrix(A_) \ x) ≈ Xt_invA_X(A, x)
         @test typeof(Xt_invA_X(A, X)) <: LazyPDMat
         @test typeof(chol(Xt_invA_X(A, X)).data) <: AbstractBlockMatrix
-        @test maximum(abs.(X' * (Matrix(A_) \ X) - Matrix(Xt_invA_X(A, X)))) < 1e-6
+        @test 1 == 2 # Not sure that the next test should pass.
+        @test maximum(abs.(Matrix(X') * (Matrix(A_) \ Matrix(X)) - Matrix(Xt_invA_X(A, X)))) < 1e-6
         @test typeof(Xt_invA_Y(X′, A, X)) <: AbstractBlockMatrix
-        @test maximum(abs.(X′' * (Matrix(A_) \ X) - Xt_invA_Y(X′, A, X))) < 1e-6
+        @test 1 == 2 # Not sure that the next test should pass.
+        @test maximum(abs.(Matrix(X′)' * (Matrix(A_) \ Matrix(X)) - Xt_invA_Y(X′, A, X))) < 1e-6
         @test typeof(A \ X) <: AbstractBlockMatrix
         @test maximum(abs.(Matrix(A_) \ X - A \ X)) < 1e-6
     end
