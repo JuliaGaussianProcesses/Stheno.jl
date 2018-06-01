@@ -7,3 +7,4 @@ test_dispatch.jl
 examples/vanilla_noisy_regression/*
 examples/simple_sensor_fusion/*
 
+docs/build/*
