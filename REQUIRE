@@ -2,3 +2,4 @@ julia 0.6.3
 Distances
 BlockArrays
 FillArrays
+IterTools

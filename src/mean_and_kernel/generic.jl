@@ -1,5 +1,3 @@
-using IterTools, FillArrays
-
 import Base: length, size
 import Distances: pairwise
 
