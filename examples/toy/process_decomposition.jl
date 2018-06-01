@@ -1,3 +1,4 @@
+using Revise
 using Stheno, Plots
 plotly();
 
@@ -23,11 +24,11 @@ f1, f2, f3 = model(GPC());
 # Generate some toy observations of `y1` and `y2`.
 ŷ1, ŷ3 = rand(rng, [f1, f3], [X1, X3]);
 
-# Compute the posterior process.
+# Compute the posterior processes.
 (f1′, f2′, f3′) = (f1, f2, f3) | (f1(X1)←ŷ1, f3(X3)←ŷ3);
 
 # Define some plotting stuff.
-Nplot, S = 500, 25;
+Nplot, S = 500, 100;
 Xp = linspace(-2.5, 12.5, Nplot);
 
 # Sample from posterior and write directly to file.
@@ -39,7 +40,7 @@ f1′Xp, f2′Xp, f3′Xp = rand(rng, [f1′, f2′, f3′], [Xp, Xp, Xp], S);
 μf3′, σf3′ = marginals(f3′, Xp);
 
 
-###########################  Plot results - USE ONLY Julia-0.6!  ###########################
+###########################  Plot results  ###########################
 
 posterior_plot = plot();
 

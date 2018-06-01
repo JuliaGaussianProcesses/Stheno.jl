@@ -46,7 +46,7 @@ using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKer
             @test cache.α ≈ zeros(Float64, N)
 
             # Posterior covariance at the data should be _exactly_ zero.
-            @test all(pairwise(k′ff, X0) .== 0)
+            @test maximum(abs.(pairwise(k′ff, X0))) < 1e-6
 
             # Posterior for indep. process should be _exactly_ the same as the prior.
             @test unary_obswise(μ′h, X0) == unary_obswise(μh, X0)

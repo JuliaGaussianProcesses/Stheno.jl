@@ -22,7 +22,9 @@ CatMean(μs::Vararg{<:MeanFunction}) = CatMean([μs...])
 (μ::CatMean)(x::Tuple{Int, <:Any}) = μ.μ[x[1]](x[2])
 length(μ::CatMean) = sum(length.(μ.μ))
 ==(μ::CatMean, μ′::CatMean) = μ.μ == μ′.μ
-unary_obswise(μ::CatMean, X::AV{<:AVM}) = BlockVector(unary_obswise.(μ.μ, X))
+function unary_obswise(μ::CatMean, X::AV{<:AVM})
+    return BlockVector(unary_obswise.(μ.μ, X))
+end
 
 """
     CatCrossKernel <: CrossKernel

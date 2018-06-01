@@ -13,6 +13,7 @@ struct CondCache
     function CondCache(kff::Kernel, μf::MeanFunction, X::AVM, f::AV{<:Real})
         μfX, Σff = unary_obswise(μf, X), pairwise(kff, X)
         δ = (f .- μfX) .* .!(f .≈ μfX)
+        δ = f - μfX
         return new(Σff, Σff \ δ, X)
     end
 end
@@ -31,8 +32,9 @@ end
 length(μ::ConditionalMean) = length(μ.μg)
 (μ::ConditionalMean)(x::Number) = unary_obswise(μ, [x])[1]
 (μ::ConditionalMean)(x::AbstractVector) = unary_obswise(μ, reshape(x, length(x), 1))[1]
-unary_obswise(μ::ConditionalMean, Xg::AVM) =
-    unary_obswise(μ.μg, Xg) + pairwise(μ.kfg, μ.c.X, Xg)' * μ.c.α
+function unary_obswise(μ::ConditionalMean, Xg::AVM)
+    return unary_obswise(μ.μg, Xg) + pairwise(μ.kfg, μ.c.X, Xg)' * μ.c.α
+end
 
 """
     ConditionalKernel <: Kernel

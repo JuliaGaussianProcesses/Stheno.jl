@@ -15,8 +15,8 @@ abstract type Kernel <: CrossKernel end
 @inline nobs(X::AbstractMatrix) = size(X, 2)
 
 # Dimensionality of observations.
-@inline ndims(x::AbstractVector) = 1
-@inline ndims(X::AbstractMatrix) = size(X, 1)
+@inline nfeatures(x::AbstractVector) = 1
+@inline nfeatures(X::AbstractMatrix) = size(X, 1)
 
 # Return observation in appropriate way depending upon container type.
 @inline getobs(x::AbstractVector, n) = x[n]

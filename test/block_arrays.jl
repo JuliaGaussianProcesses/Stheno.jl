@@ -75,34 +75,41 @@ using Stheno: BS
         rng, P1, P2 = MersenneTwister(123456), 3, 4
         A11, A12, A22 = randn(rng, P1, P1), randn(rng, P1, P2), randn(rng, P2, P2)
         A = BlockMatrix([A11, zeros(Float64, P2, P1), A12, A22], 2, 2)
+        U, L = UpperTriangular(A), LowerTriangular(A)
 
         # UpperTriangular functionality.
-        @test unbox(UpperTriangular(A)) === A
-        @test blocksize(UpperTriangular(A), 1, 1) == blocksize(A, 1, 1)
-        @test blocksize(UpperTriangular(A), 2, 1) == blocksize(A, 2, 1)
-        @test blocksizes(UpperTriangular(A), 1) == blocksizes(A, 1)
-        @test blocksizes(UpperTriangular(A), 2) == blocksizes(A, 2)
-        @test blocksizes(UpperTriangular(A)) == blocksizes(A)
+        @test unbox(U) === A
+        @test blocksize(U, 1, 1) == blocksize(A, 1, 1)
+        @test blocksize(U, 2, 1) == blocksize(A, 2, 1)
+        @test blocksizes(U, 1) == blocksizes(A, 1)
+        @test blocksizes(U, 2) == blocksizes(A, 2)
+        @test blocksizes(U) == blocksizes(A)
 
-        @test getblock(UpperTriangular(A), 1, 1) == UpperTriangular(getblock(A, 1, 1))
-        @test getblock(UpperTriangular(A), 2, 1) === Zeros{Float64}(P2, P1)
-        @test getblock(UpperTriangular(A), 2, 2) == UpperTriangular(getblock(A, 2, 2))
+        @test getblock(U, 1, 1) == UpperTriangular(getblock(A, 1, 1))
+        @test getblock(U, 2, 1) === Zeros{Float64}(P2, P1)
+        @test getblock(U, 2, 2) == UpperTriangular(getblock(A, 2, 2))
+
+        @test BlockMatrix(U) isa AbstractBlockMatrix
+        @test Matrix(BlockMatrix(U)) == Matrix(U)
 
         # LowerTriangular functionality.
-        @test unbox(LowerTriangular(A)) === A
-        @test blocksize(LowerTriangular(A), 1, 1) == blocksize(A, 1, 1)
-        @test blocksize(LowerTriangular(A), 2, 1) == blocksize(A, 2, 1)
-        @test blocksizes(LowerTriangular(A), 1) == blocksizes(A, 1)
-        @test blocksizes(LowerTriangular(A), 2) == blocksizes(A, 2)
-        @test blocksizes(LowerTriangular(A)) == blocksizes(A)
+        @test unbox(L) === A
+        @test blocksize(L, 1, 1) == blocksize(A, 1, 1)
+        @test blocksize(L, 2, 1) == blocksize(A, 2, 1)
+        @test blocksizes(L, 1) == blocksizes(A, 1)
+        @test blocksizes(L, 2) == blocksizes(A, 2)
+        @test blocksizes(L) == blocksizes(A)
 
-        @test getblock(LowerTriangular(A), 1, 1) == LowerTriangular(getblock(A, 1, 1))
-        @test getblock(LowerTriangular(A), 1, 2) === Zeros{Float64}(P1, P2)
-        @test getblock(LowerTriangular(A), 2, 2) == LowerTriangular(getblock(A, 2, 2))
+        @test getblock(L, 1, 1) == LowerTriangular(getblock(A, 1, 1))
+        @test getblock(L, 1, 2) === Zeros{Float64}(P1, P2)
+        @test getblock(L, 2, 2) == LowerTriangular(getblock(A, 2, 2))
+
+        @test BlockMatrix(L) isa AbstractBlockMatrix
+        @test Matrix(BlockMatrix(L)) == Matrix(L)
 
         # Note the subtle difference here. This is correct.
-        @test getblock(UpperTriangular(A), 1, 2) === getblock(A, 1, 2)
-        @test getblock(LowerTriangular(A), 2, 1) == getblock(A, 2, 1)
+        @test getblock(U, 1, 2) === getblock(A, 1, 2)
+        @test getblock(L, 2, 1) == getblock(A, 2, 1)
     end
 
     # Test copying.
@@ -295,17 +302,17 @@ using Stheno: BS
         x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)
         x = BlockVector([x1, x2, x3])
 
-        @test typeof(U \ x) <: AbstractBlockVector
+        @test U \ x isa AbstractBlockVector
         @test size(U \ x) == size(U_ \ Vector(x))
         @test U \ x ≈ U_ \ Vector(x)
 
-        @test typeof(U') <: LowerTriangular{<:Real, <:AbstractBlockMatrix}
-        @test typeof(U' \ x) <: AbstractBlockVector
-        @test typeof(Ac_ldiv_B(U, x)) <: AbstractBlockVector
+        @test U' isa LowerTriangular{<:Real, <:AbstractBlockMatrix}
+        @test U' \ x isa AbstractBlockVector
+        @test Ac_ldiv_B(U, x) isa AbstractBlockVector
         @test size(U' \ x) == size(U_' \ Vector(x))
         @test U' \ x ≈ U_' \ Vector(x)
 
-        @test typeof(transpose(U) \ x) <: AbstractBlockVector
+        @test transpose(U) \ x isa AbstractBlockVector
         @test size(transpose(U) \ x) == size(U_' \ Vector(x))
         @test transpose(U) \ x ≈ U_' \ Vector(x)
 
@@ -316,11 +323,11 @@ using Stheno: BS
         X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
         X = BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2)
 
-        @test typeof(U \ X) <: AbstractBlockMatrix
+        @test U \ X isa AbstractBlockMatrix
         @test size(U \ X) == size(U_ \ Matrix(X))
         @test U \ X ≈ U_ \ Matrix(X)
 
-        @test typeof(U' \ X) <: AbstractBlockMatrix
+        @test U' \ X isa AbstractBlockMatrix
         @test size(U' \ X) == size(U_' \ Matrix(X))
         @test U' \ X ≈ U_' \ Matrix(X)
     end
@@ -347,7 +354,7 @@ using Stheno: BS
         P, Q, R = P1 + P2, Q1 + Q2, R1 + R2
         B = randn(rng, P, P)
         A_ = BlockArray(B' * B + UniformScaling(1e-6), [P1, P2], [P1, P2])
-        A = LazyPDMat(Symmetric(A_))
+        A = LazyPDMat(Symmetric(A_), 1e-12)
         x = BlockArray(randn(rng, P), [P1, P2])
         X = BlockArray(randn(rng, P, Q), [P1, P2], [Q1, Q2])
         X′ = BlockArray(randn(rng, P, R), [P1, P2], [R1, R2])
@@ -366,24 +373,24 @@ using Stheno: BS
         @test chol(A) ≈ chol(Matrix(A_) + A.ϵ * I)
  
         # Test binary operations.
-        @test typeof(x + x) <: AbstractBlockVector
+        @test x + x isa AbstractBlockVector
         @test Vector(x + x) == Vector(x) + Vector(x)
-        @test typeof(x - x) <: AbstractBlockVector
+        @test x - x isa AbstractBlockVector
         @test Vector(x - x) == Vector(x) - Vector(x)
 
-        @test typeof(A_ + A_) <: AbstractBlockMatrix
+        @test A_ + A_ isa AbstractBlockMatrix
         @test Matrix(A + A) == A_ + A_
-        @test typeof(A_ - A_) <: AbstractBlockMatrix
+        @test A_ - A_ isa AbstractBlockMatrix
         @test Matrix(A - A) == A_ - A_
 
-        @test typeof(chol(A).data) <: AbstractBlockMatrix
+        @test chol(A).data isa AbstractBlockMatrix
         @test x' * (Matrix(A_) \ x) ≈ Xt_invA_X(A, x)
-        @test typeof(Xt_invA_X(A, X)) <: LazyPDMat
-        @test typeof(chol(Xt_invA_X(A, X)).data) <: AbstractBlockMatrix
+        @test Xt_invA_X(A, X) isa LazyPDMat
+        @test chol(Xt_invA_X(A, X)).data isa AbstractBlockMatrix
         @test maximum(abs.(Matrix(X') * (Matrix(A_) \ Matrix(X)) - Matrix(Xt_invA_X(A, X)))) < 1e-6
-        @test typeof(Xt_invA_Y(X′, A, X)) <: AbstractBlockMatrix
+        @test Xt_invA_Y(X′, A, X) isa AbstractBlockMatrix
         @test maximum(abs.(Matrix(X′)' * (Matrix(A_) \ Matrix(X)) - Xt_invA_Y(X′, A, X))) < 1e-6
-        @test typeof(A \ X) <: AbstractBlockMatrix
+        @test A \ X isa AbstractBlockMatrix
         @test maximum(abs.(Matrix(A_) \ X - A \ X)) < 1e-6
     end
 end

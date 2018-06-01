@@ -1,7 +1,7 @@
 import Stheno: AV, AVM, AMRV
 using Stheno: unary_obswise, unary_obswise_fallback, binary_obswise,
     binary_obswise_fallback, pairwise, pairwise_fallback, MeanFunction, Kernel, CrossKernel,
-    nobs, ndims
+    nobs, nfeatures
 
 """
     unary_obswise_tests(f, X::AVM)

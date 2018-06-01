@@ -15,7 +15,7 @@ using Stheno: unbox
         rng, N, P, Q = MersenneTwister(123456), 5, 6, 2
         B = randn(rng, N, N)
         Σ_ = B' * B + 1e-6I
-        Σ = LazyPDMat(Σ_)
+        Σ = LazyPDMat(Σ_, 1e-12)
 
         @test size(Σ) == (N, N)
         @test getindex(Σ, 10) == getindex(Σ_, 10)
@@ -27,7 +27,7 @@ using Stheno: unbox
         rng, N, P, Q = MersenneTwister(123456), 5, 6, 2
         B = randn(rng, N, N)
         A_ = B' * B + UniformScaling(1e-6)
-        A = LazyPDMat(A_)
+        A = LazyPDMat(A_, 1e-12)
         x, X, Y = randn(rng, N), randn(rng, N, P), randn(rng, N, Q)
 
         # Check utility functionality.
@@ -46,18 +46,18 @@ using Stheno: unbox
         @test chol(A) == chol(A_ + A.ϵ * I)
 
         # Test binary operations.
-        @test typeof(A + A) <: LazyPDMat
+        @test A + A isa LazyPDMat
         @test unbox(A + A) == A_ + A_
         @test A + 0.5I isa LazyPDMat
         @test A + (-0.5) * I isa Matrix
         @test unbox(A + 0.5I) == unbox(A) + 0.5I
-        @test typeof(A * A) <: LazyPDMat
+        @test A * A isa LazyPDMat
         @test unbox(A * A) == A_ * A_
         @test map(*, A, A) isa LazyPDMat
         @test unbox(map(*, A, A)) == map(*, unbox(A), unbox(A))
-        @test typeof(map(*, A, A)) <: LazyPDMat
+        @test map(*, A, A) isa LazyPDMat
         @test map(*, A, A) == LazyPDMat(map(*, A_, A_))
-        @test typeof(broadcast(*, A, A)) <: LazyPDMat
+        @test broadcast(*, A, A) isa LazyPDMat
         @test broadcast(*, A, A) == LazyPDMat(A_ .* A_)
 
         # Specialised matrix operations.
@@ -79,7 +79,7 @@ using Stheno: unbox
         # Construct PD matrix.
         B = randn(rng, D, D)
         A_ = B' * B + UniformScaling(1e-6)
-        A = LazyPDMat(A_)
+        A = LazyPDMat(A_, 1e-12)
 
         @test Stheno.diag_AᵀA(X) ≈ diag(X'X)
         @test Stheno.diag_AᵀB(X, Y) ≈ diag(X'Y)

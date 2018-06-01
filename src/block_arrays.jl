@@ -116,6 +116,20 @@ function getblock(U::UpperTriangular{T, <:ABM{T}}, p::Int, q::Int) where T
         return getblock(unbox(U), p, q)
     end
 end
+nblocks(U::UpperTriangular{T, <:ABM{T}} where T, d::Int...) = nblocks(unbox(U), d...)
+function BlockMatrix(U::UpperTriangular{T, <:ABM{T}}) where T
+    B = BlockMatrix{T}(uninitialized_blocks, blocksizes(U)...)
+    for q in 1:nblocks(U, 2)
+        for p in 1:q-1
+            setblock!(B, getblock(U, p, q), p, q)
+        end
+        setblock!(B, UpperTriangular(getblock(U, q, q)), q, q)
+        for p in q+1:nblocks(U, 1)
+            setblock!(B, Zeros{T}(blocksize(U, p, q)), p, q)
+        end
+    end
+    return B
+end
 
 @inline unbox(L::LowerTriangular{T, <:ABM{T}} where T) = L.data
 function blocksize(L::LowerTriangular{T, <:ABM{T}} where T, p::Int, q::Int)
@@ -132,6 +146,20 @@ function getblock(L::LowerTriangular{T, <:ABM{T}}, p::Int, q::Int) where T
     else
         return Zeros{T}(blocksize(L, p, q)...)
     end
+end
+nblocks(L::LowerTriangular{T, <:ABM{T}} where T, d::Int...) = nblocks(unbox(L), d...)
+function BlockMatrix(L::LowerTriangular{T, <:ABM{T}}) where T
+    B = BlockMatrix{T}(uninitialized_blocks, blocksizes(L)...)
+    for q in 1:nblocks(L, 2)
+        for p in 1:q-1
+            setblock!(B, Zeros{T}(blocksize(L, p, q)), p, q)
+        end
+        setblock!(B, LowerTriangular(getblock(L, q, q)), q, q)
+        for p in q+1:nblocks(L, 1)
+            setblock!(B, getblock(L, p, q), p, q)
+        end
+    end
+    return B
 end
 
 
@@ -207,7 +235,10 @@ function *(A::ABM{T}, x::ABV{T}) where T
     end
     return y
 end
-*(A::ABM{T}, B::AV{T}) where {T} = A * BlockVector([B])
+function *(A::ABM{T}, b::AV{T}) where {T}
+    @assert nblocks(A, 2) == 1
+    return A * BlockVector([b])
+end
 
 """
     *(A::BlockMatrix, B::BlockMatrix)
@@ -228,6 +259,10 @@ function *(A::ABM{T}, B::ABM{T}) where T
 end
 *(A::ABM{T}, B::AM{T}) where T = A * BlockMatrix([B])
 *(A::AM{T}, B::ABM{T}) where T = BlockMatrix([A]) * B
+*(U::UpperTriangular{T, <:ABM{T}}, B::ABM{T}) where T = BlockMatrix(U) * B
+*(A::ABM{T}, U::UpperTriangular{T, <:ABM{T}}) where T = B * BlockMatrix(U)
+*(U::LowerTriangular{T, <:ABM{T}}, B::ABM{T}) where T = BlockMatrix(U) * B
+*(A::ABM{T}, U::LowerTriangular{T, <:ABM{T}}) where T = B * BlockMatrix(U)
 
 # All of this can go in 0.7 because of lazy transposition (I think)
 for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
@@ -242,6 +277,9 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
     @eval function $foo_At_mul_B(A::ABM, B::AM)
         At = $foo(A)
         return At * B
+    end
+    @eval function $foo_At_mul_B(A::UpperTriangular, B::ABM)
+        return $foo_At_mul_B(BlockMatrix(A), B)
     end
     @eval function $foo_At_mul_B(A::ABM, B::AV)
         At = $foo(A)

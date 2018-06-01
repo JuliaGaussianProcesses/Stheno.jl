@@ -14,12 +14,12 @@ It will be useful for our subsequent discussion to define `blocksizes(X, n)` to 
 
 ### Why bother?
 
-The last property is particularly important for our purposes: it will allow us to guarantee that the Cholesky factorisation of a positive definite `BlockSymmetric` matrix can be represented as block matrix for which `blocksizes` is exactly the same.
+The last property is particularly important for our purposes: it will allow us to guarantee that the Cholesky factorisation of a positive definite block-symmetric matrix can be represented as block matrix for which `blocksizes` is exactly the same.
 
 
 ### Which block matrices can be block symmetric?
 
-It is important to ask which block matrices can potentially to be block-symmetric. A necessary condition for a block matrix to be block symmetric is then `blocksizes(X, 1) == blocksizes(X, 2)`. From an implementation perspective this condition is sufficient: `BlockSymmetric(X)` simply checks that this condition holds, and then enforces that `X` be block symmetric. This is analogous to the way which `Symmetric(Y)`, for some `AbstractMatrix` `Y`, checks that `Y` is square and then enforces `Y[p, q] == Y[q, p]`.
+It is important to ask which block matrices can potentially to be block-symmetric. A necessary condition for a block matrix to be block symmetric is that `blocksizes(X, 1) == blocksizes(X, 2)`. From an implementation perspective this condition is sufficient: `BlockSymmetric(X)` simply checks that this condition holds, and then enforces that `X` be block symmetric. This is analogous to the way which `Symmetric(Y)`, for some `AbstractMatrix` `Y`, checks that `Y` is square and then enforces `Y[p, q] == Y[q, p]`.
 
 
 ## Types under consideration

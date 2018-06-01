@@ -1,4 +1,4 @@
-using Stheno: CustomMean, ZeroMean, ConstantMean, nobs, ndims
+using Stheno: CustomMean, ZeroMean, ConstantMean, nobs, nfeatures
 
 @testset "mean" begin
 
