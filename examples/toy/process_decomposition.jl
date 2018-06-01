@@ -1,109 +1,112 @@
 using Revise
 using Stheno, Plots
-plotly();
+gr();
 
 
-###########################  Define and inspect our model  ###########################
+###########################  Define our model  ###########################
 
-#=
-In this example we consider three functions: f1, f2, and f3, where f3(x) = f1(x) + f2(x).
-=#
+
+# Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 function model(gpc)
-    f1 = GP(ConstantMean(randn()), EQ(), gpc)
-    f2 = GP(EQ(), gpc)
-    f3 = f1 + f2
-    return f1, f2, f3
+    f₁ = GP(ConstantMean(randn()), EQ(), gpc)
+    f₂ = GP(EQ(), gpc)
+    f₃ = f₁ + f₂
+    return f₁, f₂, f₃
 end
 
-# Randomly sample `N1` locations at which to measure `f` using `y1`, and `N2` locations
+# Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
 # at which to measure `f` using `y2`.
-rng, N1, N3 = MersenneTwister(123546), 10, 11;
-X1, X3 = sort(rand(rng, N1) * 10), sort(rand(rng, N3) * 10);
-f1, f2, f3 = model(GPC());
+rng, N₁, N₃ = MersenneTwister(123546), 10, 11;
+X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
+f₁, f₂, f₃ = model(GPC());
 
-# Generate some toy observations of `y1` and `y2`.
-ŷ1, ŷ3 = rand(rng, [f1, f3], [X1, X3]);
+# Generate some toy observations of `f₁` and `f₃`.
+ŷ₁, ŷ₃ = rand(rng, [f₁, f₃], [X₁, X₃]);
 
 # Compute the posterior processes.
-(f1′, f2′, f3′) = (f1, f2, f3) | (f1(X1)←ŷ1, f3(X3)←ŷ3);
+(f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁)←ŷ₁, f₃(X₃)←ŷ₃);
 
 # Define some plotting stuff.
-Nplot, S = 500, 100;
-Xp = linspace(-2.5, 12.5, Nplot);
+Np, S = 500, 25;
+Xp = linspace(-2.5, 12.5, Np);
 
-# Sample from posterior and write directly to file.
-f1′Xp, f2′Xp, f3′Xp = rand(rng, [f1′, f2′, f3′], [Xp, Xp, Xp], S);
+# Sample jointly from the posterior over each process.
+f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′, f₂′, f₃′], [Xp, Xp, Xp], S);
 
-# Get posterior mean and marginals f′ and y′ and write them for plotting.
-μf1′, σf1′ = marginals(f1′, Xp);
-μf2′, σf2′ = marginals(f2′, Xp);
-μf3′, σf3′ = marginals(f3′, Xp);
+# Compute posterior marginals.
+μf₁′, σf₁′ = marginals(f₁′, Xp);
+μf₂′, σf₂′ = marginals(f₂′, Xp);
+μf₃′, σf₃′ = marginals(f₃′, Xp);
 
 
 ###########################  Plot results  ###########################
 
 posterior_plot = plot();
 
-# Posterior over `f1`.
-plot!(posterior_plot, Xp, μf1′;
-    linecolor=:red,
-    linewidth=2.0,
-    label="f1");
-plot!(posterior_plot, Xp, [μf1′ μf1′];
+# Plot posterior marginal variances
+plot!(posterior_plot, Xp, [μf₁′ μf₁′];
     linewidth=0.0,
-    fillrange=[μf1′ .- 3 .* σf1′, μf1′ .+ 3 * σf1′],
+    fillrange=[μf₁′ .- 3 .* σf₁′, μf₁′ .+ 3 * σf₁′],
     fillalpha=0.3,
     fillcolor=:red,
     label="");
-scatter!(posterior_plot, X1, ŷ1;
+plot!(posterior_plot, Xp, [μf₂′ μf₂′];
+    linewidth=0.0,
+    fillrange=[μf₂′ .- 3 .* σf₂′, μf₂′ .+ 3 * σf₂′],
+    fillalpha=0.3,
+    fillcolor=:green,
+    label="");
+plot!(posterior_plot, Xp, [μf₃′ μf₃′];
+    linewidth=0.0,
+    fillrange=[μf₃′ .- 3 .* σf₃′, μf₃′ .+ 3 * σf₃′],
+    fillalpha=0.3,
+    fillcolor=:blue,
+    label="");
+
+# Plot joint posterior samples
+plot!(posterior_plot, Xp, f₁′Xp,
+    linecolor=:red,
+    linealpha=0.2,
+    label="");
+plot!(posterior_plot, Xp, f₂′Xp,
+    linecolor=:green,
+    linealpha=0.2,
+    label="");
+plot!(posterior_plot, Xp, f₃′Xp,
+    linecolor=:blue,
+    linealpha=0.2,
+    label="");
+
+# Plot posterior means
+plot!(posterior_plot, Xp, μf₁′;
+    linecolor=:red,
+    linewidth=2.0,
+    label="f1");
+plot!(posterior_plot, Xp, μf₂′;
+    linecolor=:green,
+    linewidth=2.0,
+    label="f2");
+plot!(posterior_plot, Xp, μf₃′;
+    linecolor=:blue,
+    linewidth=2.0,
+    label="f3");
+
+# Plot observations
+scatter!(posterior_plot, X₁, ŷ₁;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
     markeralpha=0.7,
     label="");
-plot!(posterior_plot, Xp, f1′Xp,
-    linecolor=:red,
-    linealpha=0.2,
-    label="");
-
-# Posterior over `f2`.
-plot!(posterior_plot, Xp, μf2′;
-    linecolor=:green,
-    linewidth=2.0,
-    label="f2");
-plot!(posterior_plot, Xp, [μf2′ μf2′];
-    linewidth=0.0,
-    fillrange=[μf2′ .- 3 .* σf2′, μf2′ .+ 3 * σf2′],
-    fillalpha=0.3,
-    fillcolor=:green,
-    label="");
-plot!(posterior_plot, Xp, f2′Xp,
-    linecolor=:green,
-    linealpha=0.2,
-    label="");
-
-# Plot posterior over f3.
-plot!(posterior_plot, Xp, μf3′;
-    linecolor=:blue,
-    linewidth=2.0,
-    label="f3");
-plot!(posterior_plot, Xp, [μf3′ μf3′];
-    linewidth=0.0,
-    fillrange=[μf3′ .- 3 .* σf3′, μf3′ .+ 3 * σf3′],
-    fillalpha=0.3,
-    fillcolor=:blue,
-    label="");
-scatter!(posterior_plot, X3, ŷ3;
+scatter!(posterior_plot, X₃, ŷ₃;
     markercolor=:blue,
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
     markeralpha=0.7,
     label="");
-plot!(posterior_plot, Xp, f3′Xp,
-    linecolor=:blue,
-    linealpha=0.2,
-    label="");
 
 display(posterior_plot);
+
+savefig(posterior_plot, "process_decomposition.pdf")
