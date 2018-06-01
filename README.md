@@ -61,26 +61,26 @@ function model(gpc)
     noise2 = GP(ConstantMean(3.5), Noise(1e-1), gpc)
 
     # Noise-corrupted versions of `f`.
-    y1 = f + noise1
-    y2 = f + noise2
+    y₁ = f + noise1
+    y₂ = f + noise2
 
-    return f, noise1, noise2, y1, y2
+    return f, noise1, noise2, y₁, y₂
 end
-f, noise1, noise2, y1, y2 = model(GPC())
+f, noise1, noise2, y₁, y₂ = model(GPC())
 
-# Generate some toy observations of `y1` and `y2`.
-X1, X2 = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10)
-ŷ1, ŷ2 = rand(rng, [y1, y2], [X1, X2])
+# Generate some toy observations of `y₁` and `y₂`.
+X₁, X₂ = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10)
+ŷ₁, ŷ₂ = rand(rng, [y₁, y₂], [X₁, X₂])
 
 # Compute the posterior processes.
-(f′, y1′, y2′) = (f, y1, y2) | (y1(X1)←ŷ1, y2(X2)←ŷ2)
+(f′, y₁′, y₂′) = (f, y₁, y₂) | (y₁(X₁)←ŷ₁, y₂(X₂)←ŷ₂)
 
 # Sample jointly from the posterior processes and compute posterior marginals.
 Xp = linspace(-2.5, 12.5, 500)
-f′Xp, y1′Xp, y2′Xp = rand(rng, [f′, y1′, y2′], [Xp, Xp, Xp], 100)
+f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′, y₁′, y₂′], [Xp, Xp, Xp], 100)
 μf′, σf′ = marginals(f′, Xp)
-μy1′, σy1′ = marginals(y1′, Xp)
-μy2′, σy2′ = marginals(y2′, Xp)
+μy₁′, σy₁′ = marginals(y₁′, Xp)
+μy₂′, σy₂′ = marginals(y₂′, Xp)
 ```
 ![Alternate Text](examples/toy/simple_sensor_fusion.png)
 
