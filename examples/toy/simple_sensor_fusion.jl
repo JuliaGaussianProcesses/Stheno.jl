@@ -1,9 +1,10 @@
-using Stheno, Plots
-plotly();
+using Stheno
 
 
 
 ###########################  Define and inspect our model  ###########################
+
+rng = MersenneTwister(123456)
 
 #=
 In this example, `f` is an unknown real-valued function that we wish to infer. To achieve
@@ -29,98 +30,44 @@ function model(gpc)
 
     return f, noise1, noise2, y1, y2
 end
-
-# Randomly sample `N1` locations at which to measure `f` using `y1`, and `N2` locations
-# at which to measure `f` using `y2`.
-rng, N1, N2 = MersenneTwister(123546), 3, 10;
-X1, X2 = sort(rand(rng, N1) * 10), sort(rand(rng, N2) * 10);
 f, noise1, noise2, y1, y2 = model(GPC());
 
 # Generate some toy observations of `y1` and `y2`.
+X1, X2 = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10);
 ŷ1, ŷ2 = rand(rng, [y1, y2], [X1, X2]);
 
-# Compute the posterior process.
+# Compute the posterior processes.
 (f′, y1′, y2′) = (f, y1, y2) | (y1(X1)←ŷ1, y2(X2)←ŷ2);
 
-# Define some plotting stuff.
-Nplot, S = 500, 100;
-Xp = linspace(-2.5, 12.5, Nplot);
-
-# Sample from posterior and write directly to file.
-f′Xp = rand(rng, f′, Xp, S);
-y1′Xp = rand(rng, y1′, Xp, S);
-y2′Xp = rand(rng, y2′, Xp, S);
-
-# Get posterior mean and marginals f′ and y′ and write them for plotting.
+# Sample jointly from the posterior processes and compute posterior marginals.
+Xp = linspace(-2.5, 12.5, 500);
+f′Xp, y1′Xp, y2′Xp = rand(rng, [f′, y1′, y2′], [Xp, Xp, Xp], 100);
 μf′, σf′ = marginals(f′, Xp);
 μy1′, σy1′ = marginals(y1′, Xp);
 μy2′, σy2′ = marginals(y2′, Xp);
 
 
-###########################  Plot results - USE ONLY Julia-0.6!  ###########################
+
+###########################  Plot results  ###########################
+
+using Plots
+# plotly();
+gr();
 
 posterior_plot = plot();
 
-# Plot posterior of first noise process.
-plot!(posterior_plot, Xp, μy1′;
-    linecolor=:red,
-    linewidth=2.0,
-    label="");
+# Plot posterior marginal std. dev.
 plot!(posterior_plot, Xp, [μy1′ μy1′];
     linewidth=0.0,
     fillrange=[μy1′ .- 3 .* σy1′, μy1′ .+ 3 * σy1′],
     fillalpha=0.3,
     fillcolor=:red,
     label="");
-scatter!(posterior_plot, X1, ŷ1;
-    markercolor=:red,
-    markershape=:circle,
-    markerstrokewidth=0.0,
-    markersize=4,
-    markeralpha=0.8,
-    label="Sensor 1");
-scatter!(posterior_plot, Xp, y1′Xp,
-    markercolor=:red,
-    markershape=:circle,
-    markerstrokewidth=0.0,
-    markersize=0.5,
-    markeralpha=0.3,
-    label="");
-
-# Plot posterior of second noise process.
-plot!(posterior_plot, Xp, μy2′;
-    linecolor=:green,
-    linewidth=2.0,
-    label="");
 plot!(posterior_plot, Xp, [μy2′ μy2′];
     linewidth=0.0,
     fillrange=[μy2′ .- 3 .* σy2′, μy2′ .+ 3 * σy2′],
     fillalpha=0.3,
     fillcolor=:green,
-    label="");
-scatter!(posterior_plot, X2, ŷ2;
-    markercolor=:green,
-    markershape=:circle,
-    markerstrokewidth=0.0,
-    markersize=4,
-    markeralpha=0.8,
-    label="Sensor 2");
-scatter!(posterior_plot, Xp, y2′Xp,
-    markercolor=:green,
-    markershape=:circle,
-    markerstrokewidth=0.0,
-    markersize=0.5,
-    markeralpha=0.3,
-    label="");
-
-# Plot posterior of smooth latent function.
-plot!(posterior_plot, Xp, f′Xp;
-    linecolor=:blue,
-    linealpha=0.2,
-    label="");
-plot!(posterior_plot, Xp, μf′;
-    linecolor=:blue,
-    linewidth=2.0,
     label="");
 plot!(posterior_plot, Xp, [μf′ μf′];
     linewidth=0.0,
@@ -129,5 +76,56 @@ plot!(posterior_plot, Xp, [μf′ μf′];
     fillcolor=:blue,
     label="");
 
+# Plot posterior marginal samples.
+scatter!(posterior_plot, Xp, y1′Xp,
+    markercolor=:red,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=0.5,
+    markeralpha=0.3,
+    label="");
+scatter!(posterior_plot, Xp, y2′Xp,
+    markercolor=:green,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=0.5,
+    markeralpha=0.3,
+    label="");
+plot!(posterior_plot, Xp, f′Xp;
+    linecolor=:blue,
+    linealpha=0.2,
+    label="");
 
-display(posterior_plot);
+# Plot posterior means
+plot!(posterior_plot, Xp, μy1′;
+    linecolor=:red,
+    linewidth=2.0,
+    label="");
+plot!(posterior_plot, Xp, μy2′;
+    linecolor=:green,
+    linewidth=2.0,
+    label="");
+plot!(posterior_plot, Xp, μf′;
+    linecolor=:blue,
+    linewidth=2.0,
+    label="Latent Function");
+
+# Plot posterior of first noise process.
+scatter!(posterior_plot, X1, ŷ1;
+    markercolor=:red,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.8,
+    label="Sensor 1");
+scatter!(posterior_plot, X2, ŷ2;
+    markercolor=:green,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.8,
+    label="Sensor 2");
+
+
+# display(posterior_plot);
+savefig(posterior_plot, "simple_sensor_fusion.png")

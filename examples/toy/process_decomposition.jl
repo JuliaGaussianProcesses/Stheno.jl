@@ -40,7 +40,8 @@ f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′, f₂′, f₃′], [Xp, Xp
 
 
 ###########################  Plot results  ###########################
-
+using Plots
+gr()
 posterior_plot = plot();
 
 # Plot posterior marginal variances
@@ -107,6 +108,6 @@ scatter!(posterior_plot, X₃, ŷ₃;
     markeralpha=0.7,
     label="");
 
-display(posterior_plot);
+# display(posterior_plot);
 
-savefig(posterior_plot, "process_decomposition.pdf")
+savefig(posterior_plot, "process_decomposition.png")
