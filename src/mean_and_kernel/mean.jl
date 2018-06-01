@@ -1,5 +1,3 @@
-using FillArrays
-
 import Base: mean, ==
 
 export CustomMean, ZeroMean, ConstantMean, mean

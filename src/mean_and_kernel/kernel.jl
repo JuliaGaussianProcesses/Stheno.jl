@@ -1,5 +1,3 @@
-using FillArrays, Distances
-
 import Base: +, *, ==
 
 export KernelType, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,

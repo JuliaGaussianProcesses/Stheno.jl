@@ -2,7 +2,7 @@ __precompile__(true)
 
 module Stheno
 
-    using Distances, BlockArrays, FillArrays, IterTools
+    using Distributions, Distances, BlockArrays, FillArrays, IterTools
     import Base: mean, cov, show, size, length, rand, vcat, convert, promote
 
     const AV{T} = AbstractVector{T}
@@ -37,6 +37,6 @@ module Stheno
     include("linops/product.jl")
     # include("linops/integrate.jl")
 
-    # Code to make Stheno work with Turing.
-    include("turing_util.jl")
+    # # Code to make Stheno work with Turing.
+    # include("turing_util.jl")
 end # module
