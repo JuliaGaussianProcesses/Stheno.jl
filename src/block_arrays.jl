@@ -7,7 +7,7 @@ import Base: +, *, size, getindex, eltype, copy, ctranspose, transpose, chol,
     Ac_ldiv_B, A_ldiv_Bc, Ac_ldiv_Bc, At_ldiv_B, A_ldiv_Bt, At_ldiv_Bt, Symmetric
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
-export BlockVector, BlockMatrix, SquareDiagonal, blocksizes, blocklengths
+export BlockVector, BlockMatrix, blocksizes, blocklengths
 
 # Do some character saving.
 const BV{T} = BlockVector{T}
@@ -17,132 +17,9 @@ const ABM{T} = AbstractBlockMatrix{T}
 const ABVM{T} = AbstractBlockVecOrMat{T}
 const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM}
 
-"""
-    SquareDiagonal{T, V<:AM{T}} <: AbstractBlockMatrix{T}
 
-A `SquareDiagonal` is endowed with a stronger form of symmetry than usual for a
-`Symmetric`: we require that each block on the diagonal of the `BlockMatrix` that it
-represents be `SquareDiagonal`. This is satisfied trivially by non-block matrices, thus
-`Symmetric` matrices wrapping a `Matrix` are also `BlockSymmetric`. If a block on the
-diagonal of a `SquareDiagonal` matrix is itself a `BlockMatrix`, then  we require that it
-also be `SquareDiagonal`.
-"""
-struct SquareDiagonal{T, TX<:ABM{T}} <: AbstractBlockMatrix{T}
-    X::TX
-    function SquareDiagonal(X::TX) where TX<:ABM{T} where T
-        @assert blocksizes(X, 1) == blocksizes(X, 2)
-        return new{T, TX}(X)
-    end
-end
-# const SD{T, TX} = SquareDiagonal{T, TX}
-const SD{T} = SquareDiagonal{T, <:ABM{T}}
-SquareDiagonal(X::SquareDiagonal) = X
-nblocks(X::SquareDiagonal) = nblocks(X.X)
-nblocks(X::SquareDiagonal, i::Int) = nblocks(X.X, i)
-blocksize(X::SquareDiagonal, N::Int...) = blocksize(X.X, N...)
-getblock(X::SquareDiagonal, p::Int...) = getblock(X.X, p...)
-setblock!(X::SquareDiagonal, v, p::Int...) = setblock!(X.X, v, p...)
-size(X::SquareDiagonal) = size(X.X)
-getindex(X::SquareDiagonal, p::Int, q::Int) = getindex(X.X, (p < q ? (p, q) : (q, p))...)
-eltype(X::SquareDiagonal) = eltype(X.X)
-copy(X::SquareDiagonal{T}) where T = SquareDiagonal(copy(X.X))
 
-for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
-          foo_At_rdiv_B, foo_A_rdiv_Bt, foo_At_rdiv_Bt,
-          foo_At_ldiv_B, foo_A_ldiv_Bt, foo_At_ldiv_Bt,) in
-            [(:transpose,
-                :At_mul_B, :A_mul_Bt, :At_mul_Bt,
-                :At_rdiv_B, :A_rdiv_Bt, :At_rdiv_Bt,
-                :At_ldiv_B, :A_ldiv_Bt, :At_ldiv_Bt,),
-            (:ctranspose,
-                :Ac_mul_B, :A_mul_Bc, :Ac_mul_Bc,
-                :Ac_rdiv_B, :A_rdiv_Bc, :Ac_rdiv_Bc,
-                :Ac_ldiv_B, :A_ldiv_Bc, :Ac_ldiv_Bc,),]
-    # Define transposition.
-    @eval function $foo(X::ABM{T}) where T<:Number
-        Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(X, 2), blocksizes(X, 1))
-        for q in 1:nblocks(X, 2), p in 1:nblocks(X, 1)
-            setblock!(Y, $foo(getblock(X, p, q)), q, p)
-        end
-        return Y
-    end
-    @eval function $foo(Xu::UpperTriangular{T, <:ABM{T}}) where T<:Number
-        X = Xu.data
-        Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(X, 2), blocksizes(X, 1))
-        for q in 1:nblocks(X, 2), p in 1:q
-            setblock!(Y, $foo(getblock(X, p, q)), q, p)
-        end
-        return LowerTriangular(Y)
-    end
-    @eval function $foo(Xl::LowerTriangular{T, <:ABM{T}} where T<:Real)
-        X = Xl.data
-        Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(X, 2), blocksizes(X, 1))
-        for p in 1:nblocks(X, 1), q in 1:p
-            setblock!(Y, $foo(getblock(X, p, q)), q, p)
-        end
-        return UpperTriangular(Y)
-    end
-    @eval function $foo_At_mul_B(A::ABM, B::AM)
-        At = $foo(A)
-        return At * B
-    end
-    @eval function $foo_At_mul_B(A::ABM, B::AV)
-        At = $foo(A)
-        return At * B
-    end
-    @eval function $foo_A_mul_Bt(A::AM, B::ABM)
-        Bt = $foo(B)
-        return A * Bt
-    end
-    @eval function $foo_A_mul_Bt(A::AV, B::ABM)
-        Bt = $foo(B)
-        return A * Bt
-    end
-    @eval function $foo_At_mul_Bt(A::ABM, B::ABM)
-        At, Bt = $foo(A), $foo(B)
-        return At * Bt
-    end
-    # @eval function $foo_At_rdiv_B(A::ABM, B::ABVM)
-    #     At = $foo(A)
-    #     return At / Bt
-    # end
-    # @eval function $foo_A_rdiv_Bt(A::ABVM, B::ABM)
-    #     Bt = $foo(B)
-    #     return A / Bt
-    # end
-    # @eval function $foo_At_rdiv_Bt(A::ABM, B::ABM)
-    #     At, Bt = $foo(A), $foo(B)
-    #     return At / Bt
-    # end
-    @eval function $foo_At_ldiv_B(A::ABM, B::AM)
-        At = $foo(A)
-        return At \ B
-    end
-    @eval function $foo_At_ldiv_B(A::ABM, B::AV)
-        At = $foo(A)
-        return At \ B
-    end
-    @eval function $foo_At_ldiv_B(A::Union{LowerTriangular, UpperTriangular}, B::AVM)
-        At = $foo(A)
-        return At \ B
-    end
-    @eval function $foo_At_ldiv_B(A::LowerTriangular{T, <:SD{T}}, B::AVM{T}) where T<:Real
-        At = $foo(A)
-        return At \ B
-    end
-    @eval function $foo_At_ldiv_B(A::UpperTriangular{T, <:SD{T}}, B::AVM{T}) where T<:Real
-        At = $foo(A)
-        return At \ B
-    end
-    # @eval function $foo_A_ldiv_Bt(A::ABVM, B::ABM)
-    #     Bt = $foo(B)
-    #     return A \ Bt
-    # end
-    # @eval function $foo_At_ldiv_Bt(A::ABM, B::ABM)
-    #     At, Bt = $foo(A), $foo(B)
-    #     return At \ Bt
-    # end
-end
+####################################### Various util #######################################
 
 """
     BlockVector(xs::Vector{<:AbstractVector{T}}) where T
@@ -179,31 +56,89 @@ Construct a block matrix with `P` rows and `Q` columns of blocks.
 BlockMatrix(xs::Vector{<:AM}, P::Int, Q::Int) = BlockMatrix(reshape(xs, P, Q))
 
 """
-    blocksizes(X::AbstractBlockMatrix, d::Int)
+    blocksizes(X::AbstractBlockArray, d::Int)
 
 Get a vector containing the block sizes over the `d`th dimension of `X`. 
 """
-function blocksizes(X::AbstractBlockMatrix, d::Int)
-    if d == 1
-        return [blocksize(X, n, 1)[1] for n in 1:nblocks(X, 1)]
-    elseif d == 2
-        return [blocksize(X, 1, n)[2] for n in 1:nblocks(X, 2)]
+function blocksizes(X::AbstractBlockArray, d::Int)
+    @assert d > 0 && d <= ndims(X)
+    idxs = [1 for _ in 1:length(size(X))]
+    block_sizes = Vector{Int}(nblocks(X, d))
+    for p in eachindex(block_sizes)
+        idxs[d] = p
+        block_sizes[p] = blocksize(X, idxs...)[d]
+    end
+    return block_sizes
+end
+blocksizes(X::AbstractBlockArray) = ([blocksizes(X, d) for d in 1:length(size(X))]...,)
+blocklengths(x::BlockVector) = blocksizes(x, 1)
+
+
+
+################################# Symmetric BlockMatrices ##############################
+
+const BS{T} = Symmetric{T, <:AbstractBlockMatrix{T}}
+unbox(X::BS) = X.data
+nblocks(X::BS) = nblocks(unbox(X))
+nblocks(X::BS, i::Int) = nblocks(unbox(X), i)
+blocksize(X::BS, N::Int...) = blocksize(unbox(X), N...)
+blocksizes(X::BS, d::Int...) = blocksizes(unbox(X), d...)
+
+function getblock(X::BS, p::Int, q::Int)
+    @assert blocksizes(X, 1) == blocksizes(X, 2)
+    X_, uplo = unbox(X), X.uplo
+    if p < q
+        return uplo == 'U' ? getblock(X_, p, q) : transpose(getblock(X_, q, p))
+    elseif p == q
+        return Symmetric(getblock(X_, p, q))
     else
-        throw(error("Boooooooooo, d ∉ (1, 2)."))
+        return uplo == 'U' ? transpose(getblock(X_, q, p)) : getblock(X_, p, q)
     end
 end
-# blocksizes(X::Union{<:Transpose, <:Adjoint}, d::Int) = blocksizes(X.parent, d == 1 ? 2 : 1)
-blocksizes(X::UpperTriangular{<:Any, <:ABM}, d::Int) = blocksizes(X.data, d)
-blocksizes(X::LowerTriangular{<:Any, <:ABM}, d::Int) = blocksizes(X.data, d)
-function blocksizes(x::BlockVector, d)
-    d == 1 || throw(error("Booooooooo, d ∉ (1,)."))
-    return [blocksize(x, n)[1] for n in 1:nblocks(x, 1)]
-end
-blocklengths(x::BlockVector) = blocksizes(x, 1)
-# blocklengths(x::Union{<:Transpose, <:Adjoint}) = blocklengths(x.parent)
 
-# Copying a BlockVector.
-function copy(a::BV{T}) where T
+
+
+######################## Util for triangular block matrices ######################
+
+@inline unbox(U::UpperTriangular{T, <:ABM{T}} where T) = U.data
+function blocksize(U::UpperTriangular{T, <:ABM{T}} where T, p::Int, q::Int)
+    return blocksize(unbox(U), p, q)
+end
+blocksizes(U::UpperTriangular{T, <:ABM{T}} where T, d::Int) = blocksizes(unbox(U), d)
+blocksizes(U::UpperTriangular{T, <:ABM{T}} where T) = blocksizes(unbox(U))
+function getblock(U::UpperTriangular{T, <:ABM{T}}, p::Int, q::Int) where T
+    @assert blocksizes(U, 1) == blocksizes(U, 2)
+    if p > q
+        return Zeros{T}(blocksize(U, p, q)...)
+    elseif p == q
+        return UpperTriangular(getblock(unbox(U), p, q))
+    else
+        return getblock(unbox(U), p, q)
+    end
+end
+
+@inline unbox(L::LowerTriangular{T, <:ABM{T}} where T) = L.data
+function blocksize(L::LowerTriangular{T, <:ABM{T}} where T, p::Int, q::Int)
+    return blocksize(unbox(L), p, q)
+end
+blocksizes(L::LowerTriangular{T, <:ABM{T}} where T, d::Int) = blocksizes(unbox(L), d)
+blocksizes(L::LowerTriangular{T, <:ABM{T}} where T) = blocksizes(unbox(L))
+function getblock(L::LowerTriangular{T, <:ABM{T}}, p::Int, q::Int) where T
+    @assert blocksizes(L, 1) == blocksizes(L, 2)
+    if p > q
+        return getblock(unbox(L), p, q)
+    elseif p == q
+        return LowerTriangular(getblock(unbox(L), p, q))
+    else
+        return Zeros{T}(blocksize(L, p, q)...)
+    end
+end
+
+
+
+####################################### Copying ######################################
+
+function copy(a::BlockVector{T}) where T
     b = BlockVector{T}(uninitialized_blocks, blocksizes(a, 1))
     for p in 1:nblocks(b, 1)
         setblock!(b, copy(getblock(a, p)), p)
@@ -211,13 +146,39 @@ function copy(a::BV{T}) where T
     return b
 end
 
-function copy(A::BM{T}) where T
+function copy(A::BlockMatrix{T}) where T
     B = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 2))
     for q in 1:nblocks(B, 2), p in 1:nblocks(B, 1)
         setblock!(B, copy(getblock(A, p, q)), p, q)
     end
     return B
 end
+
+copy(B::BS{T, <:ABM{T}} where T) = Symmetric(copy(unbox(B)))
+copy(L::LowerTriangular{T, <:BS{T}} where T) = LowerTriangular(copy(unbox(L)))
+copy(U::UpperTriangular{T, <:BS{T}} where T) = UpperTriangular(copy(unbox(U)))
+
+
+
+####################################### Transposition ######################################
+
+for foo in [:transpose, :ctranspose]
+@eval begin
+    function $foo(X::ABM{T}) where T<:Number
+        Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(X, 2), blocksizes(X, 1))
+        for q in 1:nblocks(X, 2), p in 1:nblocks(X, 1)
+            setblock!(Y, $foo(getblock(X, p, q)), q, p)
+        end
+        return Y
+    end
+    $foo(U::UpperTriangular{T, <:BS{T}} where T<:Real) = LowerTriangular(unbox(U))
+    $foo(L::LowerTriangular{T, <:BS{T}} where T<:Real) = UpperTriangular(unbox(L))
+end
+end
+
+
+
+####################################### Multiplication #####################################
 
 """
     are_conformal(A::BlockVecOrMat, B::BlockVecOrMat)
@@ -246,9 +207,7 @@ function *(A::ABM{T}, x::ABV{T}) where T
     end
     return y
 end
-function *(A::ABM{T}, B::AV{T}) where T
-    return A * BlockVector([B])
-end
+*(A::ABM{T}, B::AV{T}) where {T} = A * BlockVector([B])
 
 """
     *(A::BlockMatrix, B::BlockMatrix)
@@ -270,54 +229,79 @@ end
 *(A::ABM{T}, B::AM{T}) where T = A * BlockMatrix([B])
 *(A::AM{T}, B::ABM{T}) where T = BlockMatrix([A]) * B
 
-# Ensure that, if we try to make a `PDMat` from a `BlockMatrix`, we require that the
-# blocks on it's diagonal be square. Otherwise we should definitely error.
-LazyPDMat(X::BM) = LazyPDMat(SquareDiagonal(X))
-
-function transpose(Xu::UpperTriangular{T, <:SD{T}}) where T<:Number
-    sdt = transpose(UpperTriangular(Xu.data.X)).data
-    return LowerTriangular(SquareDiagonal(sdt))
+# All of this can go in 0.7 because of lazy transposition (I think)
+for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
+     foo_At_rdiv_B, foo_A_rdiv_Bt, foo_At_rdiv_Bt,
+     foo_At_ldiv_B, foo_A_ldiv_Bt, foo_At_ldiv_Bt,) in
+            [(:transpose, :At_mul_B, :A_mul_Bt, :At_mul_Bt,
+              :At_rdiv_B, :A_rdiv_Bt, :At_rdiv_Bt,
+              :At_ldiv_B, :A_ldiv_Bt, :At_ldiv_Bt,),
+             (:ctranspose, :Ac_mul_B, :A_mul_Bc, :Ac_mul_Bc,
+              :Ac_rdiv_B, :A_rdiv_Bc, :Ac_rdiv_Bc,
+              :Ac_ldiv_B, :A_ldiv_Bc, :Ac_ldiv_Bc,),]
+    @eval function $foo_At_mul_B(A::ABM, B::AM)
+        At = $foo(A)
+        return At * B
+    end
+    @eval function $foo_At_mul_B(A::ABM, B::AV)
+        At = $foo(A)
+        return At * B
+    end
+    @eval function $foo_A_mul_Bt(A::AM, B::ABM)
+        Bt = $foo(B)
+        return A * Bt
+    end
+    @eval function $foo_A_mul_Bt(A::AV, B::ABM)
+        Bt = $foo(B)
+        return A * Bt
+    end
+    @eval function $foo_At_mul_Bt(A::ABM, B::ABM)
+        At, Bt = $foo(A), $foo(B)
+        return At * Bt
+    end
+    # @eval function $foo_At_ldiv_B(A::ABM, B::AM)
+    #     At = $foo(A)
+    #     return At \ B
+    # end
+    # @eval function $foo_At_ldiv_B(A::ABM, B::AV)
+    #     At = $foo(A)
+    #     return At \ B
+    # end
+    @eval function $foo_At_ldiv_B(A::LowerTriangular{T, <:ABM{T}}, B::AVM{T}) where T<:Real
+        At = $foo(A)
+        return At \ B
+    end
+    @eval function $foo_At_ldiv_B(A::UpperTriangular{T, <:ABM{T}}, B::AVM{T}) where T<:Real
+        At = $foo(A)
+        return At \ B
+    end
+    # @eval function $foo_A_ldiv_Bt(A::ABVM, B::ABM)
+    #     Bt = $foo(B)
+    #     return A \ Bt
+    # end
+    # @eval function $foo_At_ldiv_Bt(A::ABM, B::ABM)
+    #     At, Bt = $foo(A), $foo(B)
+    #     return At \ Bt
+    # end
 end
-function transpose(Xu::LowerTriangular{T, <:SD{T}}) where T<:Number
-    sdt = transpose(LowerTriangular(Xu.data.X)).data
-    return UpperTriangular(SquareDiagonal(sdt))
-end
-function ctranspose(Xu::UpperTriangular{T, <:SD{T}}) where T<:Number
-    sdt = ctranspose(UpperTriangular(Xu.data.X)).data
-    return LowerTriangular(SquareDiagonal(sdt))
-end
-function ctranspose(Xu::LowerTriangular{T, <:SD{T}}) where T<:Number
-    sdt = ctranspose(LowerTriangular(Xu.data.X)).data
-    return UpperTriangular(SquareDiagonal(sdt))
-end
 
 """
-    Symmetric(X::AbstractBlockMatrix)
-A type-piratic hack. Although a `SquareDiagonal` is necessarily `Symmetric`, the reverse
-doesn't hold.
-"""
-Symmetric(X::AbstractBlockMatrix) = SquareDiagonal(X)
-
-"""
-    getblock(X::UpperTriangular{T, <:SquareDiagonal{T}} where T, p::Int, q::Int)
-
-Return block of zeros of the appropriate size if p > q.
-"""
-getblock(X::UpperTriangular{T}, p::Int, q::Int) where T =
-    p > q ? zeros(T, blocksize(X.data, p, q)) : getblock(X.data, p, q)
-getblock(X::LowerTriangular{T}, p::Int, q::Int) where T =
-    q > p ? zeros(T, blocksize(X.data, p, q)) : getblock(X.data, p, q)
-
-"""
-    chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
+    chol(A::Symmetric{T, <:AbstractBlockMatrix{T}}) where T<:Real
 
 Get the Cholesky decomposition of `A` in the form of a `BlockMatrix`.
 
 Only works for `A` where `is_block_symmetric(A) == true`. Assumes that we want the
 upper triangular version.
 """
-function chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
+function chol(A::Symmetric{T, <:AbstractBlockMatrix{T}}) where T<:Real
     U = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 1))
+
+    # Do an initial pass to fill each of the blocks with Zeros. This is cheap
+    for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
+        setblock!(U, Zeros{T}(blocksize(A, p, q)...), p, q)
+    end
+
+    # Fill out the upper triangle with the Cholesky
     for j in 1:nblocks(A, 2)
 
         # Update off-diagonals.
@@ -338,12 +322,11 @@ function chol(A::SquareDiagonal{T, <:BM{T}}) where T<:Real
         end
         setblock!(U, chol(getblock(U, j, j)), j, j)
     end
-    return UpperTriangular(SquareDiagonal(U))
+    return UpperTriangular(U)
 end
-chol(A::Symmetric{T, <:SD{T}}) where T<:Real = chol(A.data)
-chol(A::ABM) = chol(SquareDiagonal(A))
 
-function \(U::UpperTriangular{T, <:SD}, x::ABV{T}) where T<:Real
+function \(U::UpperTriangular{T, <:ABM{T}}, x::ABV{T}) where T<:Real
+    @assert are_conformal(unbox(U), x)
     y = BlockVector{T}(uninitialized_blocks, blocksizes(U, 1))
     for p in reverse(1:nblocks(y, 1))
         setblock!(y, getblock(x, p), p)
@@ -355,7 +338,8 @@ function \(U::UpperTriangular{T, <:SD}, x::ABV{T}) where T<:Real
     return y
 end
 
-function \(U::UpperTriangular{T, <:SD{T}}, X::ABM{T}) where T<:Real
+function \(U::UpperTriangular{T, <:ABM{T}}, X::ABM{T}) where T<:Real
+    @assert are_conformal(unbox(U), X)
     Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(U, 1), blocksizes(X, 2))
     for q in 1:nblocks(Y, 2), p in reverse(1:nblocks(Y, 1))
         setblock!(Y, getblock(X, p, q), p, q)
@@ -367,8 +351,8 @@ function \(U::UpperTriangular{T, <:SD{T}}, X::ABM{T}) where T<:Real
     return Y
 end
 
-function \(Ll::LowerTriangular{T, <:SD{T}}, x::ABV{T}) where T<:Real
-    L = Ll.data
+function \(L::LowerTriangular{T, <:ABM{T}}, x::ABV{T}) where T<:Real
+    @assert are_conformal(unbox(L), x)
     y = BlockVector{T}(uninitialized_blocks, blocksizes(L, 1))
     for p in 1:nblocks(y, 1)
         setblock!(y, getblock(x, p), p)
@@ -380,7 +364,8 @@ function \(Ll::LowerTriangular{T, <:SD{T}}, x::ABV{T}) where T<:Real
     return y
 end
 
-function \(L::LowerTriangular{T, <:SD{T}}, X::ABM{T}) where T<:Real
+function \(L::LowerTriangular{T, <:ABM{T}}, X::ABM{T}) where T<:Real
+    @assert are_conformal(unbox(L), X)
     Y = BlockMatrix{T}(uninitialized_blocks, blocksizes(L, 1), blocksizes(X, 2))
     for q in 1:nblocks(Y, 2), p in 1:nblocks(Y, 1)
         setblock!(Y, getblock(X, p, q), p, q)
@@ -392,24 +377,28 @@ function \(L::LowerTriangular{T, <:SD{T}}, X::ABM{T}) where T<:Real
     return Y
 end
 
-# \(L::Transpose{T, <:UpperTriangular{T, <:SD}}, X::ABVM{T}) where T<:Real =
+# \(L::Transpose{T, <:UpperTriangular{T, <:BS}}, X::ABVM{T}) where T<:Real =
 #     adjoint(L.parent) \ X
 
 import Base: UniformScaling
-function +(u::UniformScaling, X::SquareDiagonal)
+function +(u::UniformScaling, X::AbstractBlockMatrix)
+    @assert blocksizes(X, 1) == blocksizes(X, 2)
     Y = copy(X)
     for p in 1:nblocks(Y, 1)
         setblock!(Y, getblock(Y, p, p) + u, p, p)
     end
     return Y
 end
-function +(X::SquareDiagonal, u::UniformScaling)
++(u::UniformScaling, X::Symmetric{T, <:ABM{T}} where T) = Symmetric(u + unbox(X))
+function +(X::AbstractBlockMatrix, u::UniformScaling)
+    @assert blocksizes(X, 1) == blocksizes(X, 2)
     Y = copy(X)
     for p in 1:nblocks(Y, 1)
         setblock!(Y, u + getblock(Y, p, p), p, p)
     end
     return Y
 end
++(X::Symmetric{T, <:ABM{T}} where T, u::UniformScaling) = Symmetric(unbox(X) + u)
 
 # Define addition and subtraction for compatible block matrices and vectors.
 import Base: +, -

@@ -20,7 +20,7 @@ mutable struct LazyPDMat{T<:Real, TΣ<:AbstractMatrix{T}} <: AbstractMatrix{T}
     Σ::TΣ
     U::Union{Void, UpperTriangular{T}}
     ϵ::T
-    LazyPDMat(Σ::TΣ) where TΣ<:AM{T} where T<:Real = new{T, TΣ}(Σ, nothing, 1e-9)
+    LazyPDMat(Σ::TΣ) where {T<:Real, TΣ<:AM{T}} = new{T, TΣ}(Σ, nothing, 1e-9)
     LazyPDMat(Σ::TΣ, ϵ::Real) where TΣ<:AM{T} where T<:Real = new{T, TΣ}(Σ, nothing, ϵ)
 end
 LazyPDMat(Σ::LazyPDMat) = Σ

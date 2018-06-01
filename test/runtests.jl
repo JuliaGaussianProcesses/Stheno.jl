@@ -1,5 +1,5 @@
 using Revise
-using Stheno, Base.Test, BenchmarkTools, QuadGK, BlockArrays
+using Stheno, Base.Test, BenchmarkTools, QuadGK, BlockArrays, FillArrays
 
 @testset "Stheno" begin
 

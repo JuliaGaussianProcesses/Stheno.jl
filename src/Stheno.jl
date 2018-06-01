@@ -2,7 +2,7 @@ __precompile__(true)
 
 module Stheno
 
-    using Distances, BlockArrays, SimpleTraits
+    using Distances, BlockArrays, FillArrays
     import Base: mean, cov, show, size, length, rand, vcat, convert, promote
 
     const AV{T} = AbstractVector{T}

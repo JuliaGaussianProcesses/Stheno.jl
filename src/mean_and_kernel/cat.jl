@@ -90,7 +90,7 @@ function pairwise(k::CatKernel, X::AV{<:AVM})
             setblock!(Σ, getblock(Σ, p, q)', q, p)
         end
     end
-    return LazyPDMat(SquareDiagonal(Σ))
+    return LazyPDMat(Symmetric(Σ))
 end
 pairwise(k::CatKernel, X::AVM) = pairwise(k, [X])
 function pairwise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM})
