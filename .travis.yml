@@ -15,7 +15,7 @@ git:
 # (tests will run but not make your overall status red)
 matrix:
  allow_failures:
- - julia: 0.6
+ - julia: nightly
 
 ## uncomment and modify the following lines to manually install system packages
 #addons:
@@ -30,6 +30,6 @@ matrix:
 #  - julia -e 'Pkg.clone(pwd()); Pkg.build("Stheno"); Pkg.test("Stheno"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
-  - julia -e 'cd(Pkg.dir("Stheno")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  # - julia -e 'cd(Pkg.dir("Stheno")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
   - julia -e 'cd(Pkg.dir("Stheno")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
