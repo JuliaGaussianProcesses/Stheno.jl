@@ -24,5 +24,5 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
     include("linops/conditioning.jl")
     include("linops/addition.jl")
     include("linops/product.jl")
-    # include("linops/integrate.jl")
+    include("linops/integrate.jl")
 end

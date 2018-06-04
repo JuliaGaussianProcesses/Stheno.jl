@@ -52,3 +52,17 @@ function k_pp′(h::GP, ::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
     return ConditionalCrossKernel(cache, kfh, kfg, kernel(h, g))
 end
 length(::typeof(|), f::GP, ::GP, f̂::Vector) = length(f)
+
+"""
+    VariationalConditioner
+
+Construct an object which is able to 
+"""
+struct VariationalConditioner
+    u::AbstractGP
+    Z::AVM
+    m′u::AV{<:Real}
+    Σ′uu::AM{<:Real}
+end
+
+

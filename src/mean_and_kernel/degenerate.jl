@@ -1,4 +1,4 @@
-"""
+ """
     DegenerateKernel <: Kernel
 
 A rank-limited kernel, for which `k(x, x′) = kfg(:, x)' * A * kfg(:, x′)`.
@@ -10,10 +10,10 @@ A rank-limited kernel, for which `k(x, x′) = kfg(:, x)' * A * kfg(:, x′)`.
 struct DegenerateKernel{TA<:LazyPDMat} <: Kernel
     A::TA
     kfg::CrossKernel
-    function DegenerateKernel(A, kfg::CrossKernel)
+    function DegenerateKernel(A::TA, kfg::CrossKernel) where TA<:LazyPDMat
         @assert isfinite(size(kfg, 1)) && size(kfg, 1) == size(A, 1)
         @assert size(A, 1) == size(A, 2)
-        return new{typeof(A)}(Σ, kfg)
+        return new{TA}(A, kfg)
     end
 end
 (k::DegenerateKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
@@ -39,10 +39,10 @@ struct DegenerateCrossKernel{TA<:AbstractMatrix} <: CrossKernel
     kfg::CrossKernel
     A::TA
     kfh::CrossKernel
-    function DegenerateCrossKernel(kfg::CrossKernel, A, kfh::CrossKernel)
+    function DegenerateCrossKernel(kfg::CrossKernel, A::TA, kfh::CrossKernel) where TA<:AM
         @assert isfinite(size(kfg, 1)) && size(kfg, 1) == size(A, 1)
         @assert isfinite(size(kfh, 1)) && size(kfh, 1) == size(A, 2)
-        return new{typeof(A)}(kfg, A, kfh)
+        return new{TA}(kfg, A, kfh)
     end
 end
 (k::DegenerateCrossKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
