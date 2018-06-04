@@ -16,6 +16,7 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
     include("mean_and_kernel/cat.jl")
     # include("mean_and_kernel/transform.jl")
     include("mean_and_kernel/input_transform.jl")
+    include("mean_and_kernel/degenerate.jl")
 
     include("gp.jl")
 

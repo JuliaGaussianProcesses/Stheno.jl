@@ -48,6 +48,13 @@ end
 (k::LhsFiniteCrossKernel)(n::Int, x) = k.k(getobs(k.X, n), x)
 size(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? nobs(k.X) : Inf
 show(io::IO, k::LhsFiniteCrossKernel) = show(io, "LhsFiniteCrossKernel($(k.k))")
+eachindex(k::LhsFiniteCrossKernel, N::Int) = 1:size(k, N)
+function binary_obswise(k::LhsFiniteCrossKernel, q::UnitRange{<:Integer}, X′::AVM)
+    return binary_obswise(k.k, getobs(k.X, q), X′)
+end
+function pairwise(k::LhsFiniteCrossKernel, q::UnitRange{<:Integer}, X′::AVM)
+    return pairwise(k.k, getobs(k.X, q), X′)
+end
 
 """
     RhsFiniteCrossKernel <: CrossKernel
@@ -62,6 +69,13 @@ end
 (k::RhsFiniteCrossKernel)(x, n′::Int) = k.k(x, getobs(k.X′, n′))
 size(k::RhsFiniteCrossKernel, N::Int) = N == 2 ? nobs(k.X′) : Inf
 show(io::IO, k::RhsFiniteCrossKernel) = show(io, "RhsFiniteCrossKernel($(k.k))")
+eachindex(k::RhsFiniteCrossKernel, N::Int) = 1:size(k, N)
+function binary_obswise(k::RhsFiniteCrossKernel, X::AVM, q′::UnitRange{Int})
+    return binary_obswise(k.k, X, getobs(k.X′, q′))
+end
+function pairwise(k::RhsFiniteCrossKernel, X::AVM, q′::UnitRange{Int})
+    return pairwise(k.k, X, getobs(k.X′, q′))
+end
 
 """
     FiniteCrossKernel <: CrossKernel
@@ -78,6 +92,10 @@ end
 size(k::FiniteCrossKernel, N::Int) = N == 1 ? nobs(k.X) : (N == 2 ? nobs(k.X′) : 1)
 show(io::IO, k::FiniteCrossKernel) = show(io, "FiniteCrossKernel($(k.k))")
 xcov(k::FiniteCrossKernel) = pairwise(k, eachindex(k, 1), eachindex(k, 2))
-
-# General eachindex implementation.
-eachindex(k::CrossKernel, N::Int) = 1:size(k, N)
+eachindex(k::FiniteCrossKernel, N::Int) = 1:size(k, N)
+function binary_obswise(k::FiniteCrossKernel, q::UnitRange{Int}, q′::UnitRange{Int})
+    return binary_obswise(k.k, getobs(k.X, q), getobs(k.X′, q′))
+end
+function pairwise(k::FiniteCrossKernel, q::UnitRange{Int}, q′::UnitRange{Int})
+    return pairwise(k.k, getobs(k.X, q), getobs(k.X′, q′))
+end

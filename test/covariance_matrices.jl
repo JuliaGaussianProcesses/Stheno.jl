@@ -84,8 +84,22 @@ using Stheno: unbox
         @test Stheno.diag_AᵀA(X) ≈ diag(X'X)
         @test Stheno.diag_AᵀB(X, Y) ≈ diag(X'Y)
 
+        @test Stheno.diag_Xᵀ_A_X(A, X) ≈ diag(Xt_A_X(A, X))
+        @test Stheno.diag_Xᵀ_A_Y(X, A, Y) ≈ diag(Xt_A_Y(X, A, Y))
+
         @test Stheno.diag_Xᵀ_invA_X(A, X) ≈ diag(Xt_invA_X(A, X))
         @test Stheno.diag_Xᵀ_invA_Y(X, A, Y) ≈ diag(Xt_invA_Y(X, A, Y))
     end
 
+    let
+        rng, N = MersenneTwister(123456), 13
+
+        # Construct two PD matrices.
+        A__, X__ = randn(rng, N, N), randn(rng, N, N)
+        A_, X_ = A__' * A__ + 1e-9I, X__' * X__ + 1e-9I
+        A, X = LazyPDMat(A_, 1e-12), LazyPDMat(X_, 1e-12)
+
+        @test Stheno.Xtinv_A_Xinv(A, X) isa LazyPDMat
+        @test Stheno.Xtinv_A_Xinv(A, X) ≈ X_' \ (A / X_)
+    end
 end

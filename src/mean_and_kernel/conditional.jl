@@ -1,5 +1,3 @@
-export ConditionalMean, ConditionalKernel, ConditionalCrossKernel
-
 """
     CondCache
 
@@ -10,12 +8,10 @@ struct CondCache
     Σff::LazyPDMat
     α::AV{<:Real}
     X::AVM
-    function CondCache(kff::Kernel, μf::MeanFunction, X::AVM, f::AV{<:Real})
-        μfX, Σff = unary_obswise(μf, X), pairwise(kff, X)
-        δ = (f .- μfX) .* .!(f .≈ μfX)
-        δ = f - μfX
-        return new(Σff, Σff \ δ, X)
-    end
+    CondCache(mf::AV{<:Real}, Σff::AM, X::AVM, f::AV{<:Real}) = new(Σff, Σff \ (f - mf), X)
+end
+function CondCache(kff::Kernel, μf::MeanFunction, X::AVM, f::AV{<:Real})
+    return CondCache(unary_obswise(μf, X), pairwise(kff, X), X, f)
 end
 show(io::IO, ::CondCache) = show(io, "CondCache")
 

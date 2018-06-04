@@ -19,13 +19,17 @@ mutable struct GPC
     GPC() = new(0)
 end
 
+# Supertype for all GPs.
+abstract type AbstractGaussianProcess <: ContinuousMultivariateDistribution end
+const AbstractGP = AbstractGaussianProcess
+
 """
     GP{Tμ<:MeanFunction, Tk<:Kernel}
 
 A Gaussian Process (GP) object. Either constructed using an Affine Transformation of
 existing GPs or by providing a mean function `μ`, a kernel `k`, and a `GPC` `gpc`.
 """
-struct GP{Tμ<:MeanFunction, Tk<:Kernel} <: ContinuousMultivariateDistribution
+struct GP{Tμ<:MeanFunction, Tk<:Kernel} <: AbstractGaussianProcess
     args::Any
     μ::Tμ
     k::Tk

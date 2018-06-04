@@ -26,6 +26,7 @@ module Stheno
     include("mean_and_kernel/cat.jl")
     # include("mean_and_kernel/transform.jl")
     include("mean_and_kernel/input_transform.jl")
+    include("mean_and_kernel/degenerate.jl")
 
     # Gaussian Process defintions.
     include("gp.jl")

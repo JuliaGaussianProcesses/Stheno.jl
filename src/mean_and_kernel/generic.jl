@@ -16,9 +16,16 @@ abstract type Kernel <: CrossKernel end
 @inline nfeatures(x::AbstractVector) = 1
 @inline nfeatures(X::AbstractMatrix) = size(X, 1)
 
-# Return observation in appropriate way depending upon container type.
-@inline getobs(x::AbstractVector, n) = x[n]
-@inline getobs(X::AbstractMatrix, n) = X[:, n]
+"""
+    getobs(x::AbstractVecOrMat, indices)
+
+Return the observations corresponding to `indices` from `x`. If all observations are
+requested, then `getobs(x, indices) === x`.
+"""
+@inline getobs(x::AbstractVector, n) = n == eachindex(x) ? x : x[n]
+@inline getobs(X::AbstractMatrix, n) = n == 1:nobs(X) ? X : X[:, n]
+@inline getobs(x::AbstractVector, ::Colon) = x
+@inline getobs(X::AbstractMatrix, ::Colon) = X
 
 # Fallback implementations for `unary_obswise`.
 @inline unary_obswise(f, X::AbstractVecOrMat) = unary_obswise_fallback(f, X)

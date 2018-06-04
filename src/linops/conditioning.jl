@@ -35,13 +35,14 @@ function |(g::Tuple{Vararg{GP}}, c::Tuple{Vararg{Observation}})
     f_qs, Xs = [f_.args[1] for f_ in f], [f_.args[2] for f_ in f]
     μf = CatMean(mean.(f_qs))
     kff = CatKernel(kernel.(f_qs), kernel.(f_qs, permutedims(f_qs)))
-    cache = CondCache(kff, μf, Xs, y)
-    return map(g_->GP(|, g_, f_qs, cache), g)
+    return map(g_->GP(|, g_, f_qs, CondCache(kff, μf, Xs, y)), g)
 end
-μ_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache) =
-    ConditionalMean(cache, mean(g), CatCrossKernel(kernel.(f, Ref(g))))
-k_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache) =
-    ConditionalKernel(cache, CatCrossKernel(kernel.(f, Ref(g))), kernel(g))
+function μ_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
+    return ConditionalMean(cache, mean(g), CatCrossKernel(kernel.(f, Ref(g))))
+end
+function k_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
+    return ConditionalKernel(cache, CatCrossKernel(kernel.(f, Ref(g))), kernel(g))
+end
 function k_p′p(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache, h::GP)
     kfg, kfh = CatCrossKernel(kernel.(f, Ref(g))), CatCrossKernel(kernel.(f, Ref(h)))
     return ConditionalCrossKernel(cache, kfg, kfh, kernel(g, h))
