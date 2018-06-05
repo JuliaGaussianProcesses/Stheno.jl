@@ -29,7 +29,7 @@ end
 size(k::DeltaSumKernel, N::Int) = size(k.ϕ, 2)
 
 function binary_obswise(k::DeltaSumKernel, X::AVM)
-    diag_Xᵀ_A_X(pairwise(k.k, k.Z), pairwise(k.ϕ, k.Z, X))
+    return diag_Xᵀ_A_X(pairwise(k.k, k.Z), pairwise(k.ϕ, k.Z, X))
 end
 function binary_obswise(k::DeltaSumKernel, X::AVM, X′::AVM)
     return diag_Xᵀ_A_Y(pairwise(k.ϕ, k.Z, X), pairwise(k.k, k.Z), pairwise(k.ϕ, k.Z, X′))
