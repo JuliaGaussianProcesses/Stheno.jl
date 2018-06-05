@@ -25,7 +25,7 @@ using Stheno: ConstantMean, ITMean, ITKernel, getobs
         @test size(kf, 1) == Inf && size(kf, 2) == Inf
 
         @test kf(getobs(X0, 1), getobs(X1, 1)) == k(f(getobs(X0, 1)), f(getobs(X1, 1)))
-        kernel_tests(kf, X0, X1, X2)
+        kernel_tests(kf, X0, X1, X2, 1e-6)
     end
 
     # Test convenience code.

@@ -34,7 +34,7 @@ using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKer
                 mean_function_tests(μ′, X2)
             end
             for (n, k′) in enumerate([k′ff, k′gg, k′hh])
-                kernel_tests(k′, X0, X1, X2)
+                kernel_tests(k′, X0, X1, X2, 1e-6)
             end
             for k′ in [k′fg, k′fh, k′gh]
                 cross_kernel_tests(k′, X0, X1, X2)

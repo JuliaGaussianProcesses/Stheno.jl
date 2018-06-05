@@ -18,6 +18,11 @@ show(io::IO, μ::FiniteMean) = show(io, "FiniteMean($(μ.μ)")
 eachindex(μ::FiniteMean) = 1:length(μ)
 mean(μ::FiniteMean) = unary_obswise(μ, eachindex(μ))
 
+struct EmpiricalKernel{T<:LazyPDMat} <: Kernel
+    Σ::T
+end
+@inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]
+
 """
     FiniteKernel <: Kernel
 
@@ -28,6 +33,7 @@ struct FiniteKernel <: Kernel
     k::Kernel
     X::AVM
 end
+FiniteKernel(Σ::LazyPDMat) = FiniteKernel(EmpiricalKernel(Σ), 1:size(Σ, 1))
 (k::FiniteKernel)(n::Int, n′::Int) = k.k(getobs(k.X, n), getobs(k.X, n′))
 size(k::FiniteKernel, N::Int) = N ∈ (1, 2) ? nobs(k.X) : 1
 show(io::IO, k::FiniteKernel) = show(io, "FiniteKernel($(k.k))")

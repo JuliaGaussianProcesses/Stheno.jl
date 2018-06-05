@@ -53,10 +53,10 @@ end
 
 Consistency tests intended for use with `Kernel`s.
 """
-function pairwise_tests(f, X::AVM)
+function pairwise_tests(f, X::AVM; rtol=eps())
     @test pairwise(f, X) isa AbstractMatrix
     @test size(pairwise(f, X)) == (nobs(X), nobs(X))
-    @test pairwise(f, X) ≈ pairwise_fallback(f, X, X)
+    @test isapprox(pairwise(f, X), pairwise_fallback(f, X, X); rtol=rtol)
 end
 
 """
@@ -88,18 +88,18 @@ end
 Tests that any kernel `k` should be able to pass. Requires that `nobs(X0) == nobs(X1)` and
 `nobs(X0) ≠ nobs(X2)`.
 """
-function kernel_tests(k::Kernel, X0::AVM, X1::AVM, X2::AVM)
+function kernel_tests(k::Kernel, X0::AVM, X1::AVM, X2::AVM, rtol::Real=eps())
     @assert nobs(X0) == nobs(X1)
     @assert nobs(X0) ≠ nobs(X2)
 
     # Generic tests.
     cross_kernel_tests(k, X0, X1, X2)
-    binary_obswise(k, X0)
-    pairwise_tests(k, X0)
+    binary_obswise_tests(k, X0)
+    pairwise_tests(k, X0; rtol=rtol)
 
     # Kernels should be symmetric for same arguments.
-    @test pairwise(k, X0) ≈ pairwise(k, X0)'
     @test pairwise(k, X0) isa LazyPDMat
+    @test pairwise(k, X0) ≈ pairwise(k, X0)'
 
     # k(x, x′) == k(x′, x)
     @test binary_obswise(k, X0, X1) ≈ binary_obswise(k, X1, X0)

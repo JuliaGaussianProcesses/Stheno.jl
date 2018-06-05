@@ -10,7 +10,7 @@ struct DeltaSumMean{Tϕ, Tg, TZ} <: MeanFunction
 end
 (μ::DeltaSumMean)(x) = pairwise(μ.ϕ, x, μ.Z)' * unary_obswise(μ.μ, μ.Z) + μ.g(x)
 function unary_obswise(μ::DeltaSumMean, X::AVM)
-    return pairwise(μ.ϕ, X, μ.Z)' * unary_obswise(μ.μ, μ.Z) + unary_obswise(μ.g, X)
+    return pairwise(μ.ϕ, μ.Z, X)' * unary_obswise(μ.μ, μ.Z) + unary_obswise(μ.g, X)
 end
 
 """
@@ -49,12 +49,11 @@ struct LhsDeltaSumCrossKernel{Tϕ, TZ} <: CrossKernel
     k::CrossKernel
     Z::TZ
 end
-function (k::LhsDeltaSumCrossKernel)(x::Number, x′::Number)
-    return binary_obswise(k, [x], [x′])[1]
-end
-function (k::DeltaSumKernel)(x::AV, x′::AV)
+(k::LhsDeltaSumCrossKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
+function (k::LhsDeltaSumCrossKernel)(x::AV, x′::AV)
     return binary_obswise(k, reshape(x, : ,1), reshape(x′, :, 1))[1]
 end
+size(k::LhsDeltaSumCrossKernel, N::Int) = N == 1 ? size(k.ϕ, 2) : size(k.k, 2)
 
 function binary_obswise(k::LhsDeltaSumCrossKernel, X::AVM, X′::AVM)
     return diag_AᵀB(pairwise(k.ϕ, k.Z, X), pairwise(k.k, k.Z, X′))
@@ -71,18 +70,17 @@ struct RhsDeltaSumCrossKernel{TZ, Tϕ} <: CrossKernel
     Z::TZ
     ϕ::Tϕ
 end
-function (k::RhsDeltaSumCrossKernel)(x::Number, x′::Number)
-    return binary_obswise(k, [x], [x′])[1]
-end
+(k::RhsDeltaSumCrossKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
 function (k::RhsDeltaSumCrossKernel)(x::AV, x′::AV)
     return binary_obswise(k, reshape(x, :, 1), reshape(x′, :, 1))[1]
 end
+size(k::RhsDeltaSumCrossKernel, N::Int) = N == 1 ? size(k.k, 2) : size(k.ϕ, 2)
 
 function binary_obswise(k::RhsDeltaSumCrossKernel, X::AVM, X′::AVM)
     return diag_AᵀB(pairwise(k.k, k.Z, X), pairwise(k.ϕ, k.Z, X′))
 end
 function pairwise(k::RhsDeltaSumCrossKernel, X::AVM, X′::AVM)
-    return pairwise(k.k, k.Z, X′)' * pairwise(k.ϕ, k.Z, X′)
+    return pairwise(k.k, k.Z, X)' * pairwise(k.ϕ, k.Z, X′)
 end
 
 

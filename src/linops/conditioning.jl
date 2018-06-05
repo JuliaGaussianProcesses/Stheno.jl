@@ -67,15 +67,28 @@ struct Titsias{Tu<:AbstractGP, TZ<:AVM, Tm<:AV{<:Real}, Tγ} <: AbstractConditio
     Z::TZ
     m′u::Tm
     γ::Tγ
-    function Titsias(
-        u::Tu,
-        Z::TZ,
-        m′u::Tm,
-        Σ′uu::AbstractMatrix,
-        gpc::GPC,
-    ) where {Tu<:AbstractGP, TZ<:AVM, Tm<:AV{<:Real}}
-        γ = GP(Xtinv_A_Xinv(Σ′uu, kernel(u, Z)), gpc)
+    function Titsias(u::Tu, Z::TZ, m′u::Tm, Σ′uu::AM, gpc::GPC) where {Tu, TZ, Tm}
+        γ = GP(FiniteKernel(Xtinv_A_Xinv(Σ′uu, cov(u, Z))), gpc)
         return new{Tu, TZ, Tm, typeof(γ)}(u, Z, m′u, γ)
     end
 end
-|(g::GP, c::Titsias) = (g | c.u(c.Z)←c.m′u) + project(kernel(g, c.u), c.γ)
+function |(g::GP, c::Titsias)
+    g′ = g | (c.u(c.Z)←c.m′u)
+    ϕ = LhsFiniteCrossKernel(kernel(c.u, g), c.Z)
+    ĝ = project(ϕ, c.γ, 1:length(c.m′u), ZeroMean{Float64}())
+    return return g′ + ĝ
+end
+
+function optimal_q(
+    f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real},
+    u::AV{<:GP}, Z::AV{<:AVM},
+    σ::Real,
+)
+    μᵤ, Σᵤᵤ = mean(u, Z), cov(u, Z)
+    U = chol(Σᵤᵤ)
+    Γ = (U' \ xcov(u, f, Z, X)) ./ σ
+    Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean(f, X)
+    Σ′ᵤᵤ = Xt_invA_X(Ω, U)
+    μ′ᵤ = μᵤ + (U' * (Ω \ (Γ * δ))) / σ
+    return μ′ᵤ, Σ′ᵤᵤ
+end

@@ -1,6 +1,18 @@
 export project
 
 """
+    project(ϕ, f::GP, Z::AVM, g)
+
+The projection operation `f′(x) = Σₘ ϕ(x, Zₘ) * f(Zₘ) + g(x)`, where `Zₘ := getobs(Z, m)`.
+"""
+project(ϕ, f::GP, Z::AVM, g) = GP(project, ϕ, f, Z, g)
+
+μ_p′(::typeof(project), ϕ, f, Z, g) = DeltaSumMean(ϕ, mean(f), Z, g)
+k_p′(::typeof(project), ϕ, f, Z, g) = DeltaSumKernel(ϕ, kernel(f), Z)
+k_p′p(::typeof(project), ϕ, f, Z, g, fp) = LhsDeltaSumCrossKernel(ϕ, kernel(f, fp), Z)
+k_pp′(fp, ::typeof(project), ϕ, f, Z, g) = RhsDeltaSumCrossKernel(kernel(fp, f), Z, ϕ)
+
+"""
     project(ϕ, f::GP, g)
 
 The projection operation `f′(x) = Σₘ ϕₘ(x) f(m) + g(x)`. Assumes `f` is finite.
@@ -10,14 +22,4 @@ function project(ϕ, f::GP, g)
     return GP(project, ϕ, f, :, g)
 end
 
-"""
-    project(ϕ, f::GP, Z::AVM, g)
-
-The projection operation `f′(x) = Σₘ ϕ(x, Zₘ) * f(Zₘ) + g(x)`, where `Zₘ := getobs(Z, m)`.
-"""
-project(ϕ, f::GP, Z::AVM, g) = GP(project, ϕ, f, Z, g)
-
-μ_p′(::typeof(project), ϕ, f, g) = DeltaSumMean(ϕ, mean(f), :, g)
-k_p′(::typeof(project), ϕ, f, g) = DeltaSumKernel(ϕ, kernel(f), :)
-k_p′p(::typeof(project), ϕ, f, g, fp) = LhsDeltaSumCrossKernel(ϕ, kernel(f, fp), :)
-k_pp′(fp, ::typeof(project), ϕ, f, g) = RhsDeltaSumCrossKernel(kernel(fp, f), :, ϕ)
+project(ϕ, f::GP) = project(ϕ, f, ZeroMean{Float64}())
