@@ -53,16 +53,29 @@ function k_pp′(h::GP, ::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
 end
 length(::typeof(|), f::GP, ::GP, f̂::Vector) = length(f)
 
-"""
-    VariationalConditioner
+import Base: |
 
-Construct an object which is able to 
+abstract type AbstractConditioner end
+
 """
-struct VariationalConditioner
-    u::AbstractGP
-    Z::AVM
-    m′u::AV{<:Real}
-    Σ′uu::AM{<:Real}
+    Titsias <: AbstractConditioner
+
+Construct an object which is able to compute an approximate posterior.
+"""
+struct Titsias{Tu<:AbstractGP, TZ<:AVM, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
+    u::Tu
+    Z::TZ
+    m′u::Tm
+    γ::Tγ
+    function Titsias(
+        u::Tu,
+        Z::TZ,
+        m′u::Tm,
+        Σ′uu::AbstractMatrix,
+        gpc::GPC,
+    ) where {Tu<:AbstractGP, TZ<:AVM, Tm<:AV{<:Real}}
+        γ = GP(Xtinv_A_Xinv(Σ′uu, kernel(u, Z)), gpc)
+        return new{Tu, TZ, Tm, typeof(γ)}(u, Z, m′u, γ)
+    end
 end
-
-
+|(g::GP, c::Titsias) = (g | c.u(c.Z)←c.m′u) + project(kernel(g, c.u), c.γ)

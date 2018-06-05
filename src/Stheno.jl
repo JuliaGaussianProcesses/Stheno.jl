@@ -33,11 +33,12 @@ module Stheno
 
     # Affine transformations of GPs.
     include("linops/indexing.jl")
-    include("linops/conditioning.jl")
+
     include("linops/addition.jl")
     include("linops/product.jl")
     # include("linops/integrate.jl")
     include("linops/project.jl")
+    include("linops/conditioning.jl")
 
     # # Code to make Stheno work with Turing.
     # include("turing_util.jl")

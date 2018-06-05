@@ -1,29 +1,23 @@
 export project
 
 """
+    project(ϕ, f::GP, g)
 
+The projection operation `f′(x) = Σₘ ϕₘ(x) f(m) + g(x)`. Assumes `f` is finite.
+"""
+function project(ϕ, f::GP, g)
+    @assert isfinite(length(f))
+    return GP(project, ϕ, f, :, g)
+end
 
 """
-project(ϕ, f::GP, g) = GP(project, ϕ, f, g)
-μ_p′(::typeof(project), ϕ, f, g) = 
-k_p′(::typeof(project), ϕ, f, g) = DegenerateKernel(f, ϕ)
-k_pp′(fp::GP, ::typeof(project), ϕ, f::GP, g) = DegenerateCrossKernel()
+    project(ϕ, f::GP, Z::AVM, g)
 
-
-
-
-
-
-import Base: +
-
+The projection operation `f′(x) = Σₘ ϕ(x, Zₘ) * f(Zₘ) + g(x)`, where `Zₘ := getobs(Z, m)`.
 """
-    +(fa::GP, fb::GP)
+project(ϕ, f::GP, Z::AVM, g) = GP(project, ϕ, f, Z, g)
 
-Produces a GP `f` satisfying `f(x) = fa(x) + fb(x)`.
-"""
-+(fa::GP, fb::GP) = GP(+, fa, fb)
-μ_p′(::typeof(+), fa, fb) = CompositeMean(+, mean(fa), mean(fb))
-k_p′(::typeof(+), fa, fb) =
-    CompositeKernel(+, kernel(fa), kernel(fb), kernel(fa, fb), kernel(fb, fa))
-k_pp′(fp::GP, ::typeof(+), fa, fb) = CompositeCrossKernel(+, kernel(fp, fa), kernel(fp, fb))
-k_p′p(::typeof(+), fa, fb, fp::GP) = CompositeCrossKernel(+, kernel(fa, fp), kernel(fb, fp))
+μ_p′(::typeof(project), ϕ, f, g) = DeltaSumMean(ϕ, mean(f), :, g)
+k_p′(::typeof(project), ϕ, f, g) = DeltaSumKernel(ϕ, kernel(f), :)
+k_p′p(::typeof(project), ϕ, f, g, fp) = LhsDeltaSumCrossKernel(ϕ, kernel(f, fp), :)
+k_pp′(fp, ::typeof(project), ϕ, f, g) = RhsDeltaSumCrossKernel(kernel(fp, f), :, ϕ)
