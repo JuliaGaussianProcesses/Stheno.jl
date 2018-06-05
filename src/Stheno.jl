@@ -37,6 +37,7 @@ module Stheno
     include("linops/addition.jl")
     include("linops/product.jl")
     # include("linops/integrate.jl")
+    include("linops/project.jl")
 
     # # Code to make Stheno work with Turing.
     # include("turing_util.jl")

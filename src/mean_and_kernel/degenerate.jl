@@ -1,4 +1,44 @@
- """
+"""
+
+
+"""
+struct DeltaSumMean{Tϕ, Tg, TZ}
+    ϕ::Tϕ
+    g::Tg
+    Z::TZ
+    μ::MeanFunction
+end
+(μ::DeltaSumMean)(x) = pairwise(μ.ϕ, x, μ.Z)' * unary_obswise(μ.μ, μ.Z) + μ.g(x)
+function unary_obswise(μ::DeltaSumMean, X::AVM)
+    return pairwise(μ.ϕ, X, μ.Z)' * unary_obswise(μ.μ, μ.Z) + unary_obswise(μ.g, X)
+end
+
+"""
+
+
+"""
+struct DeltaSumKernel{Tϕ, TZ, TA<:AbstractMatrix}
+    ϕ::Tϕ
+    Z::TZ
+    k::Kernel
+end
+(k::DeltaSumKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
+function (k::DeltaSumKernel)(x::AV, x′::AV)
+    return binary_obswise(k, reshape(x, :, 1), reshape(x′, :, 1))[1]
+end
+size(k::DeltaSumKernel, N::Int) = size(k.ϕ, 2)
+
+binary_obswise(k::DeltaSumKernel, X::AVM) = diag_Xᵀ_A_X(k.A, pairwise(k.ϕ, k.Z, X))
+function binary_obswise(k::DeltaSumKernel, X::AVM, X′::AVM)
+    return diag_Xᵀ_A_Y(pairwise(k.ϕ, k.Z, X), pairwise(k.k, k.Z), pairwise(k.ϕ, k.Z, X′))
+end
+pairwise(k::DeltaSumKernel, X::AVM) = Xt_A_X(k.A, pairwise(k.ϕ, k.Z, X))
+function pairwise(k::DeltaSumKernel, X::AVM, X′::AVM)
+    return Xt_A_Y(pairwise(k.ϕ, k.Z, X), k.A, pairwise(k.ϕ, k.Z, X′))
+end
+
+
+"""
     DegenerateKernel <: Kernel
 
 A rank-limited kernel, for which `k(x, x′) = kfg(:, x)' * A * kfg(:, x′)`.
