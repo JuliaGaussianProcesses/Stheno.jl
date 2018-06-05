@@ -31,6 +31,7 @@ yq = y | conditioner;
 yqμ, yqσ = marginals(yq, Xp);
 
 
+
 ############################ Plotting ############################
 
 # Plot observations.
@@ -72,7 +73,6 @@ plot!(posterior_plot, Xp, [yqμ yqμ];
     fillalpha=0.3,
     fillcolor=:cyan,
     label="");
-
 
 # Plot the approximate posterior marginals over the latent function.
 scatter!(posterior_plot, Z, zeros(M);
