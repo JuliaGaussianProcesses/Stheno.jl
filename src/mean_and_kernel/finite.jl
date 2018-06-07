@@ -44,7 +44,6 @@ function pairwise(k::FiniteKernel, q::AVM)
 end
 pairwise(k::FiniteKernel, q::AVM, q′::AVM) = pairwise(k.k, getobs(k.X, q), getobs(k.X, q′))
 
-
 """
     LhsFiniteCrossKernel <: CrossKernel
 

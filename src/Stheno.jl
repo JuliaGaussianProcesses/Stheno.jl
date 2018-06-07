@@ -3,7 +3,7 @@ __precompile__(true)
 module Stheno
 
     using Distributions, Distances, BlockArrays, FillArrays, IterTools
-    import Base: mean, cov, show, size, length, rand, vcat, convert, promote
+    import Base: mean, cov, show, size, length, rand, vcat, convert, promote, eachindex
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
@@ -29,10 +29,8 @@ module Stheno
     include("mean_and_kernel/input_transform.jl")
     include("mean_and_kernel/degenerate.jl")
 
-    # Gaussian Process defintions.
+    # Basic Gaussian process definitions.
     include("gp/abstract_gp.jl")
-    include("gp/gp.jl")
-    include("gp/joint_gp.jl")
 
     # Affine transformations of GPs.
     include("linops/indexing.jl")
@@ -41,6 +39,9 @@ module Stheno
     # include("linops/integrate.jl")
     include("linops/project.jl")
     include("linops/conditioning.jl")
+
+    # Util to make it straightforward to work with collections of AbstractGPs.
+    include("gp/joint_gp.jl")
 
     # # Code to make Stheno work with Turing.
     # include("turing_util.jl")

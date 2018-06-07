@@ -61,7 +61,7 @@ function AbstractVector(μ::MeanFunction)
 end
 function AbstractMatrix(k::Kernel)
     @assert isfinite(size(k, 1))
-    return LazyPDMat(pairwise(k, eachindex(k, 1), eachindex(k, 2)))
+    return LazyPDMat(pairwise(k, eachindex(k)))
 end
 function AbstractMatrix(k::CrossKernel)
     @assert isfinite(size(k, 1))
@@ -71,4 +71,5 @@ end
 
 # For finite dimensional means and (cross-)kernels, indexing has a reasonable definition.
 eachindex(μ::MeanFunction) = 1:length(μ)
+eachindex(k::Kernel) = eachindex(k, 1)
 eachindex(k::CrossKernel, N::Int) = 1:size(k, N)

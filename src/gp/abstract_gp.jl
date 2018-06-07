@@ -41,27 +41,8 @@ function GP(args...)
     return GP{typeof(μ), typeof(k)}(args, μ, k, gpc)
 end
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)))")
-==(f::GP, g::GP) = (f.μ == g.μ) && (f.k == g.k)
-length(f::GP) = length(f.μ)
-eachindex(f::AbstractGP) = eachindex(f.μ)
 
-# Conversion and promotion of non-GPs to GPs.
-promote(f::AbstractGP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
-promote(x::Union{Real, Function}, f::AbstractGP) = reverse(promote(f, x))
-function convert(::Type{<:AbstractGP}, x::Real, gpc::GPC)
-    return GP(ConstantMean(x), ZeroKernel{Float64}(), gpc)
-end
-function convert(::Type{<:AbstractGP}, f::Function, gpc::GPC)
-    return GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
-end
-
-"""
-    mean(f::GP)
-
-The mean function of `f`.
-"""
-mean(f::AbstractGP) = f.μ
-mean_vec(f::AbstractGP) = AbstractVector(mean(f))
+mean(f::GP) = f.μ
 
 """
     kernel(f::Union{Real, Function})
@@ -73,8 +54,8 @@ mean_vec(f::AbstractGP) = AbstractVector(mean(f))
 Get the cross-kernel between `GP`s `fa` and `fb`, and . If either argument is deterministic
 then the zero-kernel is returned. Also, `kernel(f) === kernel(f, f)`.
 """
-kernel(f::AbstractGP) = f.k
-function kernel(fa::AbstractGP, fb::AbstractGP)
+kernel(f::GP) = f.k
+function kernel(fa::GP, fb::GP)
     @assert fa.gpc === fb.gpc
     if fa === fb
         return kernel(fa)
@@ -87,8 +68,14 @@ function kernel(fa::AbstractGP, fb::AbstractGP)
     end
 end
 kernel(::Union{Real, Function}) = ZeroKernel{Float64}()
-kernel(::Union{Real, Function}, ::AbstractGP) = ZeroKernel{Float64}()
-kernel(::AbstractGP, ::Union{Real, Function}) = ZeroKernel{Float64}()
+kernel(::Union{Real, Function}, ::GP) = ZeroKernel{Float64}()
+kernel(::GP, ::Union{Real, Function}) = ZeroKernel{Float64}()
+
+# Conversion and promotion of non-GPs to GPs.
+promote(f::GP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
+promote(x::Union{Real, Function}, f::GP) = reverse(promote(f, x))
+convert(::Type{<:GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), ZeroKernel{Float64}(), gpc)
+convert(::Type{<:GP}, f::Function, gpc::GPC) = GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
 
 function get_check_gpc(args...)
     gpc = args[findfirst(map(arg->arg isa GP, args))].gpc
@@ -96,12 +83,19 @@ function get_check_gpc(args...)
     return gpc
 end
 
+
+
+############### Operations defined in terms of AbstractGaussianProcesses ###################
+
+==(f::AbstractGP, g::AbstractGP) = (mean(f) == mean(g)) && (kernel(f) == kernel(g))
+length(f::AbstractGP) = length(mean(f))
+eachindex(f::AbstractGP) = eachindex(mean(f))
+mean_vec(f::AbstractGP) = AbstractVector(mean(f))
 cov(f::AbstractGP) = AbstractMatrix(kernel(f))
+xcov(f::AbstractGP, g::AbstractGP) = AbstractMatrix(kernel(f, g))
 marginal_cov(f::AbstractGP) = binary_obswise(kernel(f), eachindex(f))
 marginal_std(f::AbstractGP) = sqrt.(marginal_cov(f))
 marginals(f::AbstractGP) = (mean(f), marginal_std(f))
-
-xcov(f::AbstractGP, g::AbstractGP) = AbstractMatrix(kernel(f, g))
 
 """
     rand(rng::AbstractRNG, f::AbstractGP, N::Int=1)
@@ -114,7 +108,7 @@ end
 rand(rng::AbstractRNG, f::AbstractGP) = vec(rand(rng, f, 1))
 
 """
-    logpdf(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real})
+    logpdf(f::AbstractGP, y::AbstractVector{<:Real})
 
 Returns the log probability density observing the assignments `a` jointly.
 """
@@ -124,9 +118,9 @@ function logpdf(f::AbstractGP, y::AbstractVector{<:Real})
 end
 
 """
-    elbo(f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real}, u::AV{<:GP}, Z::AV{<:AVM}, σ::Real)
+    elbo(f::AbstractGP, y::AbstractVector{<:Real}, u::AbstractGP, σ::Real)
 
-Compute the Titsias-ELBO.
+Compute the saturated Titsias-ELBO. Requires a reasonable degree of care.
 """
 function elbo(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)
     Γ = (chol(cov(u))' \ xcov(u, f)) ./ σ

@@ -40,7 +40,7 @@ f, noise, y = model(GPC());
 ###########################  Sample jointly from the prior  ###########################
 
 # Sample jointly from the prior distribution over the three processes.
-fX, noiseX, yX = rand(rng, [f, noise, y], [X_prior, X_prior, X_prior]);
+fX, noiseX, yX = rand(rng, [f(X_prior), noise(X_prior), y(X_prior)]);
 
 
 #######################  Do posterior inference give a few samples  #######################
@@ -48,11 +48,9 @@ fX, noiseX, yX = rand(rng, [f, noise, y], [X_prior, X_prior, X_prior]);
 # Sample a few points from the prior and compute the posterior processes.
 N = 15;
 X = sort(rand(rng, N) * 10);
-ŷ = rand(rng, y, X);
+ŷ = rand(rng, y(X));
 f′, noise′, y′ = (f, noise, y) | (y(X) ← ŷ);
 
-# There appear to be some substantial numerical problems associated with generating samples
-# jointly from all three processes, thus only f′ and noise′ are considered.
 Nplot, S = 500, 100;
 Xplot = linspace(-2.0, 12.0, Nplot);
 f′Xp, noise′Xp = rand(rng, [f′, noise′], [Xplot, Xplot], S);

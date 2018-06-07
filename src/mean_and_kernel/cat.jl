@@ -22,6 +22,7 @@ CatMean(μs::Vararg{<:MeanFunction}) = CatMean([μs...])
 (μ::CatMean)(x::Tuple{Int, <:Any}) = μ.μ[x[1]](x[2])
 length(μ::CatMean) = sum(length.(μ.μ))
 ==(μ::CatMean, μ′::CatMean) = μ.μ == μ′.μ
+eachindex(μ::CatMean) = eachindex.(μ.μ)
 function unary_obswise(μ::CatMean, X::AV{<:AVM})
     return BlockVector(unary_obswise.(μ.μ, X))
 end
@@ -39,6 +40,8 @@ CatCrossKernel(ks::RowVector) = CatCrossKernel(reshape(ks, 1, length(ks)))
 size(k::CatCrossKernel, N::Int) = N == 1 ?
     sum(size.(k.ks[:, 1], Ref(1))) :
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
+==(k::CatCrossKernel, k′::CatCrossKernel) = k.ks == k′.ks
+eachindex(k::CatCrossKernel, N::Int) = eachindex.(diag(k.ks), N)
 (k::CatCrossKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any}) =
     k.ks[x[1], x′[1]](x[2], x′[2])
 function pairwise(k::CatCrossKernel, X::AV{<:AVM}, X′::AV{<:AVM})
@@ -55,7 +58,7 @@ end
 A kernel comprising lots of other kernels. This is represented as a matrix whose diagonal
 elements are `Kernels`, and whose off-diagonal elements are `CrossKernel`s. In the absence
 of determining at either either compile- or construction-time whether or not this actually
-constites a valid Mercer kernel, we take the construction of this type to be a promise on
+constitutes a valid Mercer kernel, we take the construction of this type to be a promise on
 the part of the caller that the thing they are constructing does indeed constitute a valid
 Mercer kernel.
 
@@ -77,6 +80,7 @@ function (k::CatKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any})
     end
 end
 size(k::CatKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
+eachindex(k::CatKernel) = eachindex.(k.ks_diag)
 
 binary_obswise(k::CatKernel, X::AV{<:AVM}) = BlockVector(binary_obswise.(k.ks_diag, X))
 binary_obswise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM}) =

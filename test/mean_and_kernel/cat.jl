@@ -1,4 +1,6 @@
-using Stheno: CatMean, CatCrossKernel, CatKernel, ConstantMean, ZeroMean, nobs, getobs
+using Stheno: CatMean, CatCrossKernel, CatKernel, ConstantMean, ZeroMean, nobs, getobs,
+    unary_obswise
+using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel
 using FillArrays
 
 @testset "cat" begin
@@ -30,6 +32,10 @@ using FillArrays
 
         mean_function_tests(μ, [X1, X2])
         mean_function_tests(μ, [x1, x2])
+
+        # Tests for finite case.
+        μ1f, μ2f = FiniteMean(μ1, X1), FiniteMean(μ2, X2)
+        @test eachindex(CatMean([μ1f, μ2f])) == [eachindex(μ1f), eachindex(μ2f)]
     end
 
     # Test CatCrossKernel.
@@ -41,6 +47,8 @@ using FillArrays
         k11, k12, k21, k22 =  EQ(), ZeroKernel{Float64}(), ZeroKernel{Float64}(), EQ()
         k = CatCrossKernel([k11 k12; k21 k22])
 
+        @test k == k
+
         @test size(k) == (Inf, Inf)
         @test size(k, 1) == Inf
         @test size(k, 2) == Inf
@@ -50,6 +58,13 @@ using FillArrays
         @test pairwise(k, [X0, X1], [X0′, X1′]) == vcat(row1, row2)
 
         cross_kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
+
+        # Tests for finite case.
+        k11f, k12f = FiniteCrossKernel(k11, X1, X1), FiniteCrossKernel(k12, X1, X0)
+        k21f, k22f = FiniteCrossKernel(k21, X0, X1), FiniteCrossKernel(k22, X0, X0)
+        kf = CatCrossKernel([k11f k12f; k21f k22f])
+        @test eachindex(kf, 1) == [eachindex(k11f, 1), eachindex(k22f, 1)]
+        @test eachindex(kf, 2) == [eachindex(k11f, 2), eachindex(k22f, 2)]
     end
 
     # Test CatKernel.
@@ -79,5 +94,14 @@ using FillArrays
         @test pairwise(k, [X1, X2], [X1′, X2′]) == manual
 
         kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
+
+        # Tests for finite case.
+        k11f, k22f = FiniteKernel(k11, X0), FiniteKernel(k22, X1)
+        k12f = FiniteCrossKernel(k12, X0, X1)
+        ks_off_f = Matrix{Stheno.CrossKernel}(2, 2)
+        ks_off_f[1, 2] = k12f
+        k = CatKernel([k11f, k22f], ks_off_f)
+
+        @test eachindex(k) == [eachindex(k11f), eachindex(k22f)]
     end
 end

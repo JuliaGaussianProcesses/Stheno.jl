@@ -20,8 +20,6 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
     include("mean_and_kernel/degenerate.jl")
 
     include("gp/abstract_gp.jl")
-    include("gp/gp.jl")
-    include("gp/joint_gp.jl")
 
     include("linops/indexing.jl")
     include("linops/addition.jl")
@@ -29,4 +27,6 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
     # include("linops/integrate.jl")
     include("linops/project.jl")
     include("linops/conditioning.jl")
+
+    include("gp/joint_gp.jl")
 end
