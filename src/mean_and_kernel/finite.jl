@@ -1,4 +1,4 @@
-import Base: eachindex
+import Base: eachindex, AbstractVector, AbstractMatrix
 export FiniteMean, FiniteKernel, LhsFiniteCrossKernel, RhsFiniteCrossKernel,
     FiniteCrossKernel
 
@@ -15,8 +15,7 @@ end
 (μ::FiniteMean)(n::Int) = μ.μ(getobs(μ.X, n))
 length(μ::FiniteMean) = nobs(μ.X)
 show(io::IO, μ::FiniteMean) = show(io, "FiniteMean($(μ.μ)")
-eachindex(μ::FiniteMean) = 1:length(μ)
-mean(μ::FiniteMean) = unary_obswise(μ, eachindex(μ))
+unary_obswise(μ::FiniteMean, q::AVM) = unary_obswise(μ.μ, getobs(μ.X, q))
 
 struct EmpiricalKernel{T<:LazyPDMat} <: Kernel
     Σ::T
@@ -37,9 +36,14 @@ FiniteKernel(Σ::LazyPDMat) = FiniteKernel(EmpiricalKernel(Σ), 1:size(Σ, 1))
 (k::FiniteKernel)(n::Int, n′::Int) = k.k(getobs(k.X, n), getobs(k.X, n′))
 size(k::FiniteKernel, N::Int) = N ∈ (1, 2) ? nobs(k.X) : 1
 show(io::IO, k::FiniteKernel) = show(io, "FiniteKernel($(k.k))")
-eachindex(k::FiniteKernel) = 1:nobs(k.X)
-cov(k::FiniteKernel) = pairwise(k, eachindex(k))
-xcov(k::FiniteKernel) = pairwise(k, eachindex(k))
+function binary_obswise(k::FiniteKernel, q::AVM, q′::AVM)
+    return binary_obswise(k.k, getobs(k.X, q), getobs(k.X, q′))
+end
+function pairwise(k::FiniteKernel, q::AVM)
+    return pairwise(k.k, getobs(k.X, q))
+end
+pairwise(k::FiniteKernel, q::AVM, q′::AVM) = pairwise(k.k, getobs(k.X, q), getobs(k.X, q′))
+
 
 """
     LhsFiniteCrossKernel <: CrossKernel
@@ -52,7 +56,7 @@ struct LhsFiniteCrossKernel <: CrossKernel
     X::AVM
 end
 (k::LhsFiniteCrossKernel)(n::Int, x) = k.k(getobs(k.X, n), x)
-size(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? nobs(k.X) : Inf
+size(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? nobs(k.X) : size(k.k, N)
 show(io::IO, k::LhsFiniteCrossKernel) = show(io, "LhsFiniteCrossKernel($(k.k))")
 eachindex(k::LhsFiniteCrossKernel, N::Int) = 1:size(k, N)
 function binary_obswise(k::LhsFiniteCrossKernel, q::AVM, X′::AVM)
@@ -73,9 +77,8 @@ struct RhsFiniteCrossKernel <: CrossKernel
     X′::AVM
 end
 (k::RhsFiniteCrossKernel)(x, n′::Int) = k.k(x, getobs(k.X′, n′))
-size(k::RhsFiniteCrossKernel, N::Int) = N == 2 ? nobs(k.X′) : Inf
+size(k::RhsFiniteCrossKernel, N::Int) = N == 2 ? nobs(k.X′) : size(k.k, N)
 show(io::IO, k::RhsFiniteCrossKernel) = show(io, "RhsFiniteCrossKernel($(k.k))")
-eachindex(k::RhsFiniteCrossKernel, N::Int) = 1:size(k, N)
 function binary_obswise(k::RhsFiniteCrossKernel, X::AVM, q′::AVM)
     return binary_obswise(k.k, X, getobs(k.X′, q′))
 end
@@ -97,8 +100,6 @@ end
 (k::FiniteCrossKernel)(n::Int, n′::Int) = k.k(getobs(k.X, n), getobs(k.X′, n′))
 size(k::FiniteCrossKernel, N::Int) = N == 1 ? nobs(k.X) : (N == 2 ? nobs(k.X′) : 1)
 show(io::IO, k::FiniteCrossKernel) = show(io, "FiniteCrossKernel($(k.k))")
-xcov(k::FiniteCrossKernel) = pairwise(k, eachindex(k, 1), eachindex(k, 2))
-eachindex(k::FiniteCrossKernel, N::Int) = 1:size(k, N)
 function binary_obswise(k::FiniteCrossKernel, q::AVM, q′::AVM)
     return binary_obswise(k.k, getobs(k.X, q), getobs(k.X′, q′))
 end

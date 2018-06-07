@@ -9,18 +9,18 @@
         f5 = f3 + f4
 
         for (n, (fp, fa, fb)) in enumerate([(f3, f1, f2), (f4, f1, f3), (f5, f3, f4)])
-            Σp = cov(fa, X) + cov(fb, X) + xcov(fa, fb, X) + xcov(fb, fa, X)
-            ΣpXX′ = xcov(fa, X, X′) + xcov(fb, X, X′) + xcov(fa, fb, X, X′) +
-                xcov(fa, fb, X, X′)
+            Σp = cov(fa(X)) + cov(fb(X)) + xcov(fa(X), fb(X)) + xcov(fb(X), fa(X))
+            ΣpXX′ = xcov(fa(X), fa(X′)) + xcov(fb(X), fb(X′)) + xcov(fa(X), fb(X′)) +
+                xcov(fa(X), fb(X′))
             @test mean(fp) == Stheno.CompositeMean(+, mean(fa), mean(fb))
-            @test mean(fp, X) ≈ mean(fa, X) + mean(fb, X)
-            @test cov(fp, X) ≈ Σp
-            @test xcov(fp, X, X′) ≈ ΣpXX′
-            @test xcov(fp, X′, X) ≈ transpose(ΣpXX′)                
-            @test xcov(fp, fa, X, X′) ≈ xcov(fa, X, X′) + xcov(fb, fa, X, X′)
-            @test xcov(fp, fa, X′, X) ≈ xcov(fa, X′, X) + xcov(fb, fa, X′, X)
-            @test xcov(fa, fp, X, X′) ≈ xcov(fb, fa, X, X′) + xcov(fa, X, X′)
-            @test xcov(fa, fp, X′, X) ≈ xcov(fb, fa, X′, X) + xcov(fa, X′, X)
+            @test mean_vec(fp(X)) ≈ mean_vec(fa(X)) + mean_vec(fb(X))
+            @test cov(fp(X)) ≈ Σp
+            @test xcov(fp(X), fp(X′)) ≈ ΣpXX′
+            @test xcov(fp(X′), fp(X)) ≈ transpose(ΣpXX′)                
+            @test xcov(fp(X), fa(X′)) ≈ xcov(fa(X), fa(X′)) + xcov(fb(X), fa(X′))
+            @test xcov(fp(X′), fa(X)) ≈ xcov(fa(X′), fa(X)) + xcov(fb(X′), fa(X))
+            @test xcov(fa(X), fp(X′)) ≈ xcov(fb(X), fa(X′)) + xcov(fa(X), fa(X′))
+            @test xcov(fa(X′), fp(X)) ≈ xcov(fb(X′), fa(X)) + xcov(fa(X′), fa(X))
         end
     end
 end

@@ -1,6 +1,17 @@
 import Base: |
 export ←, |
 
+"""
+    Observation
+
+Represents fixing a paricular (finite) GP to have a particular (vector) value.
+"""
+struct Observation{Tf<:AbstractGP, Ty<:AbstractVector}
+    f::Tf
+    y::Ty
+end
+←(f, y) = Observation(f, y)
+
 # """
 #     |(g::Union{GP, Tuple{Vararg{GP}}}, c::Union{Observation, Tuple{Vararg{Observation}}})
 
@@ -25,35 +36,53 @@ export ←, |
 # k_pp′(h::GP, (_, g, f, cache)::Tuple{typeof(|), GP, GP, CondCache}) =
 #     ConditionalCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
 
-# All of the code below is a stop-gap while I'm figuring out what to do about the
-# concatenation of GPs.
-|(g::GP, c::Observation) = ((g,) | (c,))[1]
-|(g::GP, c::Tuple{Vararg{Observation}}) = ((g,) | c)[1]
-|(g::Tuple{Vararg{GP}}, c::Observation) = g | (c,)
-function |(g::Tuple{Vararg{GP}}, c::Tuple{Vararg{Observation}})
-    f, y = [getfield.(c, :f)...], BlockVector([getfield.(c, :y)...])
-    f_qs, Xs = [f_.args[1] for f_ in f], [f_.args[2] for f_ in f]
-    μf = CatMean(mean.(f_qs))
-    kff = CatKernel(kernel.(f_qs), kernel.(f_qs, permutedims(f_qs)))
-    return map(g_->GP(|, g_, f_qs, CondCache(kff, μf, Xs, y)), g)
-end
-function μ_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
-    return ConditionalMean(cache, mean(g), CatCrossKernel(kernel.(f, Ref(g))))
-end
-function k_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
-    return ConditionalKernel(cache, CatCrossKernel(kernel.(f, Ref(g))), kernel(g))
-end
-function k_p′p(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache, h::GP)
-    kfg, kfh = CatCrossKernel(kernel.(f, Ref(g))), CatCrossKernel(kernel.(f, Ref(h)))
-    return ConditionalCrossKernel(cache, kfg, kfh, kernel(g, h))
-end
-function k_pp′(h::GP, ::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
-    kfh, kfg = CatCrossKernel(kernel.(f, Ref(h))), CatCrossKernel(kernel.(f, Ref(g)))
-    return ConditionalCrossKernel(cache, kfh, kfg, kernel(h, g))
-end
-length(::typeof(|), f::GP, ::GP, f̂::Vector) = length(f)
+# # All of the code below is a stop-gap while I'm figuring out what to do about the
+# # concatenation of GPs.
+# |(g::GP, c::Observation) = ((g,) | (c,))[1]
+# |(g::GP, c::Tuple{Vararg{Observation}}) = ((g,) | c)[1]
+# |(g::Tuple{Vararg{GP}}, c::Observation) = g | (c,)
+# function |(g::Tuple{Vararg{GP}}, c::Tuple{Vararg{Observation}})
+#     f, y = [getfield.(c, :f)...], BlockVector([getfield.(c, :y)...])
+#     f_qs, Xs = [f_.args[1] for f_ in f], [f_.args[2] for f_ in f]
+#     μf = CatMean(mean.(f_qs))
+#     kff = CatKernel(kernel.(f_qs), kernel.(f_qs, permutedims(f_qs)))
+#     return map(g_->GP(|, g_, f_qs, CondCache(kff, μf, Xs, y)), g)
+# end
+# function μ_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
+#     return ConditionalMean(cache, mean(g), CatCrossKernel(kernel.(f, Ref(g))))
+# end
+# function k_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
+#     return ConditionalKernel(cache, CatCrossKernel(kernel.(f, Ref(g))), kernel(g))
+# end
+# function k_p′p(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache, h::GP)
+#     kfg, kfh = CatCrossKernel(kernel.(f, Ref(g))), CatCrossKernel(kernel.(f, Ref(h)))
+#     return ConditionalCrossKernel(cache, kfg, kfh, kernel(g, h))
+# end
+# function k_pp′(h::GP, ::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
+#     kfh, kfg = CatCrossKernel(kernel.(f, Ref(h))), CatCrossKernel(kernel.(f, Ref(g)))
+#     return ConditionalCrossKernel(cache, kfh, kfg, kernel(h, g))
+# end
+# length(::typeof(|), f::GP, ::GP, f̂::Vector) = length(f)
 
-import Base: |
+# This is a bit of a hack while we're not using Finite kernels prroperly in conditional.jl
+function |(g::AbstractGP, c::Observation)
+    f_finite, y = c.f, c.y
+    f, X = f_finite.args[1], f_finite.args[2]
+    return GP(|, g, f, CondCache(kernel(f), mean(f), X, y))
+end
+function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+    return ConditionalMean(cache, mean(g), kernel(f, g))
+end
+function k_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+    return ConditionalKernel(cache, kernel(f, g), kernel(g))
+end
+function k_p′p(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache, h::AbstractGP)
+    return ConditionalCrossKernel(cache, kernel(f, g), kernel(f, h), kernel(g, h))
+end
+function k_pp′(h::AbstractGP, ::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+    return ConditionalCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
+end
+
 
 abstract type AbstractConditioner end
 

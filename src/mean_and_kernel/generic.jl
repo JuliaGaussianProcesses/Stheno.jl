@@ -53,3 +53,22 @@ pairwise_fallback(f, X::AVM, X′::AVM) =
 # COMMITING TYPE PIRACY!
 pairwise(f::PreMetric, x::AbstractVector) = pairwise(f, RowVector(x))
 pairwise(f::PreMetric, x::AV, x′::AV) = pairwise(f, RowVector(x), RowVector(x′))
+
+# Can convert to AbstractVector / AbstractMatrix if MeanFunction / Kernel has finite dims.
+function AbstractVector(μ::MeanFunction)
+    @assert isfinite(length(μ))
+    return unary_obswise(μ, eachindex(μ))
+end
+function AbstractMatrix(k::Kernel)
+    @assert isfinite(size(k, 1))
+    return LazyPDMat(pairwise(k, eachindex(k, 1), eachindex(k, 2)))
+end
+function AbstractMatrix(k::CrossKernel)
+    @assert isfinite(size(k, 1))
+    @assert isfinite(size(k, 2))
+    return pairwise(k, eachindex(k, 1), eachindex(k, 2))
+end
+
+# For finite dimensional means and (cross-)kernels, indexing has a reasonable definition.
+eachindex(μ::MeanFunction) = 1:length(μ)
+eachindex(k::CrossKernel, N::Int) = 1:size(k, N)

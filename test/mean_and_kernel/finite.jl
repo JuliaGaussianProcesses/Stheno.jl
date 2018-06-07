@@ -1,4 +1,4 @@
-using Stheno: FiniteMean, ConstantMean, getobs
+using Stheno: FiniteMean, ConstantMean, getobs, AM, AV
 
 @testset "finite" begin
 
@@ -14,8 +14,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
             @test size(μ′, 2) == 1
             @test length(μ′) == N
             @test eachindex(μ′) == 1:N
-            @test mean(μ′) == unary_obswise(μ′, eachindex(μ′))
-            @test mean(μ′) == unary_obswise(μ, X′)
+            @test AbstractVector(μ′) == unary_obswise(μ′, eachindex(μ′))
+            @test AbstractVector(μ′) == unary_obswise(μ, X′)
             mean_function_tests(μ′, eachindex(μ′))
             mean_function_tests(μ′, 1:N-1)
 
@@ -25,8 +25,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
             @test size(μ2, 1) == N - 1
             @test length(μ2) == N - 1
             @test eachindex(μ2) == 1:N-1
-            @test mean(μ′)[r] == mean(μ2)
-            @test mean(μ′)[r] == unary_obswise(μ2, eachindex(μ2))
+            @test AbstractVector(μ′)[r] == AbstractVector(μ2)
+            @test AbstractVector(μ′)[r] == unary_obswise(μ2, eachindex(μ2))
             mean_function_tests(μ2, eachindex(μ2))
             mean_function_tests(μ2, 1:N-2)
         end
@@ -56,10 +56,10 @@ using Stheno: FiniteMean, ConstantMean, getobs
             @test size(k′, 2) == N
             @test isstationary(k′) == false
             @test eachindex(k′) == 1:N
-            @test cov(k′) == pairwise(k′, eachindex(k′))
-            @test Matrix(cov(k′)) == pairwise(k′, eachindex(k′), eachindex(k′))
-            @test cov(k′) ≈ pairwise(k, X′)
-            @test xcov(k′) ≈ pairwise(k, X′)
+            @test AM(k′) == pairwise(k′, eachindex(k′))
+            @test Matrix(AM(k′)) == pairwise(k′, eachindex(k′), eachindex(k′))
+            @test AM(k′) ≈ pairwise(k, X′)
+            @test AM(k′) ≈ pairwise(k, X′)
 
             @test pairwise(k′, 1:N-1, 2:N) ≈ pairwise(k, getobs(X′, 1:N-1), getobs(X′, 2:N))
             @test pairwise(k′, eachindex(k′), 1:N-1) ≈ pairwise(k, X′, getobs(X′, 1:N-1))
@@ -72,7 +72,7 @@ using Stheno: FiniteMean, ConstantMean, getobs
             k2 = FiniteKernel(k′, r)
             @test size(k2) == (N-1, N-1)
             @test eachindex(k2) == r
-            @test xcov(k2) == pairwise(k′, r)
+            @test AM(k2) == pairwise(k′, r)
 
             # Known issue: offsetting doesn't really work.
             binary_obswise_tests(k2, r, r)
@@ -138,8 +138,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
         @test isstationary(k′) == false
         @test eachindex(k′, 1) == 1:N
         @test eachindex(k′, 2) == 1:N′
-        @test xcov(k′) == pairwise(k′, eachindex(k′, 1), eachindex(k′, 2))
-        @test xcov(k′) ≈ pairwise(k, X, X′)
+        @test AM(k′) == pairwise(k′, eachindex(k′, 1), eachindex(k′, 2))
+        @test AM(k′) ≈ pairwise(k, X, X′)
         @test pairwise(k′, 1:N-1, 2:N) ≈ pairwise(k, X[:, 1:N-1], X′[:, 2:N])
         @test pairwise(k′, eachindex(k′, 1), 1:N-1) ≈ pairwise(k, X, X′[:, 1:N-1])
         @test pairwise(k′, 2:N, eachindex(k′, 2)) ≈ pairwise(k, X[:, 2:N], X′)
@@ -151,8 +151,8 @@ using Stheno: FiniteMean, ConstantMean, getobs
         r, c = 1:N-1, 1:N′-2
         k2 = FiniteCrossKernel(k′, r, c)
         @test size(k2) == (length(r), length(c))
-        @test xcov(k2) == pairwise(k2, r, c)
-        @test xcov(k2) == pairwise(k′, r, c)
+        @test AM(k2) == pairwise(k2, r, c)
+        @test AM(k2) == pairwise(k′, r, c)
         @test pairwise(k2, 2:N-1, c) == pairwise(k′, 2:N-1, c)
 
         cross_kernel_tests(k2, r, r, c)

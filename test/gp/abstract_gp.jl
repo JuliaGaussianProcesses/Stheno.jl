@@ -1,5 +1,5 @@
 using Stheno: ConstantMean, ZeroMean, ConstantKernel, ZeroKernel, pairwise, unary_obswise,
-    nobs
+    nobs, AV, AM
 
 @testset "gp" begin
 
@@ -13,27 +13,16 @@ using Stheno: ConstantMean, ZeroMean, ConstantKernel, ZeroKernel, pairwise, unar
         kc = Stheno.LhsCross(x->sum(abs2, x), k)
 
         @test Stheno.permutedims(x) == x'
-
-        @test mean(μ, x) == unary_obswise(μ, x) && mean(μ, X) == unary_obswise(μ, X)
-
-        @test xcov(kc, x, x′) == pairwise(kc, x, x′) &&
-            xcov(kc, X, X′) == pairwise(kc, X, X′)
-        @test xcov(kc, x) == pairwise(kc, x) && xcov(kc, X) == pairwise(kc, X)
-
-        @test xcov(k, x, x′) == pairwise(k, x, x′) && xcov(k, X, X′) == pairwise(k, X, X′)
-        @test cov(k, x) == pairwise(k, x) && cov(k, X) == pairwise(k, X)
-
-        @test Stheno.diag_cov(k, x) == diag(cov(k, x))
-        @test Stheno.diag_std(k, x) == sqrt.(diag(cov(k, x)))
     end
 
     # Test the creation of indepenent GPs.
     let rng = MersenneTwister(123456)
 
         # Specification for two independent GPs.
+        gpc = GPC()
         μ1, μ2 = ConstantMean(1.0), ZeroMean{Float64}()
         k1, k2 = EQ(), Linear(5)
-        f1, f2 = GP.([μ1, μ2], [k1, k2], Ref(GPC()))
+        f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
 
         @test mean(GP(EQ(), GPC())) == ZeroMean{Float64}()
 
@@ -63,48 +52,51 @@ using Stheno: ConstantMean, ZeroMean, ConstantKernel, ZeroKernel, pairwise, unar
     let
         rng, N, D = MersenneTwister(123456), 10, 2
         X, x, μ, k = randn(rng, D, N), randn(rng, N), ConstantMean(1), EQ()
-        f = GP(μ, k, GPC())
+        fX = GP(FiniteMean(μ, X), FiniteKernel(k, X), GPC())
+        fx = GP(FiniteMean(μ, x), FiniteKernel(k, x), GPC())
 
         # Check that single-GP samples have the correct dimensions.
-        @test length(rand(rng, f, X)) == nobs(X)
-        @test size(rand(rng, f, X, 10)) == (nobs(X), 10)
+        @test length(rand(rng, fX)) == nobs(X)
+        @test size(rand(rng, fX, 10)) == (nobs(X), 10)
 
-        @test length(rand(rng, f, x)) == nobs(x)
-        @test size(rand(rng, f, x, 10)) == (nobs(x), 10)
+        @test length(rand(rng, fx)) == nobs(x)
+        @test size(rand(rng, fx, 10)) == (nobs(x), 10)
     end
 
     # Test statistical properties of `rand`.
     let
         rng, N, D, μ0, S = MersenneTwister(123456), 10, 2, 1, 100_000
-        X, μ, k = randn(rng, D, N), ConstantMean(μ0), EQ()
+        X = randn(rng, D, N)
+        μ, k = FiniteMean(ConstantMean(μ0), X), FiniteKernel(EQ(), X)
         f = GP(μ, k, GPC())
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.
-        f̂ = rand(rng, f, X, S)
-        @test maximum(abs.(mean(f̂, 2) - mean(μ, X))) < 1e-2
+        f̂ = rand(rng, f, S)
+        @test maximum(abs.(mean(f̂, 2) - AV(μ))) < 1e-2
 
-        Σ′ = (f̂ .- mean(μ, X)) * (f̂ .- mean(μ, X))' ./ S
-        @test mean(abs.(Σ′ - Matrix(cov(f, X)))) < 1e-2
+        Σ′ = (f̂ .- AV(μ)) * (f̂ .- AV(μ))' ./ S
+        @test mean(abs.(Σ′ - Matrix(cov(f)))) < 1e-2
     end
 
     # Test logpdf + elbo do something vaguely sensible + that elbo converges to logpdf.
+    using Distributions: MvNormal, PDMat
     let
-        rng, N, N′, D, gpc = MersenneTwister(123456), 25, 10, 2, GPC()
-        X, X′ = rand(rng, D, N), rand(rng, D, N′)
-        f = GP(ConstantMean(1.0), EQ(), gpc) + GP(ZeroMean{Float64}(), Noise(1e-1), gpc)
-        y, y′ = rand(rng, f, X), rand(rng, f, X′)
+        rng, N, D, σ, gpc = MersenneTwister(123456), 5, 2, 1e-1, GPC()
+        X = rand(rng, D, N)
+        μ = FiniteMean(ConstantMean(1.0), X)
+        kf, ky = FiniteKernel(EQ(), X), FiniteKernel(EQ() + Noise(σ^2), X)
+        f = GP(μ, kf, gpc)
+        y = GP(μ, ky, gpc)
+        ŷ = rand(rng, y)
 
-        logpdf_y = logpdf([f], [X], BlockVector([y]))
-        logpdf_yy′ = logpdf([f, f], [X, X′], BlockVector([y, y′]))
+        # Check that logpdf returns the correct type and roughly agrees with Distributions.
+        Σ = unbox(pairwise(ky, eachindex(ky)) + 1e-6I)
+        @test logpdf(y, ŷ) isa Real
+        @test logpdf(y, ŷ) ≈ logpdf(MvNormal(Vector(AV(μ)), Σ), ŷ)
 
-        @test logpdf_y isa Real
-        @test logpdf(f, X, y) == logpdf_y
-        @test logpdf_yy′ isa Real
-
-        elbo_y = elbo([f], [X], BlockVector([y]), [f], [X], 2e-5)
-        elbo_yy′ = elbo([f, f], [X, X′], BlockVector([y, y′]), [f, f], [X, X′], 2e-5)
-
-        @test elbo_y < logpdf_y
-        @test elbo_yy′ < logpdf_yy′
+        # Ensure that the elbo is close to the logpdf when appropriate.
+        @test elbo(f, ŷ, f, σ) isa Real
+        @test elbo(f, ŷ, f, σ) < logpdf(y, ŷ)
+        @test abs(elbo(f, ŷ, f, σ) - logpdf(y, ŷ)) < 1e-3
     end
 end
