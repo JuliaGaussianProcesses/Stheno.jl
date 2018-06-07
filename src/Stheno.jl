@@ -30,11 +30,12 @@ module Stheno
     include("mean_and_kernel/degenerate.jl")
 
     # Gaussian Process defintions.
-    include("gp.jl")
+    include("gp/abstract_gp.jl")
+    include("gp/gp.jl")
+    include("gp/joint_gp.jl")
 
     # Affine transformations of GPs.
     include("linops/indexing.jl")
-
     include("linops/addition.jl")
     include("linops/product.jl")
     # include("linops/integrate.jl")

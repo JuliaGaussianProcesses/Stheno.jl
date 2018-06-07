@@ -1,47 +1,46 @@
 import Base: size, getindex, Matrix, *, \, /
 
 """
-    WoodburyLazyPDMat{T} <: AbstractMatrix{T}
+    WoodburyMat{T} <: AbstractMatrix{T}
 
 A lazily-represented matrix to which the Woodbury-Sherman-Morrison formula can be applied
-for efficient operations. Is an `AbstractMatrix` `A`, given by `A := Xᵀ Σ X + σ^2 I`.
+for efficient operations. Is an `AbstractMatrix` `A`, given by `A := Xᵀ Σ^{-1} X + σ^2 I`.
+Note that this is a rather specific instantiation of the types of matrices considered by the
+matrix inversion and determinant lemmas. Should probably be generalised at some point.
 """
-struct WoodburyLazyPDMat{T<:Real, TX<:AM{T}, TΣ<:LazyPDMat{T}} <: AM{T}
+struct WoodburyMat{T<:Real, TX<:AM{T}, TΣ<:LazyPDMat{T}} <: AM{T}
     X::TX
     Σ::TΣ
     σ::T
-end
-
-function __intermediates(A::WoodburyLazyPDMat)
-    Γ = chol(A.Σ) * A.X / A.σ
-    Ω = Γ * Γ' + I
-    return Γ, Ω
+    Γ::TX
+    Ω::TΣ
+    function WoodburyMat(X::TX, Σ::TΣ, σ::T) where {T<:Real, TX<:AM{T}, TΣ<:LazyPDMat{T}}
+        Γ = chol(Σ)' \ X ./ σ
+        Ω = LazyPDMat(Γ * Γ' + I, 0)
+        return new{T, TX, TΣ}(X, Σ, σ, Γ, Ω)
+    end
 end
 
 # AbstractArray interface.
-size(A::WoodburyLazyPDMat) = (size(A.X, 2), size(A.X, 2))
-function getindex(A::WoodburyLazyPDMat, p::Int, q::Int)
-    return Xt_A_Y(view(A.X, :, p), A.Σ, view(A.X, :, q)) + (p == q) * A.σ^2
+size(A::WoodburyMat) = (size(A.X, 2), size(A.X, 2))
+function getindex(A::WoodburyMat, p::Int, q::Int)
+    return Xt_invA_Y(view(A.X, :, p), A.Σ, view(A.X, :, q)) + (p == q) * A.σ^2
 end
 
 # Conversions.
-LazyPDMat(A::WoodburyLazyPDMat) = Xt_A_X(A.Σ, A.X) + A.σ^2 * I
-Matrix(A::WoodburyLazyPDMat) = Matrix(LazyPDMat(A))
+LazyPDMat(A::WoodburyMat) = Xt_invA_X(A.Σ, A.X) + A.σ^2 * I
+Matrix(A::WoodburyMat) = Matrix(LazyPDMat(A))
+
+# Some unary operations.
+logdet(A::WoodburyMat) = logdet(A.Ω) + 2 * size(A, 1) * log(A.σ)
 
 # Efficient matrix multiplication.
-function *(A::WoodburyLazyPDMat{<:Real}, B::VecOrMat{<:Real})
-    return A.X' * (A.Σ * (A.X * B)) .+ (A.σ^2) .* B
-end
-function *(A::Matrix{<:Real}, B::WoodburyLazyPDMat{<:Real})
-    return ((A * B.X') * B.Σ) * B.X .+ (B.σ^2) .* A
-end
+*(A::WoodburyMat, B::VecOrMat) = A.X' * (A.Σ \ (A.X * B)) .+ (A.σ^2) .* B
+*(A::Matrix, B::WoodburyMat) = ((A * B.X') / B.Σ) * B.X .+ (B.σ^2) .* A
 
 # Efficient linear system solving.
-function \(A::WoodburyLazyPDMat, B::VecOrMat{<:Real})
-    Γ, Ω = __intermediates(A)
-    return (B .- Γ' * (Ω \ (Γ * B))) ./ A.σ^2
-end
-function /(B::VecOrMat{<:Real}, A::WoodburyLazyPDMat)
-    Γ, Ω = __intermediates(A)
-    return (B .- ((B * Γ') / Ω) * Γ) ./ A.σ^2
-end
+\(A::WoodburyMat, B::VecOrMat) = (B .- A.Γ' * (A.Ω \ (A.Γ * B))) ./ A.σ^2
+/(B::VecOrMat, A::WoodburyMat) = (B .- ((B * A.Γ') / A.Ω) * A.Γ) ./ A.σ^2
+
+# Efficient inverse-quadratic-form-like computations.
+Xt_invA_X(A::WoodburyMat, X::VecOrMat) = (X'X .- Xt_invA_X(A.Ω, A.Γ * X)) ./ (A.σ^2)

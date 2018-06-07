@@ -54,23 +54,27 @@ length(f::GP) = length(f.μ)
 # eachindex(f::GP) = eachindex(f.μ)
 
 # Conversion and promotion of non-GPs to GPs.
-promote(f::GP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
-promote(x::Union{Real, Function}, f::GP) = reverse(promote(f, x))
-convert(::Type{GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), ZeroKernel{Float64}(), gpc)
-convert(::Type{GP}, f::Function, gpc::GPC) = GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
+promote(f::AbstractGP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
+promote(x::Union{Real, Function}, f::AbstractGP) = reverse(promote(f, x))
+function convert(::Type{<:AbstractGP}, x::Real, gpc::GPC)
+    return GP(ConstantMean(x), ZeroKernel{Float64}(), gpc)
+end
+function convert(::Type{<:AbstractGP}, f::Function, gpc::GPC)
+    return GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
+end
 
 """
     kernel(f::Union{Real, Function})
-    kernel(f::GP)
-    kernel(f::Union{Real, Function}, g::GP)
-    kernel(f::GP, g::Union{Real, Function})
-    kernel(fa::GP, fb::GP)
+    kernel(f::AbstractGP)
+    kernel(f::Union{Real, Function}, g::AbstractGP)
+    kernel(f::AbstractGP, g::Union{Real, Function})
+    kernel(fa::AbstractGP, fb::AbstractGP)
 
 Get the cross-kernel between `GP`s `fa` and `fb`, and . If either argument is deterministic
 then the zero-kernel is returned. Also, `kernel(f) === kernel(f, f)`.
 """
-kernel(f::GP) = f.k
-function kernel(fa::GP, fb::GP)
+kernel(f::AbstractGP) = f.k
+function kernel(fa::AbstractGP, fb::AbstractGP)
     @assert fa.gpc === fb.gpc
     if fa === fb
         return kernel(fa)
@@ -83,8 +87,8 @@ function kernel(fa::GP, fb::GP)
     end
 end
 kernel(::Union{Real, Function}) = ZeroKernel{Float64}()
-kernel(::Union{Real, Function}, ::GP) = ZeroKernel{Float64}()
-kernel(::GP, ::Union{Real, Function}) = ZeroKernel{Float64}()
+kernel(::Union{Real, Function}, ::AbstractGP) = ZeroKernel{Float64}()
+kernel(::AbstractGP, ::Union{Real, Function}) = ZeroKernel{Float64}()
 
 function get_check_gpc(args...)
     gpc = args[findfirst(map(arg->arg isa GP, args))].gpc
@@ -97,14 +101,14 @@ end
 
 The mean function of `f`.
 """
-mean(f::GP) = f.μ
+mean(f::AbstractGP) = f.μ
 
 """
     mean(f::GP, X::AVM)
 
 The mean function of `f` evaluated at `X` is a vector whose length is `size(X, 1)`.
 """
-mean(f::GP, X::AVM) = mean(f.μ, X)
+mean(f::AbstractGP, X::AVM) = mean(f.μ, X)
 
 
 """
@@ -112,21 +116,21 @@ mean(f::GP, X::AVM) = mean(f.μ, X)
 
 The covariance of `f` evaluated at `X` is an `size(X, 1) x size(X, 1)` `LazyPDMat`.
 """
-cov(f::GP, X::AVM) = cov(f.k, X)
+cov(f::AbstractGP, X::AVM) = cov(f.k, X)
 
 """
-    xcov(f::GP, f′::GP, X::AVM, X′::AVM)
+    xcov(f::AbstractGP, f′::AbstractGP, X::AVM, X′::AVM)
 
 The cross-covariance between `f` at `X` and `f′` at `X′`.
 """
-xcov(f::GP, f′::GP, X::AVM, X′::AVM) = xcov(kernel(f, f′), X, X′)
+xcov(f::AbstractGP, f′::AbstractGP, X::AVM, X′::AVM) = xcov(kernel(f, f′), X, X′)
 
 """
     xcov(f::GP, f′::GP, X::AVM)
 
 The cross-covariance between `f` at `X` and `f′` at `X`.
 """
-xcov(f::GP, f′::GP, X::AVM) = xcov(f, f′, X, X)
+xcov(f::AbstractGP, f′::GP, X::AVM) = xcov(f, f′, X, X)
 
 """
     xcov(f::GP, X::AVM, X′::AVM)
