@@ -13,6 +13,7 @@ struct FiniteMean <: MeanFunction
     X::AVM
 end
 (μ::FiniteMean)(n::Int) = μ.μ(getobs(μ.X, n))
+eachindex(μ::FiniteMean) = eachobs(μ.X)
 length(μ::FiniteMean) = nobs(μ.X)
 show(io::IO, μ::FiniteMean) = show(io, "FiniteMean($(μ.μ)")
 unary_obswise(μ::FiniteMean, q::AVM) = unary_obswise(μ.μ, getobs(μ.X, q))

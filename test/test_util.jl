@@ -65,6 +65,14 @@ end
 Tests that any mean function `μ` should be able to pass.
 """
 function mean_function_tests(μ::MeanFunction, X::AVM)
+
+    # Test compulsory interface passes.
+    @test method_exists(μ, Tuple{typeof(X)})
+    @test !(μ(X) isa Void)
+
+    @test method_exists(eachindex, Tuple{typeof(μ)})
+
+    # Test optional interface.
     unary_obswise_tests(μ, X)
 end
 

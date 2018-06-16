@@ -41,7 +41,15 @@ size(k::CatCrossKernel, N::Int) = N == 1 ?
     sum(size.(k.ks[:, 1], Ref(1))) :
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
 ==(k::CatCrossKernel, k′::CatCrossKernel) = k.ks == k′.ks
-eachindex(k::CatCrossKernel, N::Int) = eachindex.(diag(k.ks), N)
+function eachindex(k::CatCrossKernel, N::Int)
+    if N == 1
+        return eachindex.(k.ks[:, 1], 1)
+    elseif N == 2
+        return eachindex.(k.ks[1, :], 2)
+    else
+        throw(error("N ∉ {1, 2}"))
+    end
+end
 (k::CatCrossKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any}) =
     k.ks[x[1], x′[1]](x[2], x′[2])
 function pairwise(k::CatCrossKernel, X::AV{<:AVM}, X′::AV{<:AVM})

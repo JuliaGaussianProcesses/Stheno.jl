@@ -1,3 +1,5 @@
+@testset "indexing" begin
+
 let
     # Set up some GPs.
     rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
@@ -47,3 +49,30 @@ let
 #     @test kernel(f5, f3).(id5, id3') == kernel(f1).(x[id5], x[id3]')
 #     @test kernel(f3, f5).(id3, id5') == kernel(f5, f3).(id5, id3')'
 end
+
+let
+    # Set up some GPs.
+    rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
+    X, X′ = randn(rng, D, N), randn(rng, D, N′)
+    μ1, μ2 = ConstantMean(1.0), ConstantMean(-1.5)
+    k1, k2 = EQ(), Linear(0.5)
+    f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
+    f3, f4 = f1(X), f2(X′)
+    fj = JointGP([f1, f2])
+    fjXX′ = fj([X, X′])
+
+    @test fjXX′ isa JointGP
+
+    Σ11, Σ12, Σ22 = xcov(f3, f3), xcov(f3, f4), xcov(f4, f4)
+    Σ_manual = BlockMatrix(reshape([Σ11, Σ12', Σ12, Σ22], 2, 2))
+
+    # Test that indexing a JointGP is consistent with separate indexing.
+    @test mean_vec(fjXX′) == vcat(mean_vec(f3), mean_vec(f4))
+    @test cov(fjXX′) == Σ_manual
+    @test xcov(fjXX′, fjXX′) == cov(fjXX′)
+    @show size(xcov(fjXX′, f3)), size(BlockMatrix(reshape([xcov(f3, f3), xcov(f4, f3)], 2, 1)))
+    @test xcov(fjXX′, f3) == BlockMatrix(reshape([xcov(f3, f3), xcov(f4, f3)], 2, 1))
+
+end
+
+end # @testset indexing

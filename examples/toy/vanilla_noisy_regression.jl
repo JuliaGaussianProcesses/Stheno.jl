@@ -49,7 +49,9 @@ fX, noiseX, yX = rand(rng, [f(X_prior), noise(X_prior), y(X_prior)]);
 N = 15;
 X = sort(rand(rng, N) * 10);
 ŷ = rand(rng, y(X));
-f′, noise′, y′ = (f, noise, y) | (y(X) ← ŷ);
+# f′, noise′, y′ = (f, noise, y) | (y(X) ← ŷ);
+
+out = Stheno.JointGP([f, noise, y]) | (y(X) ← ŷ)
 
 Nplot, S = 500, 100;
 Xplot = linspace(-2.0, 12.0, Nplot);

@@ -90,7 +90,7 @@ using Stheno: ConstantMean, ZeroMean, ConstantKernel, ZeroKernel, pairwise, unar
         ŷ = rand(rng, y)
 
         # Check that logpdf returns the correct type and roughly agrees with Distributions.
-        Σ = unbox(pairwise(ky, eachindex(ky)) + 1e-6I)
+        Σ = Stheno.unbox(pairwise(ky, eachindex(ky)) + 1e-6I)
         @test logpdf(y, ŷ) isa Real
         @test logpdf(y, ŷ) ≈ logpdf(MvNormal(Vector(AV(μ)), Σ), ŷ)
 

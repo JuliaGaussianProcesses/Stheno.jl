@@ -31,6 +31,8 @@ module Stheno
 
     # Basic Gaussian process definitions.
     include("gp/abstract_gp.jl")
+    include("gp/gp.jl")
+    include("gp/joint_gp.jl")
 
     # Affine transformations of GPs.
     include("linops/indexing.jl")
@@ -39,9 +41,6 @@ module Stheno
     # include("linops/integrate.jl")
     include("linops/project.jl")
     include("linops/conditioning.jl")
-
-    # Util to make it straightforward to work with collections of AbstractGPs.
-    include("gp/joint_gp.jl")
 
     # # Code to make Stheno work with Turing.
     # include("turing_util.jl")

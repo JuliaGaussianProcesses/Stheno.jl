@@ -11,10 +11,15 @@ abstract type Kernel <: CrossKernel end
 # Number of observations.
 @inline nobs(x::AbstractVector) = length(x)
 @inline nobs(X::AbstractMatrix) = size(X, 2)
+@inline nobs(X::AbstractVector{<:AbstractArray}) = sum(nobs, X)
 
 # Dimensionality of observations.
 @inline nfeatures(x::AbstractVector) = 1
 @inline nfeatures(X::AbstractMatrix) = size(X, 1)
+
+# Indices of each observation.
+@inline eachobs(X::AbstractVecOrMat) = Base.OneTo(nobs(X))
+@inline eachobs(X::AbstractVector{<:AbstractArray}) = eachobs.(X)
 
 """
     getobs(x::AbstractVecOrMat, indices)
@@ -68,8 +73,3 @@ function AbstractMatrix(k::CrossKernel)
     @assert isfinite(size(k, 2))
     return pairwise(k, eachindex(k, 1), eachindex(k, 2))
 end
-
-# For finite dimensional means and (cross-)kernels, indexing has a reasonable definition.
-eachindex(μ::MeanFunction) = 1:length(μ)
-eachindex(k::Kernel) = eachindex(k, 1)
-eachindex(k::CrossKernel, N::Int) = 1:size(k, N)

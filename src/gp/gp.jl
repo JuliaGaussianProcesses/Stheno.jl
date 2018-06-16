@@ -1,3 +1,16 @@
+export GPC, GP
+
+###################### Implementation of AbstractGaussianProcess interface #################
+
+# Pre-0.7 hack.
+Base.permutedims(v::Vector) = reshape(v, 1, length(v))
+
+# A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
+mutable struct GPC
+    n::Int
+    GPC() = new(0)
+end
+
 """
     GP{Tμ<:MeanFunction, Tk<:Kernel}
 
@@ -23,4 +36,57 @@ function GP(args...)
     μ, k, gpc = μ_p′(args...), k_p′(args...), get_check_gpc(args...)
     return GP{typeof(μ), typeof(k)}(args, μ, k, gpc)
 end
+
+function get_check_gpc(args...)
+    gpc = args[findfirst(map(arg->arg isa GP, args))].gpc
+    @assert all([!(arg isa GP) || arg.gpc == gpc for arg in args])
+    return gpc
+end
+
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)))")
+
+mean(f::GP) = f.μ
+
+"""
+    kernel(f::Union{Real, Function})
+    kernel(f::AbstractGP)
+    kernel(f::Union{Real, Function}, g::AbstractGP)
+    kernel(f::AbstractGP, g::Union{Real, Function})
+    kernel(fa::AbstractGP, fb::AbstractGP)
+
+Get the cross-kernel between `GP`s `fa` and `fb`, and . If either argument is deterministic
+then the zero-kernel is returned. Also, `kernel(f) === kernel(f, f)`.
+"""
+kernel(f::GP) = f.k
+function kernel(fa::GP, fb::GP)
+    @assert fa.gpc === fb.gpc
+    if fa === fb
+        return kernel(fa)
+    elseif fa.args == nothing && fa.n > fb.n || fb.args == nothing && fb.n > fa.n
+        if isfinite(length(fa)) && isfinite(length(fb))
+            return FiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fa), eachindex(fb))
+        elseif isfinite(length(fa)) && !isfinite(length(fb))
+            return LhsFiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fa))
+        elseif !isfinite(length(fa)) && isfinite(length(fb))
+            return RhsFiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fb))
+        else # Both processes are infinite dimensional.
+            return ZeroKernel{Float64}()
+        end
+    elseif fa.n > fb.n
+        return k_p′p(fa.args..., fb)
+    else
+        return k_pp′(fa, fb.args...)
+    end
+end
+kernel(::Union{Real, Function}) = ZeroKernel{Float64}()
+kernel(::Union{Real, Function}, ::GP) = ZeroKernel{Float64}()
+kernel(::GP, ::Union{Real, Function}) = ZeroKernel{Float64}()
+
+
+
+##################################### Syntactic Sugar#######################################
+
+promote(f::GP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
+promote(x::Union{Real, Function}, f::GP) = reverse(promote(f, x))
+convert(::Type{<:GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), ZeroKernel{Float64}(), gpc)
+convert(::Type{<:GP}, f::Function, gpc::GPC) = GP(CustomMean(f), ZeroKernel{Float64}(), gpc)

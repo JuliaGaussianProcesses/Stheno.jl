@@ -10,6 +10,7 @@ end
 end
 
 # CompositeMean definitions.
+eachindex(c::CompositeMean) = eachindex(c.x[1])
 length(c::CompositeMean) = length(c.x[1])
 (μ::CompositeMean)(x) = map(μ.f, map(f->f(x), μ.x)...)
 unary_obswise(f::CompositeMean, X::AVM) = map(f.f, map(f->unary_obswise(f, X), f.x)...)

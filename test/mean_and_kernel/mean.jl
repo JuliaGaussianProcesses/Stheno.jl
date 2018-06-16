@@ -9,7 +9,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, nobs, nfeatures
         foo_mean = x->sum(abs, x)
         f = CustomMean(foo_mean)
         @test f(X[:, 1]) == foo_mean(X[:, 1])
-        unary_obswise_tests(foo_mean, X)
+        mean_function_tests(f, X)
 
         @test isinf(length(f))
         @test size(f, 1) == Inf && size(f, 2) == 1
@@ -25,8 +25,8 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, nobs, nfeatures
         @test f(randn(rng)) === zero(Float64)
         @test f == ZeroMean{Float32}()
 
-        unary_obswise_tests(f, x)
-        unary_obswise_tests(f, X)
+        mean_function_tests(f, x)
+        mean_function_tests(f, X)
 
         @test isinf(length(f))
         @test isinf(size(f, 1)) && size(f, 2) == 1
@@ -43,8 +43,8 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, nobs, nfeatures
         @test ConstantMean(1.0) == ConstantMean(1)
         @test ConstantMean(1.0) ≠ ConstantMean(2)
         @test f(randn(rng)) == c
-        unary_obswise_tests(f, x)
-        unary_obswise_tests(f, X)
+        mean_function_tests(f, x)
+        mean_function_tests(f, X)
 
         @test isinf(length(f))
         @test isinf(size(f, 1)) && size(f, 2) == 1

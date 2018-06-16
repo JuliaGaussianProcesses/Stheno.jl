@@ -1,6 +1,9 @@
 # This file contains a number of additions to BlockArrays.jl. These are completely
 # independent of Stheno.jl, and will (hopefully) move over to BlockArrays.jl at some point.
 
+using FillArrays
+using FillArrays: Fill
+
 import Base: +, *, size, getindex, eltype, copy, ctranspose, transpose, chol,
     UpperTriangular, LowerTriangular, \, logdet, Ac_mul_B, A_mul_Bc, Ac_mul_Bc, At_mul_B,
     A_mul_Bt, At_mul_Bt, Ac_rdiv_B, A_rdiv_Bc, Ac_rdiv_Bc, At_rdiv_B, A_rdiv_Bt, At_rdiv_Bt,
@@ -26,13 +29,17 @@ const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM
 
 Construct a `BlockVector` from a collection of `AbstractVector`s.
 """
-function BlockVector(xs::Vector{<:AbstractVector{T}}) where T
+function BlockArrays.BlockVector(xs::Vector{<:AbstractVector{T}}) where T
     x = BlockVector{T}(uninitialized_blocks, length.(xs))
     for (n, x_) in enumerate(xs)
         setblock!(x, x_, n)
     end
     return x
 end
+
+# function BlockArrays.BlockVector(xs::Vector{<:Fill{T, 1}}) where T
+#     @assert true == false
+# end
 
 """
     BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
