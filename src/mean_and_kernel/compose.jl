@@ -13,7 +13,7 @@ end
 eachindex(c::CompositeMean) = eachindex(c.x[1])
 length(c::CompositeMean) = length(c.x[1])
 (μ::CompositeMean)(x) = map(μ.f, map(f->f(x), μ.x)...)
-unary_obswise(f::CompositeMean, X::AVM) = map(f.f, map(f->unary_obswise(f, X), f.x)...)
+map(f::CompositeMean, X::DataSet) = map(f.f, map(f->map(f, X), f.x)...)
 
 # CompositeKernel and CompositeCrossKernel definitions.
 for T in [:CompositeKernel, :CompositeCrossKernel]

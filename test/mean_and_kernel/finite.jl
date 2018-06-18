@@ -10,8 +10,6 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV
 
         # Recusion depth 1.
         for (μ′, X′) in zip([μX, μx], [X, x])
-            @test size(μ′, 1) == N
-            @test size(μ′, 2) == 1
             @test length(μ′) == N
             @test eachindex(μ′) == 1:N
             @test AbstractVector(μ′) == unary_obswise(μ′, eachindex(μ′))
@@ -22,7 +20,6 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV
             # Recursion depth 2.
             r = 1:N-1
             μ2 = FiniteMean(μ′, r)
-            @test size(μ2, 1) == N - 1
             @test length(μ2) == N - 1
             @test eachindex(μ2) == 1:N-1
             @test AbstractVector(μ′)[r] == AbstractVector(μ2)

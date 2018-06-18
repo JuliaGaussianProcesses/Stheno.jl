@@ -22,6 +22,8 @@ using Stheno: WoodburyMat, Xt_invA_X
         # Test basics of matrix multiplication.
         @test Matrix(A * B) ≈ Matrix(A) * B
         @test Vector(A * b) ≈ Matrix(A) * b
+        Bt = B'
+        @test Matrix(Bt * A) ≈ B' * Matrix(A)
 
         # Test basics of linear systems solving.
         @test Matrix(A \ B) ≈ Matrix(A) \ B

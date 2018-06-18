@@ -1,11 +1,43 @@
-import Base: +, *, ==
-
-export KernelType, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
+using IterTools
+import Base: +, *, ==, size
+import Distances: pairwise
+export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
     Exponential, ConstantKernel, isstationary, ZeroKernel
+
+
+
+############################# Define CrossKernels and Kernels ##############################
+
+abstract type CrossKernel end
+abstract type Kernel <: CrossKernel end
+
+@inline isstationary(::Type{<:CrossKernel}) = false
+@inline isstationary(x::CrossKernel) = isstationary(typeof(x))
 
 # Some fallback definitions.
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
+
+
+
+################################# Pairwise implementations #################################
+
+# Fallback implementation for `pairwise` with `DataSet`s.
+@inline pairwise(f::CrossKernel, X::DataSet) = pairwise(f, X, X)
+@inline pairwise(f::Kernel, X::DataSet) = LazyPDMat(pairwise(f, X, X))
+@inline pairwise(f::CrossKernel, X::DataSet, X′::DataSet) = pairwise_fallback(f, X, X′)
+
+@inline function pairwise_fallback(f, X::DataSet, X′::DataSet)
+    return [f(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
+end
+
+# COMMITING TYPE PIRACY!
+@inline pairwise(f::PreMetric, x::AbstractVector) = pairwise(f, RowVector(x))
+@inline pairwise(f::PreMetric, x::AV, x′::AV) = pairwise(f, RowVector(x), RowVector(x′))
+
+
+
+################################ Define some basic kernels #################################
 
 """
     ZeroKernel <: Kernel
@@ -14,9 +46,12 @@ A rank 0 `Kernel` that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
 (::ZeroKernel{T})(x, x′) where T = zero(T)
+(::ZeroKernel{T})(x) where T = zero(T)
 isstationary(::Type{<:ZeroKernel}) = true
-binary_obswise(::ZeroKernel{T}, X::AVM, ::AVM) where T = Zeros{T}(nobs(X))
-pairwise(::ZeroKernel{T}, X::AVM, X′::AVM) where T = Zeros{T}(nobs(X), nobs(X′))
+@inline map(::ZeroKernel{T}, X::DataSet, X′::DataSet) where T = Zeros{T}(length(X))
+@inline function pairwise(::ZeroKernel{T}, X::DataSet, X′::DataSet) where T
+    return Zeros{T}(length(X), length(X′))
+end
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
 """
@@ -28,10 +63,11 @@ but (almost certainly) shouldn't be used as a base `Kernel`.
 struct ConstantKernel{T<:Real} <: Kernel
     c::T
 end
-(k::ConstantKernel)(x, x′) = k.c
+(k::ConstantKernel)(x::T, x′::T) where T = k.c
+(k::ConstantKernel)(x) = k.c
 isstationary(::Type{<:ConstantKernel}) = true
-binary_obswise(k::ConstantKernel, X::AVM, ::AVM) = Fill(k.c, nobs(X))
-pairwise(k::ConstantKernel, X::AVM, X′::AVM) = Fill(k.c, nobs(X), nobs(X′))
+map(k::ConstantKernel, X::DataSet, ::DataSet) = Fill(k.c, length(X))
+pairwise(k::ConstantKernel, X::DataSet, X′::DataSet) = Fill(k.c, length(X), length(X′))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
 
 """
@@ -41,9 +77,10 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 """
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
-(::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-pairwise(::EQ, X::AVM) = LazyPDMat(exp.(-0.5 .* pairwise(SqEuclidean(), X)))
-pairwise(::EQ, X::AVM, X′::AVM) = exp.(-0.5 .* pairwise(SqEuclidean(), X, X′))
+(::EQ)(x::T, x′::T) where T = exp(-0.5 * sqeuclidean(x, x′))
+(::EQ)(x::T) where T = one(Float64)
+pairwise(::EQ, X::DataSet) = LazyPDMat(exp.(-0.5 .* pairwise(SqEuclidean(), X.X)))
+pairwise(::EQ, X::DataSet, X′::DataSet) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -70,15 +107,18 @@ struct Linear{T<:Union{Real, Vector{<:Real}}} <: Kernel
 end
 ==(a::Linear, b::Linear) = a.c == b.c
 (k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
+(k::Linear)(x) = sum(abs2, x .- k.c)
 
-pairwise(k::Linear, x::AbstractVector) = pairwise(k, RowVector(x))
-pairwise(k::Linear, x::AV, x′::AV) = pairwise(k, RowVector(x), RowVector(x′))
+@inline pairwise(k::Linear, x::VectorData) = pairwise(k, DataSet(RowVector(x.X)))
+@inline function pairwise(k::Linear, x::VectorData, x′::VectorData)
+    return pairwise(k, DataSet(RowVector(x.X)), DataSet(RowVector(x′.X)))
+end
 
-function pairwise(k::Linear, X::AbstractMatrix)
-    Δ = X .- k.c
+function pairwise(k::Linear, D::MatrixData)
+    Δ = D.X .- k.c
     return LazyPDMat(Δ' * Δ)
 end
-pairwise(k::Linear, X::AbstractMatrix, X′::AbstractMatrix) = (X .- k.c)' * (X′ .- k.c)
+pairwise(k::Linear, X::MatrixData, X′::MatrixData) = (X.X .- k.c)' * (X′.X .- k.c)
 
 # """
 #     Poly{Tσ<:Real} <: Kernel
@@ -103,8 +143,11 @@ end
 isstationary(::Type{<:Noise}) = true
 ==(a::Noise, b::Noise) = a.σ² == b.σ²
 (k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
-pairwise(k::Noise, X::AVM) = LazyPDMat(k.σ² .* (pairwise(SqEuclidean(), X) .== 0))
-pairwise(k::Noise, X::AVM, X′::AVM) = k.σ² .* (pairwise(SqEuclidean(), X, X′) .== 0)
+(k::Noise)(x) = k.σ²
+pairwise(k::Noise, X::DataSet) = LazyPDMat(Diagonal(Fill(k.σ², length(X))))
+function pairwise(k::Noise, X::DataSet, X′::DataSet)
+    return X === X′ ? pairwise(k, X) : Zeros(length(X), length(X′))
+end
 
 # """
 #     Wiener <: Kernel
@@ -135,3 +178,25 @@ pairwise(k::Noise, X::AVM, X′::AVM) = k.σ² .* (pairwise(SqEuclidean(), X, X�
 # @inline (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
 # isstationary(::Type{<:Exponential}) = true
 # show(io::IO, ::Exponential) = show(io, "Exp")
+
+"""
+    EmpiricalKernel <: Kernel
+
+A finite-dimensional kernel defined in terms of a PSD matrix `Σ`.
+"""
+struct EmpiricalKernel{T<:LazyPDMat} <: Kernel
+    Σ::T
+end
+@inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]
+@inline (k::EmpiricalKernel)(q::Int) = k.Σ[q, q]
+@inline size(k::EmpiricalKernel, N::Int) = size(k.Σ, N)
+
+function AbstractMatrix(k::Kernel)
+    @assert isfinite(size(k, 1))
+    return LazyPDMat(pairwise(k, eachindex(k, 1)))
+end
+function AbstractMatrix(k::CrossKernel)
+    @assert isfinite(size(k, 1))
+    @assert isfinite(size(k, 2))
+    return pairwise(k, eachindex(k, 1), eachindex(k, 2))
+end

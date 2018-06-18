@@ -118,13 +118,13 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
 
         # Test addition.
         @test μ + μ′ == CompositeMean(+, μ, μ′)
-        @test unary_obswise(μ + μ′, X) == unary_obswise(μ, X) + unary_obswise(μ′, X)
+        @test map(μ + μ′, X) == map(μ, X) + map(μ′, X)
         @test μ + 5 == CompositeMean(+, μ, ConstantMean(5))
         @test 2.34 + μ′ == CompositeMean(+, ConstantMean(2.34), μ′)
 
         # Test multiplication.
         @test μ * μ′ == CompositeMean(*, μ, μ′)
-        @test unary_obswise(μ * μ′, X) == unary_obswise(μ, X) .* unary_obswise(μ′, X)
+        @test map(μ * μ′, X) == map(μ, X) .* map(μ′, X)
         @test μ * 4.32 == CompositeMean(*, μ, ConstantMean(4.32))
         @test 4.23 * μ′ == CompositeMean(*, ConstantMean(4.23), μ′)
     end

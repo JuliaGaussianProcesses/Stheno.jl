@@ -1,108 +1,106 @@
-import Stheno: AV, AVM, AMRV
-using Stheno: unary_obswise, unary_obswise_fallback, binary_obswise,
-    binary_obswise_fallback, pairwise, pairwise_fallback, MeanFunction, Kernel, CrossKernel,
-    nobs, nfeatures
+using IterTools
+using Stheno: MeanFunction, Kernel, CrossKernel
 
 """
-    unary_obswise_tests(f, X::AVM)
+    unary_map_tests(f, X::AbstractDataSet)
 
 Consistency tests intended for use with `MeanFunction`s.
 """
-function unary_obswise_tests(f, X::AVM)
-    @test unary_obswise(f, X) isa AbstractVector
-    @test length(unary_obswise(f, X)) == nobs(X)
-    @test unary_obswise(f, X) ≈ unary_obswise_fallback(f, X)
+function unary_map_tests(f, X::ADS)
+    @test map(f, X) isa AbstractVector
+    @test length(map(f, X)) == length(X)
+    @test map(f, X) ≈ [f(x) for x in X]
 end
 
 """
-    binary_obswise_tests(f, X::AVM, X′::AVM)
+    binary_map_tests(f, X::ADS, X′::ADS)
 
 Consistency tests intended for use with `CrossKernel`s.
 """
-function binary_obswise_tests(f, X::AVM, X′::AVM)
-    @test binary_obswise(f, X, X′) isa AbstractVector
-    @test length(binary_obswise(f, X, X′)) == nobs(X)
-    @test binary_obswise(f, X, X′) ≈ binary_obswise_fallback(f, X, X′)
+function binary_map_tests(f, X::ADS, X′::ADS)
+    @test map(f, X, X′) isa AbstractVector
+    @test length(map(f, X, X′)) == length(X)
+    @test map(f, X, X′) ≈ [f(x, x′) for (x, x′) in zip(X, X′)]
 end
 
 """
-    binary_obswise_tests(f, X::AVM)
+    binary_map_tests(f, X::ADS)
 
 Consistency tests intended for use with `Kernel`s.
 """
-function binary_obswise_tests(f, X::AVM)
-    @test binary_obswise(f, X) isa AbstractVector
-    @test length(binary_obswise(f, X)) == nobs(X)
-    @test binary_obswise(f, X) ≈ binary_obswise_fallback(f, X, X)
+function binary_map_tests(f, X::ADS)
+    @test map(f, X) isa AbstractVector
+    @test length(map(f, X)) == length(X)
+    @test map(f, X) ≈ map(f, X, X)
 end
 
 """
-    pairwise_tests(f, X::AVM, X′::AVM)
-    
+    pairwise_tests(f, X::ADS, X′::ADS)
 
 Consistency tests intended for use with `CrossKernel`s.
 """
-function pairwise_tests(f, X::AVM, X′::AVM)
+function pairwise_tests(f, X::ADS, X′::ADS)
+    N, N′ = length(X), length(X′)
     @test pairwise(f, X, X′) isa AbstractMatrix
-    @test size(pairwise(f, X, X′)) == (nobs(X), nobs(X′))
-    @test pairwise(f, X, X′) ≈ pairwise_fallback(f, X, X′)
+    @test size(pairwise(f, X, X′)) == (N, N′)
+    @test pairwise(f, X, X′) ≈ reshape([f(x, x′) for (x, x′) in product(X, X′)], N, N′)
 end
 
 """
-    pairwise_tests(f, X::AVM)
+    pairwise_tests(f, X::ADS)
 
 Consistency tests intended for use with `Kernel`s.
 """
-function pairwise_tests(f, X::AVM; rtol=eps())
+function pairwise_tests(f, X::ADS; rtol=eps())
     @test pairwise(f, X) isa AbstractMatrix
-    @test size(pairwise(f, X)) == (nobs(X), nobs(X))
-    @test isapprox(pairwise(f, X), pairwise_fallback(f, X, X); rtol=rtol)
+    @test size(pairwise(f, X)) == (length(X), length(X))
+    @test isapprox(pairwise(f, X), pairwise(f, X, X); rtol=rtol)
 end
 
 """
-    mean_function_tests(μ::MeanFunction, X::AVM)
+    mean_function_tests(μ::MeanFunction, X::ADS)
 
 Tests that any mean function `μ` should be able to pass.
 """
-function mean_function_tests(μ::MeanFunction, X::AVM)
+function mean_function_tests(μ::MeanFunction, X::ADS)
 
     # Test compulsory interface passes.
-    @test method_exists(μ, Tuple{typeof(X)})
-    @test !(μ(X) isa Void)
+    @test method_exists(μ, Tuple{eltype(X)})
+    @test !(μ(X[1]) isa Void)
 
     @test method_exists(eachindex, Tuple{typeof(μ)})
 
     # Test optional interface.
-    unary_obswise_tests(μ, X)
+    unary_map_tests(μ, X)
 end
 
 """
-    cross_kernel_tests(k::CrossKernel, X::AVM, X′::AVM)
+    cross_kernel_tests(k::CrossKernel, X::ADS, X′::ADS)
 
-Tests that any kernel `k` should be able to pass. Requires that `nobs(X0) == nobs(X1)` and
-`nobs(X0) ≠ nobs(X2)`.
+Tests that any kernel `k` should be able to pass. Requires that `length(X0) == length(X1)`
+and `length(X0) ≠ length(X2)`.
 """
-function cross_kernel_tests(k::CrossKernel, X0::AVM, X1::AVM, X2::AVM)
-    @assert nobs(X0) == nobs(X1)
-    @assert nobs(X0) ≠ nobs(X2)
+function cross_kernel_tests(k::CrossKernel, X0::ADS, X1::ADS, X2::ADS)
+    @assert length(X0) == length(X1)
+    @assert length(X0) ≠ length(X2)
 
-    binary_obswise_tests(k, X0, X1)
+    binary_map_tests(k, X0, X1)
     pairwise_tests(k, X0, X2)
 end
 
 """
-    kernel_tests(k::Kernel, X0::AVM, X1::AVM, X2::AVM)
+    kernel_tests(k::Kernel, X0::ADS, X1::ADS, X2::ADS)
 
-Tests that any kernel `k` should be able to pass. Requires that `nobs(X0) == nobs(X1)` and
-`nobs(X0) ≠ nobs(X2)`.
+Tests that any kernel `k` should be able to pass. Requires that `length(X0) == length(X1)`
+and `length(X0) ≠ length(X2)`.
 """
-function kernel_tests(k::Kernel, X0::AVM, X1::AVM, X2::AVM, rtol::Real=eps())
-    @assert nobs(X0) == nobs(X1)
-    @assert nobs(X0) ≠ nobs(X2)
+function kernel_tests(k::Kernel, X0::ADS, X1::ADS, X2::ADS, rtol::Real=eps())
+    @assert length(X0) == length(X1)
+    @assert length(X0) ≠ length(X2)
 
     # Generic tests.
     cross_kernel_tests(k, X0, X1, X2)
-    binary_obswise_tests(k, X0)
+    binary_map_tests(k, X0)
     pairwise_tests(k, X0; rtol=rtol)
 
     # Kernels should be symmetric for same arguments.
@@ -110,7 +108,7 @@ function kernel_tests(k::Kernel, X0::AVM, X1::AVM, X2::AVM, rtol::Real=eps())
     @test pairwise(k, X0) ≈ pairwise(k, X0)'
 
     # k(x, x′) == k(x′, x)
-    @test binary_obswise(k, X0, X1) ≈ binary_obswise(k, X1, X0)
+    @test map(k, X0, X1) ≈ map(k, X1, X0)
     @test pairwise(k, X0, X2) ≈ pairwise(k, X2, X0)'
 
     # Should be (approximately) positive definite.

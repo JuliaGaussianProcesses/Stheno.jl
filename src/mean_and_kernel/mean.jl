@@ -1,13 +1,17 @@
-import Base: mean, ==
+import Base: mean, ==, map, AbstractVector
 
 export CustomMean, ZeroMean, ConstantMean, mean
 
+abstract type MeanFunction end
 abstract type BaseMeanFunction <: MeanFunction end
 
 eachindex(μ::BaseMeanFunction) = throw(ErrorException("Cannot construct indices for $μ"))
 length(::BaseMeanFunction) = Inf
-size(μ::BaseMeanFunction) = (size(μ, 1),)
-size(μ::BaseMeanFunction, N::Int) = N == 1 ? length(μ) : 1
+
+function AbstractVector(μ::MeanFunction)
+    @assert isfinite(length(μ))
+    return map(μ, eachindex(μ))
+end
 
 """
     CustomMean <: BaseMeanFunction
@@ -27,7 +31,7 @@ Returns zero (of the appropriate type) everywhere.
 """
 struct ZeroMean{T<:Real} <: BaseMeanFunction end
 @inline (::ZeroMean{T})(x) where T = zero(T)
-@inline unary_obswise(z::ZeroMean{T}, X::AVM) where T = Zeros{T}(nobs(X))
+@inline map(z::ZeroMean{T}, D::AbstractDataSet) where T = Zeros{T}(length(D))
 ==(::ZeroMean, ::ZeroMean) = true
 
 """
@@ -39,5 +43,19 @@ struct ConstantMean{T<:Real} <: BaseMeanFunction
     c::T
 end
 @inline (μ::ConstantMean)(x) = μ.c
-@inline unary_obswise(μ::ConstantMean, X::AVM) = Fill(μ.c, nobs(X))
-==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c 
+@inline map(μ::ConstantMean, D::AbstractDataSet) = Fill(μ.c, length(D))
+==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c
+
+"""
+    EmpiricalMean <: BaseMeanFunction
+
+A finite-dimensional mean function specified by a vector of values `μ`.
+"""
+struct EmpiricalMean{T<:Real, Tμ<:AbstractVector{T}} <: BaseMeanFunction
+    μ::Tμ
+    EmpiricalMean(μ::Tμ) where {T<:Real, Tμ<:AbstractVector{T}} = new{T, Tμ}(μ)
+end
+@inline (μ::EmpiricalMean)(n::Int) = μ.μ[n]
+==(μ1::EmpiricalMean, μ2::EmpiricalMean) = μ1.μ == μ2.μ
+@inline length(μ::EmpiricalMean) = length(μ.μ)
+@inline eachindex(μ::EmpiricalMean) = eachindex(μ.μ)

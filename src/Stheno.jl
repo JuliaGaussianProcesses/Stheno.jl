@@ -10,15 +10,13 @@ module Stheno
     const AVM{T} = AbstractVecOrMat{T}
     const AMRV{T} = Union{AbstractMatrix{T}, RowVector{T}}
 
-    # Useful functionality for defining positive definite matrices.
+    # Various bits of utility that don't really belong in this package.
     include("util/covariance_matrices.jl")
     include("util/woodbury.jl")
-
-    # Some extensions to BlockArrays.jl.
+    include("util/abstract_data_set.jl")
     include("util/block_arrays.jl")
 
     # All mean function and kernel related functionality.
-    include("mean_and_kernel/generic.jl")
     include("mean_and_kernel/mean.jl")
     include("mean_and_kernel/kernel.jl")
     include("mean_and_kernel/compose.jl")

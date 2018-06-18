@@ -53,6 +53,8 @@ using Stheno: unbox
         @test unbox(A + 0.5I) == unbox(A) + 0.5I
         @test A * A isa LazyPDMat
         @test unbox(A * A) == A_ * A_
+        @test map(+, A, A) isa LazyPDMat
+        @test unbox(map(+, A, A)) == LazyPDMat(map(+, A_, A_))
         @test map(*, A, A) isa LazyPDMat
         @test unbox(map(*, A, A)) == map(*, unbox(A), unbox(A))
         @test map(*, A, A) isa LazyPDMat
@@ -61,6 +63,8 @@ using Stheno: unbox
         @test broadcast(*, A, A) == LazyPDMat(A_ .* A_)
 
         # Specialised matrix operations.
+        @test Xt_A_X(A, x) isa Real
+        @test Xt_A_X(A, x) ≈ x' * Matrix(A) * x
         @test Xt_A_X(A, X) isa LazyPDMat
         @test Xt_invA_X(A, X) isa LazyPDMat
         @test Xt_invA_X(A, X[:, 1]) isa Real

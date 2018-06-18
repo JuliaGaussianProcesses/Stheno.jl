@@ -1,11 +1,37 @@
-using Stheno: ZeroKernel, ConstantKernel
+using Stheno: CrossKernel, ZeroKernel, ConstantKernel, pairwise, pairwise_fallback,
+    EmpiricalKernel
+
+struct FooKernel <: CrossKernel end
+(::FooKernel)(x, x′) = sum(abs2, x - x′)
 
 @testset "kernel" begin
 
+    # Test pairwise.
+    let
+        rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
+        X, X′ = DataSet(randn(rng, D, P)), DataSet(randn(rng, D, Q))
+        x, x′ = DataSet(randn(rng, P)), DataSet(randn(rng, Q))
+        foo = FooKernel()
+
+        @test pairwise_fallback(foo, X, X′) ==
+            [foo(X[1], X′[1]) foo(X[1], X′[2]);
+             foo(X[2], X′[1]) foo(X[2], X′[2]);
+             foo(X[3], X′[1]) foo(X[3], X′[2])]
+        @test pairwise_fallback(foo, x, x′) ==
+            [foo(x[1], x′[1]) foo(x[1], x′[2]);
+             foo(x[2], x′[1]) foo(x[2], x′[2]);
+             foo(x[3], x′[1]) foo(x[3], x′[2])]
+
+        @test pairwise(foo, X, X′) == pairwise_fallback(foo, X, X′)
+        @test pairwise(foo, x, x′) == pairwise_fallback(foo, x, x′)
+        @test pairwise(foo, X) == pairwise(foo, X, X)
+        @test pairwise(foo, x) == pairwise(foo, x, x)
+    end
+
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        x0, x1, x2 = DataSet(randn(rng, N)), DataSet(randn(rng, N)), DataSet(randn(rng, N′))
+        X0, X1, X2 = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
 
         # Tests for ZeroKernel.
         k_zero = ZeroKernel{Float64}()
@@ -20,6 +46,7 @@ using Stheno: ZeroKernel, ConstantKernel
         # Tests for ConstantKernel.
         k_const = ConstantKernel(randn(rng))
         @test isstationary(k_const)
+        @test k_const == k_const
         @test size(k_const, 1) == Inf && size(k_const, 2) == Inf
         @test size(k_const) == (Inf, Inf)
         kernel_tests(k_const, x0, x1, x2)
@@ -44,6 +71,15 @@ using Stheno: ZeroKernel, ConstantKernel
         @test Noise(5.0) == Noise(5)
         kernel_tests(Noise(5.0), x0, x1, x2)
         kernel_tests(Noise(5.0), X0, X1, X2)
+
+        # Tests for EmpiricalKernel.
+        A_ = randn(rng, N, N)
+        A = LazyPDMat(A_ * A_' + 1e-6I)
+        k = EmpiricalKernel(A)
+        kernel_tests(k, DataSet(1:N), DataSet(1:N), DataSet(1:N-1))
+        @test size(k, 1) == N && size(k, 2) == N
+
+        @test_throws AssertionError AbstractMatrix(EQ())
     end
 
     # # Tests for Rational Quadratic (RQ) kernel.
