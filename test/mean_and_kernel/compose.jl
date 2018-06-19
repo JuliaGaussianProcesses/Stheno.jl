@@ -1,36 +1,37 @@
 using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean,
-    ZeroMean, LhsCross, RhsCross, OuterCross, OuterKernel, MeanFunction, Kernel
+    ZeroMean, LhsCross, RhsCross, OuterCross, OuterKernel, MeanFunction, Kernel,
+    EmpiricalMean, pairwise
 
 @testset "compose" begin
 
     # Test CompositeMean.
     let
         rng, N, D = MersenneTwister(123456), 100, 2
-        μ1, μ2 = ConstantMean(1.0), ZeroMean{Float64}()
-        x, X = RowVector(randn(rng, N)), randn(rng, D, N)
+        μ1, μ2 = EmpiricalMean(randn(rng, N)), EmpiricalMean(randn(rng, N))
+        X = DataSet(eachindex(μ1))
         ν1, ν2 = CompositeMean(+, μ1, μ2), CompositeMean(*, μ1, μ2)
-        @test ν1(X[:, 1]) == μ1(X[:, 1]) + μ2(X[:, 1])
-        @test ν2(X[:, 3]) == μ1(X[:, 3]) .* μ2(X[:, 3])
-        @test length(ν1) == Inf && length(ν2) == Inf
+        @test ν1(X[1]) == μ1(X[1]) + μ2(X[1])
+        @test ν2(X[3]) == μ1(X[3]) .* μ2(X[3])
+        @test length(ν1) == N && length(ν2) == N
+        @test eachindex(ν1) == eachindex(X)
 
-        mean_function_tests(ν1, x)
         mean_function_tests(ν1, X)
-        mean_function_tests(ν2, x)
         mean_function_tests(ν2, X)
     end
 
     # Test CompositeKernel and CompositeCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        x0, x1, x2 = DataSet(randn(rng, N)), DataSet(randn(rng, N)), DataSet(randn(rng, N′))
+        X0, X1, X2 = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
 
         # Define base kernels and do composition.
         k1, k2 = EQ(), Linear(randn(rng))
         ν1, ν2 = CompositeKernel(+, k1, k2), CompositeCrossKernel(*, k1, k2)
-        @test ν1(X0[:, 1], X1[:, 2]) == k1(X0[:, 1], X1[:, 2]) + k2(X0[:, 1], X1[:, 2])
-        @test ν2(X0[:, 1], X1[:, 2]) == k1(X0[:, 1], X1[:, 2]) .* k2(X0[:, 1], X1[:, 2])
+        @test ν1(X0[1], X1[2]) == k1(X0[1], X1[2]) + k2(X0[1], X1[2])
+        @test ν2(X0[1], X1[2]) == k1(X0[1], X1[2]) .* k2(X0[1], X1[2])
         @test size(ν1, 1) == Inf && size(ν1, 2) == Inf
+        @test size(ν2, 1) == Inf && size(ν2, 2) == Inf
         @test !isstationary(ν1) && !isstationary(ν2)
         @test isstationary(CompositeKernel(+, k1, k1)) == true
 
@@ -107,7 +108,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     # Test mean function composition.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        X, s = randn(rng, N, D), randn(rng)
+        X, s = DataSet(randn(rng, D, N)), randn(rng)
         μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->vec(s .* sum(sin.(x), 2)))
 
         # Test conversion and promotion.

@@ -1,4 +1,4 @@
-using Stheno: AbstractDataSet, DataSet, BlockDataSet
+using Stheno: AbstractDataSet, DataSet, BlockDataSet, VectorData, MatrixData
 
 @testset "util/abstract_data_set" begin
 
@@ -13,8 +13,15 @@ using Stheno: AbstractDataSet, DataSet, BlockDataSet
         @test size(Dx) == (N,)
         @test length(Dx) == N
         @test Dx == Dx
+        @test getindex(Dx, 5) isa Real
         @test getindex(Dx, 5) == x[5]
-        @test getindex(Dx, 1:2:6) == x[1:2:6]
+        @test getindex(Dx, 1:2:6) isa VectorData
+        @test getindex(Dx, 1:2:6) == DataSet(x[1:2:6])
+        @test view(Dx, 4) isa AbstractArray
+        @test view(Dx, 4) == view(x, 4)
+        @test view(Dx, 1:2:6) isa VectorData
+        @test view(Dx, 1:2:6) == DataSet(view(x, 1:2:6))
+
         @test eltype(Dx) == Float64
         @test eachindex(Dx) == 1:N
 
@@ -29,10 +36,14 @@ using Stheno: AbstractDataSet, DataSet, BlockDataSet
         @test DX == DX
         @test size(DX) == (N,)
         @test length(DX) == N
+        @test getindex(DX, 5) isa Vector
         @test getindex(DX, 5) == X[:, 5]
-        @test getindex(DX, 1:2:6) == X[:, 1:2:6]
+        @test getindex(DX, 1:2:6) isa MatrixData
+        @test getindex(DX, 1:2:6) == DataSet(X[:, 1:2:6])
+        @test view(DX, 4) isa AbstractVector
         @test view(DX, 4) == view(X, :, 4)
-        @test view(DX, 1:2:4) == view(X, :, 1:2:4)
+        @test view(DX, 1:2:4) isa MatrixData
+        @test view(DX, 1:2:4) == DataSet(view(X, :, 1:2:4))
         @test eltype(DX) == Vector{Float64}
         @test eachindex(DX) == 1:N
 

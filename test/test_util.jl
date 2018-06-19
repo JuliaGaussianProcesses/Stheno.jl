@@ -1,5 +1,5 @@
 using IterTools
-using Stheno: MeanFunction, Kernel, CrossKernel
+using Stheno: MeanFunction, Kernel, CrossKernel, AVM
 
 """
     unary_map_tests(f, X::AbstractDataSet)
@@ -73,6 +73,7 @@ function mean_function_tests(μ::MeanFunction, X::ADS)
     # Test optional interface.
     unary_map_tests(μ, X)
 end
+mean_function_tests(μ::MeanFunction, X::AVM{<:Real}) = mean_function_tests(μ, DataSet(X))
 
 """
     cross_kernel_tests(k::CrossKernel, X::ADS, X′::ADS)
@@ -86,6 +87,14 @@ function cross_kernel_tests(k::CrossKernel, X0::ADS, X1::ADS, X2::ADS)
 
     binary_map_tests(k, X0, X1)
     pairwise_tests(k, X0, X2)
+end
+function cross_kernel_tests(
+    k::CrossKernel,
+    X0::AVM{<:Real},
+    X1::AVM{<:Real},
+    X2::AVM{<:Real},
+)
+    return cross_kernel_tests(k, DataSet(X0), DataSet(X1), DataSet(X2))
 end
 
 """
@@ -113,4 +122,13 @@ function kernel_tests(k::Kernel, X0::ADS, X1::ADS, X2::ADS, rtol::Real=eps())
 
     # Should be (approximately) positive definite.
     @test all(eigvals(Matrix(pairwise(k, X0))) .> -1e-9)
+end
+function kernel_tests(
+    k::Kernel,
+    X0::AVM{<:Real},
+    X1::AVM{<:Real},
+    X2::AVM{<:Real},
+    rtol::Real=eps(),
+)
+   return kernel_tests(k, DataSet(X0), DataSet(X1), DataSet(X2), rtol)
 end

@@ -41,14 +41,19 @@ const MatrixData{T} = DataSet{T, <:AbstractMatrix{T}}
 
 # Vector data set.
 @inline size(D::VectorData) = (length(D.X),)
-@inline getindex(D::VectorData, n) = D.X[n]
+@inline getindex(D::VectorData, n::Int) = D.X[n]
+@inline getindex(D::VectorData, n) = DataSet(D.X[n])
+@inline view(D::VectorData, n::Int) = view(D.X, n)
+@inline view(D::VectorData, n) = DataSet(view(D.X, n))
 @inline eltype(D::VectorData{T}) where T = T
 @inline next(D::VectorData, n::Int) = (D.X[n], n + 1)
 
 # Matrix data set.
 @inline size(D::MatrixData) = (size(D.X, 2),)
-@inline getindex(D::MatrixData, n) = D.X[:, n]
-@inline view(D::MatrixData, n) = view(D.X, :, n)
+@inline getindex(D::MatrixData, n::Int) = D.X[:, n]
+@inline getindex(D::MatrixData, n) = DataSet(D.X[:, n])
+@inline view(D::MatrixData, n::Int) = view(D.X, :, n)
+@inline view(D::MatrixData, n) = DataSet(view(D.X, :, n))
 @inline eltype(D::MatrixData{T}) where T = Vector{T}
 @inline next(D::MatrixData, n::Int) = (view(D, n), n + 1)
 

@@ -1,5 +1,5 @@
 using IterTools
-import Base: +, *, ==, size
+import Base: +, *, ==, size, eachindex
 import Distances: pairwise
 export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
     Exponential, ConstantKernel, isstationary, ZeroKernel
@@ -18,16 +18,17 @@ abstract type Kernel <: CrossKernel end
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
 
+eachindex(k::Kernel, N::Int) = eachindex(k)
 
 
 ################################# Pairwise implementations #################################
 
 # Fallback implementation for `pairwise` with `DataSet`s.
-@inline pairwise(f::CrossKernel, X::DataSet) = pairwise(f, X, X)
-@inline pairwise(f::Kernel, X::DataSet) = LazyPDMat(pairwise(f, X, X))
-@inline pairwise(f::CrossKernel, X::DataSet, X′::DataSet) = pairwise_fallback(f, X, X′)
+@inline pairwise(f::CrossKernel, X::ADS) = pairwise(f, X, X)
+@inline pairwise(f::Kernel, X::ADS) = LazyPDMat(pairwise(f, X, X))
+@inline pairwise(f::CrossKernel, X::ADS, X′::ADS) = pairwise_fallback(f, X, X′)
 
-@inline function pairwise_fallback(f, X::DataSet, X′::DataSet)
+@inline function pairwise_fallback(f, X::ADS, X′::ADS)
     return [f(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
 end
 
@@ -35,7 +36,11 @@ end
 @inline pairwise(f::PreMetric, x::AbstractVector) = pairwise(f, RowVector(x))
 @inline pairwise(f::PreMetric, x::AV, x′::AV) = pairwise(f, RowVector(x), RowVector(x′))
 
-
+# Syntactic sugar for pairwise.
+@inline pairwise(f::CrossKernel, X::AV{<:Real}) = pairwise(f, DataSet(X))
+@inline function pairwise(f::CrossKernel, X::AV{<:Real}, X′::AV{<:Real})
+    return pairwise(f, DataSet(X), DataSet(X′))
+end
 
 ################################ Define some basic kernels #################################
 
@@ -77,7 +82,7 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 """
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
-(::EQ)(x::T, x′::T) where T = exp(-0.5 * sqeuclidean(x, x′))
+(::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
 (::EQ)(x::T) where T = one(Float64)
 pairwise(::EQ, X::DataSet) = LazyPDMat(exp.(-0.5 .* pairwise(SqEuclidean(), X.X)))
 pairwise(::EQ, X::DataSet, X′::DataSet) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
