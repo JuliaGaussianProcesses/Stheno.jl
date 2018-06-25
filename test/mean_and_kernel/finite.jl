@@ -16,6 +16,7 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV, pairwise
             @test AbstractVector(μ′) == map(μ, X′)
             mean_function_tests(μ′, eachindex(μ′))
             mean_function_tests(μ′, 1:N-1)
+            mean_function_tests(μ′, BlockData([1:N-1, eachindex(μ′)]))
 
             # Recursion depth 2.
             r = DataSet(1:N-1)
@@ -25,6 +26,7 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV, pairwise
             @test AbstractVector(μ′)[r] == AbstractVector(μ2)
             @test AbstractVector(μ′)[r] == map(μ2, DataSet(eachindex(μ2)))
             mean_function_tests(μ2, eachindex(μ2))
+            mean_function_tests(μ2, 1:N-2)
             mean_function_tests(μ2, 1:N-2)
         end
 
@@ -63,6 +65,10 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV, pairwise
             @test pairwise(k′, 2:N, eachindex(k′)) ≈ pairwise(k, X′[2:N], X′)
 
             kernel_tests(k′, 1:N-1, 2:N, eachindex(k′))
+            d0 = BlockData([1:N-1, 2:N])
+            d1 = BlockData([2:N, 1:N-1])
+            d2 = BlockData([eachindex(k′)])
+            kernel_tests(k′, d0, d1, d2)
 
             # Recursion depth 2.
             r = 1:N-1
@@ -96,6 +102,8 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV, pairwise
 
         cross_kernel_tests(k′, DataSet(eachindex(k′, 1)), X, X′)
         cross_kernel_tests(kx, DataSet(eachindex(kx, 1)), x, x′)
+        cross_kernel_tests(k′, DataSet(eachindex(k′, 1)), BlockData([X]), BlockData([X′]))
+        cross_kernel_tests(kx, DataSet(eachindex(kx, 1)), BlockData([x]), BlockData([x′]))
 
         show(IOBuffer(), k′)
     end
@@ -116,8 +124,11 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV, pairwise
         @test pairwise(k′, X, DataSet(eachindex(k′, 2))) ≈ pairwise(k, X, X′)
         @test pairwise(k′, X, DataSet(1:N′-1)) ≈ pairwise(k, X, X′[1:N′-1])
 
-        cross_kernel_tests(k′, X, DataSet(1:N), DataSet(eachindex(k′, 2)))
-        cross_kernel_tests(kx, x, DataSet(1:N), DataSet(eachindex(kx, 2)))
+        d1, d2 = DataSet(1:N), DataSet(eachindex(k′, 2))
+        cross_kernel_tests(k′, X, d1, d2)
+        cross_kernel_tests(kx, x, d1, d2)
+        cross_kernel_tests(k′, BlockData([X]), BlockData([d1]), BlockData([d2]))
+        cross_kernel_tests(kx, BlockData([x]), BlockData([d1]), BlockData([d2]))
 
         show(IOBuffer(), k′)
     end
@@ -143,6 +154,8 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV, pairwise
 
         cross_kernel_tests(k′, 1:N, 1:N, 1:N′)
         cross_kernel_tests(kx, 1:N, 1:N, 1:N′)
+        cross_kernel_tests(k′, BlockData([1:N]), BlockData([1:N]), BlockData([1:N′]))
+        cross_kernel_tests(kx, BlockData([1:N]), BlockData([1:N]), BlockData([1:N′]))
 
         # Recursion depth == 2.
         r, c = DataSet(1:N-1), DataSet(1:N′-2)
@@ -153,6 +166,7 @@ using Stheno: FiniteMean, ConstantMean, getobs, AM, AV, pairwise
         @test pairwise(k2, DataSet(2:N-1), DataSet(c)) == pairwise(k′, DataSet(2:N-1), DataSet(c))
 
         cross_kernel_tests(k2, r, r, c)
+        cross_kernel_tests(k2, BlockData([r]), BlockData([r]), BlockData([c]))
 
         show(IOBuffer(), k′)
     end

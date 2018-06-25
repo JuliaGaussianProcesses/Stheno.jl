@@ -1,6 +1,7 @@
 import Base: size, eachindex, getindex, view, ==, endof, eltype, start, next, done,
-    IndexStyle
-export AbstractDataSet, ADS, DataSet, BlockDataSet
+    IndexStyle, map, convert, promote
+import Distances: pairwise
+export AbstractDataSet, ADS, DataSet, BlockData
 
 """
     AbstractDataSet
@@ -12,6 +13,7 @@ abstract type AbstractDataSet{T} <: AbstractVector{T} end
 const ADS{T} = AbstractDataSet{T}
 
 IndexStyle(::Type{<:AbstractDataSet}) = IndexLinear()
+
 
 
 ################################## Basic data type ##################################
@@ -62,27 +64,36 @@ const MatrixData{T} = DataSet{T, <:AbstractMatrix{T}}
 ################################## Fancy block data type ##################################
 
 """
-    BlockDataSet{TX<:AbstractVector{<:AbstractDataSet}} <: AbstractDataSet    
+    BlockData{TX<:AbstractVector{<:AbstractDataSet}} <: AbstractDataSet    
 
 A strictly ordered collection of `AbstractDataSet`s.
 """
-struct BlockDataSet{TX<:AbstractVector{<:AbstractDataSet}} <: AbstractDataSet{Any}
+struct BlockData{TX<:AbstractVector{<:AbstractDataSet}} <: AbstractDataSet{Any}
     X::TX
 end
-function BlockDataSet(D::AbstractVector{<:AbstractArray})
+function BlockData(D::AbstractVector{<:AbstractArray})
     @assert all(ndims.(D) .< 3)
-    return BlockDataSet(DataSet.(D))
+    return BlockData(DataSet.(D))
 end
-@inline ==(D1::BlockDataSet, D2::BlockDataSet) = D1.X == D2.X
-@inline size(D::BlockDataSet) = (sum(length, D.X),)
-@inline endof(D::BlockDataSet) = (length(D.X), length(D.X[end]))
+@inline ==(D1::BlockData, D2::BlockData) = D1.X == D2.X
+@inline size(D::BlockData) = (sum(length, D.X),)
+@inline endof(D::BlockData) = (length(D.X), length(D.X[end]))
 
-@inline getindex(D::BlockDataSet, b::Int) = D.X[b]
-@inline getindex(D::BlockDataSet, b::Int, n) = D.X[b][n]
-@inline view(D::BlockDataSet, b::Int, n) = view(D.X[b], n)
+@inline blocks(X::BlockData) = X.X
+@inline function getindex(D::BlockData, n::Int)
+    b = 1
+    while n > length(D.X[b])
+        n -= length(D.X[b])
+        b += 1
+    end
+    return D.X[b][n]
+end
+@inline getindex(D::BlockData, b::Int, n) = D.X[b][n]
+@inline view(D::BlockData, b::Int, n) = view(D.X[b], n)
+@inline eltype(D::BlockData) = Any
 
-@inline start(D::BlockDataSet) = (1, start(D.X[1]))
-function next(D::BlockDataSet, state::Tuple{Int, Int})
+@inline start(D::BlockData) = (1, start(D.X[1]))
+function next(D::BlockData, state::Tuple{Int, Int})
     b, n = state
     x = D.X[b]
     if !done(x, n)
@@ -94,7 +105,7 @@ function next(D::BlockDataSet, state::Tuple{Int, Int})
         return val, (b′, n′)
     end 
 end
-@inline function done(D::BlockDataSet, state::Tuple{Int, Int})
+@inline function done(D::BlockData, state::Tuple{Int, Int})
     b, n = state
     return b == length(D.X) && done(D.X[b], n)
 end

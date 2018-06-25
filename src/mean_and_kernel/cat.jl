@@ -1,14 +1,16 @@
+import Base: map
+import Distances: pairwise
 export CatMean, CatKernel, CatCrossKernel
 
-@inline nobs(X::AV{<:AVM}) = sum(nobs, X)
-function getobs(X::AV{<:AVM}, n::Int)
-    p = 1
-    while n > nobs(X[p])
-        n -= nobs(X[p])
-        p += 1
-    end
-    return (p, getobs(X[p], n))
-end
+# @inline nobs(X::AV{<:AVM}) = sum(nobs, X)
+# function getobs(X::AV{<:AVM}, n::Int)
+#     p = 1
+#     while n > nobs(X[p])
+#         n -= nobs(X[p])
+#         p += 1
+#     end
+#     return (p, getobs(X[p], n))
+# end
 
 """
     CatMean <: MeanFunction
@@ -23,8 +25,8 @@ CatMean(μs::Vararg{<:MeanFunction}) = CatMean([μs...])
 length(μ::CatMean) = sum(length.(μ.μ))
 ==(μ::CatMean, μ′::CatMean) = μ.μ == μ′.μ
 eachindex(μ::CatMean) = eachindex.(μ.μ)
-function unary_obswise(μ::CatMean, X::AV{<:AVM})
-    return BlockVector(unary_obswise.(μ.μ, X))
+function map(μ::CatMean, X::BlockData)
+    return BlockVector(map.(μ.μ, blocks(X)))
 end
 
 """
@@ -52,13 +54,22 @@ function eachindex(k::CatCrossKernel, N::Int)
 end
 (k::CatCrossKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any}) =
     k.ks[x[1], x′[1]](x[2], x′[2])
-function pairwise(k::CatCrossKernel, X::AV{<:AVM}, X′::AV{<:AVM})
-    Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X′))
-    for q in 1:nblocks(Ω, 2), p in 1:nblocks(Ω, 1)
-        setblock!(Ω, pairwise(k.ks[p, q], X[p], X′[q]), p, q)
-    end
-    return Ω
+function map(k::CatCrossKernel, X::BlockData)
+    return BlockVector(map.(diag(k.ks), blocks(X)))
 end
+function map(k::CatCrossKernel, X::BlockData, X′::BlockData)
+    return BlockVector(map.(diag(k.ks), blocks(X), blocks(X′)))
+end
+function pairwise(k::CatCrossKernel, X::BlockData, X′::BlockData)
+    return BlockMatrix(broadcast(pairwise, k.ks, blocks(X), blocks(X′)'))
+end
+# function pairwise(k::CatCrossKernel, X::AV{<:AVM}, X′::AV{<:AVM})
+#     Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X′))
+#     for q in 1:nblocks(Ω, 2), p in 1:nblocks(Ω, 1)
+#         setblock!(Ω, pairwise(k.ks[p, q], X[p], X′[q]), p, q)
+#     end
+#     return Ω
+# end
 
 """
     CatKernel <: Kernel
@@ -90,37 +101,70 @@ end
 size(k::CatKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
 eachindex(k::CatKernel) = eachindex.(k.ks_diag)
 
-binary_obswise(k::CatKernel, X::AV{<:AVM}) = BlockVector(binary_obswise.(k.ks_diag, X))
-binary_obswise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM}) =
-    BlockVector(binary_obswise.(k.ks_diag, X, X′))
+# binary_obswise(k::CatKernel, X::AV{<:AVM}) = BlockVector(binary_obswise.(k.ks_diag, X))
+# binary_obswise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM}) =
+#     BlockVector(binary_obswise.(k.ks_diag, X, X′))
+
+map(k::CatKernel, X::BlockData) = BlockVector(map.(k.ks_diag, blocks(X)))
+function map(k::CatKernel, X::BlockData, X′::BlockData)
+    return BlockVector(map.(k.ks_diag, blocks(X), blocks(X′)))
+end
 
 Base.ctranspose(z::Zeros{T}) where {T} = Zeros{T}(reverse(size(z)))
-function pairwise(k::CatKernel, X::AV{<:AVM})
-    Σ = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X))
+
+function pairwise(k::CatKernel, X::BlockData)
+    bX = blocks(X)
+    Σ = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX))
     for q in eachindex(k.ks_diag)
-        setblock!(Σ, Matrix(pairwise(k.ks_diag[q], X[q])), q, q)
+        setblock!(Σ, Matrix(pairwise(k.ks_diag[q], bX[q])), q, q)
         for p in 1:q-1
-            setblock!(Σ, pairwise(k.ks_off[p, q], X[p], X[q]), p, q)
+            setblock!(Σ, pairwise(k.ks_off(p, q), bX[p], bX[q]), p, q)
             setblock!(Σ, getblock(Σ, p, q)', q, p)
         end
     end
-    return LazyPDMat(Symmetric(Σ))
+    return Σ
 end
-pairwise(k::CatKernel, X::AVM) = pairwise(k, [X])
-function pairwise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM})
-    Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X′))
+function pairwise(k::CatKernel, X::BlockData, X′::BlockData)
+    bX, bX′ = blocks(X), blocks(X′)
+    Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length(bX), length(bX′))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
         if p == q
-            setblock!(Ω, pairwise(k.ks_diag[p], X[p], X′[p]), p, p)
+            setblock!(Ω, pairwise(k.ks_diag[p], bX[p], bX′[p]), p, p)
         elseif p < q
-            setblock!(Ω, pairwise(k.ks_off[p, q], X[p], X′[q]), p, q)
+            setblock!(Ω, pairwise(k.ks_off[p, q], bX[p], bX′[q]), p, q)
         else
-            setblock!(Ω, pairwise(k.ks_off[q, p], X[p], X′[q]), p, q)
+            setblock!(Ω, pairwise(k.ks_off[q, p], bX[p], bX′[q]), p, q)
         end
     end
     return Ω
 end
 
-pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AVM, X′::AVM) = pairwise(k, [X], [X′])
-pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AV{<:AVM}, X′::AVM) = pairwise(k, X, [X′])
-pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AVM, X′::AV{<:AVM}) = pairwise(k, [X], X′)
+# function pairwise(k::CatKernel, X::AV{<:AVM})
+#     Σ = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X))
+#     for q in eachindex(k.ks_diag)
+#         setblock!(Σ, Matrix(pairwise(k.ks_diag[q], X[q])), q, q)
+#         for p in 1:q-1
+#             setblock!(Σ, pairwise(k.ks_off[p, q], X[p], X[q]), p, q)
+#             setblock!(Σ, getblock(Σ, p, q)', q, p)
+#         end
+#     end
+#     return LazyPDMat(Symmetric(Σ))
+# end
+# pairwise(k::CatKernel, X::AVM) = pairwise(k, [X])
+# function pairwise(k::CatKernel, X::AV{<:AVM}, X′::AV{<:AVM})
+#     Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X′))
+#     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
+#         if p == q
+#             setblock!(Ω, pairwise(k.ks_diag[p], X[p], X′[p]), p, p)
+#         elseif p < q
+#             setblock!(Ω, pairwise(k.ks_off[p, q], X[p], X′[q]), p, q)
+#         else
+#             setblock!(Ω, pairwise(k.ks_off[q, p], X[p], X′[q]), p, q)
+#         end
+#     end
+#     return Ω
+# end
+
+# pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AVM, X′::AVM) = pairwise(k, [X], [X′])
+# pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AV{<:AVM}, X′::AVM) = pairwise(k, X, [X′])
+# pairwise(k::Union{<:CatCrossKernel, <:CatKernel}, X::AVM, X′::AV{<:AVM}) = pairwise(k, [X], X′)

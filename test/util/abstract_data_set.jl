@@ -1,4 +1,4 @@
-using Stheno: AbstractDataSet, DataSet, BlockDataSet, VectorData, MatrixData
+using Stheno: AbstractDataSet, DataSet, BlockData, VectorData, MatrixData
 
 @testset "util/abstract_data_set" begin
 
@@ -53,20 +53,22 @@ using Stheno: AbstractDataSet, DataSet, BlockDataSet, VectorData, MatrixData
         @test next(DX, 1) == (DX[1], 2)
         @test hcat([x for x in DX]...) == X
 
-        # Test BlockDataSets.
-        DxX = BlockDataSet([x, X])
+        # Test BlockDatas.
+        DxX = BlockData([x, X])
         @test size(DxX) == (2N,)
         @test length(DxX) == 2N
         @test DxX == DxX
-        @test DxX == BlockDataSet([Dx, DX])
+        @test DxX == BlockData([Dx, DX])
         @test endof(DxX) == (2, N)
         @test length([x for x in DxX]) == 2N
         @test getindex(DxX, 1, 1) == Dx[1]
         @test getindex(DxX, 1, N) == Dx[end]
         @test getindex(DxX, 2, 1) == DX[1]
         @test getindex(DxX, 2, N) == DX[end]
-        @test getindex(DxX, 1) === Dx
-        @test getindex(DxX, 2) === DX
+        @test getindex(DxX, 1) === Dx[1]
+        @test getindex(DxX, 2) === Dx[2]
+        @test getindex(DxX, N) === Dx[N]
+        @test getindex(DxX, N + 1) == DX[1]
         @test view(DxX, 2, 1) == view(DX, 1)
         @test view(DxX, 2, N) == view(DX, N)
         @test eachindex(DxX) == 1:2N

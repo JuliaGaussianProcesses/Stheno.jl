@@ -1,13 +1,13 @@
 using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKernel,
-    ConstantMean, ZeroMean, ZeroKernel, ConstantKernel
+    ConstantMean, ZeroMean, ZeroKernel, ConstantKernel, pairwise
 
 @testset "conditional" begin
 
     # Tests for conditioning with independent processes.
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 13, 2
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
-        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+        x0, x1, x2 = DataSet(randn(rng, N)), DataSet(randn(rng, N)), DataSet(randn(rng, N′))
         μf, μg, μh = ConstantMean(randn(rng)), ZeroMean{Float64}(), ConstantMean(randn(rng))
         kff, kgg, khh = EQ(), EQ() + Noise(1e-6), Noise(1e-6)
         kfg, kfh, kgh = EQ(), ZeroKernel{Float64}(), ZeroKernel{Float64}()
@@ -16,7 +16,7 @@ using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKer
         for (X0, X1, X2) in [(X0, X1, X2), (x0, x1, x2)]
 
             # Construct conditioned objects.
-            y = unary_obswise(μf, X0) + chol(LazyPDMat(pairwise(kff, X0)))' * randn(rng, N)
+            y = map(μf, X0) + chol(LazyPDMat(pairwise(kff, X0)))' * randn(rng, N)
             cache = CondCache(kff, μf, X0, y)
             μ′f = ConditionalMean(cache, μf, kff)
             μ′g = ConditionalMean(cache, μg, kfg)
@@ -32,30 +32,35 @@ using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKer
             for (n, μ′) in enumerate([μ′f, μ′g, μ′h])
                 mean_function_tests(μ′, X0)
                 mean_function_tests(μ′, X2)
+                mean_function_tests(μ′, BlockData([X0, X2]))
             end
             for (n, k′) in enumerate([k′ff, k′gg, k′hh])
                 kernel_tests(k′, X0, X1, X2, 1e-6)
+                kernel_tests(k′, BlockData([X0]), BlockData([X1]), BlockData([X2]), 1e-6)
+                kernel_tests(k′, BlockData([X0]), BlockData([X1]), BlockData([X2, X1]), 1e-6)
             end
             for k′ in [k′fg, k′fh, k′gh]
                 cross_kernel_tests(k′, X0, X1, X2)
+                cross_kernel_tests(k′, BlockData([X0]), BlockData([X1]), BlockData([X2]))
+                cross_kernel_tests(k′, BlockData([X0]), BlockData([X1]), BlockData([X2, X1]))
             end
 
             # Test that observing the mean function shrinks the posterior covariance
             # appropriately, but leaves the posterior mean at the prior mean (modulo noise).
-            cache = CondCache(kff, μf, X0, unary_obswise(μf, X0))
+            cache = CondCache(kff, μf, X0, map(μf, X0))
             @test cache.α ≈ zeros(Float64, N)
 
             # Posterior covariance at the data should be _exactly_ zero.
             @test maximum(abs.(pairwise(k′ff, X0))) < 1e-6
 
             # Posterior for indep. process should be _exactly_ the same as the prior.
-            @test unary_obswise(μ′h, X0) == unary_obswise(μh, X0)
-            @test unary_obswise(μ′h, X1) == unary_obswise(μh, X1)
-            @test unary_obswise(μ′h, X2) == unary_obswise(μh, X2)
-            @test binary_obswise(k′hh, X0) == binary_obswise(khh, X0)
-            @test binary_obswise(k′hh, X1) == binary_obswise(khh, X1)
-            @test binary_obswise(k′hh, X2) == binary_obswise(khh, X2)
-            @test binary_obswise(k′hh, X0, X1) == binary_obswise(khh, X0, X1)
+            @test map(μ′h, X0) == map(μh, X0)
+            @test map(μ′h, X1) == map(μh, X1)
+            @test map(μ′h, X2) == map(μh, X2)
+            @test map(k′hh, X0) == map(khh, X0)
+            @test map(k′hh, X1) == map(khh, X1)
+            @test map(k′hh, X2) == map(khh, X2)
+            @test map(k′hh, X0, X1) == map(khh, X0, X1)
             @test pairwise(k′hh, X0) == pairwise(khh, X0)
             @test pairwise(k′hh, X0, X2) == pairwise(khh, X0, X2)
             @test pairwise(k′fh, X0, X2) == pairwise(kfh, X0, X2)

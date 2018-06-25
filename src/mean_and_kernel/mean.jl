@@ -1,4 +1,5 @@
 import Base: mean, ==, map, AbstractVector
+import Base: map
 
 export CustomMean, ZeroMean, ConstantMean, mean
 
@@ -12,6 +13,9 @@ function AbstractVector(μ::MeanFunction)
     @assert isfinite(length(μ))
     return map(μ, eachindex(μ))
 end
+
+map(f::MeanFunction, X::BlockData) = BlockVector([map(f, x) for x in blocks(X)])
+map(f::MeanFunction, X::AbstractVector{<:ADS}) = map(f, BlockData(X))
 
 """
     CustomMean <: BaseMeanFunction
@@ -31,7 +35,7 @@ Returns zero (of the appropriate type) everywhere.
 """
 struct ZeroMean{T<:Real} <: BaseMeanFunction end
 @inline (::ZeroMean{T})(x) where T = zero(T)
-@inline map(z::ZeroMean{T}, D::AbstractDataSet) where T = Zeros{T}(length(D))
+@inline map(z::ZeroMean{T}, D::DataSet) where T = Zeros{T}(length(D))
 ==(::ZeroMean, ::ZeroMean) = true
 
 """
@@ -43,7 +47,7 @@ struct ConstantMean{T<:Real} <: BaseMeanFunction
     c::T
 end
 @inline (μ::ConstantMean)(x) = μ.c
-@inline map(μ::ConstantMean, D::AbstractDataSet) = Fill(μ.c, length(D))
+@inline map(μ::ConstantMean, D::DataSet) = Fill(μ.c, length(D))
 ==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c
 
 """
@@ -55,7 +59,7 @@ struct EmpiricalMean{T<:Real, Tμ<:AbstractVector{T}} <: BaseMeanFunction
     μ::Tμ
     EmpiricalMean(μ::Tμ) where {T<:Real, Tμ<:AbstractVector{T}} = new{T, Tμ}(μ)
 end
-@inline (μ::EmpiricalMean)(n::Int) = μ.μ[n]
+@inline (μ::EmpiricalMean)(n) = μ.μ[n]
 ==(μ1::EmpiricalMean, μ2::EmpiricalMean) = μ1.μ == μ2.μ
 @inline length(μ::EmpiricalMean) = length(μ.μ)
 @inline eachindex(μ::EmpiricalMean) = eachindex(μ.μ)

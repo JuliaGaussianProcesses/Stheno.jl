@@ -26,12 +26,24 @@ struct FooKernel <: CrossKernel end
         @test pairwise(foo, x, x′) == pairwise_fallback(foo, x, x′)
         @test pairwise(foo, X) == pairwise(foo, X, X)
         @test pairwise(foo, x) == pairwise(foo, x, x)
+
+        XB = BlockData([X, X′])
+        @test pairwise(foo, XB, XB) ==
+            vcat(hcat(pairwise(foo, X, X), pairwise(foo, X, X′)),
+                 hcat(pairwise(foo, X′, X), pairwise(foo, X′, X′)))
+        @test pairwise(foo, XB, XB) == pairwise(foo, [X, X′], [X, X′])
+
+        @test pairwise(foo, X, [X, X′]) isa BlockMatrix
+        @test pairwise(foo, X, [X, X′]) == pairwise(foo, [X], [X, X′])
+        @test pairwise(foo, [X], X′) isa BlockMatrix
+        @test pairwise(foo, [X], X′) == pairwise(foo, [X], [X′])
     end
 
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = DataSet(randn(rng, N)), DataSet(randn(rng, N)), DataSet(randn(rng, N′))
         X0, X1, X2 = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+        XB0, XB1, XB2 = BlockData([x0, X0]), BlockData([x1, X1]), BlockData([x2, X2])
 
         # Tests for ZeroKernel.
         k_zero = ZeroKernel{Float64}()
@@ -42,6 +54,7 @@ struct FooKernel <: CrossKernel end
         @test ZeroKernel{Float64}() == ZeroKernel{Float32}()
         kernel_tests(k_zero, x0, x1, x2)
         kernel_tests(k_zero, X0, X1, X2)
+        kernel_tests(k_zero, XB0, XB1, XB2)
 
         # Tests for ConstantKernel.
         k_const = ConstantKernel(randn(rng))
@@ -51,6 +64,7 @@ struct FooKernel <: CrossKernel end
         @test size(k_const) == (Inf, Inf)
         kernel_tests(k_const, x0, x1, x2)
         kernel_tests(k_const, X0, X1, X2)
+        kernel_tests(k_const, XB0, XB1, XB2)
 
         # Tests for EQ.
         @test isstationary(EQ())
@@ -58,6 +72,8 @@ struct FooKernel <: CrossKernel end
         @test size(EQ()) == (Inf, Inf)
         kernel_tests(EQ(), x0, x1, x2)
         kernel_tests(EQ(), X0, X1, X2)
+        kernel_tests(EQ(), BlockData([x0, x0]), BlockData([x1, x1]), BlockData([x2, x2]))
+        kernel_tests(EQ(), BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2, X2]))
 
         # Tests for Linear.
         @test !isstationary(Linear)
@@ -65,18 +81,23 @@ struct FooKernel <: CrossKernel end
         @test a == a && a ≠ b
         kernel_tests(a, x0, x1, x2)
         kernel_tests(a, X0, X1, X2)
+        kernel_tests(a, BlockData([x0, x0]), BlockData([x1, x1]), BlockData([x2, x2]))
+        kernel_tests(a, BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2, X2]))
 
         # Tests for Noise
         @test isstationary(Noise(randn(rng)))
         @test Noise(5.0) == Noise(5)
         kernel_tests(Noise(5.0), x0, x1, x2)
         kernel_tests(Noise(5.0), X0, X1, X2)
+        kernel_tests(Noise(5.0), XB0, XB1, XB2)
 
         # Tests for EmpiricalKernel.
         A_ = randn(rng, N, N)
         A = LazyPDMat(A_ * A_' + 1e-6I)
         k = EmpiricalKernel(A)
-        kernel_tests(k, DataSet(1:N), DataSet(1:N), DataSet(1:N-1))
+        Ds0, Ds1, Ds2 = DataSet(1:N), DataSet(1:N), DataSet(1:N-1)
+        kernel_tests(k, Ds0, Ds1, Ds2)
+        kernel_tests(k, BlockData([Ds0, Ds0]), BlockData([Ds1, Ds1]), BlockData([Ds2, Ds2]))
         @test size(k, 1) == N && size(k, 2) == N
 
         @test_throws AssertionError AbstractMatrix(EQ())

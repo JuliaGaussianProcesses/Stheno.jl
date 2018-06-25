@@ -17,6 +17,8 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
 
         mean_function_tests(ν1, X)
         mean_function_tests(ν2, X)
+        mean_function_tests(ν1, BlockData([X, X]))
+        mean_function_tests(ν2, BlockData([X, X]))
     end
 
     # Test CompositeKernel and CompositeCrossKernel.
@@ -35,10 +37,18 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         @test !isstationary(ν1) && !isstationary(ν2)
         @test isstationary(CompositeKernel(+, k1, k1)) == true
 
+        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
+        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
+
         cross_kernel_tests(ν2, x0, x1, x2)
         cross_kernel_tests(ν2, X0, X1, X2)
+        cross_kernel_tests(ν2, xb0, xb1, xb2)
+        cross_kernel_tests(ν2, XB0, XB1, XB2)
+
         kernel_tests(ν1, x0, x1, x2)
         kernel_tests(ν1, X0, X1, X2)
+        kernel_tests(ν1, xb0, xb1, xb2)
+        kernel_tests(ν1, XB0, XB1, XB2)
     end
 
     # Test LhsCross functionality.
@@ -53,8 +63,12 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2])
         @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
+        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
+        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
         cross_kernel_tests(ν, x0, x1, x2)
         cross_kernel_tests(ν, X0, X1, X2)
+        cross_kernel_tests(ν, xb0, xb1, xb2)
+        cross_kernel_tests(ν, XB0, XB1, XB2)
     end
 
     # Test RhsCross functionality.
@@ -69,8 +83,12 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         @test ν(X0[:, 1], X0[:, 2]) == k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
         @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
+        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
+        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
         cross_kernel_tests(ν, x0, x1, x2)
         cross_kernel_tests(ν, X0, X1, X2)
+        cross_kernel_tests(ν, xb0, xb1, xb2)
+        cross_kernel_tests(ν, XB0, XB1, XB2)
     end
 
     # Test OuterCross.
@@ -85,8 +103,12 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
         @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
+        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
+        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
         cross_kernel_tests(ν, x0, x1, x2)
         cross_kernel_tests(ν, X0, X1, X2)
+        cross_kernel_tests(ν, xb0, xb1, xb2)
+        cross_kernel_tests(ν, XB0, XB1, XB2)
     end
 
     # Test OuterKernel.
@@ -101,8 +123,12 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
         @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
+        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
+        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
         kernel_tests(ν, x0, x1, x2)
         kernel_tests(ν, X0, X1, X2)
+        cross_kernel_tests(ν, xb0, xb1, xb2)
+        cross_kernel_tests(ν, XB0, XB1, XB2)
     end
 
     # Test mean function composition.

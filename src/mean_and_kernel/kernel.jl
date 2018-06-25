@@ -21,6 +21,16 @@ size(k::CrossKernel) = (size(k, 1), size(k, 2))
 eachindex(k::Kernel, N::Int) = eachindex(k)
 
 
+
+################################# `map` implementations #################################
+
+map(k::CrossKernel, X::BlockData) = BlockVector([map(k, x) for x in blocks(X)])
+function map(k::CrossKernel, X::BlockData, X′::BlockData)
+    return BlockVector([map(k, x, x′) for (x, x′) in zip(blocks(X), blocks(X′))])
+end
+
+
+
 ################################# Pairwise implementations #################################
 
 # Fallback implementation for `pairwise` with `DataSet`s.
@@ -41,6 +51,20 @@ end
 @inline function pairwise(f::CrossKernel, X::AV{<:Real}, X′::AV{<:Real})
     return pairwise(f, DataSet(X), DataSet(X′))
 end
+
+# Specialisations of `pairwise` + sugar for `BlockData` sets. Returns a `BlockArray`.
+function pairwise(f::CrossKernel, X::BlockData, X′::BlockData)
+    return BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X′)])
+end
+function pairwise(f::CrossKernel, X::AbstractVector{<:ADS}, X′::AbstractVector{<:ADS})
+    return pairwise(f, BlockData(X), BlockData(X′))
+end
+
+# Edge cases for interactions between vectors of data and data.
+pairwise(f::CrossKernel, X::AbstractVector{<:ADS}, X′::ADS) = pairwise(f, X, [X′])
+pairwise(f::CrossKernel, X::ADS, X′::AbstractVector{<:ADS}) = pairwise(f, [X], X′)
+
+
 
 ################################ Define some basic kernels #################################
 

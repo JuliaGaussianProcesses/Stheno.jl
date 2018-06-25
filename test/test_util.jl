@@ -1,5 +1,5 @@
 using IterTools
-using Stheno: MeanFunction, Kernel, CrossKernel, AVM
+using Stheno: MeanFunction, Kernel, CrossKernel, AVM, blocks
 
 """
     unary_map_tests(f, X::AbstractDataSet)
@@ -11,9 +11,14 @@ function unary_map_tests(f, X::ADS)
     @test length(map(f, X)) == length(X)
     @test map(f, X) ≈ [f(x) for x in X]
 end
+function unary_map_tests(f, X::BlockData)
+    @test map(f, X) isa AbstractBlockVector
+    @test length(map(f, X)) == length(X)
+    @test map(f, X) ≈ BlockVector([map(f, x) for x in blocks(X)])
+end
 
 """
-    binary_map_tests(f, X::ADS, X′::ADS)
+    binary_map_tests(f, X::AbstractDataSet, X′::AbstractDataSet)
 
 Consistency tests intended for use with `CrossKernel`s.
 """
@@ -22,14 +27,25 @@ function binary_map_tests(f, X::ADS, X′::ADS)
     @test length(map(f, X, X′)) == length(X)
     @test map(f, X, X′) ≈ [f(x, x′) for (x, x′) in zip(X, X′)]
 end
+function binary_map_tests(f, XB::BlockData, XB′::BlockData)
+    @test map(f, XB, XB′) isa AbstractBlockVector
+    @test length(map(f, XB, XB′)) == length(XB)
+    @test map(f, XB, XB′) ≈
+        BlockVector([map(f, X, X′) for (X, X′) in zip(blocks(XB), blocks(XB′))])
+end
 
 """
-    binary_map_tests(f, X::ADS)
+    binary_map_tests(f, X::AbstractDataSet)
 
 Consistency tests intended for use with `Kernel`s.
 """
-function binary_map_tests(f, X::ADS)
+function binary_map_tests(f, X::AbstractDataSet)
     @test map(f, X) isa AbstractVector
+    @test length(map(f, X)) == length(X)
+    @test map(f, X) ≈ map(f, X, X)
+end
+function binary_map_tests(f, X::BlockData)
+    @test map(f, X) isa AbstractBlockVector
     @test length(map(f, X)) == length(X)
     @test map(f, X) ≈ map(f, X, X)
 end
@@ -45,6 +61,13 @@ function pairwise_tests(f, X::ADS, X′::ADS)
     @test size(pairwise(f, X, X′)) == (N, N′)
     @test pairwise(f, X, X′) ≈ reshape([f(x, x′) for (x, x′) in product(X, X′)], N, N′)
 end
+function pairwise_tests(f, X::BlockData, X′::BlockData)
+    N, N′ = length(X), length(X′)
+    @test pairwise(f, X, X′) isa AbstractBlockMatrix
+    @test size(pairwise(f, X, X′)) == (N, N′)
+    @test pairwise(f, X, X′) ==
+        BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X′)])
+end
 
 """
     pairwise_tests(f, X::ADS)
@@ -56,6 +79,12 @@ function pairwise_tests(f, X::ADS; rtol=eps())
     @test size(pairwise(f, X)) == (length(X), length(X))
     @test isapprox(pairwise(f, X), pairwise(f, X, X); rtol=rtol)
 end
+function pairwise_tests(f, X::BlockData; rtol=eps())
+    @test pairwise(f, X) isa LazyPDMat{T, <:AbstractBlockMatrix{T}} where T
+    @test size(pairwise(f, X)) == (length(X), length(X))
+    @test pairwise(f, X) ==
+        BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X)])
+end
 
 """
     mean_function_tests(μ::MeanFunction, X::ADS)
@@ -65,7 +94,6 @@ Tests that any mean function `μ` should be able to pass.
 function mean_function_tests(μ::MeanFunction, X::ADS)
 
     # Test compulsory interface passes.
-    @test method_exists(μ, Tuple{eltype(X)})
     @test !(μ(X[1]) isa Void)
 
     @test method_exists(eachindex, Tuple{typeof(μ)})
