@@ -17,6 +17,7 @@ abstract type Kernel <: CrossKernel end
 # Some fallback definitions.
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
+length(k::Kernel) = size(k, 1)
 
 eachindex(k::Kernel, N::Int) = eachindex(k)
 
@@ -59,6 +60,7 @@ end
 function pairwise(f::CrossKernel, X::AbstractVector{<:ADS}, X′::AbstractVector{<:ADS})
     return pairwise(f, BlockData(X), BlockData(X′))
 end
+pairwise(f::Kernel, X::AbstractVector{<:ADS}) = pairwise(f, BlockData(X))
 
 # Edge cases for interactions between vectors of data and data.
 pairwise(f::CrossKernel, X::AbstractVector{<:ADS}, X′::ADS) = pairwise(f, X, [X′])

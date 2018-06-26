@@ -3,7 +3,7 @@
 let
     # Set up some GPs.
     rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
-    X, X′ = randn(rng, D, N), randn(rng, D, N′)
+    X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
     μ1, μ2 = ConstantMean(1), ConstantMean(-1.5)
     k1, k2 = EQ(), Linear(0.5)
     f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
@@ -53,13 +53,13 @@ end
 let
     # Set up some GPs.
     rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
-    X, X′ = randn(rng, D, N), randn(rng, D, N′)
+    X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
     μ1, μ2 = ConstantMean(1.0), ConstantMean(-1.5)
     k1, k2 = EQ(), Linear(0.5)
     f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
     f3, f4 = f1(X), f2(X′)
     fj = JointGP([f1, f2])
-    fjXX′ = fj([X, X′])
+    fjXX′ = fj(BlockData([X, X′]))
 
     @test fjXX′ isa JointGP
 
@@ -70,9 +70,7 @@ let
     @test mean_vec(fjXX′) == vcat(mean_vec(f3), mean_vec(f4))
     @test cov(fjXX′) == Σ_manual
     @test xcov(fjXX′, fjXX′) == cov(fjXX′)
-    @show size(xcov(fjXX′, f3)), size(BlockMatrix(reshape([xcov(f3, f3), xcov(f4, f3)], 2, 1)))
     @test xcov(fjXX′, f3) == BlockMatrix(reshape([xcov(f3, f3), xcov(f4, f3)], 2, 1))
-
 end
 
 end # @testset indexing

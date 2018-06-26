@@ -6,6 +6,14 @@ import Base: +
 Produces a GP `f` satisfying `f(x) = fa(x) + fb(x)`.
 """
 +(fa::GP, fb::GP) = GP(+, fa, fb)
+
+"""
+    +(fa::JointGP, fb::JointGP)
+
+Same as above, but for a collection of GPs.
+"""
++(fa::JointGP, fb::JointGP) = JointGP(fa.fs .+ fb.fs)
+
 μ_p′(::typeof(+), fa, fb) = CompositeMean(+, mean(fa), mean(fb))
 k_p′(::typeof(+), fa, fb) =
     CompositeKernel(+, kernel(fa), kernel(fb), kernel(fa, fb), kernel(fb, fa))

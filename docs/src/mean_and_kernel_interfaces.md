@@ -83,3 +83,28 @@ Required testing is as follows:
 
 ## `Kernel`
 
+
+
+
+
+
+
+## Abstract Gaussian Process interface
+
+For `f, g <: AbstractGaussianProcess`, we require the following methods:
+
+| Required methods | Brief description |
+|:--------------------- |:-------------------------------- |
+| `mean(f)` | Representation of the mean function of a GP |
+| `kernel(f)` | Representation of the kernel of a GP |
+| `kernel(f, g)` | Representation of the cross-kernel between `f` and `g` |
+| **Important optional methods** | **Brief description** |
+| `f == g` | Equality. Defaults to checking mean and kernel are equal |
+| `length(f)` | Defaults to length of `length(mean(f))` |
+| `eachindex(f)` | Defaults to `eachindex(mean(f))` |
+| `mean_vec(f)` | Vector representation of `mean(f)`. Defaults to `AbstractVector(mean(f))`|
+| `cov(f)` | Covariance matrix of `f`. Defaults to `AbstractMatrix(kernel(f))` |
+| `xcov(f, g)` | Cross-covariance matrix between `f` and `g`. Defaults to `AbstractMatrix(kernel(f, g))` |
+| `marginal_cov(f)` | Equivalent to `diag(cov(f))`, but fast |
+
+Note that `eachindex`, `mean_vec`, `cov`, `xcov`, and `marginal_cov` should all fail if the dimensionality of `f` (or `g` if applicable) is not finite.

@@ -1,20 +1,8 @@
 using Stheno: CatMean, CatCrossKernel, CatKernel, ConstantMean, ZeroMean
-using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel
+using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, map, pairwise
 using FillArrays
 
 @testset "cat" begin
-
-    # # Test `nobs` and `getobs` for nested data.
-    # let
-    #     rng, N1, N2, N3 = MersenneTwister(123456), 4, 1, 5
-    #     x1, x2, x3 = randn(rng, N1), randn(rng, N2), randn(rng, N3)
-    #     x, xcat = [x1, x2, x3], vcat(x1, x2, x3)
-
-    #     @test nobs(x) == length(xcat)
-    #     ids = [1, 1, 1, 1, 2, 3, 3, 3, 3, 3]
-    #     @test all(map(n->getobs(x, n)[1], eachindex(xcat)) == ids)
-    #     @test all(map(n->getobs(x, n)[2], eachindex(xcat)) == xcat)
-    # end
 
     # Test CatMean.
     let
@@ -29,12 +17,16 @@ using FillArrays
         @test map(μ, [X1, X2]) == vcat(map(μ1, X1), map(μ2, X2))
         @test map(μ, [x1, x2]) == vcat(map(μ1, x1), map(μ2, x2))
 
-        mean_function_tests(μ, BlockData([X1, X2]))
-        mean_function_tests(μ, BlockData([x1, x2]))
+        # mean_function_tests(μ, BlockData([X1, X2]))
+        # mean_function_tests(μ, BlockData([x1, x2]))
+        # unary_map_tests(μ, BlockData([X1, X2]))
 
         # Tests for finite case.
         μ1f, μ2f = FiniteMean(μ1, X1), FiniteMean(μ2, X2)
-        @test eachindex(CatMean([μ1f, μ2f])) == [eachindex(μ1f), eachindex(μ2f)]
+        cat_μ = CatMean([μ1f, μ2f])
+        @test eachindex(cat_μ) == [eachindex(μ1f), eachindex(μ2f)]
+        @test AbstractVector(cat_μ) ==
+            BlockVector([AbstractVector(μ1f), AbstractVector(μ2f)])
     end
 
     # Test CatCrossKernel.
@@ -56,7 +48,7 @@ using FillArrays
         row2 = hcat(pairwise(k21, X1, X0′), pairwise(k22, X1, X1′))
         @test pairwise(k, [X0, X1], [X0′, X1′]) == vcat(row1, row2)
 
-        cross_kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
+        # cross_kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
 
         # Tests for finite case.
         k11f, k12f = FiniteCrossKernel(k11, X1, X1), FiniteCrossKernel(k12, X1, X0)
@@ -64,6 +56,8 @@ using FillArrays
         kf = CatCrossKernel([k11f k12f; k21f k22f])
         @test eachindex(kf, 1) == [eachindex(k11f, 1), eachindex(k22f, 1)]
         @test eachindex(kf, 2) == [eachindex(k11f, 2), eachindex(k22f, 2)]
+        @test AbstractMatrix(kf) ==
+            BlockMatrix(reshape(AbstractMatrix.([k11f, k21f, k12f, k22f]), 2, 2))
     end
 
     # Test CatKernel.
@@ -92,7 +86,7 @@ using FillArrays
                       hcat(pairwise(k12, X2, X1′), pairwise(k22, X2, X2′)),)
         @test pairwise(k, [X1, X2], [X1′, X2′]) == manual
 
-        kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
+        # kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
 
         # Tests for finite case.
         k11f, k22f = FiniteKernel(k11, X0), FiniteKernel(k22, X1)
@@ -102,5 +96,9 @@ using FillArrays
         k = CatKernel([k11f, k22f], ks_off_f)
 
         @test eachindex(k) == [eachindex(k11f), eachindex(k22f)]
+        Σ11, Σ21 = AbstractMatrix(k11f), AbstractMatrix(k12f)'
+        Σ12, Σ22 = AbstractMatrix(k12f), AbstractMatrix(k22f)
+        @test AbstractMatrix(k) ==
+            BlockMatrix(reshape([Σ11, Σ21, Σ12, Σ22], 2, 2))
     end
 end

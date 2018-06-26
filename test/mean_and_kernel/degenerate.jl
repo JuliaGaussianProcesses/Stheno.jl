@@ -4,8 +4,8 @@ using Stheno: DeltaSumMean, DeltaSumKernel, LhsDeltaSumCrossKernel, RhsDeltaSumC
 
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 6, 10
-        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        x0, x1, x2 = DataSet(randn(rng, N)), DataSet(randn(rng, N)), DataSet(randn(rng, N′))
+        X0, X1, X2 = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
 
         ϕ, k, g = EQ(), EQ(), ConstantMean(5.0)
         k_dsx, k_dsX = DeltaSumKernel(ϕ, k, x0), DeltaSumKernel(ϕ, k, X0)

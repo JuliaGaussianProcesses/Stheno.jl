@@ -1,16 +1,6 @@
-import Base: map
+import Base: map, AbstractVector, AbstractMatrix
 import Distances: pairwise
 export CatMean, CatKernel, CatCrossKernel
-
-# @inline nobs(X::AV{<:AVM}) = sum(nobs, X)
-# function getobs(X::AV{<:AVM}, n::Int)
-#     p = 1
-#     while n > nobs(X[p])
-#         n -= nobs(X[p])
-#         p += 1
-#     end
-#     return (p, getobs(X[p], n))
-# end
 
 """
     CatMean <: MeanFunction
@@ -21,13 +11,14 @@ struct CatMean <: MeanFunction
     μ::Vector
 end
 CatMean(μs::Vararg{<:MeanFunction}) = CatMean([μs...])
-(μ::CatMean)(x::Tuple{Int, <:Any}) = μ.μ[x[1]](x[2])
+# (μ::CatMean)(x::Tuple{Int, <:Any}) = μ.μ[x[1]](x[2])
 length(μ::CatMean) = sum(length.(μ.μ))
 ==(μ::CatMean, μ′::CatMean) = μ.μ == μ′.μ
 eachindex(μ::CatMean) = eachindex.(μ.μ)
 function map(μ::CatMean, X::BlockData)
     return BlockVector(map.(μ.μ, blocks(X)))
 end
+AbstractVector(μ::CatMean) = BlockVector(AbstractVector.(μ.μ))
 
 """
     CatCrossKernel <: CrossKernel
@@ -52,8 +43,8 @@ function eachindex(k::CatCrossKernel, N::Int)
         throw(error("N ∉ {1, 2}"))
     end
 end
-(k::CatCrossKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any}) =
-    k.ks[x[1], x′[1]](x[2], x′[2])
+# (k::CatCrossKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any}) =
+#     k.ks[x[1], x′[1]](x[2], x′[2])
 function map(k::CatCrossKernel, X::BlockData)
     return BlockVector(map.(diag(k.ks), blocks(X)))
 end
@@ -61,7 +52,10 @@ function map(k::CatCrossKernel, X::BlockData, X′::BlockData)
     return BlockVector(map.(diag(k.ks), blocks(X), blocks(X′)))
 end
 function pairwise(k::CatCrossKernel, X::BlockData, X′::BlockData)
-    return BlockMatrix(broadcast(pairwise, k.ks, blocks(X), blocks(X′)'))
+    return BlockMatrix(broadcast(pairwise, k.ks, blocks(X), reshape(blocks(X′), 1, :)))
+end
+function AbstractMatrix(k::CatCrossKernel)
+    return BlockMatrix(map(AbstractMatrix, k.ks))
 end
 # function pairwise(k::CatCrossKernel, X::AV{<:AVM}, X′::AV{<:AVM})
 #     Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, nobs.(X), nobs.(X′))
@@ -89,15 +83,15 @@ struct CatKernel <: Kernel
     ks_diag::Vector{<:Kernel}
     ks_off::Matrix{<:CrossKernel}
 end
-function (k::CatKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any})
-    if x[1] == x′[1]
-        return k.ks_diag[x[1]](x[2], x′[2])
-    elseif x[1] < x′[1]
-        return k.ks_off[x[1], x′[1]](x[2], x′[2])
-    else
-        return k.ks_off[x′[1], x[1]](x′[2], x[2])'
-    end
-end
+# function (k::CatKernel)(x::Tuple{Int, <:Any}, x′::Tuple{Int, <:Any})
+#     if x[1] == x′[1]
+#         return k.ks_diag[x[1]](x[2], x′[2])
+#     elseif x[1] < x′[1]
+#         return k.ks_off[x[1], x′[1]](x[2], x′[2])
+#     else
+#         return k.ks_off[x′[1], x[1]](x′[2], x[2])'
+#     end
+# end
 size(k::CatKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
 eachindex(k::CatKernel) = eachindex.(k.ks_diag)
 
@@ -118,7 +112,7 @@ function pairwise(k::CatKernel, X::BlockData)
     for q in eachindex(k.ks_diag)
         setblock!(Σ, Matrix(pairwise(k.ks_diag[q], bX[q])), q, q)
         for p in 1:q-1
-            setblock!(Σ, pairwise(k.ks_off(p, q), bX[p], bX[q]), p, q)
+            setblock!(Σ, pairwise(k.ks_off[p, q], bX[p], bX[q]), p, q)
             setblock!(Σ, getblock(Σ, p, q)', q, p)
         end
     end
@@ -126,7 +120,7 @@ function pairwise(k::CatKernel, X::BlockData)
 end
 function pairwise(k::CatKernel, X::BlockData, X′::BlockData)
     bX, bX′ = blocks(X), blocks(X′)
-    Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length(bX), length(bX′))
+    Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX′))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
         if p == q
             setblock!(Ω, pairwise(k.ks_diag[p], bX[p], bX′[p]), p, p)
@@ -137,6 +131,18 @@ function pairwise(k::CatKernel, X::BlockData, X′::BlockData)
         end
     end
     return Ω
+end
+function AbstractMatrix(k::CatKernel)
+    Ns = length.(k.ks_diag)
+    Σ = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, Ns, Ns)
+    for q in eachindex(k.ks_diag)
+        setblock!(Σ, AbstractMatrix(k.ks_diag[q]), q, q)
+        for p in 1:q-1
+            setblock!(Σ, AbstractMatrix(k.ks_off[p, q]), p, q)
+            setblock!(Σ, getblock(Σ, p, q)', q, p)
+        end
+    end
+    return LazyPDMat(Σ)
 end
 
 # function pairwise(k::CatKernel, X::AV{<:AVM})

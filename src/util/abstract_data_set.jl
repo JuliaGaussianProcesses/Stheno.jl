@@ -61,7 +61,7 @@ const MatrixData{T} = DataSet{T, <:AbstractMatrix{T}}
 
 
 
-################################## Fancy block data type ##################################
+################################ Fancy block data set type #################################
 
 """
     BlockData{TX<:AbstractVector{<:AbstractDataSet}} <: AbstractDataSet    

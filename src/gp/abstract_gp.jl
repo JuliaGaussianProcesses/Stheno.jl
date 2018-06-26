@@ -61,7 +61,7 @@ xcov(f::AbstractGP, g::AbstractGP) = AbstractMatrix(kernel(f, g))
 
 Efficiently compute of `diag(cov(f))`.
 """
-marginal_cov(f::AbstractGP) = binary_obswise(kernel(f), eachindex(f))
+marginal_cov(f::AbstractGP) = map(kernel(f), eachindex(f))
 
 """
     marginal_std(f::AbstractGP)

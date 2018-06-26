@@ -1,7 +1,7 @@
 @testset "addition" begin
     let
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
-        X, X′ = randn(rng, D, N), randn(rng, D, N′)
+        X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
         μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)
         f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
         f3 = f1 + f2
@@ -22,5 +22,15 @@
             @test xcov(fa(X), fp(X′)) ≈ xcov(fb(X), fa(X′)) + xcov(fa(X), fa(X′))
             @test xcov(fa(X′), fp(X)) ≈ xcov(fb(X′), fa(X)) + xcov(fa(X′), fa(X))
         end
+    end
+
+    let
+        rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
+        X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+        μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)
+        f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
+        fj1, fj2 = JointGP([f1, f2]), JointGP([f2, f1])
+        @test mean_vec((fj1 + fj2)(BlockData([X, X′]))) ==
+            BlockVector([mean_vec((f1 + f2)(X)), mean_vec((f2 + f1)(X′))])
     end
 end

@@ -64,11 +64,12 @@ function kernel(fa::GP, fb::GP)
         return kernel(fa)
     elseif fa.args == nothing && fa.n > fb.n || fb.args == nothing && fb.n > fa.n
         if isfinite(length(fa)) && isfinite(length(fb))
-            return FiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fa), eachindex(fb))
+            return FiniteCrossKernel(ZeroKernel{Float64}(),
+                DataSet(eachindex(fa)), DataSet(eachindex(fb)))
         elseif isfinite(length(fa)) && !isfinite(length(fb))
-            return LhsFiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fa))
+            return LhsFiniteCrossKernel(ZeroKernel{Float64}(), DataSet(eachindex(fa)))
         elseif !isfinite(length(fa)) && isfinite(length(fb))
-            return RhsFiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fb))
+            return RhsFiniteCrossKernel(ZeroKernel{Float64}(), DataSet(eachindex(fb)))
         else # Both processes are infinite dimensional.
             return ZeroKernel{Float64}()
         end

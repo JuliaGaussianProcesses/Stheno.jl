@@ -1,3 +1,5 @@
+import Base: map, eachindex
+import Distances: pairwise
 export transform, pick_dims, periodic, scale
 
 """
@@ -13,7 +15,8 @@ end
 (μ::ITMean)(x) = μ.μ(μ.f(x))
 ITMean(μ::MeanFunction, ::typeof(identity)) = μ
 length(μ::ITMean) = length(μ.μ)
-unary_obswise(μ::ITMean, X::AVM) = unary_obswise(μ.μ, unary_obswise(μ.f, X))
+eachindex(μ::ITMean) = eachindex(μ.μ)
+map(μ::ITMean, X::DataSet) = map(μ.μ, map(μ.f, X))
 
 """
     ITKernel{Tk<:Kernel, Tf} <: Kernel
@@ -30,11 +33,10 @@ ITKernel(k::Kernel, ::typeof(identity)) = k
 size(k::ITKernel, N::Int...) = size(k.k, N...)
 isstationary(k::ITKernel) = isstationary(k.k)
 
-binary_obswise(k::ITKernel, X::AVM, X′::AVM) =
-    binary_obswise(k.k, unary_obswise(k.f, X), unary_obswise(k.f, X′))
-pairwise(k::ITKernel, X::AVM) = pairwise(k.k, unary_obswise(k.f, X))
-pairwise(k::ITKernel, X::AVM, X′::AVM) =
-    pairwise(k.k, unary_obswise(k.f, X), unary_obswise(k.f, X′))
+map(k::ITKernel, X::DataSet) = map(k.k, map(k.f, X))
+map(k::ITKernel, X::DataSet, X′::DataSet) = map(k.k, map(k.f, X), map(k.f, X′))
+pairwise(k::ITKernel, X::DataSet) = pairwise(k.k, map(k.f, X))
+pairwise(k::ITKernel, X::DataSet, X′::DataSet) = pairwise(k.k, map(k.f, X), map(k.f, X′))
 
 """
     transform(f::Union{MeanFunction, Kernel}, ϕ)
@@ -55,7 +57,7 @@ struct Scale{T<:Real}
     l::T
 end
 (s::Scale)(x) = s.l * x
-unary_obswise(s::Scale, x::AVM) = s.l .* x
+map(s::Scale, x::AVM) = s.l .* x
 
 """
     pick_dims(x::Union{MeanFunction, Kernel}, I)
@@ -78,6 +80,7 @@ struct Periodic{Tf<:Real}
     f::Tf
 end
 (p::Periodic)(t::Real) = [cos((2π * p.f) * t), sin((2π * p.f) * t)]
-unary_obswise(p::Periodic, t::AV) =
-    vcat(RowVector(cos.((2π * p.f) .* t)),
-         RowVector(sin.((2π * p.f) .* t)))
+function map(p::Periodic, t::VectorData)
+    return DataSet(vcat(RowVector(map(x->cos((2π * p.f) * x), t)),
+                        RowVector(map(x->sin((2π * p.f) * x), t))))
+end

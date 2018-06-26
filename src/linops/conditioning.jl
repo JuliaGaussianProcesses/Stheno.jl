@@ -64,12 +64,20 @@ end
 # end
 # length(::typeof(|), f::GP, ::GP, f̂::Vector) = length(f)
 
-# This is a bit of a hack while we're not using Finite kernels prroperly in conditional.jl
-function |(g::AbstractGP, c::Observation)
+"""
+    |(g::AbstractGP, c::Observation)
+
+Condition `g` on observation `c`.
+"""
+function |(g::GP, c::Observation)
     f_finite, y = c.f, c.y
     f, X = f_finite.args[1], f_finite.args[2]
     return GP(|, g, f, CondCache(kernel(f), mean(f), X, y))
 end
+function |(g::JointGP, c::Observation)
+    
+end
+
 function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
     return ConditionalMean(cache, mean(g), kernel(f, g))
 end

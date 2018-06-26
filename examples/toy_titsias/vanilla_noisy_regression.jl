@@ -14,7 +14,7 @@ y = f + GP(Noise(0.1), gpc);
 # Make the problem concrete.
 rng, N, P, M = MersenneTwister(123456), 100, 300, 25;
 X, Xp, Z = linspace(-7.5, 7.5, N), linspace(-10.0, 10.0, P), linspace(-10.0, 10.0, M);
-ŷ = rand(rng, y, X);
+ŷ = rand(rng, y(X));
 
 # Compute exact posterior processes + corresponding marginals.
 f′, y′ = (f, y) | (y(X) ← ŷ);

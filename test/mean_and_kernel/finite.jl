@@ -1,4 +1,4 @@
-using Stheno: FiniteMean, ConstantMean, getobs, AM, AV, pairwise
+using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
 
 @testset "finite" begin
 
