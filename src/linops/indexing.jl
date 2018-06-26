@@ -25,6 +25,5 @@ k_p′p(f_q::GP, X::AVM, f_p::GP) = LhsFiniteCrossKernel(kernel(f_q, f_p), X)
 k_pp′(f_p::GP, f_q::GP, X′::AVM) = RhsFiniteCrossKernel(kernel(f_p, f_q), X′)
 
 # Sugar. This behaviour needs to be formalised and isolated at some point.
-(f_q::GP)(X::AVM) = f_q(DataSet(X))
-(f_q::JointGP)(X::AVM) = f_q(DataSet(X))
-(f_q::JointGP)(X::AV{<:AVM}) = f_q(BlockData(DataSet.(X)))
+(f_q::GP)(X::AVM) = f_q(ADS(X))
+(f_q::JointGP)(X::AVM) = f_q(ADS(X))

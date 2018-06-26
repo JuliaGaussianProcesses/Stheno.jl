@@ -17,9 +17,9 @@ end
 
 # Some tests for self-consistency in the posterior when doing single-conditioning.
 let
-    rng, N, N′, D = MersenneTwister(123456), 500, 50, 2
+    rng, N, N′, D = MersenneTwister(123456), 2, 3, 2
     X_, X′_ = randn(rng, D, N), randn(rng, D, N′)
-    X, X′ = DataSet(X_), DataSet(X′_)
+    X, X′, Z = DataSet(X_), DataSet(X′_), DataSet(randn(rng, D, N + N′))
     μ, k, XX′ = ConstantMean(1.0), EQ(), DataSet(hcat(X_, X′_))
     f = GP(μ, k, GPC())
     y = rand(rng, f(XX′))
@@ -39,8 +39,14 @@ let
     # @test maximum(abs.(Σ′XX′[N+1:N+N′, 1:N] - xcov(f′X′, f′X, 1:N′, 1:N))) < 1e-12
 
     # Test that conditioning works for JointGPs.
-    fb = JointGP([f, f])
-    fb′ = fb | (fb(BlockData([X, X′]))←BlockArray(y, [N, N′]))
+    fb, Xb = JointGP([f, f]), BlockData([X, X′])
+    Zb = BlockData([Z, Z])
+    fb′ = fb | (fb(Xb)←BlockArray(y, [N, N′]))
+    @test mean_vec(fb′(Zb)) ≈ mean_vec(f′(Zb))
+    @test cov(fb′(Zb)) ≈ cov(f′(Zb))
+
+    # f′b = f | (fb(Xb)←BlockArray(y, [N, N′]))
+    # @test mean_vec(f′b(X)) ≈ mean_vec(f′X)
 end
 
 end

@@ -11,7 +11,7 @@ length(::BaseMeanFunction) = Inf
 
 function AbstractVector(μ::MeanFunction)
     @assert isfinite(length(μ))
-    return map(μ, eachindex(μ))
+    return map(μ, DataSet(eachindex(μ)))
 end
 
 map(f::MeanFunction, X::BlockData) = BlockVector([map(f, x) for x in blocks(X)])

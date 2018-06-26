@@ -109,3 +109,12 @@ end
     b, n = state
     return b == length(D.X) && done(D.X[b], n)
 end
+
+
+
+##################################### Generic conversion methods ###########################
+
+ADS(X::AVM) = DataSet(X)
+ADS(X::AV{<:ADS}) = BlockData(X)
+ADS(X::AV{<:AVM}) = BlockData(ADS.(X))
+

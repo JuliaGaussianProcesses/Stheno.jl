@@ -48,7 +48,7 @@ end
 @inline pairwise(f::PreMetric, x::AV, x′::AV) = pairwise(f, RowVector(x), RowVector(x′))
 
 # Syntactic sugar for pairwise.
-@inline pairwise(f::CrossKernel, X::AV{<:Real}) = pairwise(f, DataSet(X))
+@noinline pairwise(f::CrossKernel, X::AV{<:Real}) = pairwise(f, DataSet(X))
 @inline function pairwise(f::CrossKernel, X::AV{<:Real}, X′::AV{<:Real})
     return pairwise(f, DataSet(X), DataSet(X′))
 end
@@ -63,6 +63,8 @@ end
 pairwise(f::Kernel, X::AbstractVector{<:ADS}) = pairwise(f, BlockData(X))
 
 # Edge cases for interactions between vectors of data and data.
+pairwise(f::CrossKernel, X::BlockData, X′::ADS) = pairwise(f, X, BlockData([X′]))
+pairwise(f::CrossKernel, X::ADS, X′::BlockData) = pairwise(f, BlockData([X]), X′)
 pairwise(f::CrossKernel, X::AbstractVector{<:ADS}, X′::ADS) = pairwise(f, X, [X′])
 pairwise(f::CrossKernel, X::ADS, X′::AbstractVector{<:ADS}) = pairwise(f, [X], X′)
 
@@ -224,7 +226,7 @@ end
 
 function AbstractMatrix(k::Kernel)
     @assert isfinite(size(k, 1))
-    return LazyPDMat(pairwise(k, eachindex(k, 1)))
+    return LazyPDMat(pairwise(k, ADS(eachindex(k, 1))))
 end
 function AbstractMatrix(k::CrossKernel)
     @assert isfinite(size(k, 1))
