@@ -16,29 +16,29 @@ module Stheno
     include("util/abstract_data_set.jl")
     include("util/block_arrays.jl")
 
-    # All mean function and kernel related functionality.
-    include("mean_and_kernel/mean.jl")
-    include("mean_and_kernel/kernel.jl")
-    include("mean_and_kernel/compose.jl")
-    include("mean_and_kernel/finite.jl")
-    include("mean_and_kernel/conditional.jl")
-    include("mean_and_kernel/cat.jl")
-    # include("mean_and_kernel/transform.jl")
-    include("mean_and_kernel/input_transform.jl")
-    include("mean_and_kernel/degenerate.jl")
+    # # All mean function and kernel related functionality.
+    # include("mean_and_kernel/mean.jl")
+    # include("mean_and_kernel/kernel.jl")
+    # include("mean_and_kernel/compose.jl")
+    # include("mean_and_kernel/finite.jl")
+    # include("mean_and_kernel/conditional.jl")
+    # include("mean_and_kernel/cat.jl")
+    # # include("mean_and_kernel/transform.jl")
+    # include("mean_and_kernel/input_transform.jl")
+    # include("mean_and_kernel/degenerate.jl")
 
-    # Basic Gaussian process definitions.
-    include("gp/abstract_gp.jl")
-    include("gp/gp.jl")
-    include("gp/joint_gp.jl")
+    # # Basic Gaussian process definitions.
+    # include("gp/abstract_gp.jl")
+    # include("gp/gp.jl")
+    # include("gp/joint_gp.jl")
 
-    # Affine transformations of GPs.
-    include("linops/indexing.jl")
-    include("linops/addition.jl")
-    include("linops/product.jl")
-    # include("linops/integrate.jl")
-    include("linops/project.jl")
-    include("linops/conditioning.jl")
+    # # Affine transformations of GPs.
+    # include("linops/indexing.jl")
+    # include("linops/addition.jl")
+    # include("linops/product.jl")
+    # # include("linops/integrate.jl")
+    # include("linops/project.jl")
+    # include("linops/conditioning.jl")
 
     # # Code to make Stheno work with Turing.
     # include("turing_util.jl")

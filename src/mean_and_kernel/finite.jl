@@ -16,7 +16,7 @@ end
 eachindex(μ::FiniteMean) = eachindex(μ.X)
 length(μ::FiniteMean) = length(μ.X)
 show(io::IO, μ::FiniteMean) = show(io, "FiniteMean($(μ.μ)")
-map(μ::FiniteMean, q::DataSet) = map(μ.μ, μ.X[q])
+map(μ::FiniteMean, q::AV{<:Integer}) = map(μ.μ, μ.X[q])
 
 """
     FiniteKernel <: Kernel
@@ -35,7 +35,10 @@ eachindex(k::FiniteKernel) = eachindex(k.X)
 size(k::FiniteKernel, N::Int) = N ∈ (1, 2) ? length(k.X) : 1
 show(io::IO, k::FiniteKernel) = show(io, "FiniteKernel($(k.k))")
 map(k::FiniteKernel, q::DataSet, q′::DataSet) = map(k.k, k.X[q], k.X[q′])
-pairwise(k::FiniteKernel, q::DataSet) = pairwise(k.k, k.X[q])
+function pairwise(k::FiniteKernel, q::DataSet)
+    @show k.X, k.X[q], typeof(k.X[q]), typeof(k.X), typeof(q)
+    return pairwise(k.k, k.X[q])
+end
 pairwise(k::FiniteKernel, q::DataSet, q′::DataSet) = pairwise(k.k, k.X[q], k.X[q′])
 
 """
