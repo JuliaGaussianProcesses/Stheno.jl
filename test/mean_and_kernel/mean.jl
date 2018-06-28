@@ -14,7 +14,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
     # Test CustomMean function.
     let
         rng, N, D = MersenneTwister(123456), 11, 2
-        X, x = DataSet(randn(rng, D, N)), DataSet(randn(rng, N))
+        X, x = MatData(randn(rng, D, N)), randn(rng, N)
         foo_mean = x->sum(abs, x)
         f = CustomMean(foo_mean)
 
@@ -27,14 +27,14 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
         @test isinf(length(f))
 
         # Check that shorthand for block-wise application of mean function works.
-        @test map(f, [x, X]) isa BlockVector
-        @test map(f, [x, X]) == map(f, BlockData([x, X]))
+        @test map(f, BlockData([x, X])) isa BlockVector
+        @test map(f, BlockData([x, X])) == map(f, BlockData([x, X]))
     end
 
     # Test ZeroMean.
     let
         rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, x = DataSet(randn(rng, D, P)), DataSet(randn(rng, P))
+        X, x = MatData(randn(rng, D, P)), randn(rng, P)
         f = ZeroMean{Float64}()
 
         @test f(randn(rng)) === zero(Float64)
@@ -50,7 +50,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
     # Test ConstantMean.
     let
         rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, x = DataSet(randn(rng, D, P)), DataSet(randn(rng, P))
+        X, x = MatData(randn(rng, D, P)), randn(rng, P)
         c = randn(rng)
         f = ConstantMean(c)
 
@@ -68,7 +68,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
     # Test EmpiricalMean.
     let
         rng, N, D = MersenneTwister(123456), 11, 2
-        Dx = DataSet(1:N)
+        x = 1:N
         m = randn(rng, N)
         μ = EmpiricalMean(m)
 
@@ -76,7 +76,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
         @test eachindex(μ) == eachindex(m)
         @test μ == μ
 
-        mean_function_tests(μ, Dx)
-        mean_function_tests(μ, BlockData([Dx, Dx]))
+        mean_function_tests(μ, x)
+        mean_function_tests(μ, BlockData([x, x]))
     end
 end

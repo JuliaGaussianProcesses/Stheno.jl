@@ -5,26 +5,26 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for FiniteMean.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        μ, X, x = ConstantMean(1.5), DataSet(randn(rng, D, N)), DataSet(randn(rng, N))
+        μ, X, x = ConstantMean(1.5), MatData(randn(rng, D, N)), randn(rng, N)
         μX, μx = FiniteMean(μ, X), FiniteMean(μ, x)
 
         # Recusion depth 1.
         for (μ′, X′) in zip([μX, μx], [X, x])
             @test length(μ′) == N
             @test eachindex(μ′) == 1:N
-            @test AbstractVector(μ′) == map(μ′, DataSet(eachindex(μ′)))
+            @test AbstractVector(μ′) == map(μ′, eachindex(μ′))
             @test AbstractVector(μ′) == map(μ, X′)
             mean_function_tests(μ′, eachindex(μ′))
             mean_function_tests(μ′, 1:N-1)
             mean_function_tests(μ′, BlockData([1:N-1, eachindex(μ′)]))
 
             # Recursion depth 2.
-            r = DataSet(1:N-1)
+            r = 1:N-1
             μ2 = FiniteMean(μ′, r)
             @test length(μ2) == N - 1
             @test eachindex(μ2) == 1:N-1
             @test AbstractVector(μ′)[r] == AbstractVector(μ2)
-            @test AbstractVector(μ′)[r] == map(μ2, DataSet(eachindex(μ2)))
+            @test AbstractVector(μ′)[r] == map(μ2, eachindex(μ2))
             mean_function_tests(μ2, eachindex(μ2))
             mean_function_tests(μ2, 1:N-2)
             mean_function_tests(μ2, 1:N-2)
@@ -44,7 +44,7 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for FiniteKernel.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        k, X, x = EQ(), DataSet(randn(rng, D, N)), DataSet(randn(rng, N))
+        k, X, x = EQ(), MatData(randn(rng, D, N)), randn(rng, N)
         kX, kx = FiniteKernel(k, X), FiniteKernel(k, x)
 
         for (k′, X′) in zip((kX, kx), (X, x))
@@ -55,8 +55,8 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
             @test size(k′, 2) == N
             @test isstationary(k′) == false
             @test eachindex(k′) == 1:N
-            @test AM(k′) == pairwise(k′, DataSet(eachindex(k′)))
-            @test Matrix(AM(k′)) == pairwise(k′, DataSet(eachindex(k′)), DataSet(eachindex(k′)))
+            @test AM(k′) == pairwise(k′, eachindex(k′))
+            @test Matrix(AM(k′)) == pairwise(k′, eachindex(k′), eachindex(k′))
             @test AM(k′) ≈ pairwise(k, X′)
             @test AM(k′) ≈ pairwise(k, X′)
 
@@ -72,14 +72,14 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
 
             # Recursion depth 2.
             r = 1:N-1
-            k2 = FiniteKernel(k′, DataSet(r))
+            k2 = FiniteKernel(k′, r)
             @test size(k2) == (N-1, N-1)
             @test eachindex(k2) == r
-            @test AM(k2) == pairwise(k′, DataSet(r))
+            @test AM(k2) == pairwise(k′, r)
 
             # Known issue: offsetting doesn't really work.
-            binary_map_tests(k2, DataSet(r), DataSet(r))
-            pairwise_tests(k′, DataSet(r), DataSet(r))
+            binary_map_tests(k2, r, r)
+            pairwise_tests(k′, r, r)
         end
 
         show(IOBuffer(), kX)
@@ -88,8 +88,8 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for LhsFiniteCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
-        k, X, X′ = EQ(), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
-        x, x′ = DataSet(randn(rng, N)), DataSet(randn(rng, N′))
+        k, X, X′ = EQ(), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        x, x′ = randn(rng, N), randn(rng, N′)
         k′, kx = LhsFiniteCrossKernel(k, X), LhsFiniteCrossKernel(k, x)
 
         @test size(k′) == (N, Inf)
@@ -97,13 +97,13 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
         @test size(k′, 2) == Inf
         @test isstationary(k′) == false
         @test eachindex(k′, 1) == 1:N
-        @test pairwise(k′, DataSet(eachindex(k′, 1)), X′) ≈ pairwise(k, X, X′)
-        @test pairwise(k′, DataSet(1:N-1), X′) ≈ pairwise(k, X[1:N-1], X′)
+        @test pairwise(k′, eachindex(k′, 1), X′) ≈ pairwise(k, X, X′)
+        @test pairwise(k′, 1:N-1, X′) ≈ pairwise(k, X[1:N-1], X′)
 
-        cross_kernel_tests(k′, DataSet(eachindex(k′, 1)), X, X′)
-        cross_kernel_tests(kx, DataSet(eachindex(kx, 1)), x, x′)
-        cross_kernel_tests(k′, DataSet(eachindex(k′, 1)), BlockData([X]), BlockData([X′]))
-        cross_kernel_tests(kx, DataSet(eachindex(kx, 1)), BlockData([x]), BlockData([x′]))
+        cross_kernel_tests(k′, eachindex(k′, 1), X, X′)
+        cross_kernel_tests(kx, eachindex(kx, 1), x, x′)
+        cross_kernel_tests(k′, eachindex(k′, 1), BlockData([X]), BlockData([X′]))
+        cross_kernel_tests(kx, eachindex(kx, 1), BlockData([x]), BlockData([x′]))
 
         show(IOBuffer(), k′)
     end
@@ -111,8 +111,8 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for RhsFiniteCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
-        X, Y, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
-        x, y, x′ = DataSet(randn(rng, N)), DataSet(randn(rng, N)), DataSet(randn(rng, N′))
+        X, Y, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        x, y, x′ = randn(rng, N), randn(rng, N), randn(rng, N′)
         k = EQ()
         k′, kx = RhsFiniteCrossKernel(k, X′), RhsFiniteCrossKernel(k, x′)
 
@@ -121,10 +121,10 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
         @test size(k′, 2) == N′
         @test isstationary(k′) == false
         @test eachindex(k′, 2) == 1:N′
-        @test pairwise(k′, X, DataSet(eachindex(k′, 2))) ≈ pairwise(k, X, X′)
-        @test pairwise(k′, X, DataSet(1:N′-1)) ≈ pairwise(k, X, X′[1:N′-1])
+        @test pairwise(k′, X, eachindex(k′, 2)) ≈ pairwise(k, X, X′)
+        @test pairwise(k′, X, 1:N′-1) ≈ pairwise(k, X, X′[1:N′-1])
 
-        d1, d2 = DataSet(1:N), DataSet(eachindex(k′, 2))
+        d1, d2 = 1:N, eachindex(k′, 2)
         cross_kernel_tests(k′, X, d1, d2)
         cross_kernel_tests(kx, x, d1, d2)
         cross_kernel_tests(k′, BlockData([X]), BlockData([d1]), BlockData([d2]))
@@ -136,8 +136,8 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for FiniteCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 7, 2
-        x, x′ = DataSet(randn(rng, N)), DataSet(randn(rng, N′))
-        k, X, X′ = EQ(), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+        x, x′ = randn(rng, N), randn(rng, N′)
+        k, X, X′ = EQ(), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
         k′, kx = FiniteCrossKernel(k, X, X′), FiniteCrossKernel(k, x, x′)
 
         @test size(k′) == (N, N′)
@@ -146,11 +146,11 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
         @test isstationary(k′) == false
         @test eachindex(k′, 1) == 1:N
         @test eachindex(k′, 2) == 1:N′
-        @test AM(k′) == pairwise(k′, DataSet(eachindex(k′, 1)), DataSet(eachindex(k′, 2)))
+        @test AM(k′) == pairwise(k′, eachindex(k′, 1), eachindex(k′, 2))
         @test AM(k′) ≈ pairwise(k, X, X′)
-        @test pairwise(k′, DataSet(1:N-1), DataSet(2:N)) ≈ pairwise(k, X[1:N-1], X′[2:N])
-        @test pairwise(k′, DataSet(eachindex(k′, 1)), DataSet(1:N-1)) ≈ pairwise(k, X, X′[1:N-1])
-        @test pairwise(k′, DataSet(2:N), DataSet(eachindex(k′, 2))) ≈ pairwise(k, X[2:N], X′)
+        @test pairwise(k′, 1:N-1, 2:N) ≈ pairwise(k, X[1:N-1], X′[2:N])
+        @test pairwise(k′, eachindex(k′, 1), 1:N-1) ≈ pairwise(k, X, X′[1:N-1])
+        @test pairwise(k′, 2:N, eachindex(k′, 2)) ≈ pairwise(k, X[2:N], X′)
 
         cross_kernel_tests(k′, 1:N, 1:N, 1:N′)
         cross_kernel_tests(kx, 1:N, 1:N, 1:N′)
@@ -158,12 +158,12 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
         cross_kernel_tests(kx, BlockData([1:N]), BlockData([1:N]), BlockData([1:N′]))
 
         # Recursion depth == 2.
-        r, c = DataSet(1:N-1), DataSet(1:N′-2)
+        r, c = 1:N-1, 1:N′-2
         k2 = FiniteCrossKernel(k′, r, c)
         @test size(k2) == (length(r), length(c))
-        @test AM(k2) == pairwise(k2, DataSet(r), DataSet(c))
-        @test AM(k2) == pairwise(k′, DataSet(r), DataSet(c))
-        @test pairwise(k2, DataSet(2:N-1), DataSet(c)) == pairwise(k′, DataSet(2:N-1), DataSet(c))
+        @test AM(k2) == pairwise(k2, r, c)
+        @test AM(k2) == pairwise(k′, r, c)
+        @test pairwise(k2, 2:N-1, c) == pairwise(k′, 2:N-1, c)
 
         cross_kernel_tests(k2, r, r, c)
         cross_kernel_tests(k2, BlockData([r]), BlockData([r]), BlockData([c]))

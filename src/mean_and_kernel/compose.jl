@@ -13,7 +13,7 @@ end
 eachindex(c::CompositeMean) = eachindex(c.x[1])
 length(c::CompositeMean) = length(c.x[1])
 (μ::CompositeMean)(x) = map(μ.f, map(f->f(x), μ.x)...)
-map(f::CompositeMean, X::DataSet) = map(f.f, map(f->map(f, X), f.x)...)
+_map(f::CompositeMean, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
 
 # CompositeKernel definitions.
 (k::CompositeKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
@@ -21,14 +21,14 @@ map(f::CompositeMean, X::DataSet) = map(f.f, map(f->map(f, X), f.x)...)
 size(k::CompositeKernel, N::Int) = size(k.x[1], N)
 isstationary(k::CompositeKernel) = all(map(isstationary, k.x))
 
-map(f::CompositeKernel, X::DataSet) = map(f.f, map(f->map(f, X), f.x)...)
-function pairwise(f::CompositeKernel, X::DataSet)
+_map(f::CompositeKernel, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
+function _pairwise(f::CompositeKernel, X::AV)
     return LazyPDMat(map(f.f, map(f->pairwise(f, X), f.x)...))
 end
-function map(f::CompositeKernel, X::DataSet, X′::DataSet)
+function _map(f::CompositeKernel, X::AV, X′::AV)
     return map(f.f, map(f->map(f, X, X′), f.x)...)
 end
-function pairwise(f::CompositeKernel, X::DataSet, X′::DataSet)
+function _pairwise(f::CompositeKernel, X::AV, X′::AV)
     return map(f.f, map(f->pairwise(f, X, X′), f.x)...)
 end
 
@@ -37,10 +37,10 @@ end
 size(k::CompositeCrossKernel, N::Int) = size(k.x[1], N)
 isstationary(k::CompositeCrossKernel) = all(map(isstationary, k.x))
 
-function map(f::CompositeCrossKernel, X::DataSet, X′::DataSet)
+function _map(f::CompositeCrossKernel, X::AV, X′::AV)
     return map(f.f, map(f->map(f, X, X′), f.x)...)
 end
-function pairwise(f::CompositeCrossKernel, X::DataSet, X′::DataSet)
+function _pairwise(f::CompositeCrossKernel, X::AV, X′::AV)
     return map(f.f, map(f->pairwise(f, X, X′), f.x)...)
 end
 
@@ -59,7 +59,7 @@ struct LhsCross <: CrossKernel
 end
 (k::LhsCross)(x, x′) = k.f(x) * k.k(x, x′)
 size(k::LhsCross, N::Int) = size(k.k, N)
-pairwise(k::LhsCross, X::DataSet, X′::DataSet) = map(k.f, X) .* pairwise(k.k, X, X′)
+_pairwise(k::LhsCross, X::AV, X′::AV) = map(k.f, X) .* pairwise(k.k, X, X′)
 
 """
     RhsCross <: CrossKernel
@@ -72,7 +72,7 @@ struct RhsCross <: CrossKernel
 end
 (k::RhsCross)(x, x′) = k.k(x, x′) * k.f(x′)
 size(k::RhsCross, N::Int) = size(k.k, N)
-pairwise(k::RhsCross, X::DataSet, X′::DataSet) = pairwise(k.k, X, X′) .* map(k.f, X′)'
+_pairwise(k::RhsCross, X::AV, X′::AV) = pairwise(k.k, X, X′) .* map(k.f, X′)'
 
 """
     OuterCross <: CrossKernel
@@ -85,7 +85,7 @@ struct OuterCross <: CrossKernel
 end
 (k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 size(k::OuterCross, N::Int) = size(k.k, N)
-function pairwise(k::OuterCross, X::DataSet, X′::DataSet)
+function _pairwise(k::OuterCross, X::AV, X′::AV)
     return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
 end
 
@@ -101,10 +101,10 @@ end
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 (k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
 size(k::OuterKernel, N::Int) = size(k.k, N)
-function pairwise(k::OuterKernel, X::DataSet)
+function _pairwise(k::OuterKernel, X::AV)
     return Xt_A_X(pairwise(k.k, X), Diagonal(map(k.f, X)))
 end
-function pairwise(k::OuterKernel, X::DataSet, X′::DataSet)
+function _pairwise(k::OuterKernel, X::AV, X′::AV)
     return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
 end
 

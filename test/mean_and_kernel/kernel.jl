@@ -1,5 +1,5 @@
-using Stheno: CrossKernel, ZeroKernel, ConstantKernel, pairwise, pairwise_fallback,
-    EmpiricalKernel
+using Stheno: CrossKernel, ZeroKernel, ConstantKernel, pairwise, EmpiricalKernel,
+    _pairwise_fallback
 
 struct FooKernel <: CrossKernel end
 (::FooKernel)(x, x′) = sum(abs2, x - x′)
@@ -9,21 +9,21 @@ struct FooKernel <: CrossKernel end
     # Test pairwise.
     let
         rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, X′ = DataSet(randn(rng, D, P)), DataSet(randn(rng, D, Q))
-        x, x′ = DataSet(randn(rng, P)), DataSet(randn(rng, Q))
+        X, X′ = MatData(randn(rng, D, P)), MatData(randn(rng, D, Q))
+        x, x′ = randn(rng, P), randn(rng, Q)
         foo = FooKernel()
 
-        @test pairwise_fallback(foo, X, X′) ==
+        @test _pairwise_fallback(foo, X, X′) ==
             [foo(X[1], X′[1]) foo(X[1], X′[2]);
              foo(X[2], X′[1]) foo(X[2], X′[2]);
              foo(X[3], X′[1]) foo(X[3], X′[2])]
-        @test pairwise_fallback(foo, x, x′) ==
+        @test _pairwise_fallback(foo, x, x′) ==
             [foo(x[1], x′[1]) foo(x[1], x′[2]);
              foo(x[2], x′[1]) foo(x[2], x′[2]);
              foo(x[3], x′[1]) foo(x[3], x′[2])]
 
-        @test pairwise(foo, X, X′) == pairwise_fallback(foo, X, X′)
-        @test pairwise(foo, x, x′) == pairwise_fallback(foo, x, x′)
+        @test pairwise(foo, X, X′) == _pairwise_fallback(foo, X, X′)
+        @test pairwise(foo, x, x′) == _pairwise_fallback(foo, x, x′)
         @test pairwise(foo, X) == pairwise(foo, X, X)
         @test pairwise(foo, x) == pairwise(foo, x, x)
 
@@ -31,18 +31,12 @@ struct FooKernel <: CrossKernel end
         @test pairwise(foo, XB, XB) ==
             vcat(hcat(pairwise(foo, X, X), pairwise(foo, X, X′)),
                  hcat(pairwise(foo, X′, X), pairwise(foo, X′, X′)))
-        @test pairwise(foo, XB, XB) == pairwise(foo, [X, X′], [X, X′])
-
-        @test pairwise(foo, X, [X, X′]) isa BlockMatrix
-        @test pairwise(foo, X, [X, X′]) == pairwise(foo, [X], [X, X′])
-        @test pairwise(foo, [X], X′) isa BlockMatrix
-        @test pairwise(foo, [X], X′) == pairwise(foo, [X], [X′])
     end
 
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x0, x1, x2 = DataSet(randn(rng, N)), DataSet(randn(rng, N)), DataSet(randn(rng, N′))
-        X0, X1, X2 = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
         XB0, XB1, XB2 = BlockData([x0, X0]), BlockData([x1, X1]), BlockData([x2, X2])
 
         # Tests for ZeroKernel.
@@ -95,7 +89,7 @@ struct FooKernel <: CrossKernel end
         A_ = randn(rng, N, N)
         A = LazyPDMat(A_ * A_' + 1e-6I)
         k = EmpiricalKernel(A)
-        Ds0, Ds1, Ds2 = DataSet(1:N), DataSet(1:N), DataSet(1:N-1)
+        Ds0, Ds1, Ds2 = 1:N, 1:N, 1:N-1
         kernel_tests(k, Ds0, Ds1, Ds2)
         kernel_tests(k, BlockData([Ds0, Ds0]), BlockData([Ds1, Ds1]), BlockData([Ds2, Ds2]))
         @test size(k, 1) == N && size(k, 2) == N

@@ -4,10 +4,10 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
 @testset "Stheno" begin
 
     @testset "util" begin
-    #     include("util/covariance_matrices.jl")
-    #     include("util/woodbury.jl")
-    #     include("util/block_arrays.jl")
-        include("util/abstract_data_set.jl")
+        # include("util/covariance_matrices.jl")
+        # include("util/woodbury.jl")
+        # include("util/block_arrays.jl")
+        # include("util/abstract_data_set.jl")
     end
 
     @testset "mean_and_kernel" begin
@@ -23,17 +23,17 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
         # include("mean_and_kernel/degenerate.jl")
     end
 
-    # @testset "gp" begin
-    #     include("gp/abstract_gp.jl")
-    #     include("gp/joint_gp.jl")
-    # end
+    @testset "gp" begin
+        include("gp/abstract_gp.jl")
+        include("gp/joint_gp.jl")
+    end
 
     @testset "linops" begin
-    #     include("linops/indexing.jl")
-    #     include("linops/addition.jl")
-    #     include("linops/product.jl")
-    #     # # include("linops/integrate.jl")
-    #     include("linops/project.jl")
-        # include("linops/conditioning.jl")
+        include("linops/indexing.jl")
+        include("linops/addition.jl")
+        include("linops/product.jl")
+        # include("linops/integrate.jl")
+        include("linops/project.jl")
+        include("linops/conditioning.jl")
     end
 end

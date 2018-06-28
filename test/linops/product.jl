@@ -3,7 +3,7 @@
     # Test the multiplication of a GP by a constant.
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
-        X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+        X, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
         g1, c, c′ = GP(ConstantMean(1.0), EQ(), GPC()), -4.3, 2.1
         g2, g2′ = c * g1, g1 * c′
         g3, g3′ = c * g2, g2′ * c′
@@ -43,20 +43,20 @@
     # Test the multiplication of a GP by a known function.
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
-        X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+        X, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
         g1, f, f′ = GP(ConstantMean(1.0), EQ(), GPC()), x->sum(sin, x), x->sum(cos, x)
         g2, g2′ = f * g1, g1 * f′
         g3, g3′ = f * g2, g2′ * f′
         g4, g4′ = f * g3, g3′ * f′
 
-        @test mean_vec(g2(X)) == f.(X) .* mean_vec(g1(X))
-        @test mean_vec(g3(X)) == f.(X) .* mean_vec(g2(X))
-        @test mean_vec(g4(X)) == f.(X) .* mean_vec(g3(X))
-        @test mean_vec(g2′(X)) == mean_vec(g1(X)) .* f′.(X)
-        @test mean_vec(g3′(X)) == mean_vec(g2′(X)) .* f′.(X)
-        @test mean_vec(g4′(X)) == mean_vec(g3′(X)) .* f′.(X)
+        @test mean_vec(g2(X)) == map(f, X) .* mean_vec(g1(X))
+        @test mean_vec(g3(X)) == map(f, X) .* mean_vec(g2(X))
+        @test mean_vec(g4(X)) == map(f, X) .* mean_vec(g3(X))
+        @test mean_vec(g2′(X)) == mean_vec(g1(X)) .* map(f′, X)
+        @test mean_vec(g3′(X)) == mean_vec(g2′(X)) .* map(f′, X)
+        @test mean_vec(g4′(X)) == mean_vec(g3′(X)) .* map(f′, X)
 
-        fX, f′X = f.(X), f′.(X)
+        fX, f′X = map(f, X), map(f′, X)
         @test cov(g2(X)) ≈ fX .* cov(g1(X)) .* fX'
         @test cov(g3(X)) ≈ fX .* cov(g2(X)) .* fX'
         @test cov(g4(X)) ≈ fX .* cov(g3(X)) .* fX'

@@ -11,11 +11,14 @@ length(::BaseMeanFunction) = Inf
 
 function AbstractVector(μ::MeanFunction)
     @assert isfinite(length(μ))
-    return map(μ, DataSet(eachindex(μ)))
+    @show typeof(eachindex(μ))
+    return map(μ, eachindex(μ))
 end
 
+@inline _map_fallback(f::MeanFunction, X::AV) = invoke(map, Tuple{Any, typeof(X)}, f, X)
+@noinline _map(f::MeanFunction, X::AV) = _map_fallback(f, X)
+@inline map(f::MeanFunction, X::AV) = _map(f, X)
 map(f::MeanFunction, X::BlockData) = BlockVector([map(f, x) for x in blocks(X)])
-map(f::MeanFunction, X::AbstractVector{<:ADS}) = map(f, BlockData(X))
 
 """
     CustomMean <: BaseMeanFunction
@@ -35,7 +38,7 @@ Returns zero (of the appropriate type) everywhere.
 """
 struct ZeroMean{T<:Real} <: BaseMeanFunction end
 @inline (::ZeroMean{T})(x) where T = zero(T)
-@inline map(z::ZeroMean{T}, D::DataSet) where T = Zeros{T}(length(D))
+@inline _map(z::ZeroMean{T}, D::AbstractVector) where T = Zeros{T}(length(D))
 ==(::ZeroMean, ::ZeroMean) = true
 
 """
@@ -47,7 +50,7 @@ struct ConstantMean{T<:Real} <: BaseMeanFunction
     c::T
 end
 @inline (μ::ConstantMean)(x) = μ.c
-@inline map(μ::ConstantMean, D::DataSet) = Fill(μ.c, length(D))
+@inline _map(μ::ConstantMean, D::AbstractVector) = Fill(μ.c, length(D))
 ==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c
 
 """

@@ -2,7 +2,7 @@
 
 let
     rng, N, N′, D = MersenneTwister(123456), 5, 6,  2
-    X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+    X, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
     y = randn(rng, N)
 
     # Test mechanics for finite conditioned process with single conditioning.
@@ -19,8 +19,8 @@ end
 let
     rng, N, N′, D = MersenneTwister(123456), 2, 3, 2
     X_, X′_ = randn(rng, D, N), randn(rng, D, N′)
-    X, X′, Z = DataSet(X_), DataSet(X′_), DataSet(randn(rng, D, N + N′))
-    μ, k, XX′ = ConstantMean(1.0), EQ(), DataSet(hcat(X_, X′_))
+    X, X′, Z = MatData(X_), MatData(X′_), MatData(randn(rng, D, N + N′))
+    μ, k, XX′ = ConstantMean(1.0), EQ(), MatData(hcat(X_, X′_))
     f = GP(μ, k, GPC())
     y = rand(rng, f(XX′))
 

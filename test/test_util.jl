@@ -1,12 +1,12 @@
 using IterTools
-using Stheno: MeanFunction, Kernel, CrossKernel, AVM, blocks
+using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise
 
 """
-    unary_map_tests(f, X::AbstractDataSet)
+    unary_map_tests(f, X::AbstractVector)
 
 Consistency tests intended for use with `MeanFunction`s.
 """
-function unary_map_tests(f, X::ADS)
+function unary_map_tests(f, X::AbstractVector)
     @test map(f, X) isa AbstractVector
     @test length(map(f, X)) == length(X)
     @test map(f, X) ≈ [f(x) for x in X]
@@ -18,11 +18,11 @@ function unary_map_tests(f, X::BlockData)
 end
 
 """
-    binary_map_tests(f, X::AbstractDataSet, X′::AbstractDataSet)
+    binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
 
 Consistency tests intended for use with `CrossKernel`s.
 """
-function binary_map_tests(f, X::ADS, X′::ADS)
+function binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
     @test map(f, X, X′) isa AbstractVector
     @test length(map(f, X, X′)) == length(X)
     @test map(f, X, X′) ≈ [f(x, x′) for (x, x′) in zip(X, X′)]
@@ -35,11 +35,11 @@ function binary_map_tests(f, XB::BlockData, XB′::BlockData)
 end
 
 """
-    binary_map_tests(f, X::AbstractDataSet)
+    binary_map_tests(f, X::AbstractVector)
 
 Consistency tests intended for use with `Kernel`s.
 """
-function binary_map_tests(f, X::AbstractDataSet)
+function binary_map_tests(f, X::AbstractVector)
     @test map(f, X) isa AbstractVector
     @test length(map(f, X)) == length(X)
     @test map(f, X) ≈ map(f, X, X)
@@ -55,7 +55,7 @@ end
 
 Consistency tests intended for use with `CrossKernel`s.
 """
-function pairwise_tests(f, X::ADS, X′::ADS)
+function pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
     N, N′ = length(X), length(X′)
     @test pairwise(f, X, X′) isa AbstractMatrix
     @test size(pairwise(f, X, X′)) == (N, N′)
@@ -74,7 +74,7 @@ end
 
 Consistency tests intended for use with `Kernel`s.
 """
-function pairwise_tests(f, X::ADS; rtol=eps())
+function pairwise_tests(f, X::AbstractVector; rtol=eps())
     @test pairwise(f, X) isa AbstractMatrix
     @test size(pairwise(f, X)) == (length(X), length(X))
     @test isapprox(pairwise(f, X), pairwise(f, X, X); rtol=rtol)
@@ -87,11 +87,18 @@ function pairwise_tests(f, X::BlockData; rtol=eps())
 end
 
 """
-    mean_function_tests(μ::MeanFunction, X::ADS)
+    mean_function_tests(μ::MeanFunction, X::AbstractVector)
 
 Tests that any mean function `μ` should be able to pass.
 """
-function mean_function_tests(μ::MeanFunction, X::ADS)
+function mean_function_tests(μ::MeanFunction, X::AbstractVector)
+    __mean_function_tests(μ, X)
+    mean_function_tests(μ, BlockData([X, X]))
+end
+function mean_function_tests(μ::MeanFunction, X::BlockData)
+    __mean_function_tests(μ, X)
+end
+function __mean_function_tests(μ::MeanFunction, X::AbstractVector)
 
     # Test compulsory interface passes.
     @test !(μ(X[1]) isa Void)
@@ -101,37 +108,42 @@ function mean_function_tests(μ::MeanFunction, X::ADS)
     # Test optional interface.
     unary_map_tests(μ, X)
 end
-mean_function_tests(μ::MeanFunction, X::AVM{<:Real}) = mean_function_tests(μ, DataSet(X))
 
 """
-    cross_kernel_tests(k::CrossKernel, X::ADS, X′::ADS)
+    cross_kernel_tests(k::CrossKernel, X::AbstractVector, X′::AbstractVector)
 
 Tests that any kernel `k` should be able to pass. Requires that `length(X0) == length(X1)`
 and `length(X0) ≠ length(X2)`.
 """
-function cross_kernel_tests(k::CrossKernel, X0::ADS, X1::ADS, X2::ADS)
+function cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
+    __cross_kernel_tests(k, X0, X1, X2)
+    cross_kernel_tests(k, BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2]))
+end
+function cross_kernel_tests(k::CrossKernel, X0::BlockData, X1::BlockData, X2::BlockData)
+    __cross_kernel_tests(k, X0, X1, X2)
+end
+function __cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
     @assert length(X0) == length(X1)
     @assert length(X0) ≠ length(X2)
 
     binary_map_tests(k, X0, X1)
     pairwise_tests(k, X0, X2)
 end
-function cross_kernel_tests(
-    k::CrossKernel,
-    X0::AVM{<:Real},
-    X1::AVM{<:Real},
-    X2::AVM{<:Real},
-)
-    return cross_kernel_tests(k, DataSet(X0), DataSet(X1), DataSet(X2))
-end
 
 """
-    kernel_tests(k::Kernel, X0::ADS, X1::ADS, X2::ADS)
+    kernel_tests(k::Kernel, X0::AbstractVector, X1::AbstractVector, X2::AbstractVector)
 
 Tests that any kernel `k` should be able to pass. Requires that `length(X0) == length(X1)`
 and `length(X0) ≠ length(X2)`.
 """
-function kernel_tests(k::Kernel, X0::ADS, X1::ADS, X2::ADS, rtol::Real=eps())
+function kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
+    __kernel_tests(k, X0, X1, X2, rtol)
+    kernel_tests(k, BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2]), rtol)
+end
+function kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
+    __kernel_tests(k, X0, X1, X2, rtol)
+end
+function __kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
     @assert length(X0) == length(X1)
     @assert length(X0) ≠ length(X2)
 
@@ -150,13 +162,4 @@ function kernel_tests(k::Kernel, X0::ADS, X1::ADS, X2::ADS, rtol::Real=eps())
 
     # Should be (approximately) positive definite.
     @test all(eigvals(Matrix(pairwise(k, X0))) .> -1e-9)
-end
-function kernel_tests(
-    k::Kernel,
-    X0::AVM{<:Real},
-    X1::AVM{<:Real},
-    X2::AVM{<:Real},
-    rtol::Real=eps(),
-)
-   return kernel_tests(k, DataSet(X0), DataSet(X1), DataSet(X2), rtol)
 end

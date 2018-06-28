@@ -23,51 +23,42 @@ eachindex(k::Kernel, N::Int) = eachindex(k)
 
 
 
-################################# `map` implementations #################################
+###################### `map` and `pairwise` fallback implementations #######################
 
+@inline _map_fallback(k::CrossKernel, X::AV) = invoke(map, Tuple{Any, typeof(X)}, k, X)
+@inline _map(k::CrossKernel, X::AV) = _map_fallback(k, X)
+@inline map(k::CrossKernel, X::AV) = _map(k, X)
 map(k::CrossKernel, X::BlockData) = BlockVector([map(k, x) for x in blocks(X)])
+
+@inline function _map_fallback(k::CrossKernel, X::AV, X′::AV)
+    return invoke(map, Tuple{Any, typeof(X), typeof(X′)}, k, X, X′)
+end
+@inline _map(k::CrossKernel, X::AV, X′::AV) = _map_fallback(k, X, X′)
+@inline map(k::CrossKernel, X::AV, X′::AV) = _map(k, X, X′)
 function map(k::CrossKernel, X::BlockData, X′::BlockData)
     return BlockVector([map(k, x, x′) for (x, x′) in zip(blocks(X), blocks(X′))])
 end
+map(k::CrossKernel, X::BlockData, X′::AV) = map(k, X, BlockData([X′]))
+map(k::CrossKernel, X::AV, X′::BlockData) = map(k, BlockData([X]), X′)
 
-
-
-################################# Pairwise implementations #################################
-
-# Fallback implementation for `pairwise` with `DataSet`s.
-@inline pairwise(f::CrossKernel, X::ADS) = pairwise(f, X, X)
-@inline pairwise(f::Kernel, X::ADS) = LazyPDMat(pairwise(f, X, X))
-@inline pairwise(f::CrossKernel, X::ADS, X′::ADS) = pairwise_fallback(f, X, X′)
-
-@inline function pairwise_fallback(f, X::ADS, X′::ADS)
-    return [f(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
+function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
+    return [k(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
 end
-
-# COMMITING TYPE PIRACY!
-@inline pairwise(f::PreMetric, x::AbstractVector) = pairwise(f, RowVector(x))
-@inline pairwise(f::PreMetric, x::AV, x′::AV) = pairwise(f, RowVector(x), RowVector(x′))
-
-# Syntactic sugar for pairwise.
-@noinline pairwise(f::CrossKernel, X::AV{<:Real}) = pairwise(f, DataSet(X))
-@inline function pairwise(f::CrossKernel, X::AV{<:Real}, X′::AV{<:Real})
-    return pairwise(f, DataSet(X), DataSet(X′))
+_pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise_fallback(k, X, X′)
+pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise(k, X, X′)
+function pairwise(k::CrossKernel, X::BlockData, X′::BlockData)
+    return BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X′)])
 end
+pairwise(k::CrossKernel, X::BlockData, X′::AV) = pairwise(k, X, BlockData([X′]))
+pairwise(k::CrossKernel, X::AV, X′::BlockData) = pairwise(k, BlockData([X]), X′)
+pairwise(k::CrossKernel, X::AV) = pairwise(k, X, X)
 
-# Specialisations of `pairwise` + sugar for `BlockData` sets. Returns a `BlockArray`.
-function pairwise(f::CrossKernel, X::BlockData, X′::BlockData)
-    return BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X′)])
+_pairwise_fallback(k::Kernel, X::AV) = _pairwise_fallback(k, X, X)
+_pairwise(k::Kernel, X::AV) = _pairwise_fallback(k, X)
+pairwise(k::Kernel, X::AV) = _pairwise(k, X)
+function pairwise(k::Kernel, X::BlockData)
+    return LazyPDMat(BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X)]))
 end
-function pairwise(f::CrossKernel, X::AbstractVector{<:ADS}, X′::AbstractVector{<:ADS})
-    return pairwise(f, BlockData(X), BlockData(X′))
-end
-pairwise(f::Kernel, X::AbstractVector{<:ADS}) = pairwise(f, BlockData(X))
-
-# Edge cases for interactions between vectors of data and data.
-pairwise(f::CrossKernel, X::BlockData, X′::ADS) = pairwise(f, X, BlockData([X′]))
-pairwise(f::CrossKernel, X::ADS, X′::BlockData) = pairwise(f, BlockData([X]), X′)
-pairwise(f::CrossKernel, X::AbstractVector{<:ADS}, X′::ADS) = pairwise(f, X, [X′])
-pairwise(f::CrossKernel, X::ADS, X′::AbstractVector{<:ADS}) = pairwise(f, [X], X′)
-
 
 
 ################################ Define some basic kernels #################################
@@ -81,8 +72,8 @@ struct ZeroKernel{T<:Real} <: Kernel end
 (::ZeroKernel{T})(x, x′) where T = zero(T)
 (::ZeroKernel{T})(x) where T = zero(T)
 isstationary(::Type{<:ZeroKernel}) = true
-@inline map(::ZeroKernel{T}, X::DataSet, X′::DataSet) where T = Zeros{T}(length(X))
-@inline function pairwise(::ZeroKernel{T}, X::DataSet, X′::DataSet) where T
+@inline _map(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X))
+@inline function _pairwise(::ZeroKernel{T}, X::AV, X′::AV) where T
     return Zeros{T}(length(X), length(X′))
 end
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
@@ -99,8 +90,8 @@ end
 (k::ConstantKernel)(x::T, x′::T) where T = k.c
 (k::ConstantKernel)(x) = k.c
 isstationary(::Type{<:ConstantKernel}) = true
-map(k::ConstantKernel, X::DataSet, ::DataSet) = Fill(k.c, length(X))
-pairwise(k::ConstantKernel, X::DataSet, X′::DataSet) = Fill(k.c, length(X), length(X′))
+_map(k::ConstantKernel, X::AV, ::AV) = Fill(k.c, length(X))
+_pairwise(k::ConstantKernel, X::AV, X′::AV) = Fill(k.c, length(X), length(X′))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
 
 """
@@ -112,8 +103,8 @@ struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
 (::EQ)(x::T) where T = one(Float64)
-pairwise(::EQ, X::DataSet) = LazyPDMat(exp.(-0.5 .* pairwise(SqEuclidean(), X.X)))
-pairwise(::EQ, X::DataSet, X′::DataSet) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
+_pairwise(::EQ, X::MatData) = LazyPDMat(exp.(-0.5 .* pairwise(SqEuclidean(), X.X)))
+_pairwise(::EQ, X::MatData, X′::MatData) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -142,16 +133,16 @@ end
 (k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
 (k::Linear)(x) = sum(abs2, x .- k.c)
 
-@inline pairwise(k::Linear, x::VectorData) = pairwise(k, DataSet(RowVector(x.X)))
-@inline function pairwise(k::Linear, x::VectorData, x′::VectorData)
-    return pairwise(k, DataSet(RowVector(x.X)), DataSet(RowVector(x′.X)))
+@inline _pairwise(k::Linear, x::AV) = _pairwise(k, MatData(RowVector(x)))
+@inline function _pairwise(k::Linear, x::AV, x′::AV)
+    return _pairwise(k, MatData(RowVector(x)), MatData(RowVector(x′)))
 end
 
-function pairwise(k::Linear, D::MatrixData)
+function _pairwise(k::Linear, D::MatData)
     Δ = D.X .- k.c
     return LazyPDMat(Δ' * Δ)
 end
-pairwise(k::Linear, X::MatrixData, X′::MatrixData) = (X.X .- k.c)' * (X′.X .- k.c)
+_pairwise(k::Linear, X::MatData, X′::MatData) = (X.X .- k.c)' * (X′.X .- k.c)
 
 # """
 #     Poly{Tσ<:Real} <: Kernel
@@ -177,9 +168,9 @@ isstationary(::Type{<:Noise}) = true
 ==(a::Noise, b::Noise) = a.σ² == b.σ²
 (k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
 (k::Noise)(x) = k.σ²
-pairwise(k::Noise, X::DataSet) = LazyPDMat(Diagonal(Fill(k.σ², length(X))))
-function pairwise(k::Noise, X::DataSet, X′::DataSet)
-    return X === X′ ? pairwise(k, X) : Zeros(length(X), length(X′))
+_pairwise(k::Noise, X::AV) = LazyPDMat(Diagonal(Fill(k.σ², length(X))))
+function _pairwise(k::Noise, X::AV, X′::AV)
+    return X === X′ ? _pairwise(k, X) : Zeros(length(X), length(X′))
 end
 
 # """
@@ -226,7 +217,7 @@ end
 
 function AbstractMatrix(k::Kernel)
     @assert isfinite(size(k, 1))
-    return LazyPDMat(pairwise(k, ADS(eachindex(k, 1))))
+    return LazyPDMat(pairwise(k, eachindex(k, 1)))
 end
 function AbstractMatrix(k::CrossKernel)
     @assert isfinite(size(k, 1))

@@ -3,7 +3,7 @@
 let
     # Set up some GPs.
     rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
-    X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+    X, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
     μ1, μ2 = ConstantMean(1), ConstantMean(-1.5)
     k1, k2 = EQ(), Linear(0.5)
     f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
@@ -53,7 +53,7 @@ end
 let
     # Set up some GPs.
     rng, N, N′, D, gpc = MersenneTwister(123456), 4, 5, 2, GPC()
-    X, X′ = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+    X, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
     μ1, μ2 = ConstantMean(1.0), ConstantMean(-1.5)
     k1, k2 = EQ(), Linear(0.5)
     f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)

@@ -8,7 +8,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, D = MersenneTwister(123456), 100, 2
         μ1, μ2 = EmpiricalMean(randn(rng, N)), EmpiricalMean(randn(rng, N))
-        X = DataSet(eachindex(μ1))
+        X = eachindex(μ1)
         ν1, ν2 = CompositeMean(+, μ1, μ2), CompositeMean(*, μ1, μ2)
         @test ν1(X[1]) == μ1(X[1]) + μ2(X[1])
         @test ν2(X[3]) == μ1(X[3]) .* μ2(X[3])
@@ -24,8 +24,8 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     # Test CompositeKernel and CompositeCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x0, x1, x2 = DataSet(randn(rng, N)), DataSet(randn(rng, N)), DataSet(randn(rng, N′))
-        X0, X1, X2 = DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N)), DataSet(randn(rng, D, N′))
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
 
         # Define base kernels and do composition.
         k1, k2 = EQ(), Linear(randn(rng))
@@ -55,12 +55,12 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
 
         f, k = x->sum(abs2, x), EQ()
         ν = LhsCross(f, k)
 
-        @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2])
+        @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2])
         @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
         xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
@@ -75,12 +75,12 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
 
         f, k = x->sum(abs2, x), EQ()
         ν = RhsCross(k, f)
 
-        @test ν(X0[:, 1], X0[:, 2]) == k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
+        @test ν(X0[1], X0[2]) == k(X0[1], X0[2]) * f(X0[2])
         @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
         xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
@@ -95,12 +95,12 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
 
         f, k = x->sum(abs2, x), EQ()
         ν = OuterCross(f, k)
 
-        @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
+        @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2]) * f(X0[2])
         @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
         xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
@@ -115,12 +115,12 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
 
         f, k = x->sum(abs2, x), EQ()
         ν = OuterKernel(f, k)
 
-        @test ν(X0[:, 1], X0[:, 2]) == f(X0[:, 1]) * k(X0[:, 1], X0[:, 2]) * f(X0[:, 2])
+        @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2]) * f(X0[2])
         @test size(ν, 1) == Inf && size(ν, 2) == Inf
 
         xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
@@ -134,7 +134,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     # Test mean function composition.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        X, s = DataSet(randn(rng, D, N)), randn(rng)
+        X, s = MatData(randn(rng, D, N)), randn(rng)
         μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->vec(s .* sum(sin.(x), 2)))
 
         # Test conversion and promotion.
@@ -159,7 +159,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     # Test kernel composition.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        X, s = randn(rng, N, D), randn(rng)
+        X, s = MatData(randn(rng, N, D)), randn(rng)
         k, k′ = EQ(), Linear(1)
 
         # Test conversion and promotion.

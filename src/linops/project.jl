@@ -3,9 +3,9 @@ export project
 """
     project(ϕ, f::GP, Z::AVM, g)
 
-The projection operation `f′(x) = Σₘ ϕ(x, Zₘ) * f(Zₘ) + g(x)`, where `Zₘ := getobs(Z, m)`.
+The projection operation `f′(x) = Σ_j ϕ(x, Z[j]) * f(Z[j]) + g(x)`.
 """
-project(ϕ, f::GP, Z::AVM, g) = GP(project, ϕ, f, Z, g)
+project(ϕ, f::GP, Z::AV, g) = GP(project, ϕ, f, Z, g)
 
 μ_p′(::typeof(project), ϕ, f, Z, g) = DeltaSumMean(ϕ, mean(f), Z, g)
 k_p′(::typeof(project), ϕ, f, Z, g) = DeltaSumKernel(ϕ, kernel(f), Z)

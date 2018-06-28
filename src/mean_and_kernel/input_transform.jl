@@ -16,7 +16,7 @@ end
 ITMean(μ::MeanFunction, ::typeof(identity)) = μ
 length(μ::ITMean) = length(μ.μ)
 eachindex(μ::ITMean) = eachindex(μ.μ)
-map(μ::ITMean, X::DataSet) = map(μ.μ, map(μ.f, X))
+_map(μ::ITMean, X::AV) = map(μ.μ, map(μ.f, X))
 
 """
     ITKernel{Tk<:Kernel, Tf} <: Kernel
@@ -33,10 +33,10 @@ ITKernel(k::Kernel, ::typeof(identity)) = k
 size(k::ITKernel, N::Int...) = size(k.k, N...)
 isstationary(k::ITKernel) = isstationary(k.k)
 
-map(k::ITKernel, X::DataSet) = map(k.k, map(k.f, X))
-map(k::ITKernel, X::DataSet, X′::DataSet) = map(k.k, map(k.f, X), map(k.f, X′))
-pairwise(k::ITKernel, X::DataSet) = pairwise(k.k, map(k.f, X))
-pairwise(k::ITKernel, X::DataSet, X′::DataSet) = pairwise(k.k, map(k.f, X), map(k.f, X′))
+_map(k::ITKernel, X::AV) = map(k.k, map(k.f, X))
+_map(k::ITKernel, X::AV, X′::AV) = map(k.k, map(k.f, X), map(k.f, X′))
+_pairwise(k::ITKernel, X::AV) = pairwise(k.k, map(k.f, X))
+_pairwise(k::ITKernel, X::AV, X′::AV) = pairwise(k.k, map(k.f, X), map(k.f, X′))
 
 """
     transform(f::Union{MeanFunction, Kernel}, ϕ)
@@ -80,7 +80,7 @@ struct Periodic{Tf<:Real}
     f::Tf
 end
 (p::Periodic)(t::Real) = [cos((2π * p.f) * t), sin((2π * p.f) * t)]
-function map(p::Periodic, t::VectorData)
-    return DataSet(vcat(RowVector(map(x->cos((2π * p.f) * x), t)),
+function map(p::Periodic, t::AV)
+    return MatData(vcat(RowVector(map(x->cos((2π * p.f) * x), t)),
                         RowVector(map(x->sin((2π * p.f) * x), t))))
 end

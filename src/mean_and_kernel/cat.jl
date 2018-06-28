@@ -18,7 +18,7 @@ eachindex(μ::CatMean) = eachindex.(μ.μ)
 function map(μ::CatMean, X::BlockData)
     return BlockVector(map.(μ.μ, blocks(X)))
 end
-AbstractVector(μ::CatMean) = BlockVector(AbstractVector.(μ.μ))
+AbstractVector(μ::CatMean) = BlockVector(map(AbstractVector, μ.μ))
 
 """
     CatCrossKernel <: CrossKernel

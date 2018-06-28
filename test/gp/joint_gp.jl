@@ -5,7 +5,7 @@ using Stheno: JointGP
     using Distributions: MvNormal, PDMat
     let
         rng, N, N′, D, gpc = MersenneTwister(123456), 3, 4, 2, GPC()
-        X, X′ = DataSet(rand(rng, D, N)), DataSet(rand(rng, D, N′))
+        X, X′ = MatData(rand(rng, D, N)), MatData(rand(rng, D, N′))
         f = GP(FiniteMean(ConstantMean(5.4), X), FiniteKernel(EQ(), X), gpc)
         g = GP(FiniteMean(ConstantMean(1.2), X′), FiniteKernel(EQ(), X′), gpc)
         y, z = rand(rng, f), rand(rng, g)

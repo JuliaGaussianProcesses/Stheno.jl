@@ -1,3 +1,5 @@
+import Distances: pairwise
+
 """
 
 
@@ -9,7 +11,7 @@ struct DeltaSumMean{Tϕ, Tg, TZ} <: MeanFunction
     g::Tg
 end
 (μ::DeltaSumMean)(x) = pairwise(μ.ϕ, x, μ.Z)' * map(μ.μ, μ.Z) + μ.g(x)
-function map(μ::DeltaSumMean, X::DataSet)
+function _map(μ::DeltaSumMean, X::AV)
     return pairwise(μ.ϕ, μ.Z, X)' * map(μ.μ, μ.Z) + map(μ.g, X)
 end
 
@@ -22,22 +24,22 @@ struct DeltaSumKernel{Tϕ, TZ} <: Kernel
     k::Kernel
     Z::TZ
 end
-(k::DeltaSumKernel)(x::Number, x′::Number) = map(k, DataSet([x]), DataSet([x′]))[1]
+(k::DeltaSumKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 function (k::DeltaSumKernel)(x::AV, x′::AV)
-    return map(k, DataSet(reshape(x, :, 1)), DataSet(reshape(x′, :, 1)))[1]
+    return map(k, MatData(reshape(x, :, 1)), MatData(reshape(x′, :, 1)))[1]
 end
 size(k::DeltaSumKernel, N::Int) = size(k.ϕ, 2)
 
-function map(k::DeltaSumKernel, X::DataSet)
+function _map(k::DeltaSumKernel, X::AV)
     return diag_Xᵀ_A_X(pairwise(k.k, k.Z), pairwise(k.ϕ, k.Z, X))
 end
-function map(k::DeltaSumKernel, X::DataSet, X′::DataSet)
+function _map(k::DeltaSumKernel, X::AV, X′::AV)
     return diag_Xᵀ_A_Y(pairwise(k.ϕ, k.Z, X), pairwise(k.k, k.Z), pairwise(k.ϕ, k.Z, X′))
 end
-function pairwise(k::DeltaSumKernel, X::DataSet)
+function _pairwise(k::DeltaSumKernel, X::AV)
     return Xt_A_X(pairwise(k.k, k.Z), pairwise(k.ϕ, k.Z, X))
 end
-function pairwise(k::DeltaSumKernel, X::DataSet, X′::DataSet)
+function _pairwise(k::DeltaSumKernel, X::AV, X′::AV)
     return Xt_A_Y(pairwise(k.ϕ, k.Z, X), pairwise(k.k, k.Z), pairwise(k.ϕ, k.Z, X′))
 end
 
@@ -49,16 +51,16 @@ struct LhsDeltaSumCrossKernel{Tϕ, TZ} <: CrossKernel
     k::CrossKernel
     Z::TZ
 end
-(k::LhsDeltaSumCrossKernel)(x::Number, x′::Number) = map(k, DataSet([x]), DataSet([x′]))[1]
+(k::LhsDeltaSumCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 function (k::LhsDeltaSumCrossKernel)(x::AV, x′::AV)
-    return map(k, DataSet(reshape(x, : ,1)), DataSet(reshape(x′, :, 1)))[1]
+    return map(k, MatData(reshape(x, : ,1)), MatData(reshape(x′, :, 1)))[1]
 end
 size(k::LhsDeltaSumCrossKernel, N::Int) = N == 1 ? size(k.ϕ, 2) : size(k.k, 2)
 
-function map(k::LhsDeltaSumCrossKernel, X::DataSet, X′::DataSet)
+function _map(k::LhsDeltaSumCrossKernel, X::AV, X′::AV)
     return diag_AᵀB(pairwise(k.ϕ, k.Z, X), pairwise(k.k, k.Z, X′))
 end
-function pairwise(k::LhsDeltaSumCrossKernel, X::DataSet, X′::DataSet)
+function _pairwise(k::LhsDeltaSumCrossKernel, X::AV, X′::AV)
     return pairwise(k.ϕ, k.Z, X)' * pairwise(k.k, k.Z, X′)
 end
 
@@ -70,16 +72,16 @@ struct RhsDeltaSumCrossKernel{TZ, Tϕ} <: CrossKernel
     Z::TZ
     ϕ::Tϕ
 end
-(k::RhsDeltaSumCrossKernel)(x::Number, x′::Number) = map(k, DataSet([x]), DataSet([x′]))[1]
+(k::RhsDeltaSumCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 function (k::RhsDeltaSumCrossKernel)(x::AV, x′::AV)
-    return map(k, DataSet(reshape(x, :, 1)), DataSet(reshape(x′, :, 1)))[1]
+    return map(k, MatData(reshape(x, :, 1)), MatData(reshape(x′, :, 1)))[1]
 end
 size(k::RhsDeltaSumCrossKernel, N::Int) = N == 1 ? size(k.k, 2) : size(k.ϕ, 2)
 
-function map(k::RhsDeltaSumCrossKernel, X::DataSet, X′::DataSet)
+function _map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
     return diag_AᵀB(pairwise(k.k, k.Z, X), pairwise(k.ϕ, k.Z, X′))
 end
-function pairwise(k::RhsDeltaSumCrossKernel, X::DataSet, X′::DataSet)
+function _pairwise(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
     return pairwise(k.k, k.Z, X)' * pairwise(k.ϕ, k.Z, X′)
 end
 
