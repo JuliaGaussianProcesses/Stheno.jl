@@ -8,11 +8,11 @@ Produces a GP `f` satisfying `f(x) = fa(x) + fb(x)`.
 +(fa::GP, fb::GP) = GP(+, fa, fb)
 
 """
-    +(fa::JointGP, fb::JointGP)
+    +(fa::BlockGP, fb::BlockGP)
 
 Same as above, but for a collection of GPs.
 """
-+(fa::JointGP, fb::JointGP) = JointGP(fa.fs .+ fb.fs)
++(fa::BlockGP, fb::BlockGP) = BlockGP(fa.fs .+ fb.fs)
 
 μ_p′(::typeof(+), fa, fb) = CompositeMean(+, mean(fa), mean(fb))
 k_p′(::typeof(+), fa, fb) =

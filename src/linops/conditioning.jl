@@ -18,7 +18,7 @@ end
 Condition `g` on observation `c`.
 """
 |(g::GP, c::Observation) = GP(|, g, c.f, CondCache(mean_vec(c.f), cov(c.f), c.y))
-|(g::JointGP, c::Observation) = JointGP(g.fs .| c)
+|(g::BlockGP, c::Observation) = BlockGP(g.fs .| c)
 
 function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
     return ConditionalMean(cache, mean(g), kernel(f, g))

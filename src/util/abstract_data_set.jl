@@ -1,5 +1,4 @@
-import Base: size, eachindex, getindex, view, ==, endof, eltype, start, next, done,
-    IndexStyle, map, convert, promote
+import Base: size, eachindex, getindex, view, ==, eltype
 import Distances: pairwise
 export MatData, BlockData
 
@@ -43,7 +42,7 @@ BlockData(X::Vector{AbstractVector}) = BlockData{Any, AbstractVector}(X)
 @inline size(D::BlockData) = (sum(length, D.X),)
 
 @inline blocks(X::BlockData) = X.X
-@inline function getindex(D::BlockData, n::Int)
+function getindex(D::BlockData, n::Int)
     b = 1
     while n > length(D.X[b])
         n -= length(D.X[b])
@@ -51,7 +50,14 @@ BlockData(X::Vector{AbstractVector}) = BlockData{Any, AbstractVector}(X)
     end
     return D.X[b][n]
 end
+function getindex(D::BlockData, n::BlockVector{<:Integer})
+    @assert eachindex(D) == n
+    return D
+end
 @inline view(D::BlockData, b::Int, n) = view(D.X[b], n)
 @inline eltype(D::BlockData{T}) where T = T
-
+function eachindex(D::BlockData)
+    lengths = map(length, blocks(D))
+    return BlockArray(1:sum(lengths), lengths)
+end
 

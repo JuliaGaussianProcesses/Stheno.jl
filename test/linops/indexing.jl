@@ -58,15 +58,15 @@ let
     k1, k2 = EQ(), Linear(0.5)
     f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
     f3, f4 = f1(X), f2(X′)
-    fj = JointGP([f1, f2])
+    fj = BlockGP([f1, f2])
     fjXX′ = fj(BlockData([X, X′]))
 
-    @test fjXX′ isa JointGP
+    @test fjXX′ isa BlockGP
 
     Σ11, Σ12, Σ22 = xcov(f3, f3), xcov(f3, f4), xcov(f4, f4)
     Σ_manual = BlockMatrix(reshape([Σ11, Σ12', Σ12, Σ22], 2, 2))
 
-    # Test that indexing a JointGP is consistent with separate indexing.
+    # Test that indexing a BlockGP is consistent with separate indexing.
     @test mean_vec(fjXX′) == vcat(mean_vec(f3), mean_vec(f4))
     @test cov(fjXX′) == Σ_manual
     @test xcov(fjXX′, fjXX′) == cov(fjXX′)

@@ -9,12 +9,6 @@ abstract type BaseMeanFunction <: MeanFunction end
 eachindex(μ::BaseMeanFunction) = throw(ErrorException("Cannot construct indices for $μ"))
 length(::BaseMeanFunction) = Inf
 
-function AbstractVector(μ::MeanFunction)
-    @assert isfinite(length(μ))
-    @show typeof(eachindex(μ))
-    return map(μ, eachindex(μ))
-end
-
 @inline _map_fallback(f::MeanFunction, X::AV) = invoke(map, Tuple{Any, typeof(X)}, f, X)
 @noinline _map(f::MeanFunction, X::AV) = _map_fallback(f, X)
 @inline map(f::MeanFunction, X::AV) = _map(f, X)

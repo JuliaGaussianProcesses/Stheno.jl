@@ -1,6 +1,6 @@
-using Stheno: JointGP
+using Stheno: BlockGP
 
-@testset "joint_gp" begin
+@testset "block_gp" begin
 
     using Distributions: MvNormal, PDMat
     let
@@ -10,16 +10,16 @@ using Stheno: JointGP
         g = GP(FiniteMean(ConstantMean(1.2), X′), FiniteKernel(EQ(), X′), gpc)
         y, z = rand(rng, f), rand(rng, g)
 
-        # Construct a JointGP over a single finite process (edge-case).
-        f_single = JointGP([f])
+        # Construct a BlockGP over a single finite process (edge-case).
+        f_single = BlockGP([f])
         @test length(f_single) == length(f)
         # @test eachindex(f_single) == [eachindex(f)]
 
-        @test mean(f_single) isa CatMean
-        @test mean(f_single) == CatMean([mean(f)])
+        @test mean(f_single) isa BlockMean
+        @test mean(f_single) == BlockMean([mean(f)])
         @test getblock(mean_vec(f_single), 1) == mean_vec(f)
 
-        @test kernel(f_single) isa CatKernel
+        @test kernel(f_single) isa BlockKernel
         @test kernel(f_single).ks_diag == [kernel(f)]
         @test getblock(Stheno.unbox(cov(f_single)), 1, 1) == cov(f)
 
@@ -40,12 +40,12 @@ using Stheno: JointGP
         @test size(rand(rng, f_single, 3)) == (length(f_single), 3)
 
         # Construct a GP over multiple processes.
-        fs = JointGP([f, g])
+        fs = BlockGP([f, g])
         @test length(fs) == length(f) + length(g)
         # @test eachindex(fs) == [eachindex(f), eachindex(g)]
 
-        @test mean(fs) isa CatMean
-        @test mean(fs) == CatMean([mean(f), mean(g)])
+        @test mean(fs) isa BlockMean
+        @test mean(fs) == BlockMean([mean(f), mean(g)])
         @test mean_vec(fs) == BlockVector([mean_vec(f), mean_vec(g)])
 
         @test getblock(Stheno.unbox(cov(fs)), 1, 1) == cov(f)
@@ -53,7 +53,7 @@ using Stheno: JointGP
         @test getblock(Stheno.unbox(cov(fs)), 1, 2) == xcov(f, g)
         @test getblock(Stheno.unbox(cov(fs)), 2, 1) == xcov(g, f)
 
-        # k = Stheno.CatCrossKernel(kernel.(f, permutedims(fs.fs)))
+        # k = Stheno.BlockCrossKernel(kernel.(f, permutedims(fs.fs)))
         # @show size(k.ks[1]), size(k.ks[2])
         # @show eachindex(k, 1), eachindex(k, 2)
 
@@ -73,7 +73,7 @@ using Stheno: JointGP
         @test size(rand(rng, [f, g], 4)) == (length(f) + length(g), 4)
 
         # Check `logpdf` for two independent processes.
-        joint, joint_obs = JointGP([f, g]), BlockVector([y, z])
+        joint, joint_obs = BlockGP([f, g]), BlockVector([y, z])
         @test logpdf(joint, joint_obs) ≈ logpdf(f, y) + logpdf(g, z)
         @test logpdf([f, g], [y, z]) == logpdf(joint, joint_obs)
     end

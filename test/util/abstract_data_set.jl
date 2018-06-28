@@ -36,7 +36,8 @@ using Stheno: MatData, BlockData
         @test getindex(DxX, N + 1) == DX[1]
         @test view(DxX, 2, 1) == view(DX, 1)
         @test view(DxX, 2, N) == view(DX, N)
-        @test eachindex(DxX) == 1:2N
+        @test eachindex(DxX) isa BlockVector
+        @test eachindex(DxX) == BlockVector([1:N, N+1:2N])
 
         # Test iteration.
         @test [x for x in DxX][1] == x[1]

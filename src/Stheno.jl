@@ -22,15 +22,16 @@ module Stheno
     include("mean_and_kernel/compose.jl")
     include("mean_and_kernel/finite.jl")
     include("mean_and_kernel/conditional.jl")
-    include("mean_and_kernel/cat.jl")
+    include("mean_and_kernel/block.jl")
     # include("mean_and_kernel/transform.jl")
     include("mean_and_kernel/input_transform.jl")
     include("mean_and_kernel/degenerate.jl")
+    include("mean_and_kernel/conversion.jl")
 
     # # Basic Gaussian process definitions.
     include("gp/abstract_gp.jl")
     include("gp/gp.jl")
-    include("gp/joint_gp.jl")
+    include("gp/block_gp.jl")
 
     # Affine transformations of GPs.
     include("linops/indexing.jl")

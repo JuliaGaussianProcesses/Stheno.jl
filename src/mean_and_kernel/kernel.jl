@@ -53,9 +53,8 @@ pairwise(k::CrossKernel, X::BlockData, X′::AV) = pairwise(k, X, BlockData([X�
 pairwise(k::CrossKernel, X::AV, X′::BlockData) = pairwise(k, BlockData([X]), X′)
 pairwise(k::CrossKernel, X::AV) = pairwise(k, X, X)
 
-_pairwise_fallback(k::Kernel, X::AV) = _pairwise_fallback(k, X, X)
-_pairwise(k::Kernel, X::AV) = _pairwise_fallback(k, X)
-pairwise(k::Kernel, X::AV) = _pairwise(k, X)
+_pairwise(k::Kernel, X::AV) = _pairwise(k, X, X)
+pairwise(k::Kernel, X::AV) = LazyPDMat(_pairwise(k, X))
 function pairwise(k::Kernel, X::BlockData)
     return LazyPDMat(BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X)]))
 end
@@ -103,7 +102,7 @@ struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
 (::EQ)(x::T) where T = one(Float64)
-_pairwise(::EQ, X::MatData) = LazyPDMat(exp.(-0.5 .* pairwise(SqEuclidean(), X.X)))
+_pairwise(::EQ, X::MatData) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
 _pairwise(::EQ, X::MatData, X′::MatData) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
 
 # """
@@ -140,7 +139,7 @@ end
 
 function _pairwise(k::Linear, D::MatData)
     Δ = D.X .- k.c
-    return LazyPDMat(Δ' * Δ)
+    return Δ' * Δ
 end
 _pairwise(k::Linear, X::MatData, X′::MatData) = (X.X .- k.c)' * (X′.X .- k.c)
 
@@ -168,7 +167,7 @@ isstationary(::Type{<:Noise}) = true
 ==(a::Noise, b::Noise) = a.σ² == b.σ²
 (k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
 (k::Noise)(x) = k.σ²
-_pairwise(k::Noise, X::AV) = LazyPDMat(Diagonal(Fill(k.σ², length(X))))
+_pairwise(k::Noise, X::AV) = Diagonal(Fill(k.σ², length(X)))
 function _pairwise(k::Noise, X::AV, X′::AV)
     return X === X′ ? _pairwise(k, X) : Zeros(length(X), length(X′))
 end
@@ -214,13 +213,3 @@ end
 @inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]
 @inline (k::EmpiricalKernel)(q::Int) = k.Σ[q, q]
 @inline size(k::EmpiricalKernel, N::Int) = size(k.Σ, N)
-
-function AbstractMatrix(k::Kernel)
-    @assert isfinite(size(k, 1))
-    return LazyPDMat(pairwise(k, eachindex(k, 1)))
-end
-function AbstractMatrix(k::CrossKernel)
-    @assert isfinite(size(k, 1))
-    @assert isfinite(size(k, 2))
-    return pairwise(k, eachindex(k, 1), eachindex(k, 2))
-end
