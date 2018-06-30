@@ -51,11 +51,10 @@ X = sort(rand(rng, N) * 10);
 ŷ = rand(rng, y(X));
 f′, noise′, y′ = (f, noise, y) | (y(X) ← ŷ);
 
-out = Stheno.BlockGP([f, noise, y]) | (y(X) ← ŷ)
-
 Nplot, S = 500, 100;
 Xplot = linspace(-2.0, 12.0, Nplot);
-f′Xp, noise′Xp = rand(rng, [f′, noise′], [Xplot, Xplot], S);
+f′Xplot_, noise′Xplot_ = f′(Xplot), noise′(Xplot)
+f′Xp, noise′Xp = rand(rng, [f′Xplot_, noise′Xplot_], S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
 μ′f, σ′f = marginals(f′, Xplot);

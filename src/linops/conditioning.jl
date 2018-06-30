@@ -11,6 +11,9 @@ struct Observation{Tf<:AbstractGP, Ty<:AbstractVector}
     y::Ty
 end
 ←(f, y) = Observation(f, y)
+get_f(c::Observation) = c.f
+get_y(c::Observation) = c.y
+merge(c::Tuple{Observation}) = BlockGP(get_f.(c))←BlockVector(get_y.(c))
 
 """
     |(g::AbstractGP, c::Observation)
@@ -33,6 +36,12 @@ function k_pp′(h::AbstractGP, ::typeof(|), g::AbstractGP, f::AbstractGP, cache
     return ConditionalCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
 end
 
+# Sugar
+|(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)
+|(g::Tuple{Vararg{AbstractGP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
+function |(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}})
+    return deconstruct(BlockGP([g...]) | merge(c))
+end
 
 abstract type AbstractConditioner end
 
