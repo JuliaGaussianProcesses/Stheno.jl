@@ -45,37 +45,70 @@ end
 
 abstract type AbstractConditioner end
 
+# """
+#     Titsias <: AbstractConditioner
+
+# Construct an object which is able to compute an approximate posterior.
+# """
+# struct Titsias{Tu<:AbstractGP, TZ<:AVM, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
+#     u::Tu
+#     Z::TZ
+#     m′u::Tm
+#     γ::Tγ
+#     function Titsias(u::Tu, Z::TZ, m′u::Tm, Σ′uu::AM, gpc::GPC) where {Tu, TZ, Tm}
+#         γ = GP(FiniteKernel(Xtinv_A_Xinv(Σ′uu, cov(u, Z))), gpc)
+#         return new{Tu, TZ, Tm, typeof(γ)}(u, Z, m′u, γ)
+#     end
+# end
+# function |(g::GP, c::Titsias)
+#     g′ = g | (c.u(c.Z)←c.m′u)
+#     ϕ = LhsFiniteCrossKernel(kernel(c.u, g), c.Z)
+#     ĝ = project(ϕ, c.γ, 1:length(c.m′u), ZeroMean{Float64}())
+#     return return g′ + ĝ
+# end
+
+# function optimal_q(
+#     f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real},
+#     u::AV{<:GP}, Z::AV{<:AVM},
+#     σ::Real,
+# )
+#     μᵤ, Σᵤᵤ = mean(u, Z), cov(u, Z)
+#     U = chol(Σᵤᵤ)
+#     Γ = (U' \ xcov(u, f, Z, X)) ./ σ
+#     Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean(f, X)
+#     Σ′ᵤᵤ = Xt_invA_X(Ω, U)
+#     μ′ᵤ = μᵤ + (U' * (Ω \ (Γ * δ))) / σ
+#     return μ′ᵤ, Σ′ᵤᵤ
+# end
+
 """
     Titsias <: AbstractConditioner
 
 Construct an object which is able to compute an approximate posterior.
 """
-struct Titsias{Tu<:AbstractGP, TZ<:AVM, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
+struct Titsias{Tu<:AbstractGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
     u::Tu
-    Z::TZ
     m′u::Tm
     γ::Tγ
-    function Titsias(u::Tu, Z::TZ, m′u::Tm, Σ′uu::AM, gpc::GPC) where {Tu, TZ, Tm}
-        γ = GP(FiniteKernel(Xtinv_A_Xinv(Σ′uu, cov(u, Z))), gpc)
-        return new{Tu, TZ, Tm, typeof(γ)}(u, Z, m′u, γ)
+    function Titsias(u::Tu, m′u::Tm, Σ′uu::AM, gpc::GPC) where {Tu, Tm}
+        γ = GP(FiniteKernel(Xtinv_A_Xinv(Σ′uu, cov(u))), gpc)
+        return new{Tu, Tm, typeof(γ)}(u, m′u, γ)
     end
 end
 function |(g::GP, c::Titsias)
-    g′ = g | (c.u(c.Z)←c.m′u)
-    ϕ = LhsFiniteCrossKernel(kernel(c.u, g), c.Z)
+    g′ = g | (c.u←c.m′u)
+    ϕ = kernel(c.u, g)
+    # ϕ = LhsFiniteCrossKernel(kernel(c.u, g), c.Z)
+    @show typeof(ϕ)
     ĝ = project(ϕ, c.γ, 1:length(c.m′u), ZeroMean{Float64}())
-    return return g′ + ĝ
+    return g′ + ĝ
 end
 
-function optimal_q(
-    f::AV{<:GP}, X::AV{<:AVM}, y::BlockVector{<:Real},
-    u::AV{<:GP}, Z::AV{<:AVM},
-    σ::Real,
-)
-    μᵤ, Σᵤᵤ = mean(u, Z), cov(u, Z)
+function optimal_q(f::AbstractGP, y::AbstractVector{<:Real}, u::AbstractGP, σ::Real)
+    μᵤ, Σᵤᵤ = mean_vec(u), cov(u)
     U = chol(Σᵤᵤ)
-    Γ = (U' \ xcov(u, f, Z, X)) ./ σ
-    Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean(f, X)
+    Γ = (U' \ xcov(u, f)) ./ σ
+    Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean_vec(f)
     Σ′ᵤᵤ = Xt_invA_X(Ω, U)
     μ′ᵤ = μᵤ + (U' * (Ω \ (Γ * δ))) / σ
     return μ′ᵤ, Σ′ᵤᵤ

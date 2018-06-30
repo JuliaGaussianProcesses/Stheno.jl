@@ -9,8 +9,8 @@ abstract type BaseMeanFunction <: MeanFunction end
 eachindex(μ::BaseMeanFunction) = throw(ErrorException("Cannot construct indices for $μ"))
 length(::BaseMeanFunction) = Inf
 
-@inline _map_fallback(f::MeanFunction, X::AV) = invoke(map, Tuple{Any, typeof(X)}, f, X)
-@noinline _map(f::MeanFunction, X::AV) = _map_fallback(f, X)
+@inline _map_fallback(f::MeanFunction, X::AV) = [f(x) for x in X]
+@inline _map(f::MeanFunction, X::AV) = _map_fallback(f, X)
 @inline map(f::MeanFunction, X::AV) = _map(f, X)
 map(f::MeanFunction, X::BlockData) = BlockVector([map(f, x) for x in blocks(X)])
 

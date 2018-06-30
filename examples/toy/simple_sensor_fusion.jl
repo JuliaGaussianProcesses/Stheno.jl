@@ -42,9 +42,9 @@ ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)]);
 # Sample jointly from the posterior processes and compute posterior marginals.
 Xp = linspace(-2.5, 12.5, 500);
 f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp), y₁′(Xp), y₂′(Xp)], 100);
-μf′, σf′ = marginals(f′, Xp);
-μy₁′, σy₁′ = marginals(y₁′, Xp);
-μy₂′, σy₂′ = marginals(y₂′, Xp);
+μf′, σf′ = marginals(f′(Xp));
+μy₁′, σy₁′ = marginals(y₁′(Xp));
+μy₂′, σy₂′ = marginals(y₂′(Xp));
 
 
 

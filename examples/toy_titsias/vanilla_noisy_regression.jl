@@ -1,10 +1,10 @@
 using Revise
-using Stheno, Plots
-plotly();
 
 
 
 ############################ Modeling and Approximate Inference ############################
+
+using Stheno
 
 # A vanilla noisy regression model.
 gpc = GPC();
@@ -18,21 +18,24 @@ ŷ = rand(rng, y(X));
 
 # Compute exact posterior processes + corresponding marginals.
 f′, y′ = (f, y) | (y(X) ← ŷ);
-f′μ, f′σ = marginals(f′, Xp);
-y′μ, y′σ = marginals(y′, Xp);
+f′μ, f′σ = marginals(f′(Xp));
+y′μ, y′σ = marginals(y′(Xp));
 
 # Compute approximate posterior processes + corresponding marginals.
-m′u, Σ′uu = Stheno.optimal_q([f], [X], BlockVector([ŷ]), [f], [Z], sqrt(1e-1));
-conditioner = Stheno.Titsias(f, Z, m′u, Σ′uu, gpc);
+m′u, Σ′uu = Stheno.optimal_q(f(X), ŷ, f(Z), sqrt(1e-1));
+conditioner = Stheno.Titsias(f(Z), m′u, Σ′uu, gpc);
 fq = f | conditioner;
-fqμ, fqσ = marginals(fq, Xp);
+fqμ, fqσ = marginals(fq(Xp));
 
 yq = y | conditioner;
-yqμ, yqσ = marginals(yq, Xp);
+yqμ, yqσ = marginals(yq(Xp));
 
 
 
 ############################ Plotting ############################
+
+using Plots
+plotly();
 
 # Plot observations.
 posterior_plot = plot();

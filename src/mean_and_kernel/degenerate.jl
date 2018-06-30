@@ -1,22 +1,25 @@
 import Distances: pairwise
 
 """
-
+    DeltaSumMean{Tϕ, Tg, TZ} <: MeanFunction
 
 """
-struct DeltaSumMean{Tϕ, Tg, TZ} <: MeanFunction
+struct DeltaSumMean{Tϕ, Tg} <: MeanFunction
     ϕ::Tϕ
     μ::MeanFunction
-    Z::TZ
     g::Tg
 end
-(μ::DeltaSumMean)(x) = pairwise(μ.ϕ, x, μ.Z)' * map(μ.μ, μ.Z) + μ.g(x)
+(μ::DeltaSumMean)(x::Number) = _map(μ, [x])[1]
+(μ::DeltaSumMean)(X::AV) = _map(μ, MatData(reshape(X, :, 1)))[1]
 function _map(μ::DeltaSumMean, X::AV)
-    return pairwise(μ.ϕ, μ.Z, X)' * map(μ.μ, μ.Z) + map(μ.g, X)
+    Z = eachindex(μ.ϕ, 1)
+    @show Z
+    return pairwise(μ.ϕ, Z, X)' * map(μ.μ, Z) + map(μ.g, X)
 end
+eachindex(μ::DeltaSumMean) = eachindex(g)
 
 """
-
+    DeltaSumKernel{Tϕ, TZ} <: Kernel
 
 """
 struct DeltaSumKernel{Tϕ, TZ} <: Kernel
@@ -78,7 +81,7 @@ function (k::RhsDeltaSumCrossKernel)(x::AV, x′::AV)
 end
 size(k::RhsDeltaSumCrossKernel, N::Int) = N == 1 ? size(k.k, 2) : size(k.ϕ, 2)
 
-function _map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
+@noinline function _map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
     return diag_AᵀB(pairwise(k.k, k.Z, X), pairwise(k.ϕ, k.Z, X′))
 end
 function _pairwise(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
