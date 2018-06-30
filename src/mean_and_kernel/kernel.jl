@@ -25,14 +25,12 @@ eachindex(k::Kernel, N::Int) = eachindex(k)
 
 ###################### `map` and `pairwise` fallback implementations #######################
 
-@inline _map_fallback(k::CrossKernel, X::AV) = invoke(map, Tuple{Any, typeof(X)}, k, X)
+@inline _map_fallback(k::CrossKernel, X::AV) = [k(x) for x in X]
 @inline _map(k::CrossKernel, X::AV) = _map_fallback(k, X)
 @inline map(k::CrossKernel, X::AV) = _map(k, X)
 map(k::CrossKernel, X::BlockData) = BlockVector([map(k, x) for x in blocks(X)])
 
-@inline function _map_fallback(k::CrossKernel, X::AV, X′::AV)
-    return invoke(map, Tuple{Any, typeof(X), typeof(X′)}, k, X, X′)
-end
+@inline _map_fallback(k::CrossKernel, X::AV, X′::AV) = [k(x, x′) for (x, x′) in zip(X, X′)]
 @inline _map(k::CrossKernel, X::AV, X′::AV) = _map_fallback(k, X, X′)
 @inline map(k::CrossKernel, X::AV, X′::AV) = _map(k, X, X′)
 function map(k::CrossKernel, X::BlockData, X′::BlockData)
@@ -169,7 +167,12 @@ isstationary(::Type{<:Noise}) = true
 (k::Noise)(x) = k.σ²
 _pairwise(k::Noise, X::AV) = Diagonal(Fill(k.σ², length(X)))
 function _pairwise(k::Noise, X::AV, X′::AV)
-    return X === X′ ? _pairwise(k, X) : Zeros(length(X), length(X′))
+    if X === X′
+        return _pairwise(k, X)
+    else
+        return [view(X, p) == view(X′, q) ? k.σ² : 0
+            for p in eachindex(X), q in eachindex(X′)]
+    end
 end
 
 # """

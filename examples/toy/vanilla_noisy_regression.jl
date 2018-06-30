@@ -43,6 +43,7 @@ f, noise, y = model(GPC());
 fX, noiseX, yX = rand(rng, [f(X_prior), noise(X_prior), y(X_prior)]);
 
 
+
 #######################  Do posterior inference give a few samples  #######################
 
 # Sample a few points from the prior and compute the posterior processes.
@@ -57,8 +58,10 @@ f′Xplot_, noise′Xplot_ = f′(Xplot), noise′(Xplot)
 f′Xp, noise′Xp = rand(rng, [f′Xplot_, noise′Xplot_], S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-μ′f, σ′f = marginals(f′, Xplot);
-σ′y = diag_std(y′, Xplot);
+μ′f, σ′f = marginals(f′(Xplot));
+σ′y = marginal_std(y′(Xplot));
+
+
 
 ####################################  Plot results  ####################################
 
@@ -105,3 +108,5 @@ scatter!(posterior_plot, X, ŷ;
     legend=false);
 joint_plot = plot(prior_plot, posterior_plot, layout=(2, 1));
 display(joint_plot);
+
+

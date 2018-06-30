@@ -1,6 +1,7 @@
 import Base: eachindex, rand, mean, cov
 import Distributions: logpdf, ContinuousMultivariateDistribution
-export AbstractGP, kernel, rand, logpdf, elbo, diag_cov, diag_std, marginals, mean_vec, xcov
+export AbstractGP, kernel, rand, logpdf, elbo, marginal_cov, marginal_std, marginals,
+    mean_vec, xcov
 
 """
     AbstractGaussianProcess <: ContinuousMultivariateDistribution
@@ -75,7 +76,7 @@ marginal_std(f::AbstractGP) = sqrt.(marginal_cov(f))
 
 Sugar, equivalent to `(mean(f), marginal_std(f))`.
 """
-marginals(f::AbstractGP) = (mean(f), marginal_std(f))
+marginals(f::AbstractGP) = (mean_vec(f), marginal_std(f))
 
 """
     rand(rng::AbstractRNG, f::AbstractGP, N::Int=1)

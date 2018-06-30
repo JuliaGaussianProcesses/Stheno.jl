@@ -1,10 +1,9 @@
 using Revise
 using Stheno, Plots
-gr();
+
 
 
 ###########################  Define our model  ###########################
-
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 function model(gpc)
@@ -21,7 +20,7 @@ X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
 f₁, f₂, f₃ = model(GPC());
 
 # Generate some toy observations of `f₁` and `f₃`.
-ŷ₁, ŷ₃ = rand(rng, [f₁, f₃], [X₁, X₃]);
+ŷ₁, ŷ₃ = rand(rng, [f₁(X₁), f₃(X₃)]);
 
 # Compute the posterior processes.
 (f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁)←ŷ₁, f₃(X₃)←ŷ₃);
@@ -31,17 +30,19 @@ Np, S = 500, 25;
 Xp = linspace(-2.5, 12.5, Np);
 
 # Sample jointly from the posterior over each process.
-f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′, f₂′, f₃′], [Xp, Xp, Xp], S);
+f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(Xp)], S);
 
 # Compute posterior marginals.
-μf₁′, σf₁′ = marginals(f₁′, Xp);
-μf₂′, σf₂′ = marginals(f₂′, Xp);
-μf₃′, σf₃′ = marginals(f₃′, Xp);
+μf₁′, σf₁′ = marginals(f₁′(Xp));
+μf₂′, σf₂′ = marginals(f₂′(Xp));
+μf₃′, σf₃′ = marginals(f₃′(Xp));
+
 
 
 ###########################  Plot results  ###########################
+
 using Plots
-gr()
+plotly();
 posterior_plot = plot();
 
 # Plot posterior marginal variances
@@ -108,6 +109,6 @@ scatter!(posterior_plot, X₃, ŷ₃;
     markeralpha=0.7,
     label="");
 
-# display(posterior_plot);
+display(posterior_plot);
 
-savefig(posterior_plot, "process_decomposition.png")
+# savefig(posterior_plot, "process_decomposition.png")

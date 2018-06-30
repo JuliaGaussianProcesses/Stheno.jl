@@ -1,7 +1,27 @@
+using Stheno: get_f, get_y, Observation, merge
+
 @testset "conditioning" begin
 
+# Test Observation functionality.
 let
-    rng, N, N′, D = MersenneTwister(123456), 5, 6,  2
+    rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+    X, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+    y, y′ = randn(rng, N), randn(rng, N′)
+    f = GP(ConstantMean(1), EQ(), GPC())
+
+    fX, fX′ = f(X), f(X′)
+    c1, c2 = fX←y, fX′←y′
+    @test Observation(fX, y) == c1
+    @test get_f(c1) === fX && get_f(c2) === fX′
+    @test get_y(c1) === y && get_y(c2) === y′
+
+    c = merge((c1, c2))
+    @test get_y(c) == BlockVector([y, y′])
+    @test get_f(c).fs == [fX, fX′]
+end
+
+let
+    rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
     X, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
     y = randn(rng, N)
 
@@ -48,6 +68,10 @@ let
     f′b = f | (fb(Xb)←BlockArray(y, [N, N′]))
     @test mean_vec(f′b(X)) ≈ mean_vec(f′X)
     @test maximum(abs.(cov(f′b(Zb)) - cov(f′(Zb)))) < 1e-6
+
+    # Test sugar for multiple-conditioning.
+    @test mean_vec(fb′(Zb)) ≈ mean_vec((f | (f(X)←y[1:N], f(X′)←y[N+1:end]))(Zb))
+    @test maximum(abs.(cov(fb′(Zb)) - cov((f | (f(X)←y[1:N], f(X′)←y[N+1:end]))(Zb)))) < 1e-6
 end
 
 end

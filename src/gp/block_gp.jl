@@ -24,7 +24,7 @@ deconstruct(f::BlockGP) = (f.fs...,)
 ##################################### Syntactic Sugar ######################################
 
 # Convenience methods for invoking `logpdf` and `rand` with multiple processes.
-rand(rng::AbstractRNG, fs::AV{<:AbstractGP}) = vec(rand(rng, fs, 1))
+rand(rng::AbstractRNG, fs::AV{<:AbstractGP}) = vec.(rand(rng, fs, 1))
 rand(rng::AbstractRNG, fs::AV{<:AbstractGP}, N::Int) = rand(rng, BlockGP(fs), N).blocks
 function rand(rng::AbstractRNG, f::BlockGP, N::Int)
     M = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(f.fs), [N])
@@ -36,14 +36,3 @@ function rand(rng::AbstractRNG, f::BlockGP, N::Int)
 end
 
 logpdf(fs::AV{<:AbstractGP}, ys::AV{<:AV{<:Real}}) = logpdf(BlockGP(fs), BlockVector(ys))
-
-# function rand(rng::AbstractRNG, f::AV{<:GP}, X::AV{<:AVM}, N::Int)
-#     ϵ = BlockMatrix(randn.(rng, nobs.(X), N))
-#     y = mean(f, X) .+ chol(cov(f, X))' * ϵ
-#     ends = cumsum(nobs.(X))
-#     starts = ends .- nobs.(X) .+ 1
-#     return [y[starts[n]:ends[n], :] for n in eachindex(starts)]
-# end
-# rand(rng::AbstractRNG, f::AV{<:GP}, X::AV{<:AVM}) = vec.(rand(rng, f, X, 1))
-# rand(rng::AbstractRNG, f::GP, X::AVM, N::Int) = rand(rng, [f], [X], N)[1]
-# rand(rng::AbstractRNG, f::GP, X::AVM) = rand(rng, [f], [X])[1]

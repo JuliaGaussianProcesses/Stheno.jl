@@ -33,16 +33,16 @@ end
 rng, N, Nplot, S = MersenneTwister(123456), 100, 500, 100;
 X, Xp = sort(rand(rng, N) * 10), linspace(-2.5, 12.5, Nplot);
 f, ω, fpω, y = model(GPC());
-fs, ωs, ys, ŷ = rand(rng, [f, ω, fpω, y], [Xp, Xp, Xp, X]);
+fs, ωs, ys, ŷ = rand(rng, [f(Xp), ω(Xp), fpω(Xp), y(X)]);
 
 # Compute posterior distribution over f′.
 f′ = f | (y(X) ← ŷ);
 
 # Sample from the posterior and write to file.
-f′Xp = rand(rng, f′, Xp, S);
+f′Xp = rand(rng, f′(Xp), S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-μf′, σf′ = marginals(f′, Xp);
+μf′, σf′ = marginals(f′(Xp));
 
 
 

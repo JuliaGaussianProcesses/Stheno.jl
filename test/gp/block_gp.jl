@@ -69,8 +69,9 @@ using Stheno: BlockGP
 
         @test length(rand(rng, fs)) == length(fs)
         @test size(rand(rng, fs, 3)) == (length(fs), 3)
-        @test length(rand(rng, [f, g])) == length(f) + length(g)
-        @test size(rand(rng, [f, g], 4)) == (length(f) + length(g), 4)
+        @test sum(length.(rand(rng, [f, g]))) == length(f) + length(g)
+        fs, gs = rand(rng, [f, g], 4)
+        @test size(fs) == (length(f), 4) && size(gs) == (length(g), 4)
 
         # Check `logpdf` for two independent processes.
         joint, joint_obs = BlockGP([f, g]), BlockVector([y, z])

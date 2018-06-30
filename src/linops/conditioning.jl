@@ -1,4 +1,4 @@
-import Base: |
+import Base: |, merge
 export ←, |
 
 """
@@ -13,7 +13,7 @@ end
 ←(f, y) = Observation(f, y)
 get_f(c::Observation) = c.f
 get_y(c::Observation) = c.y
-merge(c::Tuple{Observation}) = BlockGP(get_f.(c))←BlockVector(get_y.(c))
+merge(c::Tuple{Vararg{Observation}}) = BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
 
 """
     |(g::AbstractGP, c::Observation)
