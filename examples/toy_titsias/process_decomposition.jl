@@ -5,12 +5,22 @@ using Stheno
 
 ###########################  Define our model  ###########################
 
+σ² = 0.1
+
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 function model(gpc)
+
+    # Define latent processes.
     f₁ = GP(ConstantMean(randn()), EQ(), gpc)
     f₂ = GP(EQ(), gpc)
     f₃ = f₁ + f₂
-    return f₁, f₂, f₃
+
+    # Define noisy versions of latent processes which we are permitted to observe.
+    y₁ = f₁ + GP(Noise(σ²), gpc)
+    y₂ = f₂ + GP(Noise(σ²), gpc)
+    y₃ = f₃ + GP(Noise(σ²), gpc)
+
+    return f₁, f₂, f₃, y₁, y₂, y₃
 end
 
 # Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
@@ -19,29 +29,29 @@ rng, N₁, N₃, M = MersenneTwister(123546), 10, 11, 100;
 Z = linspace(-15.0, 15.0, M);
 X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
 gpc = GPC();
-f₁, f₂, f₃ = model(gpc);
+f₁, f₂, f₃, y₁, y₂, y₃ = model(gpc);
 
 # Generate some toy observations of `f₁` and `f₃`.
-ŷ₁, ŷ₃ = rand(rng, [f₁, f₃], [X₁, X₃]);
+ŷ₁, ŷ₃ = rand(rng, [y₁(X₁), y₃(X₃)]);
 
-# Compute the approximate posterior processes.
-m′u, Σ′uu = Stheno.optimal_q([f₁, f₃], [X₁, X₃], BlockVector([ŷ₁, ŷ₃]), [f₃], [Z], sqrt(1e-3));
-conditioner = Stheno.Titsias(f₃, Z, m′u, Σ′uu, gpc);
-f₁′ = f₁ | conditioner;
-f₂′ = f₂ | conditioner;
-f₃′ = f₃ | conditioner;
+# Compute approximation to the posterior by placing data in the simply way.
+f, ŷ = BlockGP([f₁(X₁), f₃(X₃)]), BlockVector([ŷ₁, ŷ₃]);
+
+m′u, Σ′uu = Stheno.optimal_q(f, ŷ, f, sqrt(σ²));
+conditioner = Stheno.Titsias(f, m′u, Σ′uu, gpc);
+f₁′, f₂′, f₃′, y₁′, y₂′, y₃′ = (f₁, f₂, f₃, y₁, y₂, y₃) | conditioner;
 
 # Define some plotting stuff.
 Np, S = 500, 25;
 Xp = linspace(-2.5, 12.5, Np);
 
-# # Sample jointly from the posterior over each process.
-# f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′, f₂′, f₃′], [Xp, Xp, Xp], S);
+# Sample jointly from the posterior over each process.
+f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(Xp)], S);
 
 # Compute posterior marginals.
-μf₁′, σf₁′ = marginals(f₁′, Xp);
-μf₂′, σf₂′ = marginals(f₂′, Xp);
-μf₃′, σf₃′ = marginals(f₃′, Xp);
+μf₁′, σf₁′ = marginals(f₁′(Xp));
+μf₂′, σf₂′ = marginals(f₂′(Xp));
+μf₃′, σf₃′ = marginals(f₃′(Xp));
 
 
 

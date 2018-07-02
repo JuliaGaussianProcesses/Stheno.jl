@@ -25,7 +25,8 @@ eachindex(k::Kernel, N::Int) = eachindex(k)
 
 ###################### `map` and `pairwise` fallback implementations #######################
 
-@inline _map_fallback(k::CrossKernel, X::AV) = [k(x) for x in X]
+@inline _map_fallback(k::CrossKernel, X::AV) = [k(x, x) for x in X]
+@inline _map_fallback(k::Kernel, X::AV) = [k(x) for x in X]
 @inline _map(k::CrossKernel, X::AV) = _map_fallback(k, X)
 @inline map(k::CrossKernel, X::AV) = _map(k, X)
 map(k::CrossKernel, X::BlockData) = BlockVector([map(k, x) for x in blocks(X)])
@@ -40,6 +41,7 @@ map(k::CrossKernel, X::BlockData, X′::AV) = map(k, X, BlockData([X′]))
 map(k::CrossKernel, X::AV, X′::BlockData) = map(k, BlockData([X]), X′)
 
 function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
+    @show typeof(k), typeof(X), typeof(X′)
     return [k(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
 end
 _pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise_fallback(k, X, X′)
@@ -55,6 +57,16 @@ _pairwise(k::Kernel, X::AV) = _pairwise(k, X, X)
 pairwise(k::Kernel, X::AV) = LazyPDMat(_pairwise(k, X))
 function pairwise(k::Kernel, X::BlockData)
     return LazyPDMat(BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X)]))
+end
+
+# Sugar for `eachindex` things.
+for op in [:map, :pairwise]
+    @eval begin
+        $op(k::CrossKernel, ::Colon) = $op(k, eachindex(k))
+        $op(k::CrossKernel, ::Colon, ::Colon) = $op(k, eachindex(k, 1), eachindex(k, 2))
+        $op(k::CrossKernel, ::Colon, X′::AV) = $op(k, eachindex(k, 1), X′)
+        $op(k::CrossKernel, X::AV, ::Colon) = $op(k, X, eachindex(k, 2))
+    end
 end
 
 
@@ -75,6 +87,14 @@ isstationary(::Type{<:ZeroKernel}) = true
 end
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
+# ZeroKernel-specific optimisations.
++(k::CrossKernel, k′::ZeroKernel) = k
++(k::ZeroKernel, k′::CrossKernel) = k′
++(k::ZeroKernel, k′::ZeroKernel) = k
+*(k::CrossKernel, k′::ZeroKernel) = k′
+*(k::ZeroKernel, k′::CrossKernel) = k
+*(k::ZeroKernel, k′::ZeroKernel) = k
+
 """
     ConstantKernel{T<:Real} <: Kernel
 
@@ -90,6 +110,10 @@ isstationary(::Type{<:ConstantKernel}) = true
 _map(k::ConstantKernel, X::AV, ::AV) = Fill(k.c, length(X))
 _pairwise(k::ConstantKernel, X::AV, X′::AV) = Fill(k.c, length(X), length(X′))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
+
+# ConstantKernel-specific optimisations.
++(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c + k′.c)
+*(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c * k′.c)
 
 """
     EQ <: Kernel

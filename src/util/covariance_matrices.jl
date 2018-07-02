@@ -1,5 +1,5 @@
 import Base: size, ==, +, -, *, isapprox, getindex, IndexStyle, map, broadcast,
-    cov, logdet, chol, \, Matrix, UpperTriangular
+    cov, logdet, chol, \, Matrix, UpperTriangular, transpose, ctranspose
 export cov, LazyPDMat, Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X
 
 """
@@ -57,7 +57,7 @@ Xt_A_X(A::LazyPDMat, X::AbstractMatrix) = LazyPDMat(Symmetric(X' * unbox(A) * X)
 Xt_A_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A) * x)
 Xt_A_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A) * X)' * (chol(A) * Y)
 function Xt_invA_X(A::LazyPDMat, X::AVM)
-    V = chol(A)' \ X
+    V = At_ldiv_B(chol(A), X)
     return LazyPDMat(Symmetric(V'V))
 end
 Xt_invA_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A)' \ x)
@@ -83,3 +83,6 @@ function Xtinv_A_Xinv(A::LazyPDMat, X::LazyPDMat)
     C = ((chol(A) / chol(X)) / chol(X)')
     return LazyPDMat(Symmetric(C'C))
 end
+
+transpose(A::LazyPDMat) = A
+ctranspose(A::LazyPDMat) = A

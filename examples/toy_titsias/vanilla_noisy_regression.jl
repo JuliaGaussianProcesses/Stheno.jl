@@ -7,9 +7,9 @@ using Revise
 using Stheno
 
 # A vanilla noisy regression model.
-gpc = GPC();
+gpc, σ = GPC(), sqrt(1e-1);
 f = GP(EQ(), gpc);
-y = f + GP(Noise(0.1), gpc);
+y = f + GP(Noise(σ^2), gpc);
 
 # Make the problem concrete.
 rng, N, P, M = MersenneTwister(123456), 100, 300, 25;
@@ -22,13 +22,15 @@ f′μ, f′σ = marginals(f′(Xp));
 y′μ, y′σ = marginals(y′(Xp));
 
 # Compute approximate posterior processes + corresponding marginals.
-m′u, Σ′uu = Stheno.optimal_q(f(X), ŷ, f(Z), sqrt(1e-1));
+m′u, Σ′uu = Stheno.optimal_q(f(X), ŷ, f(Z), σ);
 conditioner = Stheno.Titsias(f(Z), m′u, Σ′uu, gpc);
 fq = f | conditioner;
 fqμ, fqσ = marginals(fq(Xp));
 
 yq = y | conditioner;
 yqμ, yqσ = marginals(yq(Xp));
+
+@show logpdf(y(X), ŷ), elbo(f(X), ŷ, f(Z), σ);
 
 
 

@@ -22,24 +22,16 @@ size(k::CompositeKernel, N::Int) = size(k.x[1], N)
 isstationary(k::CompositeKernel) = all(map(isstationary, k.x))
 
 _map(f::CompositeKernel, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
-function _pairwise(f::CompositeKernel, X::AV)
-    return LazyPDMat(map(f.f, map(f->pairwise(f, X), f.x)...))
-end
-function _map(f::CompositeKernel, X::AV, X′::AV)
-    return map(f.f, map(f->map(f, X, X′), f.x)...)
-end
-function _pairwise(f::CompositeKernel, X::AV, X′::AV)
-    return map(f.f, map(f->pairwise(f, X, X′), f.x)...)
-end
+_pairwise(f::CompositeKernel, X::AV) = LazyPDMat(map(f.f, map(f->pairwise(f, X), f.x)...))
+_map(f::CompositeKernel, X::AV, X′::AV) = map(f.f, map(f->map(f, X, X′), f.x)...)
+_pairwise(f::CompositeKernel, X::AV, X′::AV) = map(f.f, map(f->pairwise(f, X, X′), f.x)...)
 
 # CompositeCrossKernel definitions.
 (k::CompositeCrossKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
 size(k::CompositeCrossKernel, N::Int) = size(k.x[1], N)
 isstationary(k::CompositeCrossKernel) = all(map(isstationary, k.x))
 
-function _map(f::CompositeCrossKernel, X::AV, X′::AV)
-    return map(f.f, map(f->map(f, X, X′), f.x)...)
-end
+_map(f::CompositeCrossKernel, X::AV, X′::AV) = map(f.f, map(f->map(f, X, X′), f.x)...)
 function _pairwise(f::CompositeCrossKernel, X::AV, X′::AV)
     return map(f.f, map(f->pairwise(f, X, X′), f.x)...)
 end
@@ -101,9 +93,7 @@ end
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 (k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
 size(k::OuterKernel, N::Int) = size(k.k, N)
-function _pairwise(k::OuterKernel, X::AV)
-    return Xt_A_X(pairwise(k.k, X), Diagonal(map(k.f, X)))
-end
+_pairwise(k::OuterKernel, X::AV) = Xt_A_X(pairwise(k.k, X), Diagonal(map(k.f, X)))
 function _pairwise(k::OuterKernel, X::AV, X′::AV)
     return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
 end
@@ -130,10 +120,10 @@ convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
 *(μ::Real, μ′::MeanFunction) = *(promote(μ, μ′)...)
 
 # Composing kernels.
-+(k::Kernel, k′::Kernel) = CompositeKernel(+, k, k′)
-+(k::Kernel, k′::Real) = +(promote(k, k′)...)
-+(k::Real, k′::Kernel) = +(promote(k, k′)...)
++(k::CrossKernel, k′::CrossKernel) = CompositeKernel(+, k, k′)
++(k::CrossKernel, k′::Real) = +(promote(k, k′)...)
++(k::Real, k′::CrossKernel) = +(promote(k, k′)...)
 
-*(k::Kernel, k′::Kernel) = CompositeKernel(*, k, k′)
-*(k::Kernel, k′::Real) = *(promote(k, k′)...)
-*(k::Real, k′::Kernel) = *(promote(k, k′)...)
+*(k::CrossKernel, k′::CrossKernel) = CompositeKernel(*, k, k′)
+*(k::CrossKernel, k′::Real) = *(promote(k, k′)...)
+*(k::Real, k′::CrossKernel) = *(promote(k, k′)...)

@@ -107,6 +107,10 @@ end
 
 ######################## Util for triangular block matrices ######################
 
+const BlockUT{T} = UpperTriangular{T, <:ABM{T}}
+const BlockLT{T} = LowerTriangular{T, <:ABM{T}}
+const BlockTri{T} = Union{BlockUT{T}, BlockLT{T}}
+
 @inline unbox(U::UpperTriangular{T, <:ABM{T}} where T) = U.data
 function blocksize(U::UpperTriangular{T, <:ABM{T}} where T, p::Int, q::Int)
     return blocksize(unbox(U), p, q)
@@ -246,6 +250,10 @@ function *(A::ABM{T}, b::AV{T}) where {T}
     @assert nblocks(A, 2) == 1
     return A * BlockVector([b])
 end
+# function *(A::ABM{T}, b::FillArrays.Zeros{T,1}) where T
+#     @show size(A), size(b)
+#     return invoke(*, Tuple{AbstractMatrix, typeof(b)}, A, b)
+# end
 
 """
     *(A::BlockMatrix, B::BlockMatrix)
@@ -285,9 +293,10 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
         At = $foo(A)
         return At * B
     end
-    @eval function $foo_At_mul_B(A::UpperTriangular, B::ABM)
-        return $foo_At_mul_B(BlockMatrix(A), B)
+    @eval function $foo_At_mul_B(A::BlockTri, B::ABVM)
+        return $foo_At_mul_B(unbox(A), B)
     end
+    @eval $foo_At_mul_B(A::BlockTri, B::BlockTri) = $foo_At_mul_B(unbox(A), unbox(B))
     @eval function $foo_At_mul_B(A::ABM, B::AV)
         At = $foo(A)
         return At * B
@@ -319,6 +328,9 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
     @eval function $foo_At_ldiv_B(A::UpperTriangular{T, <:ABM{T}}, B::AVM{T}) where T<:Real
         At = $foo(A)
         return At \ B
+    end
+    @eval function $foo_At_ldiv_B(A::BlockTri, B::BlockTri)
+        return $foo_At_ldiv_B(A, unbox(B))
     end
     # @eval function $foo_A_ldiv_Bt(A::ABVM, B::ABM)
     #     Bt = $foo(B)
@@ -465,4 +477,19 @@ for foo in [:+, :-]
         end
         return C
     end
+end
+
+
+
+#################################### Higher Order ##########################################
+
+import Base: broadcast
+
+# Very specific `broadcast` method for particular use case. Needs to be generalised.
+function broadcast(f, A::AbstractBlockVector, b::Real)
+    return BlockVector([broadcast(f, getblock(A, p), b) for p in 1:nblocks(A, 1)])
+end
+function broadcast(f, A::AbstractBlockMatrix, b::Real)
+    return BlockMatrix([broadcast(f, getblock(A, p, q), b)
+        for p in 1:nblocks(A, 1), q in 1:nblocks(A, 2)])
 end

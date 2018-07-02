@@ -10,7 +10,9 @@ Avoids recomputing the covariance `Σff` and the Kriging vector `α`.
 struct CondCache
     Σff::LazyPDMat
     α::AV{<:Real}
-    CondCache(mf::AV{<:Real}, Σff::AM, f::AV{<:Real}) = new(Σff, Σff \ (f - mf))
+    function CondCache(mf::AV{<:Real}, Σff::AM, f::AV{<:Real})
+        return new(Σff, Σff \ (f - mf))
+    end
 end
 function CondCache(kff::Kernel, μf::MeanFunction, X::AV, f::AV{<:Real})
     return CondCache(map(μf, X), pairwise(kff, X), f)
@@ -32,7 +34,10 @@ eachindex(μ::ConditionalMean) = eachindex(μ.μg)
 (μ::ConditionalMean)(x::Number) = map(μ, [x])[1]
 (μ::ConditionalMean)(x::AbstractVector) = map(μ, MatData(reshape(x, length(x), 1)))[1]
 function _map(μ::ConditionalMean, Xg::AV)
-    return map(μ.μg, Xg) + pairwise(μ.kfg, eachindex(μ.kfg, 1), Xg)' * μ.c.α
+    @show typeof(μ), typeof(μ.kfg), typeof(μ.c.α), typeof(Xg)
+    F = pairwise(μ.kfg, :, Xg)
+    @show typeof(F), nblocks(F, 1), nblocks(F, 2), size(F), size(μ.c.α)
+    return map(μ.μg, Xg) + pairwise(μ.kfg, :, Xg)' * μ.c.α
 end
 
 """
@@ -53,28 +58,28 @@ eachindex(k::ConditionalKernel) = eachindex(k.kgg)
 
 function _map(k::ConditionalKernel, X::AV)
     σgg = map(k.kgg, X)
-    Σfg_X = pairwise(k.kfg, eachindex(k.kfg, 1), X)
+    Σfg_X = pairwise(k.kfg, :, X)
     σ′gg = diag_Xᵀ_invA_X(k.c.Σff, Σfg_X)
     return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
 end
 function _map(k::ConditionalKernel, X::AV, X′::AV)
     σgg = map(k.kgg, X, X′)
-    Σfg_X = pairwise(k.kfg, eachindex(k.kfg, 1), X)
-    Σfg_X′ = pairwise(k.kfg, eachindex(k.kfg, 1), X′)
+    Σfg_X = pairwise(k.kfg, :, X)
+    Σfg_X′ = pairwise(k.kfg, :, X′)
     σ′gg = diag_Xᵀ_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
     return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
 end
 
 function _pairwise(k::ConditionalKernel, X::AV)
     Σgg = AbstractMatrix(pairwise(k.kgg, X))
-    Σfg_X = pairwise(k.kfg, eachindex(k.kfg, 1), X)
+    Σfg_X = pairwise(k.kfg, :, X)
     Σ′gg = AbstractMatrix(Xt_invA_X(k.c.Σff, Σfg_X))
     return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
 end
 function _pairwise(k::ConditionalKernel, X::AV, X′::AV)
     Σgg = pairwise(k.kgg, X, X′)
-    Σfg_X = pairwise(k.kfg, eachindex(k.kfg, 1), X)
-    Σfg_X′ = pairwise(k.kfg, eachindex(k.kfg, 1), X′)
+    Σfg_X = pairwise(k.kfg, :, X)
+    Σfg_X′ = pairwise(k.kfg, :, X′)
     Σ′gg = Xt_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
     return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
 end
@@ -98,16 +103,16 @@ eachindex(k::ConditionalCrossKernel, N::Int) = eachindex(k.kgh, N)
 
 function _map(k::ConditionalCrossKernel, X::AV, X′::AV)
     σgh = map(k.kgh, X, X′)
-    Σfg_X = pairwise(k.kfg, eachindex(k.kfg, 1), X)
-    Σfh_X′ = pairwise(k.kfh, eachindex(k.kfh, 1), X′)
+    Σfg_X = pairwise(k.kfg, :, X)
+    Σfh_X′ = pairwise(k.kfh, :, X′)
     σ′gh = diag_Xᵀ_invA_Y(Σfg_X, k.c.Σff, Σfh_X′)
     return (σgh .- σ′gh) .* .!(σgh .≈ σ′gh)
 end
 
 function _pairwise(k::ConditionalCrossKernel, Xg::AV, Xh::AV)
     Σgh = pairwise(k.kgh, Xg, Xh)
-    Σfg_Xg = pairwise(k.kfg, eachindex(k.kfg, 1), Xg)
-    Σfh_Xh = pairwise(k.kfh, eachindex(k.kfh, 1), Xh)
+    Σfg_Xg = pairwise(k.kfg, :, Xg)
+    Σfh_Xh = pairwise(k.kfh, :, Xh)
     Σ′gh = Xt_invA_Y(Σfg_Xg, k.c.Σff, Σfh_Xh)
     return (Σgh .- Σ′gh) .* .!(Σgh .≈ Σ′gh)
 end

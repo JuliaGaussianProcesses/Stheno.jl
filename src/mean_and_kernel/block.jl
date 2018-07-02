@@ -44,6 +44,10 @@ function map(k::BlockCrossKernel, X::BlockData, X′::BlockData)
     return BlockVector(map.(diag(k.ks), blocks(X), blocks(X′)))
 end
 function pairwise(k::BlockCrossKernel, X::BlockData, X′::BlockData)
+    @show blocks(X), blocks(X′)
+    @show size(broadcast(pairwise, k.ks, blocks(X), reshape(blocks(X′), 1, :)))
+    @show size(k.ks), size(blocks(X)), size(reshape(blocks(X′), 1, :))
+    @show k.ks
     return BlockMatrix(broadcast(pairwise, k.ks, blocks(X), reshape(blocks(X′), 1, :)))
 end
 

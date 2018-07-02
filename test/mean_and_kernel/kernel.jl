@@ -50,6 +50,9 @@ struct FooKernel <: CrossKernel end
         kernel_tests(k_zero, X0, X1, X2)
         kernel_tests(k_zero, XB0, XB1, XB2)
 
+        @test ZeroKernel{Float64}() + ZeroKernel{Float64}() == ZeroKernel{Float64}()
+        @test ZeroKernel{Float64}() * EQ() == ZeroKernel{Float64}()
+
         # Tests for ConstantKernel.
         k_const = ConstantKernel(randn(rng))
         @test isstationary(k_const)
@@ -59,6 +62,9 @@ struct FooKernel <: CrossKernel end
         kernel_tests(k_const, x0, x1, x2)
         kernel_tests(k_const, X0, X1, X2)
         kernel_tests(k_const, XB0, XB1, XB2)
+
+        @test k_const + k_const isa ConstantKernel
+        @test k_const + k_const == ConstantKernel(2 * k_const.c)
 
         # Tests for EQ.
         @test isstationary(EQ())
@@ -83,7 +89,7 @@ struct FooKernel <: CrossKernel end
         @test Noise(5.0) == Noise(5)
         kernel_tests(Noise(5.0), x0, x1, x2)
         kernel_tests(Noise(5.0), X0, X1, X2)
-        kernel_tests(Noise(5.0), XB0, XB1, XB2)
+        # kernel_tests(Noise(5.0), XB0, XB1, XB2)
 
         # Tests for EmpiricalKernel.
         A_ = randn(rng, N, N)

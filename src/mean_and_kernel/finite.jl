@@ -20,6 +20,9 @@ length(μ::FiniteMean) = length(μ.X)
 show(io::IO, μ::FiniteMean) = show(io, "FiniteMean($(μ.μ)")
 _map(μ::FiniteMean, q::IntVec) = map(μ.μ, μ.X[q])
 
+# Sugar
+map(μ::FiniteMean, ::Colon) = map(μ, eachindex(μ))
+
 """
     FiniteKernel <: Kernel
 
@@ -36,11 +39,20 @@ FiniteKernel(Σ::LazyPDMat) = FiniteKernel(EmpiricalKernel(Σ), 1:size(Σ, 1))
 eachindex(k::FiniteKernel) = eachindex(k.X)
 size(k::FiniteKernel, N::Int) = N ∈ (1, 2) ? length(k.X) : 1
 show(io::IO, k::FiniteKernel) = show(io, "FiniteKernel($(k.k))")
+_map(k::FiniteKernel, q::IntVec) = map(k.k, k.X[q])
 _map(k::FiniteKernel, q::IntVec, q′::IntVec) = map(k.k, k.X[q], k.X[q′])
 function _pairwise(k::FiniteKernel, q::IntVec)
     return pairwise(k.k, k.X[q])
 end
 _pairwise(k::FiniteKernel, q::IntVec, q′::IntVec) = pairwise(k.k, k.X[q], k.X[q′])
+
+# Sugar
+map(k::FiniteKernel, ::Colon) = map(k, eachindex(k))
+map(k::FiniteKernel, ::Colon, ::Colon) = map(k, eachindex(k), eachindex(k))
+pairwise(k::FiniteKernel, ::Colon) = pairwise(k, eachindex(k))
+pairwise(k::FiniteKernel, ::Colon, ::Colon) = pairwise(k, eachindex(k), eachindex(k))
+pairwise(k::FiniteKernel, ::Colon, q′::IntVec) = pairwise(k, eachindex(k), q′)
+pairwise(k::FiniteKernel, q::IntVec, ::Colon) = eachindex(k, q, eachindex(k))
 
 """
     LhsFiniteCrossKernel <: CrossKernel
@@ -59,6 +71,10 @@ eachindex(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex
 _map(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = map(k.k, k.X[q], X′)
 _pairwise(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = pairwise(k.k, k.X[q], X′)
 
+# Sugar
+map(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = map(k, eachindex(k, 1), X′)
+pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = pairwise(k, eachindex(k, 1), X′)
+
 """
     RhsFiniteCrossKernel <: CrossKernel
 
@@ -75,6 +91,10 @@ show(io::IO, k::RhsFiniteCrossKernel) = show(io, "RhsFiniteCrossKernel($(k.k))")
 eachindex(k::RhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.k, 1) : eachindex(k.X′)
 _map(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = map(k.k, X, k.X′[q′])
 _pairwise(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = pairwise(k.k, X, k.X′[q′])
+
+# Sugar
+map(k::RhsFiniteCrossKernel, X::AV, ::Colon) = map(k, X, eachindex(k, 2))
+pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = pairwise(k, X, eachindex(k, 2))
 
 """
     FiniteCrossKernel <: CrossKernel
@@ -93,3 +113,11 @@ show(io::IO, k::FiniteCrossKernel) = show(io, "FiniteCrossKernel($(k.k))")
 eachindex(k::FiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex(k.X′)
 _map(k::FiniteCrossKernel, q::IntVec, q′::IntVec) = map(k.k, k.X[q], k.X′[q′])
 _pairwise(k::FiniteCrossKernel, q::IntVec, q′::IntVec) = pairwise(k.k, k.X[q], k.X′[q′])
+
+# Sugar
+map(k::FiniteCrossKernel, ::Colon, ::Colon) = map(k, eachindex(k, 1), eachindex(k, 2))
+function pairwise(k::FiniteCrossKernel, ::Colon, ::Colon)
+    return pairwise(k, eachindex(k, 1), eachindex(k, 2))
+end
+pairwise(k::FiniteCrossKernel, ::Colon, X′::IntVec) = pairwise(k, eachindex(k, 1), X′)
+pairwise(k::FiniteCrossKernel, X::IntVec, ::Colon) = pairwise(k, X, eachindex(k, 2))

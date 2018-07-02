@@ -1,5 +1,4 @@
-import Base: mean, ==, map, AbstractVector
-import Base: map
+import Base: mean, ==, map, AbstractVector, map, +, *
 
 export CustomMean, ZeroMean, ConstantMean, mean
 
@@ -13,6 +12,7 @@ length(::BaseMeanFunction) = Inf
 @inline _map(f::MeanFunction, X::AV) = _map_fallback(f, X)
 @inline map(f::MeanFunction, X::AV) = _map(f, X)
 map(f::MeanFunction, X::BlockData) = BlockVector([map(f, x) for x in blocks(X)])
+map(f::MeanFunction, ::Colon) = map(f, eachindex(f))
 
 """
     CustomMean <: BaseMeanFunction
@@ -35,6 +35,13 @@ struct ZeroMean{T<:Real} <: BaseMeanFunction end
 @inline _map(z::ZeroMean{T}, D::AbstractVector) where T = Zeros{T}(length(D))
 ==(::ZeroMean, ::ZeroMean) = true
 
++(μ::ZeroMean, μ′::ZeroMean) = μ
++(μ::ZeroMean, μ′::MeanFunction) = μ′
++(μ::MeanFunction, μ′::ZeroMean) = μ
+*(μ::ZeroMean, μ′::ZeroMean) = μ
+*(μ::ZeroMean, μ′::MeanFunction) = μ
+*(μ::MeanFunction, μ′::ZeroMean) = μ′
+
 """
     ConstantMean{T} <: BaseMeanFunction
 
@@ -46,6 +53,9 @@ end
 @inline (μ::ConstantMean)(x) = μ.c
 @inline _map(μ::ConstantMean, D::AbstractVector) = Fill(μ.c, length(D))
 ==(μ::ConstantMean, μ′::ConstantMean) = μ.c == μ′.c
+
++(μ::ConstantMean, μ′::ConstantMean) = ConstantMean(μ.c + μ′.c)
+*(μ::ConstantMean, μ′::ConstantMean) = ConstantMean(μ.c * μ′.c)
 
 """
     EmpiricalMean <: BaseMeanFunction

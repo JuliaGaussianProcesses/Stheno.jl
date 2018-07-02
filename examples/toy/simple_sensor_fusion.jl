@@ -4,7 +4,7 @@ using Stheno
 
 ###########################  Define and inspect our model  ###########################
 
-rng = MersenneTwister(123456)
+rng = MersenneTwister(123456);
 
 #=
 In this example, `f` is an unknown real-valued function that we wish to infer. To achieve
