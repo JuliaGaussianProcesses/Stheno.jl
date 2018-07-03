@@ -63,5 +63,26 @@
         @test cov(g2′(X)) ≈ f′X .* cov(g1(X)) .* f′X'
         @test cov(g3′(X)) ≈ f′X .* cov(g2′(X)) .* f′X'
         @test cov(g4′(X)) ≈ f′X .* cov(g3′(X)) .* f′X'
+
+        fX′, f′X′ = map(f, X′), map(f′, X′)
+        @test xcov(g2(X), g1(X′)) ≈ fX .* xcov(g1(X), g1(X′))
+        @test xcov(g3(X), g1(X′)) ≈ fX.^2 .* xcov(g1(X), g1(X′))
+        @test xcov(g4(X), g1(X′)) ≈ fX.^3 .* xcov(g1(X), g1(X′))
+        @test xcov(g2′(X), g1(X′)) ≈ f′X .* xcov(g1(X), g1(X′))
+        @test xcov(g3′(X), g1(X′)) ≈ (f′X.^2) .* xcov(g1(X), g1(X′))
+        @test xcov(g4′(X), g1(X′)) ≈ (f′X.^3) .* xcov(g1(X), g1(X′))
+
+        @test xcov(g1(X′), g2(X)) == xcov(g2(X), g1(X′))'
+        @test xcov(g1(X′), g3(X)) == xcov(g3(X), g1(X′))'
+        @test xcov(g1(X′), g4(X)) == xcov(g4(X), g1(X′))'
+
+        @test xcov(g2(X), g2′(X′)) ≈ fX .* xcov(g1(X), g1(X′)) .* f′X′'
+        @test xcov(g3(X), g3′(X′)) ≈ fX.^2 .* xcov(g1(X), g1(X′)) .* (f′X′.^2)'
+        @test xcov(g4(X), g4′(X′)) ≈ fX.^3 .* xcov(g1(X), g1(X′)) .* (f′X′.^3)'
+
+        @test xcov(g2(X), g3′(X′)) ≈ fX .* xcov(g1(X), g1(X′)) .* (f′X′').^2
+        @test xcov(g3(X), g2′(X′)) ≈ fX.^2 .* xcov(g1(X), g1(X′)) .* (f′X′')
+        @test xcov(g2(X), g4′(X′)) ≈ fX .* xcov(g1(X), g1(X′)) .* (f′X′').^3
+        @test xcov(g4(X), g2′(X′)) ≈ fX.^3 .* xcov(g1(X), g1(X′)) .* (f′X′')
     end
 end

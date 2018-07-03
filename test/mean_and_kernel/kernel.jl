@@ -51,6 +51,7 @@ struct FooKernel <: CrossKernel end
         kernel_tests(k_zero, XB0, XB1, XB2)
 
         @test ZeroKernel{Float64}() + ZeroKernel{Float64}() == ZeroKernel{Float64}()
+        @test ZeroKernel{Float64}() * ZeroKernel{Float64}() === ZeroKernel{Float64}()
         @test ZeroKernel{Float64}() * EQ() == ZeroKernel{Float64}()
 
         # Tests for ConstantKernel.
@@ -63,8 +64,13 @@ struct FooKernel <: CrossKernel end
         kernel_tests(k_const, X0, X1, X2)
         kernel_tests(k_const, XB0, XB1, XB2)
 
+        zro = ZeroKernel{Float64}()
         @test k_const + k_const isa ConstantKernel
-        @test k_const + k_const == ConstantKernel(2 * k_const.c)
+        @test k_const * k_const == ConstantKernel(k_const.c^2)
+        @test zro + k_const === k_const
+        @test k_const + zro === k_const
+        @test zro * k_const === zro
+        @test k_const * zro === zro
 
         # Tests for EQ.
         @test isstationary(EQ())

@@ -74,4 +74,10 @@ let
     @test maximum(abs.(cov(fb′(Zb)) - cov((f | (f(X)←y[1:N], f(X′)←y[N+1:end]))(Zb)))) < 1e-6
 end
 
+# Test 41, 43
+
+
+
+# Test all of Titsias implementation.
+
 end

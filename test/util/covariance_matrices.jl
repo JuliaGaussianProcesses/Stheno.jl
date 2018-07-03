@@ -93,6 +93,9 @@ using Stheno: unbox
 
         @test Stheno.diag_Xᵀ_invA_X(A, X) ≈ diag(Xt_invA_X(A, X))
         @test Stheno.diag_Xᵀ_invA_Y(X, A, Y) ≈ diag(Xt_invA_Y(X, A, Y))
+
+        @test transpose(A) === A
+        @test ctranspose(A) === A
     end
 
     let

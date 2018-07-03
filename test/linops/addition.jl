@@ -28,9 +28,19 @@
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
         μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)
+
+        # Addition of BlockGPs.
         f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
         fj1, fj2 = BlockGP([f1, f2]), BlockGP([f2, f1])
         @test mean_vec((fj1 + fj2)(BlockData([X, X′]))) ==
             BlockVector([mean_vec((f1 + f2)(X)), mean_vec((f2 + f1)(X′))])
+
+        # Addition of a BlockGP and a GP.
+        @test mean_vec((fj1 + f1)(BlockData([X, X′]))) ==
+            BlockData([mean_vec((f1 + f1)(X)), mean_vec((f2 + f1)(X′))])
+
+        # Addition of a GP and a BlockGP.
+        @test mean_vec((f2 + fj2)(BlockData([X, X′]))) ==
+            BlockData([mean_vec((f2 + f2)(X)), mean_vec((f2 + f1)(X′))])
     end
 end

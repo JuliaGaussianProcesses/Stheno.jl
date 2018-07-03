@@ -10,6 +10,7 @@ function unary_map_tests(f, X::AbstractVector)
     @test map(f, X) isa AbstractVector
     @test length(map(f, X)) == length(X)
     @test map(f, X) ≈ [f(x) for x in X]
+    @test map(f, X) ≈ Stheno._map_fallback(f, X)
 end
 function unary_map_tests(f, X::BlockData)
     @test map(f, X) isa AbstractBlockVector
@@ -26,6 +27,7 @@ function binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
     @test map(f, X, X′) isa AbstractVector
     @test length(map(f, X, X′)) == length(X)
     @test map(f, X, X′) ≈ [f(x, x′) for (x, x′) in zip(X, X′)]
+    @test map(f, X, X′) ≈ Stheno._map_fallback(f, X, X′)
 end
 function binary_map_tests(f, XB::BlockData, XB′::BlockData)
     @test map(f, XB, XB′) isa AbstractBlockVector
@@ -60,6 +62,7 @@ function pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
     @test pairwise(f, X, X′) isa AbstractMatrix
     @test size(pairwise(f, X, X′)) == (N, N′)
     @test pairwise(f, X, X′) ≈ reshape([f(x, x′) for (x, x′) in product(X, X′)], N, N′)
+    @test pairwise(f, X, X′) ≈ Stheno._pairwise_fallback(f, X, X′)
 end
 function pairwise_tests(f, X::BlockData, X′::BlockData)
     N, N′ = length(X), length(X′)
@@ -93,6 +96,7 @@ Tests that any mean function `μ` should be able to pass.
 """
 function mean_function_tests(μ::MeanFunction, X::AbstractVector)
     __mean_function_tests(μ, X)
+    mean_function_tests(μ, BlockData([X]))
     mean_function_tests(μ, BlockData([X, X]))
 end
 function mean_function_tests(μ::MeanFunction, X::BlockData)
@@ -162,4 +166,8 @@ function __kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
 
     # Should be (approximately) positive definite.
     @test all(eigvals(Matrix(pairwise(k, X0))) .> -1e-9)
+
+    # length should equal length of first side.
+    @test length(k) == size(k, 1)
+    @test size(k, 1) == size(k, 2)
 end

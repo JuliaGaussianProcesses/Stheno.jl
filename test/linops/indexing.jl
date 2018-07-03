@@ -71,6 +71,10 @@ let
     @test cov(fjXX′) == Σ_manual
     @test xcov(fjXX′, fjXX′) == cov(fjXX′)
     @test xcov(fjXX′, f3) == BlockMatrix(reshape([xcov(f3, f3), xcov(f4, f3)], 2, 1))
+
+    # Check that broadcasting functionality works appropriately.
+    @test cov(BlockGP([f1, f2])(X)) == cov(BlockGP([f1(X), f2(X)]))
+    @test cov(BlockGP([f1, f2])(X)(1:N-1)) == cov(BlockGP([f1(X), f2(X)])(1:N-1))
 end
 
 end # @testset indexing

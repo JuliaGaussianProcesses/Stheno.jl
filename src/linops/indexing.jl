@@ -17,7 +17,7 @@ Index the `c`th component `AbstractGP` of `f_q` at `X[c]`.
 
 Index each `c`th component `AbstractGP` of `f_q` at `X`.
 """
-(f_q::BlockGP)(X::AbstractVector) = BlockGP([f(X) for f in f_q])
+(f_q::BlockGP)(X::AbstractVector) = BlockGP([f(X) for f in f_q.fs])
 
 μ_p′(f_q::GP, X::AVM) = FiniteMean(mean(f_q), X)
 k_p′(f_q::GP, X::AVM) = FiniteKernel(kernel(f_q), X)

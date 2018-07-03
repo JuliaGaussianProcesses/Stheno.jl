@@ -45,6 +45,14 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
         mean_function_tests(f, BlockData([x, X]))
 
         @test isinf(length(f))
+
+        c = ConstantMean(5.0)
+        @test f + f === f
+        @test f + c == c
+        @test c + f == c
+        @test f * f === f
+        @test f * c === f
+        @test c * f === f
     end
 
     # Test ConstantMean.
@@ -78,5 +86,8 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
 
         mean_function_tests(μ, x)
         mean_function_tests(μ, BlockData([x, x]))
+
+        @test map(μ, :) == map(μ, eachindex(μ))
+
     end
 end
