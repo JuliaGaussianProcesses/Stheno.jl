@@ -41,7 +41,6 @@ map(k::CrossKernel, X::BlockData, X′::AV) = map(k, X, BlockData([X′]))
 map(k::CrossKernel, X::AV, X′::BlockData) = map(k, BlockData([X]), X′)
 
 function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
-    @show typeof(k), typeof(X), typeof(X′)
     return [k(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
 end
 _pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise_fallback(k, X, X′)

@@ -3,6 +3,7 @@ import Distances: pairwise
 """
     DeltaSumMean{Tϕ, Tg, TZ} <: MeanFunction
 
+
 """
 struct DeltaSumMean{Tϕ, Tg} <: MeanFunction
     ϕ::Tϕ
@@ -12,24 +13,13 @@ end
 (μ::DeltaSumMean)(x::Number) = _map(μ, [x])[1]
 (μ::DeltaSumMean)(X::AV) = _map(μ, MatData(reshape(X, :, 1)))[1]
 function _map(μ::DeltaSumMean, X::AV)
-    @show typeof(pairwise(μ.ϕ, :, X)), typeof(eachindex(μ.ϕ, 1))
-    @show typeof(μ.ϕ)
-    @show typeof(μ.ϕ.ks[1].k), typeof(μ.ϕ.ks[2].k)
-    @show μ.ϕ.ks[1].X, X
-    @show @which _pairwise(EQ(), μ.ϕ.ks[1].X, X)
-    @show size(_pairwise(EQ(), μ.ϕ.ks[1].X, X))
-    @show size(_pairwise(EQ(), μ.ϕ.ks[2].X, X))
-    @show size(pairwise(μ.ϕ, eachindex(μ.ϕ, 1), X))
-    @show @which pairwise(μ.ϕ, eachindex(μ.ϕ, 1), BlockData([X]))
-    # @show size(eachindex(μ.ϕ.ks[1], 1)), size(eachindex(μ.ϕ.ks[2], 1))
-    # @show size(pairwise(μ.ϕ, :, X))
-    # @show size(X)
     return pairwise(μ.ϕ, :, X)' * map(μ.μ, :) + map(μ.g, X)
 end
 eachindex(μ::DeltaSumMean) = eachindex(g)
 
 """
     DeltaSumKernel{Tϕ} <: Kernel
+
 
 """
 struct DeltaSumKernel{Tϕ} <: Kernel
@@ -55,6 +45,8 @@ end
 
 """
     LhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
+
+
 """
 struct LhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
     ϕ::Tϕ
@@ -75,6 +67,8 @@ end
 
 """
     RhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
+
+
 """
 struct RhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
     k::CrossKernel

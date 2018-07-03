@@ -21,6 +21,8 @@ kernel(f1::BlockGP, f2::GP) = BlockCrossKernel(kernel.(f1.fs, Ref(f2)))
 
 deconstruct(f::BlockGP) = (f.fs...,)
 
+
+
 ##################################### Syntactic Sugar ######################################
 
 # Convenience methods for invoking `logpdf` and `rand` with multiple processes.
@@ -29,6 +31,7 @@ rand(rng::AbstractRNG, fs::AV{<:AbstractGP}, N::Int) = rand(rng, BlockGP(fs), N)
 function rand(rng::AbstractRNG, f::BlockGP, N::Int)
     M = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(f.fs), [N])
     μ = mean_vec(f)
+    # @show "foo"
     for b in eachindex(f.fs)
         setblock!(M, getblock(μ, b) * ones(1, N), b, 1)
     end

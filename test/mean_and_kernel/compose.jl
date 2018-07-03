@@ -146,13 +146,13 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         # Test addition.
         @test μ + μ′ == CompositeMean(+, μ, μ′)
         @test map(μ + μ′, X) == map(μ, X) + map(μ′, X)
-        @test μ + 5 == CompositeMean(+, μ, ConstantMean(5))
+        @test map(μ + 5, X) == map(μ, X) .+ 5
         @test 2.34 + μ′ == CompositeMean(+, ConstantMean(2.34), μ′)
 
         # Test multiplication.
         @test μ * μ′ == CompositeMean(*, μ, μ′)
         @test map(μ * μ′, X) == map(μ, X) .* map(μ′, X)
-        @test μ * 4.32 == CompositeMean(*, μ, ConstantMean(4.32))
+        @test map(μ * 4.32, X) == 4.32 .* map(μ, X)
         @test 4.23 * μ′ == CompositeMean(*, ConstantMean(4.23), μ′)
     end
 

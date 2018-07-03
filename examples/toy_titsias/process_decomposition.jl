@@ -5,7 +5,7 @@ using Stheno
 
 ###########################  Define our model  ###########################
 
-σ² = 0.1
+σ² = 1e-3
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 function model(gpc)
@@ -53,32 +53,37 @@ f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(X
 μf₂′, σf₂′ = marginals(f₂′(Xp));
 μf₃′, σf₃′ = marginals(f₃′(Xp));
 
+@show logpdf([y₁(X₁), y₃(X₃)], [ŷ₁, ŷ₃]);
+fb, yb = BlockGP([f₁(X₁), f₃(X₃)]), BlockVector([ŷ₁, ŷ₃]);
+@show elbo(fb, yb, fb, sqrt(σ²));
 
 
 ###########################  Plot results  ###########################
+
+
 using Plots
 plotly();
 posterior_plot = plot();
 
-# Plot posterior marginal variances
-plot!(posterior_plot, Xp, [μf₁′ μf₁′];
-    linewidth=0.0,
-    fillrange=[μf₁′ .- 3 .* σf₁′, μf₁′ .+ 3 * σf₁′],
-    fillalpha=0.3,
-    fillcolor=:red,
-    label="");
-plot!(posterior_plot, Xp, [μf₂′ μf₂′];
-    linewidth=0.0,
-    fillrange=[μf₂′ .- 3 .* σf₂′, μf₂′ .+ 3 * σf₂′],
-    fillalpha=0.3,
-    fillcolor=:green,
-    label="");
-plot!(posterior_plot, Xp, [μf₃′ μf₃′];
-    linewidth=0.0,
-    fillrange=[μf₃′ .- 3 .* σf₃′, μf₃′ .+ 3 * σf₃′],
-    fillalpha=0.3,
-    fillcolor=:blue,
-    label="");
+# # Plot posterior marginal variances
+# plot!(posterior_plot, Xp, [μf₁′ μf₁′];
+#     linewidth=0.0,
+#     fillrange=[μf₁′ .- 3 .* σf₁′, μf₁′ .+ 3 * σf₁′],
+#     fillalpha=0.3,
+#     fillcolor=:red,
+#     label="");
+# plot!(posterior_plot, Xp, [μf₂′ μf₂′];
+#     linewidth=0.0,
+#     fillrange=[μf₂′ .- 3 .* σf₂′, μf₂′ .+ 3 * σf₂′],
+#     fillalpha=0.3,
+#     fillcolor=:green,
+#     label="");
+# plot!(posterior_plot, Xp, [μf₃′ μf₃′];
+#     linewidth=0.0,
+#     fillrange=[μf₃′ .- 3 .* σf₃′, μf₃′ .+ 3 * σf₃′],
+#     fillalpha=0.3,
+#     fillcolor=:blue,
+#     label="");
 
 # # Plot joint posterior samples
 # plot!(posterior_plot, Xp, f₁′Xp,

@@ -34,9 +34,6 @@ eachindex(μ::ConditionalMean) = eachindex(μ.μg)
 (μ::ConditionalMean)(x::Number) = map(μ, [x])[1]
 (μ::ConditionalMean)(x::AbstractVector) = map(μ, MatData(reshape(x, length(x), 1)))[1]
 function _map(μ::ConditionalMean, Xg::AV)
-    @show typeof(μ), typeof(μ.kfg), typeof(μ.c.α), typeof(Xg)
-    F = pairwise(μ.kfg, :, Xg)
-    @show typeof(F), nblocks(F, 1), nblocks(F, 2), size(F), size(μ.c.α)
     return map(μ.μg, Xg) + pairwise(μ.kfg, :, Xg)' * μ.c.α
 end
 

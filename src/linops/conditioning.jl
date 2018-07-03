@@ -61,7 +61,8 @@ struct Titsias{Tu<:AbstractGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
 end
 function |(g::AbstractGP, c::Titsias)
     g′ = g | (c.u←c.m′u)
-    ĝ = project(kernel(c.u, g), c.γ, 1:length(c.m′u), ZeroMean{Float64}())
+    # @show typeof(kernel(c.u, g)), typeof(g), size(kernel(c.u, g).ks)
+    ĝ = project(kernel(c.u, g), c.γ, eachindex(c.u), ZeroMean{Float64}())
     return g′ + ĝ
 end
 
@@ -86,4 +87,9 @@ function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AV{<:AbstractGP}
     return optimal_q(BlockGP(f), BlockVector(y), BlockGP(u), σ)
 end
 
-|(g::Tuple{Vararg{AbstractGP}}, c::AbstractConditioner) = deconstruct(BlockGP([g...]) | c)
+|(g::Tuple{Vararg{AbstractGP}}, c::Titsias) = deconstruct(BlockGP([g...]) | c)
+function |(g::BlockGP, c::Titsias)
+    # @show "foo"
+    return BlockGP(g.fs .| c)
+end
+

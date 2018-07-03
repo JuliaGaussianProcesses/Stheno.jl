@@ -20,6 +20,7 @@ _map(f::CompositeMean, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
 (k::CompositeKernel)(x) = map(k.f, map(f->f(x), k.x)...)
 size(k::CompositeKernel, N::Int) = size(k.x[1], N)
 isstationary(k::CompositeKernel) = all(map(isstationary, k.x))
+@noinline eachindex(k::CompositeKernel) = eachindex(k.x[1], 1)
 
 _map(f::CompositeKernel, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
 _pairwise(f::CompositeKernel, X::AV) = LazyPDMat(map(f.f, map(f->pairwise(f, X), f.x)...))
