@@ -59,9 +59,8 @@ struct Titsias{Tu<:AbstractGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
         return new{Tu, Tm, typeof(γ)}(u, m′u, γ)
     end
 end
-function |(g::AbstractGP, c::Titsias)
+function |(g::GP, c::Titsias)
     g′ = g | (c.u←c.m′u)
-    # @show typeof(kernel(c.u, g)), typeof(g), size(kernel(c.u, g).ks)
     ĝ = project(kernel(c.u, g), c.γ, eachindex(c.u), ZeroMean{Float64}())
     return g′ + ĝ
 end
@@ -89,7 +88,6 @@ end
 
 |(g::Tuple{Vararg{AbstractGP}}, c::Titsias) = deconstruct(BlockGP([g...]) | c)
 function |(g::BlockGP, c::Titsias)
-    # @show "foo"
     return BlockGP(g.fs .| c)
 end
 
