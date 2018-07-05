@@ -15,6 +15,7 @@ struct FiniteMean <: MeanFunction
     X::AbstractVector
 end
 (μ::FiniteMean)(n) = μ.μ(getindex(μ.X, n))
+finite(μ::MeanFunction, X::AbstractVector) = FiniteMean(μ, X)
 eachindex(μ::FiniteMean) = eachindex(μ.X)
 length(μ::FiniteMean) = length(μ.X)
 show(io::IO, μ::FiniteMean) = show(io, "FiniteMean($(μ.μ)")
@@ -34,6 +35,7 @@ struct FiniteKernel <: Kernel
     X::AbstractVector
 end
 FiniteKernel(Σ::LazyPDMat) = FiniteKernel(EmpiricalKernel(Σ), 1:size(Σ, 1))
+finite(k::Kernel, X::AbstractVector) = FiniteKernel(k, X)
 (k::FiniteKernel)(n, n′) = k.k(getindex(k.X, n), getindex(k.X, n′))
 (k::FiniteKernel)(n) = k.k(k.X[n], k.X[n])
 eachindex(k::FiniteKernel) = eachindex(k.X)
@@ -65,6 +67,7 @@ struct LhsFiniteCrossKernel <: CrossKernel
     X::AbstractVector
 end
 (k::LhsFiniteCrossKernel)(n, x) = k.k(getindex(k.X, n), x)
+lhsfinite(k::CrossKernel, X::AbstractVector) = LhsFiniteCrossKernel(k, X)
 size(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? length(k.X) : size(k.k, N)
 show(io::IO, k::LhsFiniteCrossKernel) = show(io, "LhsFiniteCrossKernel($(k.k))")
 eachindex(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex(k.k, 2)
@@ -86,6 +89,7 @@ struct RhsFiniteCrossKernel <: CrossKernel
     X′::AbstractVector
 end
 (k::RhsFiniteCrossKernel)(x, n′) = k.k(x, getindex(k.X′, n′))
+rhsfinite(k::CrossKernel, X′::AbstractVector) = RhsFiniteCrossKernel(k, X′)
 size(k::RhsFiniteCrossKernel, N::Int) = N == 2 ? length(k.X′) : size(k.k, N)
 show(io::IO, k::RhsFiniteCrossKernel) = show(io, "RhsFiniteCrossKernel($(k.k))")
 eachindex(k::RhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.k, 1) : eachindex(k.X′)
@@ -108,6 +112,7 @@ struct FiniteCrossKernel <: CrossKernel
     X′::AbstractVector
 end
 (k::FiniteCrossKernel)(n, n′) = k.k(getindex(k.X, n), getindex(k.X′, n′))
+finite(k::CrossKernel, X::AV, X′::AV) = FiniteCrossKernel(k, X, X′)
 size(k::FiniteCrossKernel, N::Int) = N == 1 ? length(k.X) : (N == 2 ? length(k.X′) : 1)
 show(io::IO, k::FiniteCrossKernel) = show(io, "FiniteCrossKernel($(k.k))")
 eachindex(k::FiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex(k.X′)

@@ -227,7 +227,10 @@ that for general matrices / vectors as we additionally require that each block b
 with block of the other matrix with which it will be multiplied. This ensures that the
 result is itself straightforwardly representable as `BlockVecOrMat`.
 """
-are_conformal(A::AVM, B::AVM) = blocksizes(A, 2) == blocksizes(B, 1)
+function are_conformal(A::AVM, B::AVM)
+    # @show blocksizes(A, 2), blocksizes(B, 1)
+    return blocksizes(A, 2) == blocksizes(B, 1)
+end
 
 """
     *(A::BlockMatrix, x::BlockVector)

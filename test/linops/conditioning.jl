@@ -93,7 +93,7 @@ end
 # Test Titsias implementation by checking that it (approximately) recovers exact inference
 # when M = N and Z = X.
 let
-    rng, N, N′, D, σ² = MersenneTwister(123456), 10, 11, 5, 1e-1
+    rng, N, N′, D, σ² = MersenneTwister(123456), 2, 3, 5, 1e-1
     X_, X′_ = randn(rng, D, N), randn(rng, D, N′)
     X, X′, Z = MatData(X_), MatData(X′_), MatData(randn(rng, D, N + N′))
     μ, k, XX′ = ConstantMean(1.0), EQ(), MatData(hcat(X_, X′_))
@@ -126,6 +126,7 @@ let
 
     # Check that Titsias with BlockGP works the same as Titsias with regular GP.
     ŷX, ŷX′ = ŷ[1:N], ŷ[N+1:end]
+
     fb, ŷb = BlockGP([f(X), f(X′)]), BlockVector([ŷX, ŷX′])
     μb, Σb = Stheno.optimal_q(fb, ŷb, fb, sqrt(σ²))
 
@@ -141,9 +142,18 @@ let
     f′Zb = f(Z) | conditioner_blocked
 
     @test isapprox(mean_vec(f′Z), mean_vec(f′Zb); rtol=1e-4)
-    # @test isapprox(cov(f′Z), cov(f′Zb); rtol=1e-4)
-    # display((cov(f′Z) .- cov(f′Zb)) ./ 1)
-    # display((cov(f′Z) .- cov(f′Zb)) ./ cov(f′Zb))
+    @test isapprox(cov(f′Z), cov(f′Zb); rtol=1e-4)
+    display((cov(f′Z) .- cov(f′Zb)) ./ 1)
+    display((cov(f′Z) .- cov(f′Zb)) ./ cov(f′Zb))
+
+    Xb = BlockData([X, X′])
+    Kuu, Kuu_b = cov(f(XX′)), cov(f(Xb))
+
+    # THESE ARE NOT DIFFERENT! WHAT THE HELL IS GOING ON TO MAKE THIS WRONG?!?!?!
+    display(Stheno.Xtinv_A_Xinv(Σᵤᵤ, Kuu))
+    display(Stheno.Xtinv_A_Xinv(Σb, Kuu_b))
+
+    @show maximum(abs.(Stheno.Xtinv_A_Xinv(Σᵤᵤ, Kuu) - Stheno.Xtinv_A_Xinv(Σb, Kuu_b)))
 
 end
 

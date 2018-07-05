@@ -61,7 +61,7 @@ struct Titsias{Tu<:AbstractGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
 end
 function |(g::GP, c::Titsias)
     g′ = g | (c.u←c.m′u)
-    ĝ = project(kernel(c.u, g), c.γ, eachindex(c.u), ZeroMean{Float64}())
+    ĝ = project(kernel(c.u, g), c.γ(eachindex(c.u)))
     return g′ + ĝ
 end
 
