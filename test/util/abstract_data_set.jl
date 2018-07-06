@@ -1,4 +1,4 @@
-using Stheno: MatData, BlockData
+using Stheno: ColsAreObs, BlockData
 
 @testset "util/abstract_data_set" begin
 
@@ -7,23 +7,23 @@ using Stheno: MatData, BlockData
         x, X = randn(rng, N), randn(rng, D, N)
 
         # Test Matrix data sets.
-        DX = MatData(X)
+        DX = ColsAreObs(X)
         @test DX == DX
         @test size(DX) == (N,)
         @test length(DX) == N
         @test getindex(DX, 5) isa Vector
         @test getindex(DX, 5) == X[:, 5]
-        @test getindex(DX, 1:2:6) isa MatData
-        @test getindex(DX, 1:2:6) == MatData(X[:, 1:2:6])
+        @test getindex(DX, 1:2:6) isa ColsAreObs
+        @test getindex(DX, 1:2:6) == ColsAreObs(X[:, 1:2:6])
         @test view(DX, 4) isa AbstractVector
         @test view(DX, 4) == view(X, :, 4)
-        @test view(DX, 1:2:4) isa MatData
-        @test view(DX, 1:2:4) == MatData(view(X, :, 1:2:4))
+        @test view(DX, 1:2:4) isa ColsAreObs
+        @test view(DX, 1:2:4) == ColsAreObs(view(X, :, 1:2:4))
         @test eltype(DX) == Vector{Float64}
         @test eachindex(DX) == 1:N
 
         # Test BlockDataSet.
-        DX = MatData(X)
+        DX = ColsAreObs(X)
         DxX = BlockData([x, DX])
         @test size(DxX) == (2N,)
         @test length(DxX) == 2N

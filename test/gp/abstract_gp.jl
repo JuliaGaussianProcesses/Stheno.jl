@@ -50,7 +50,7 @@ using Stheno: ConstantMean, ZeroMean, ConstantKernel, ZeroKernel, pairwise, AV, 
     # Test deterministic properties of `rand`.
     let
         rng, N, D = MersenneTwister(123456), 10, 2
-        X, x, μ, k = MatData(randn(rng, D, N)), randn(rng, N), ConstantMean(1), EQ()
+        X, x, μ, k = ColsAreObs(randn(rng, D, N)), randn(rng, N), ConstantMean(1), EQ()
         fX = GP(FiniteMean(μ, X), FiniteKernel(k, X), GPC())
         fx = GP(FiniteMean(μ, x), FiniteKernel(k, x), GPC())
 
@@ -65,7 +65,7 @@ using Stheno: ConstantMean, ZeroMean, ConstantKernel, ZeroKernel, pairwise, AV, 
     # Test statistical properties of `rand`.
     let
         rng, N, D, μ0, S = MersenneTwister(123456), 10, 2, 1, 100_000
-        X = MatData(randn(rng, D, N))
+        X = ColsAreObs(randn(rng, D, N))
         μ, k = FiniteMean(ConstantMean(μ0), X), FiniteKernel(EQ(), X)
         f = GP(μ, k, GPC())
 
@@ -81,7 +81,7 @@ using Stheno: ConstantMean, ZeroMean, ConstantKernel, ZeroKernel, pairwise, AV, 
     using Distributions: MvNormal, PDMat
     let
         rng, N, D, σ, gpc = MersenneTwister(123456), 5, 2, 1e-1, GPC()
-        X = MatData(rand(rng, D, N))
+        X = ColsAreObs(rand(rng, D, N))
         μ = FiniteMean(ConstantMean(1.0), X)
         kf, ky = FiniteKernel(EQ(), X), FiniteKernel(EQ() + Noise(σ^2), X)
         f = GP(μ, kf, gpc)

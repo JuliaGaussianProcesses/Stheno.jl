@@ -14,7 +14,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
     # Test CustomMean function.
     let
         rng, N, D = MersenneTwister(123456), 11, 2
-        X, x = MatData(randn(rng, D, N)), randn(rng, N)
+        X, x = ColsAreObs(randn(rng, D, N)), randn(rng, N)
         foo_mean = x->sum(abs, x)
         f = CustomMean(foo_mean)
 
@@ -34,7 +34,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
     # Test ZeroMean.
     let
         rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, x = MatData(randn(rng, D, P)), randn(rng, P)
+        X, x = ColsAreObs(randn(rng, D, P)), randn(rng, P)
         f = ZeroMean{Float64}()
 
         @test f(randn(rng)) === zero(Float64)
@@ -58,7 +58,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
     # Test ConstantMean.
     let
         rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, x = MatData(randn(rng, D, P)), randn(rng, P)
+        X, x = ColsAreObs(randn(rng, D, P)), randn(rng, P)
         c = randn(rng)
         f = ConstantMean(c)
 
@@ -88,6 +88,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
         mean_function_tests(μ, BlockData([x, x]))
 
         @test map(μ, :) == map(μ, eachindex(μ))
+        @test map(μ, :) == m
 
     end
 end

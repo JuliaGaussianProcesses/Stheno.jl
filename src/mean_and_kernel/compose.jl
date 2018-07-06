@@ -14,6 +14,7 @@ eachindex(c::CompositeMean) = eachindex(c.x[1])
 length(c::CompositeMean) = length(c.x[1])
 (μ::CompositeMean)(x) = map(μ.f, map(f->f(x), μ.x)...)
 _map(f::CompositeMean, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
+map(f::CompositeMean, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
 
 # CompositeKernel definitions.
 (k::CompositeKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
@@ -27,16 +28,22 @@ _pairwise(f::CompositeKernel, X::AV) = LazyPDMat(map(f.f, map(f->pairwise(f, X),
 _map(f::CompositeKernel, X::AV, X′::AV) = map(f.f, map(f->map(f, X, X′), f.x)...)
 _pairwise(f::CompositeKernel, X::AV, X′::AV) = map(f.f, map(f->pairwise(f, X, X′), f.x)...)
 
+map(f::CompositeKernel, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
+pairwise(f::ConstantKernel, ::Colon) = LazyPDMat(map(f.f, map(f->pairwise(f, :), f.x)...))
+
 # CompositeCrossKernel definitions.
 (k::CompositeCrossKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
 size(k::CompositeCrossKernel, N::Int) = size(k.x[1], N)
 isstationary(k::CompositeCrossKernel) = all(map(isstationary, k.x))
+eachindex(k::CompositeCrossKernel, dim::Int) = eachindex(k.x[1], dim)
 
 _map(f::CompositeCrossKernel, X::AV, X′::AV) = map(f.f, map(f->map(f, X, X′), f.x)...)
 function _pairwise(f::CompositeCrossKernel, X::AV, X′::AV)
     return map(f.f, map(f->pairwise(f, X, X′), f.x)...)
 end
 
+map(f::CompositeCrossKernel, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
+pairwise(f::CompositeCrossKernel, ::Colon) = map(f.f, map(f->pairwise(f, :), f.x)...)
 
 
 ############################## Multiply-by-Function Kernels ################################
@@ -53,6 +60,10 @@ end
 (k::LhsCross)(x, x′) = k.f(x) * k.k(x, x′)
 size(k::LhsCross, N::Int) = size(k.k, N)
 _pairwise(k::LhsCross, X::AV, X′::AV) = map(k.f, X) .* pairwise(k.k, X, X′)
+eachindex(k::LhsCross, dim::Int) = eachindex(k.k, dim)
+
+# map(k::LhsCross, ::Colon) = map(k.f, :) .* map(k.k, :)
+# pairwise(k::LhsCross, ::Colon) = map(k.f, :) .* pairwise(k.k, :)
 
 """
     RhsCross <: CrossKernel
@@ -66,6 +77,10 @@ end
 (k::RhsCross)(x, x′) = k.k(x, x′) * k.f(x′)
 size(k::RhsCross, N::Int) = size(k.k, N)
 _pairwise(k::RhsCross, X::AV, X′::AV) = pairwise(k.k, X, X′) .* map(k.f, X′)'
+eachindex(k::RhsCross, dim::Int) = eachindex(k.k, dim)
+
+# map(k::RhsCross, ::Colon) = map(k.k, :) .* map(k.f, :)
+# pairwise(k::RhsCross, ::Colon) = pairwise(k.k, :) .* map(k.f, :)'
 
 """
     OuterCross <: CrossKernel
@@ -81,6 +96,9 @@ size(k::OuterCross, N::Int) = size(k.k, N)
 function _pairwise(k::OuterCross, X::AV, X′::AV)
     return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
 end
+eachindex(k::OuterCross, dim::Int) = eachindex(k.k, dim)
+
+# map(k::OuterCross, ::Colon) = map(k.f, :) .* pairwise(k.k, :) .* map(k.f, :)'
 
 """
     OuterKernel <: Kernel
@@ -98,7 +116,7 @@ _pairwise(k::OuterKernel, X::AV) = Xt_A_X(pairwise(k.k, X), Diagonal(map(k.f, X)
 function _pairwise(k::OuterKernel, X::AV, X′::AV)
     return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
 end
-
+eachindex(k::OuterKernel) = eachindex(k.k)
 
 
 ############################## Convenience functionality ##############################

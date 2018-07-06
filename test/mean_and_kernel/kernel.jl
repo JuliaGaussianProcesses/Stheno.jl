@@ -9,7 +9,7 @@ struct FooKernel <: CrossKernel end
     # Test pairwise.
     let
         rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, X′ = MatData(randn(rng, D, P)), MatData(randn(rng, D, Q))
+        X, X′ = ColsAreObs(randn(rng, D, P)), ColsAreObs(randn(rng, D, Q))
         x, x′ = randn(rng, P), randn(rng, Q)
         foo = FooKernel()
 
@@ -36,7 +36,7 @@ struct FooKernel <: CrossKernel end
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         XB0, XB1, XB2 = BlockData([x0, X0]), BlockData([x1, X1]), BlockData([x2, X2])
 
         # Tests for ZeroKernel.
@@ -105,6 +105,11 @@ struct FooKernel <: CrossKernel end
         kernel_tests(k, Ds0, Ds1, Ds2)
         kernel_tests(k, BlockData([Ds0, Ds0]), BlockData([Ds1, Ds1]), BlockData([Ds2, Ds2]))
         @test size(k, 1) == N && size(k, 2) == N
+
+        @test map(k, :) == diag(A)
+        @test map(k, :, :) == diag(A)
+        @test pairwise(k, :) == A
+        @test pairwise(k, :, :) == A
 
         @test_throws AssertionError AbstractMatrix(EQ())
     end

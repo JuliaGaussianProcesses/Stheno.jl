@@ -32,7 +32,7 @@ end
 length(μ::ConditionalMean) = length(μ.μg)
 eachindex(μ::ConditionalMean) = eachindex(μ.μg)
 (μ::ConditionalMean)(x::Number) = map(μ, [x])[1]
-(μ::ConditionalMean)(x::AbstractVector) = map(μ, MatData(reshape(x, length(x), 1)))[1]
+(μ::ConditionalMean)(x::AbstractVector) = map(μ, ColsAreObs(reshape(x, length(x), 1)))[1]
 function _map(μ::ConditionalMean, Xg::AV)
     return map(μ.μg, Xg) + pairwise(μ.kfg, :, Xg)' * μ.c.α
 end
@@ -49,7 +49,7 @@ struct ConditionalKernel <: Kernel
 end
 (k::ConditionalKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 (k::ConditionalKernel)(x::AV, x′::AV) =
-    map(k, MatData(reshape(x, length(x), 1)), MatData(reshape(x′, length(x′), 1)))[1]
+    map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
 size(k::ConditionalKernel, N::Int) = size(k.kgg, N)
 eachindex(k::ConditionalKernel) = eachindex(k.kgg)
 
@@ -94,7 +94,7 @@ struct ConditionalCrossKernel <: CrossKernel
 end
 (k::ConditionalCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 (k::ConditionalCrossKernel)(x::AV, x′::AV) =
-    map(k, MatData(reshape(x, length(x), 1)), MatData(reshape(x′, length(x′), 1)))[1]
+    map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
 size(k::ConditionalCrossKernel, N::Int) = size(k.kgh, N)
 eachindex(k::ConditionalCrossKernel, N::Int) = eachindex(k.kgh, N)
 

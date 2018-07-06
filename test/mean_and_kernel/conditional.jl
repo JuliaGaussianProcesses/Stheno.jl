@@ -6,7 +6,7 @@ using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKer
     # Tests for conditioning with independent processes.
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 13, 2
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         μf, μg, μh = ConstantMean(randn(rng)), ZeroMean{Float64}(), ConstantMean(randn(rng))
         kff, kgg, khh = EQ(), EQ() + Noise(1e-6), Noise(1e-6)

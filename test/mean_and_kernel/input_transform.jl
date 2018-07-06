@@ -5,7 +5,7 @@ using Stheno: ConstantMean, ITMean, ITKernel, map, pairwise
     # Test ITMean.
     let
         rng, N, D = MersenneTwister(123456), 10, 2
-        μ, f, X = ConstantMean(randn(rng)), x->sum(abs2, x), MatData(randn(rng, D, N))
+        μ, f, X = ConstantMean(randn(rng)), x->sum(abs2, x), ColsAreObs(randn(rng, D, N))
         μf = ITMean(μ, f)
 
         @test ITMean(μ, identity) == μ
@@ -18,7 +18,7 @@ using Stheno: ConstantMean, ITMean, ITKernel, map, pairwise
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
         k, f = EQ(), x->sum(abs2, x)
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         kf = ITKernel(k, f)
 
         @test ITKernel(k, identity) == k
@@ -32,7 +32,7 @@ using Stheno: ConstantMean, ITMean, ITKernel, map, pairwise
     let
         rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
         m, k = ConstantMean(randn(rng)), EQ()
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         m1, k1 = pick_dims(m, 1), pick_dims(k, 1)
 
         @test m1(X0[1]) == m(X0[1][1])

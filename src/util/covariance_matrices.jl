@@ -53,16 +53,18 @@ map(::typeof(*), Σs::LazyPDMat...) = LazyPDMat(map(*, map(unbox, Σs)...))
 broadcast(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(unbox(Σ1) .* unbox(Σ2))
 
 # Specialised operations to exploit the Cholesky.
-Xt_A_X(A::LazyPDMat, X::AbstractMatrix) = LazyPDMat(Symmetric(X' * unbox(A) * X))
-Xt_A_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A) * x)
-Xt_A_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A) * X)' * (chol(A) * Y)
-function Xt_invA_X(A::LazyPDMat, X::AVM)
+@noinline function Xt_A_X(A::LazyPDMat, X::AbstractMatrix)
+    return LazyPDMat(Symmetric(X' * unbox(unbox(A)) * X))
+end
+@noinline Xt_A_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A) * x)
+@noinline Xt_A_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A) * X)' * (chol(A) * Y)
+@noinline function Xt_invA_X(A::LazyPDMat, X::AVM)
     V = At_ldiv_B(chol(A), X)
     return LazyPDMat(Symmetric(V'V))
 end
-Xt_invA_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A)' \ x)
-Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
-\(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
+@noinline Xt_invA_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A)' \ x)
+@noinline Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
+@noinline \(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
 
 # Some generic operations that are useful for operations involving covariance matrices.
 diag_AᵀA(A::AbstractMatrix) = vec(sum(abs2, A, 1))
@@ -80,8 +82,8 @@ diag_Xᵀ_invA_Y(X::AM, A::LazyPDMat, Y::AM) = diag_AᵀB(chol(A)' \ X, chol(A)'
 # Specialised solver routine, especially useful for Titsias conditionals.
 function Xtinv_A_Xinv(A::LazyPDMat, X::LazyPDMat)
     @assert size(A) == size(X)
-    C = ((chol(A) / chol(X)) / chol(X)')
-    return LazyPDMat(Symmetric(C'C))
+    C = chol(X) \ At_ldiv_B(chol(X), chol(A)')
+    return LazyPDMat(Symmetric(C * C'))
 end
 
 transpose(A::LazyPDMat) = A

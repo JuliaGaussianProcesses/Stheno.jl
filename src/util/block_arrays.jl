@@ -21,6 +21,11 @@ const ABVM{T} = AbstractBlockVecOrMat{T}
 const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM}
 
 
+unbox(X::AbstractBlockMatrix) = X
+unbox(X::Symmetric) = unbox(X.data)
+unbox(X::AbstractMatrix) = X
+
+
 
 ####################################### Various util #######################################
 
@@ -37,10 +42,6 @@ function BlockArrays.BlockVector(xs::Vector{<:AbstractVector{T}}) where T
     return x
 end
 
-# function BlockArrays.BlockVector(xs::Vector{<:Fill{T, 1}}) where T
-#     @assert true == false
-# end
-
 """
     BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
 
@@ -54,6 +55,7 @@ function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
     return X
 end
 BlockMatrix(Xs::Vector{<:AbstractVecOrMat}) = BlockMatrix(reshape(Xs, length(Xs), 1))
+BlockMatrix(x::AbstractVecOrMat) = BlockMatrix([x])
 
 """
     BlockMatrix(xs::Vector{<:AM}, P::Int, Q::Int)
@@ -228,6 +230,7 @@ with block of the other matrix with which it will be multiplied. This ensures th
 result is itself straightforwardly representable as `BlockVecOrMat`.
 """
 function are_conformal(A::AVM, B::AVM)
+    # @show typeof(A), typeof(B)
     # @show blocksizes(A, 2), blocksizes(B, 1)
     return blocksizes(A, 2) == blocksizes(B, 1)
 end

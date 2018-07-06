@@ -19,13 +19,16 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
         mean_function_tests(ν2, X)
         mean_function_tests(ν1, BlockData([X, X]))
         mean_function_tests(ν2, BlockData([X, X]))
+
+        @test map(ν1, :) == μ1.μ .+ μ2.μ
+        @test map(ν2, :) == μ1.μ .* μ2.μ
     end
 
     # Test CompositeKernel and CompositeCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
         # Define base kernels and do composition.
         k1, k2 = EQ(), Linear(randn(rng))
@@ -55,7 +58,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
         f, k = x->sum(abs2, x), EQ()
         ν = LhsCross(f, k)
@@ -75,7 +78,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
         f, k = x->sum(abs2, x), EQ()
         ν = RhsCross(k, f)
@@ -95,7 +98,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
         f, k = x->sum(abs2, x), EQ()
         ν = OuterCross(f, k)
@@ -115,7 +118,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
         f, k = x->sum(abs2, x), EQ()
         ν = OuterKernel(f, k)
@@ -134,7 +137,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     # Test mean function composition.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        X, s = MatData(randn(rng, D, N)), randn(rng)
+        X, s = ColsAreObs(randn(rng, D, N)), randn(rng)
         μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->vec(s .* sum(sin.(x), 2)))
 
         # Test conversion and promotion.
@@ -159,7 +162,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     # Test kernel composition.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        X, s = MatData(randn(rng, N, D)), randn(rng)
+        X, s = ColsAreObs(randn(rng, N, D)), randn(rng)
         k, k′ = EQ(), Linear(1)
 
         # Test conversion and promotion.

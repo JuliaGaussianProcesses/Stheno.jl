@@ -32,6 +32,7 @@ end
 ITKernel(k::Kernel, ::typeof(identity)) = k
 size(k::ITKernel, N::Int...) = size(k.k, N...)
 isstationary(k::ITKernel) = isstationary(k.k)
+eachindex(k::ITKernel) = eachindex(k.k)
 
 _map(k::ITKernel, X::AV) = map(k.k, map(k.f, X))
 _map(k::ITKernel, X::AV, X′::AV) = map(k.k, map(k.f, X), map(k.f, X′))
@@ -81,6 +82,6 @@ struct Periodic{Tf<:Real}
 end
 (p::Periodic)(t::Real) = [cos((2π * p.f) * t), sin((2π * p.f) * t)]
 function map(p::Periodic, t::AV)
-    return MatData(vcat(RowVector(map(x->cos((2π * p.f) * x), t)),
+    return ColsAreObs(vcat(RowVector(map(x->cos((2π * p.f) * x), t)),
                         RowVector(map(x->sin((2π * p.f) * x), t))))
 end

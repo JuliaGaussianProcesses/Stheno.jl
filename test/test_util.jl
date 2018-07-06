@@ -78,7 +78,7 @@ end
 Consistency tests intended for use with `Kernel`s.
 """
 function pairwise_tests(f, X::AbstractVector; rtol=eps())
-    @test pairwise(f, X) isa AbstractMatrix
+    @test pairwise(f, X) isa LazyPDMat{T, <:AbstractMatrix{T}} where T
     @test size(pairwise(f, X)) == (length(X), length(X))
     @test isapprox(pairwise(f, X), pairwise(f, X, X); rtol=rtol)
 end
@@ -130,6 +130,8 @@ function __cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
     @assert length(X0) == length(X1)
     @assert length(X0) ≠ length(X2)
 
+    @test method_exists(eachindex, Tuple{typeof(k), Int})
+
     binary_map_tests(k, X0, X1)
     pairwise_tests(k, X0, X2)
 end
@@ -150,6 +152,8 @@ end
 function __kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
     @assert length(X0) == length(X1)
     @assert length(X0) ≠ length(X2)
+
+    @test method_exists(eachindex, Tuple{typeof(k)})
 
     # Generic tests.
     cross_kernel_tests(k, X0, X1, X2)

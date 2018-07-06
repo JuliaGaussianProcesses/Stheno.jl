@@ -5,7 +5,7 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for FiniteMean.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        μ, X, x = ConstantMean(1.5), MatData(randn(rng, D, N)), randn(rng, N)
+        μ, X, x = ConstantMean(1.5), ColsAreObs(randn(rng, D, N)), randn(rng, N)
         μX, μx = FiniteMean(μ, X), FiniteMean(μ, x)
 
         # Recusion depth 1.
@@ -44,7 +44,7 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for FiniteKernel.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        k, X, x = EQ(), MatData(randn(rng, D, N)), randn(rng, N)
+        k, X, x = EQ(), ColsAreObs(randn(rng, D, N)), randn(rng, N)
         kX, kx = FiniteKernel(k, X), FiniteKernel(k, x)
 
         for (k′, X′) in zip((kX, kx), (X, x))
@@ -88,7 +88,7 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for LhsFiniteCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
-        k, X, X′ = EQ(), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        k, X, X′ = EQ(), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         x, x′ = randn(rng, N), randn(rng, N′)
         k′, kx = LhsFiniteCrossKernel(k, X), LhsFiniteCrossKernel(k, x)
 
@@ -111,7 +111,7 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     # Tests for RhsFiniteCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
-        X, Y, X′ = MatData(randn(rng, D, N)), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X, Y, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         x, y, x′ = randn(rng, N), randn(rng, N), randn(rng, N′)
         k = EQ()
         k′, kx = RhsFiniteCrossKernel(k, X′), RhsFiniteCrossKernel(k, x′)
@@ -137,7 +137,7 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 7, 2
         x, x′ = randn(rng, N), randn(rng, N′)
-        k, X, X′ = EQ(), MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        k, X, X′ = EQ(), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         k′, kx = FiniteCrossKernel(k, X, X′), FiniteCrossKernel(k, x, x′)
 
         @test size(k′) == (N, N′)

@@ -9,7 +9,7 @@ using FillArrays: Zeros, Fill
         x = randn(rng, N)
 
         # Check that base mean functions convert properly when made finite.
-        for (μ, T) in [(CustomMean(sin), Vector),
+        for (μ, T) in [(CustomMean(sin), Vector{Float64}),
                        (ZeroMean{Float64}(), Zeros{Float64}),
                        (ConstantMean(randn(rng)), Fill)]
             μ_finite = FiniteMean(μ, x)

@@ -5,10 +5,10 @@ Convert `μ` into an `AbstractVector` if such a representation exists.
 """
 function AbstractVector(μ::MeanFunction)
     @assert isfinite(length(μ))
+    @show eachindex(μ)
     return map(μ, eachindex(μ))
 end
 AbstractVector(μ::EmpiricalMean) = μ.μ
-# AbstractVector(μ::FiniteMean) = map(μ, eachindex(μ))
 
 """
     AbstractMatrix(k::Kernel)
@@ -20,7 +20,6 @@ function AbstractMatrix(k::Kernel)
     return pairwise(k, eachindex(k, 1))
 end
 AbstractMatrix(k::EmpiricalKernel) = k.Σ
-# AbstractMatrix(k::FiniteKernel) = pairwise(k, eachindex(k, 1))
 
 """
     AbstractMatrix(k::CrossKernel)
@@ -32,4 +31,3 @@ function AbstractMatrix(k::CrossKernel)
     @assert isfinite(size(k, 2))
     return pairwise(k, eachindex(k, 1), eachindex(k, 2))
 end
-# AbstractMatrix(k::FiniteCrossKernel) = pairwise(k, eachindex(k, 1), eachindex(k, 2))

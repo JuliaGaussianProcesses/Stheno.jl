@@ -8,7 +8,7 @@ using FillArrays
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x1, x2 = randn(rng, N), randn(rng, N′)
-        X1, X2 = MatData(randn(rng, D, N)), MatData(randn(rng, D, N′))
+        X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         μ1, μ2 = ConstantMean(1.0), ZeroMean{Float64}()
         μ, Dx, DX = BlockMean([μ1, μ2]), BlockData([x1, x2]), BlockData([X1, X2])
 
@@ -32,9 +32,9 @@ using FillArrays
     # Test BlockCrossKernel.
     let
         rng, N1, N2, N1′, N2′, D = MersenneTwister(123456), 5, 6, 2, 7, 8
-        X0, X0′ = MatData(randn(rng, D, N1)), MatData(randn(rng, D, N2))
-        X1, X1′ = MatData(randn(rng, D, N1′)), MatData(randn(rng, D, N2′))
-        X2, X2′ = MatData(randn(rng, D, N1)), MatData(randn(rng, D, N2))
+        X0, X0′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
+        X1, X1′ = ColsAreObs(randn(rng, D, N1′)), ColsAreObs(randn(rng, D, N2′))
+        X2, X2′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
         k11, k12, k21, k22 =  EQ(), ZeroKernel{Float64}(), ZeroKernel{Float64}(), EQ()
         k = BlockCrossKernel([k11 k12; k21 k22])
 
@@ -64,9 +64,9 @@ using FillArrays
     # Test BlockKernel.
     let
         rng, N1, N2, N1′, N2′, D = MersenneTwister(123456), 5, 6, 3, 4, 2
-        X0, X0′ = MatData(randn(rng, D, N1)), MatData(randn(rng, D, N2))
-        X1, X1′ = MatData(randn(rng, D, N1′)), MatData(randn(rng, D, N2′))
-        X2, X2′ = MatData(randn(rng, D, N1)), MatData(randn(rng, D, N2))
+        X0, X0′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
+        X1, X1′ = ColsAreObs(randn(rng, D, N1′)), ColsAreObs(randn(rng, D, N2′))
+        X2, X2′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
 
         # Construct BlockKernel.
         k11, k22, k12 = EQ(), EQ(), ZeroKernel{Float64}()

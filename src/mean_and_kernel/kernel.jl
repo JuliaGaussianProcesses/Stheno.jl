@@ -25,44 +25,53 @@ eachindex(k::Kernel, N::Int) = eachindex(k)
 
 ###################### `map` and `pairwise` fallback implementations #######################
 
-@inline _map_fallback(k::CrossKernel, X::AV) = [k(x, x) for x in X]
-@inline _map_fallback(k::Kernel, X::AV) = [k(x) for x in X]
-@inline _map(k::CrossKernel, X::AV) = _map_fallback(k, X)
-@inline map(k::CrossKernel, X::AV) = _map(k, X)
+# Unary map / _map
+_map_fallback(k::CrossKernel, X::AV) = [k(x, x) for x in X]
+_map_fallback(k::Kernel, X::AV) = [k(x) for x in X]
+_map(k::CrossKernel, X::AV) = _map_fallback(k, X)
 map(k::CrossKernel, X::BlockData) = BlockVector([map(k, x) for x in blocks(X)])
+map(k::CrossKernel, X::AV) = _map(k, X)
 
-@inline _map_fallback(k::CrossKernel, X::AV, X′::AV) = [k(x, x′) for (x, x′) in zip(X, X′)]
-@inline _map(k::CrossKernel, X::AV, X′::AV) = _map_fallback(k, X, X′)
-@inline map(k::CrossKernel, X::AV, X′::AV) = _map(k, X, X′)
+
+# Binary map / _map
+_map_fallback(k::CrossKernel, X::AV, X′::AV) = [k(x, x′) for (x, x′) in zip(X, X′)]
+_map(k::CrossKernel, X::AV, X′::AV) = _map_fallback(k, X, X′)
 function map(k::CrossKernel, X::BlockData, X′::BlockData)
     return BlockVector([map(k, x, x′) for (x, x′) in zip(blocks(X), blocks(X′))])
 end
-map(k::CrossKernel, X::BlockData, X′::AV) = map(k, X, BlockData([X′]))
-map(k::CrossKernel, X::AV, X′::BlockData) = map(k, BlockData([X]), X′)
+map(k::CrossKernel, X::AV, X′::AV) = _map(k, X, X′)
 
+
+# Unary pairwise / _pairwise
+_pairwise(k::Kernel, X::AV) = _pairwise(k, X, X)
+pairwise(k::Kernel, X::AV) = LazyPDMat(_pairwise(k, X))
+function pairwise(k::Kernel, X::BlockData)
+    return LazyPDMat(BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X)]))
+end
+pairwise(k::CrossKernel, X::BlockData) = pairwise(k, X, X)
+pairwise(k::CrossKernel, X::AV) = _pairwise(k, X)
+
+
+# Binary pairwise / _pairwise
 function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
     return [k(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
 end
 _pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise_fallback(k, X, X′)
+_pairwise(k::CrossKernel, X::AV) = _pairwise(k, X, X)
+
 pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise(k, X, X′)
 function pairwise(k::CrossKernel, X::BlockData, X′::BlockData)
     return BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X′)])
 end
 pairwise(k::CrossKernel, X::BlockData, X′::AV) = pairwise(k, X, BlockData([X′]))
 pairwise(k::CrossKernel, X::AV, X′::BlockData) = pairwise(k, BlockData([X]), X′)
-pairwise(k::CrossKernel, X::AV) = pairwise(k, X, X)
 
-_pairwise(k::Kernel, X::AV) = _pairwise(k, X, X)
-pairwise(k::Kernel, X::AV) = LazyPDMat(_pairwise(k, X))
-function pairwise(k::Kernel, X::BlockData)
-    return LazyPDMat(BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X)]))
-end
 
 # Sugar for `eachindex` things.
 for op in [:map, :pairwise]
     @eval begin
         $op(k::CrossKernel, ::Colon) = $op(k, eachindex(k))
-        $op(k::CrossKernel, ::Colon, ::Colon) = $op(k, eachindex(k, 1), eachindex(k, 2))
+        $op(k::CrossKernel, ::Colon, ::Colon) = $op(k, :)
         $op(k::CrossKernel, ::Colon, X′::AV) = $op(k, eachindex(k, 1), X′)
         $op(k::CrossKernel, X::AV, ::Colon) = $op(k, X, eachindex(k, 2))
     end
@@ -70,6 +79,11 @@ end
 
 
 ################################ Define some basic kernels #################################
+
+# An error that Kernels may throw if `eachindex` is undefined.
+function eachindex_err(::T) where T<:Kernel
+    throw(ArgumentError("`eachindex` undefined for kernel of type $T."))
+end
 
 """
     ZeroKernel <: Kernel
@@ -84,7 +98,8 @@ isstationary(::Type{<:ZeroKernel}) = true
 @inline function _pairwise(::ZeroKernel{T}, X::AV, X′::AV) where T
     return Zeros{T}(length(X), length(X′))
 end
-==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
+@inline ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
+@inline eachindex(k::ZeroKernel) = eachindex_err(k)
 
 # ZeroKernel-specific optimisations.
 +(k::CrossKernel, k′::ZeroKernel) = k
@@ -109,6 +124,7 @@ isstationary(::Type{<:ConstantKernel}) = true
 _map(k::ConstantKernel, X::AV, ::AV) = Fill(k.c, length(X))
 _pairwise(k::ConstantKernel, X::AV, X′::AV) = Fill(k.c, length(X), length(X′))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
+@inline eachindex(k::ConstantKernel) = eachindex_err(k)
 
 # ConstantKernel-specific optimisations.
 +(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c + k′.c)
@@ -123,8 +139,9 @@ struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
 (::EQ)(x::T) where T = one(Float64)
-_pairwise(::EQ, X::MatData) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
-_pairwise(::EQ, X::MatData, X′::MatData) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
+_pairwise(::EQ, X::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
+_pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
+@inline eachindex(k::EQ) = eachindex_err(k)
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -152,17 +169,18 @@ end
 ==(a::Linear, b::Linear) = a.c == b.c
 (k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
 (k::Linear)(x) = sum(abs2, x .- k.c)
+@inline eachindex(k::Linear) = eachindex_err(k)
 
-@inline _pairwise(k::Linear, x::AV) = _pairwise(k, MatData(RowVector(x)))
+@inline _pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(RowVector(x)))
 @inline function _pairwise(k::Linear, x::AV, x′::AV)
-    return _pairwise(k, MatData(RowVector(x)), MatData(RowVector(x′)))
+    return _pairwise(k, ColsAreObs(RowVector(x)), ColsAreObs(RowVector(x′)))
 end
 
-function _pairwise(k::Linear, D::MatData)
+function _pairwise(k::Linear, D::ColsAreObs)
     Δ = D.X .- k.c
     return Δ' * Δ
 end
-_pairwise(k::Linear, X::MatData, X′::MatData) = (X.X .- k.c)' * (X′.X .- k.c)
+_pairwise(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
 
 # """
 #     Poly{Tσ<:Real} <: Kernel
@@ -197,6 +215,7 @@ function _pairwise(k::Noise, X::AV, X′::AV)
             for p in eachindex(X), q in eachindex(X′)]
     end
 end
+@inline eachindex(k::Noise) = eachindex_err(k)
 
 # """
 #     Wiener <: Kernel
@@ -239,3 +258,20 @@ end
 @inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]
 @inline (k::EmpiricalKernel)(q::Int) = k.Σ[q, q]
 @inline size(k::EmpiricalKernel, N::Int) = size(k.Σ, N)
+eachindex(k::EmpiricalKernel) = eachindex(k.Σ, 1)
+
+function _pairwise(k::EmpiricalKernel, X::AV)
+    if X == eachindex(k)
+        return k.Σ
+    else
+        return k.Σ[X, X]
+    end
+end
+
+function _pairwise(k::EmpiricalKernel, X::AV, X′::AV)
+    if X == eachindex(k) && X′ == eachindex(k)
+        return k.Σ
+    else
+        return k.Σ[X, X′]
+    end
+end

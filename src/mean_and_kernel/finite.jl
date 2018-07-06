@@ -34,7 +34,6 @@ struct FiniteKernel <: Kernel
     k::Kernel
     X::AbstractVector
 end
-FiniteKernel(Σ::LazyPDMat) = FiniteKernel(EmpiricalKernel(Σ), 1:size(Σ, 1))
 finite(k::Kernel, X::AbstractVector) = FiniteKernel(k, X)
 (k::FiniteKernel)(n, n′) = k.k(getindex(k.X, n), getindex(k.X, n′))
 (k::FiniteKernel)(n) = k.k(k.X[n], k.X[n])

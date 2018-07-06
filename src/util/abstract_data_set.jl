@@ -1,28 +1,28 @@
-import Base: size, eachindex, getindex, view, ==, eltype
+import Base: size, eachindex, getindex, view, ==, eltype, convert
 import Distances: pairwise
-export MatData, BlockData
+export ColsAreObs, BlockData
 
 
 
 ################################## Basic matrix data type ##################################
 
 """
-    MatData{T, TX<:AbstractMatrix}
+    ColsAreObs{T, TX<:AbstractMatrix}
 
 A lightweight box for an `AbstractMatrix` to make it behave like a vector of vectors.
 """
-struct MatData{T, TX<:AbstractMatrix{T}} <: AbstractVector{Vector{T}}
+struct ColsAreObs{T, TX<:AbstractMatrix{T}} <: AbstractVector{Vector{T}}
     X::TX
-    MatData(X::TX) where {T, TX<:AbstractMatrix{T}} = new{T, TX}(X)
+    ColsAreObs(X::TX) where {T, TX<:AbstractMatrix{T}} = new{T, TX}(X)
 end
 
-@inline ==(D1::MatData, D2::MatData) = D1.X == D2.X
-@inline size(D::MatData) = (size(D.X, 2),)
-@inline getindex(D::MatData, n::Int) = D.X[:, n]
-@inline getindex(D::MatData, n) = MatData(D.X[:, n])
-@inline view(D::MatData, n::Int) = view(D.X, :, n)
-@inline view(D::MatData, n) = MatData(view(D.X, :, n))
-@inline eltype(D::MatData{T}) where T = Vector{T}
+@inline ==(D1::ColsAreObs, D2::ColsAreObs) = D1.X == D2.X
+@inline size(D::ColsAreObs) = (size(D.X, 2),)
+@inline getindex(D::ColsAreObs, n::Int) = D.X[:, n]
+@inline getindex(D::ColsAreObs, n) = ColsAreObs(D.X[:, n])
+@inline view(D::ColsAreObs, n::Int) = view(D.X, :, n)
+@inline view(D::ColsAreObs, n) = ColsAreObs(view(D.X, :, n))
+@inline eltype(D::ColsAreObs{T}) where T = Vector{T}
 
 
 
@@ -61,3 +61,5 @@ function eachindex(D::BlockData)
     return BlockArray(1:sum(lengths), lengths)
 end
 
+convert(::Type{BlockData}, x::BlockData) = x
+convert(::Type{BlockData}, x::AbstractVector) = BlockData([x])

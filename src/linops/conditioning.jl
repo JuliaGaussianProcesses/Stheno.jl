@@ -45,6 +45,8 @@ end
 
 abstract type AbstractConditioner end
 
+FillArrays.Zeros(x::BlockVector) = BlockVector(Zeros.(x.blocks))
+
 """
     Titsias <: AbstractConditioner
 
@@ -55,14 +57,16 @@ struct Titsias{Tu<:AbstractGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
     m′u::Tm
     γ::Tγ
     function Titsias(u::Tu, m′u::Tm, Σ′uu::AM, gpc::GPC) where {Tu, Tm}
-        γ = GP(FiniteKernel(Xtinv_A_Xinv(Σ′uu, cov(u))), gpc)
+        μ = EmpiricalMean(Zeros(m′u))
+        Σ = EmpiricalKernel(Xtinv_A_Xinv(Σ′uu, cov(u)))
+        γ = GP(μ, Σ, gpc)
         return new{Tu, Tm, typeof(γ)}(u, m′u, γ)
     end
 end
 function |(g::GP, c::Titsias)
     g′ = g | (c.u←c.m′u)
-    ĝ = project(kernel(c.u, g), c.γ(eachindex(c.u)))
-    return g′ + ĝ
+    ĝ = project(kernel(c.u, g), c.γ)
+    return g′ + ĝ, g′, ĝ
 end
 
 function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)

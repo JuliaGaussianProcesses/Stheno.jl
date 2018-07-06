@@ -8,9 +8,9 @@ abstract type BaseMeanFunction <: MeanFunction end
 eachindex(μ::BaseMeanFunction) = throw(ErrorException("Cannot construct indices for $μ"))
 length(::BaseMeanFunction) = Inf
 
-@inline _map_fallback(f::MeanFunction, X::AV) = [f(x) for x in X]
-@inline _map(f::MeanFunction, X::AV) = _map_fallback(f, X)
-@inline map(f::MeanFunction, X::AV) = _map(f, X)
+_map_fallback(f::MeanFunction, X::AV) = [f(x) for x in X]
+_map(f::MeanFunction, X::AV) = _map_fallback(f, X)
+map(f::MeanFunction, X::AV) = _map(f, X)
 map(f::MeanFunction, X::BlockData) = BlockVector([map(f, x) for x in blocks(X)])
 map(f::MeanFunction, ::Colon) = map(f, eachindex(f))
 
@@ -70,3 +70,12 @@ end
 ==(μ1::EmpiricalMean, μ2::EmpiricalMean) = μ1.μ == μ2.μ
 @inline length(μ::EmpiricalMean) = length(μ.μ)
 @inline eachindex(μ::EmpiricalMean) = eachindex(μ.μ)
+
+@inline map(μ::EmpiricalMean, ::Colon) = μ.μ
+function _map(μ::EmpiricalMean, X::AV)
+    if X == eachindex(μ)
+        return μ.μ
+    else
+        return μ[X]
+    end
+end
