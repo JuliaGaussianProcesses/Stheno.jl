@@ -32,7 +32,7 @@ function (k::DeltaSumKernel)(x::AV, x′::AV)
     return map(k, ColsAreObs(reshape(x, :, 1)), ColsAreObs(reshape(x′, :, 1)))[1]
 end
 (k::DeltaSumKernel)(x::AV) = map(k, ColsAreObs(reshape(x, :, 1)))[1]
-size(k::DeltaSumKernel, N::Int) = size(k.ϕ, 2)
+length(k::DeltaSumKernel) = size(k.ϕ, 2)
 eachindex(k::DeltaSumKernel) = eachindex(k.ϕ, 2)
 
 _map(k::DeltaSumKernel, X::AV) = diag_Xᵀ_A_X(pairwise(k.k, :), pairwise(k.ϕ, :, X))

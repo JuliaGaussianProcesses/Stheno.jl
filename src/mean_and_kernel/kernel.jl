@@ -17,11 +17,12 @@ abstract type Kernel <: CrossKernel end
 # Some fallback definitions.
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
-length(k::Kernel) = size(k, 1)
+
 
 eachindex(k::Kernel, N::Int) = eachindex(k)
-
-
+size(k::Kernel) = (length(k), length(k))
+size(k::Kernel, dim::Int) = size(k)[dim]
+length(k::Kernel) = Inf
 
 ###################### `map` and `pairwise` fallback implementations #######################
 
@@ -100,14 +101,6 @@ isstationary(::Type{<:ZeroKernel}) = true
 end
 @inline ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 @inline eachindex(k::ZeroKernel) = eachindex_err(k)
-
-# ZeroKernel-specific optimisations.
-+(k::CrossKernel, k′::ZeroKernel) = k
-+(k::ZeroKernel, k′::CrossKernel) = k′
-+(k::ZeroKernel, k′::ZeroKernel) = k
-*(k::CrossKernel, k′::ZeroKernel) = k′
-*(k::ZeroKernel, k′::CrossKernel) = k
-*(k::ZeroKernel, k′::ZeroKernel) = k
 
 """
     ConstantKernel{T<:Real} <: Kernel
@@ -257,7 +250,7 @@ struct EmpiricalKernel{T<:LazyPDMat} <: Kernel
 end
 @inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]
 @inline (k::EmpiricalKernel)(q::Int) = k.Σ[q, q]
-@inline size(k::EmpiricalKernel, N::Int) = size(k.Σ, N)
+@inline length(k::EmpiricalKernel) = size(k.Σ, 1)
 eachindex(k::EmpiricalKernel) = eachindex(k.Σ, 1)
 
 function _pairwise(k::EmpiricalKernel, X::AV)

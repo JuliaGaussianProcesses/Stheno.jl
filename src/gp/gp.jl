@@ -45,6 +45,13 @@ end
 
 show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)))")
 
+function Base.print(io::IO, gp::GP)
+    println(io, "GP with mean:")
+    println(io, Shunted(Shunt(4, ' '), gp.μ))
+    println(io, "and kernel:")
+    print(io, Shunted(Shunt(4, ' '), gp.k))
+end
+
 mean(f::GP) = f.μ
 
 """
@@ -64,11 +71,11 @@ function kernel(fa::GP, fb::GP)
         return kernel(fa)
     elseif fa.args == nothing && fa.n > fb.n || fb.args == nothing && fb.n > fa.n
         if isfinite(length(fa)) && isfinite(length(fb))
-            return FiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fa), eachindex(fb))
+            return FiniteZeroCrossKernel(eachindex(fa), eachindex(fb))
         elseif isfinite(length(fa)) && !isfinite(length(fb))
-            return LhsFiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fa))
+            return LhsFiniteZeroCrossKernel(eachindex(fa))
         elseif !isfinite(length(fa)) && isfinite(length(fb))
-            return RhsFiniteCrossKernel(ZeroKernel{Float64}(), eachindex(fb))
+            return RhsFiniteZeroCrossKernel(eachindex(fb))
         else # Both processes are infinite dimensional.
             return ZeroKernel{Float64}()
         end

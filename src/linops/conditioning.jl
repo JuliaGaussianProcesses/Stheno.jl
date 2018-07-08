@@ -15,6 +15,17 @@ get_f(c::Observation) = c.f
 get_y(c::Observation) = c.y
 merge(c::Tuple{Vararg{Observation}}) = BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
 
+is_zero_kernel(::CrossKernel) = false
+is_zero_kernel(::ZeroKernel) = true
+is_zero_kernel(
+    k::Union{
+        FiniteKernel,
+        FiniteCrossKernel,
+        LhsFiniteCrossKernel,
+        RhsFiniteCrossKernel,
+    },
+) = is_zero_kernel(k.k)
+
 """
     |(g::AbstractGP, c::Observation)
 
@@ -24,16 +35,32 @@ Condition `g` on observation `c`.
 |(g::BlockGP, c::Observation) = BlockGP(g.fs .| c)
 
 function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
-    return ConditionalMean(cache, mean(g), kernel(f, g))
+    if is_zero_kernel(kernel(f, g))
+        return mean(g)
+    else
+        return ConditionalMean(cache, mean(g), kernel(f, g))
+    end
 end
 function k_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
-    return ConditionalKernel(cache, kernel(f, g), kernel(g))
+    if is_zero_kernel(kernel(f, g))
+        return kernel(g)
+    else
+        return ConditionalKernel(cache, kernel(f, g), kernel(g))
+    end
 end
 function k_p′p(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache, h::AbstractGP)
-    return ConditionalCrossKernel(cache, kernel(f, g), kernel(f, h), kernel(g, h))
+    if is_zero_kernel(kernel(f, g)) || is_zero_kernel(kernel(f, h))
+        return kernel(g, h)
+    else
+        return ConditionalCrossKernel(cache, kernel(f, g), kernel(f, h), kernel(g, h))
+    end
 end
 function k_pp′(h::AbstractGP, ::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
-    return ConditionalCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
+    if is_zero_kernel(kernel(f, g)) || is_zero_kernel(kernel(f, h))
+        return kernel(h, g)
+    else
+        return ConditionalCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
+    end
 end
 
 # Sugar

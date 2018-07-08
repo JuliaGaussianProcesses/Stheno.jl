@@ -7,6 +7,7 @@ abstract type BaseMeanFunction <: MeanFunction end
 
 eachindex(μ::BaseMeanFunction) = throw(ErrorException("Cannot construct indices for $μ"))
 length(::BaseMeanFunction) = Inf
+size(μ::MeanFunction) = (length(μ),)
 
 _map_fallback(f::MeanFunction, X::AV) = [f(x) for x in X]
 _map(f::MeanFunction, X::AV) = _map_fallback(f, X)
@@ -34,13 +35,6 @@ struct ZeroMean{T<:Real} <: BaseMeanFunction end
 @inline (::ZeroMean{T})(x) where T = zero(T)
 @inline _map(z::ZeroMean{T}, D::AbstractVector) where T = Zeros{T}(length(D))
 ==(::ZeroMean, ::ZeroMean) = true
-
-+(μ::ZeroMean, μ′::ZeroMean) = μ
-+(μ::ZeroMean, μ′::MeanFunction) = μ′
-+(μ::MeanFunction, μ′::ZeroMean) = μ
-*(μ::ZeroMean, μ′::ZeroMean) = μ
-*(μ::ZeroMean, μ′::MeanFunction) = μ
-*(μ::MeanFunction, μ′::ZeroMean) = μ′
 
 """
     ConstantMean{T} <: BaseMeanFunction

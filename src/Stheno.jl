@@ -28,6 +28,7 @@ module Stheno
     # include("mean_and_kernel/transform.jl")
     include("mean_and_kernel/input_transform.jl")
     include("mean_and_kernel/degenerate.jl")
+    include("mean_and_kernel/zero.jl")
     include("mean_and_kernel/conversion.jl")
     include("mean_and_kernel/printing.jl")
 

@@ -139,7 +139,7 @@ let
 
     # Test that conditioning is indifferent to choice of Blocks.
     conditioner_blocked = Stheno.Titsias(fb, μb, Σb, gpc)
-    f′Zb, g′b, ĝb = f(Z) | conditioner_blocked
+    f′Zb, g′b, ĝb = f(BlockData([Z])) | conditioner_blocked
 
     @test isapprox(mean_vec(f′Z), mean_vec(f′Zb); rtol=1e-4)
     @test isapprox(cov(f′Z), cov(f′Zb); rtol=1e-4)

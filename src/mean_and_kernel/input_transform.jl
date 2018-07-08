@@ -30,7 +30,7 @@ struct ITKernel{Tk<:Kernel, Tf} <: Kernel
 end
 (k::ITKernel)(x, x′) = k.k(k.f(x), k.f(x′))
 ITKernel(k::Kernel, ::typeof(identity)) = k
-size(k::ITKernel, N::Int...) = size(k.k, N...)
+length(k::ITKernel) = length(k.k)
 isstationary(k::ITKernel) = isstationary(k.k)
 eachindex(k::ITKernel) = eachindex(k.k)
 

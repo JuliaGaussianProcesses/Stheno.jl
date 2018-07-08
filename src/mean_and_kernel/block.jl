@@ -65,7 +65,7 @@ struct BlockKernel <: Kernel
     ks_diag::Vector{<:Kernel}
     ks_off::Matrix{<:CrossKernel}
 end
-size(k::BlockKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
+length(k::BlockKernel) = sum(size.(k.ks_diag, 1))
 eachindex(k::BlockKernel) = BlockData(eachindex.(k.ks_diag))
 
 map(k::BlockKernel, X::BlockData) = BlockVector(map.(k.ks_diag, blocks(X)))
@@ -101,13 +101,3 @@ function pairwise(k::BlockKernel, X::BlockData, X′::BlockData)
     end
     return Ω
 end
-
-# function pairwise(k::BlockKernel, q::AV{Int})
-#     if q == eachindex()
-
-# end
-
-# function pairwise(k::BlockKernel, q::AV{Int}, q′::AV{Int})
-
-
-# end

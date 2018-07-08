@@ -50,7 +50,7 @@ end
 (k::ConditionalKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 (k::ConditionalKernel)(x::AV, x′::AV) =
     map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
-size(k::ConditionalKernel, N::Int) = size(k.kgg, N)
+length(k::ConditionalKernel) = length(k.kgg)
 eachindex(k::ConditionalKernel) = eachindex(k.kgg)
 
 function _map(k::ConditionalKernel, X::AV)

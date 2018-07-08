@@ -19,7 +19,7 @@ map(f::CompositeMean, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
 # CompositeKernel definitions.
 (k::CompositeKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
 (k::CompositeKernel)(x) = map(k.f, map(f->f(x), k.x)...)
-size(k::CompositeKernel, N::Int) = size(k.x[1], N)
+length(k::CompositeKernel) = length(k.x[1])
 isstationary(k::CompositeKernel) = all(map(isstationary, k.x))
 @noinline eachindex(k::CompositeKernel) = eachindex(k.x[1], 1)
 
@@ -112,7 +112,7 @@ struct OuterKernel <: Kernel
 end
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 (k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
-size(k::OuterKernel, N::Int) = size(k.k, N)
+length(k::OuterKernel) = length(k.k)
 _pairwise(k::OuterKernel, X::AV) = Xt_A_X(pairwise(k.k, X), Diagonal(map(k.f, X)))
 function _pairwise(k::OuterKernel, X::AV, X′::AV)
     return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
@@ -130,20 +130,16 @@ convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
 promote_rule(::Type{<:Kernel}, ::Type{<:Real}) = Kernel
 convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
 
-# Composing mean functions.
-+(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(+, μ, μ′)
+# Composing mean functions with Reals.
 +(μ::MeanFunction, μ′::Real) = +(promote(μ, μ′)...)
 +(μ::Real, μ′::MeanFunction) = +(promote(μ, μ′)...)
 
-*(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(*, μ, μ′)
 *(μ::MeanFunction, μ′::Real) = *(promote(μ, μ′)...)
 *(μ::Real, μ′::MeanFunction) = *(promote(μ, μ′)...)
 
-# Composing kernels.
-+(k::CrossKernel, k′::CrossKernel) = CompositeKernel(+, k, k′)
+# Composing kernels with Reals.
 +(k::CrossKernel, k′::Real) = +(promote(k, k′)...)
 +(k::Real, k′::CrossKernel) = +(promote(k, k′)...)
 
-*(k::CrossKernel, k′::CrossKernel) = CompositeKernel(*, k, k′)
 *(k::CrossKernel, k′::Real) = *(promote(k, k′)...)
 *(k::Real, k′::CrossKernel) = *(promote(k, k′)...)

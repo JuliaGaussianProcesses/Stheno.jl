@@ -12,7 +12,15 @@ end
 
 project(ϕ, f::GP) = project(ϕ, f, ZeroMean{Float64}())
 
-μ_p′(::typeof(project), ϕ, f, g) = DeltaSumMean(ϕ, mean(f), g)
-k_p′(::typeof(project), ϕ, f, g) = DeltaSumKernel(ϕ, kernel(f))
-k_p′p(::typeof(project), ϕ, f, g, fp) = LhsDeltaSumCrossKernel(ϕ, kernel(f, fp))
-k_pp′(fp, ::typeof(project), ϕ, f, g) = RhsDeltaSumCrossKernel(kernel(f, fp), ϕ)
+function μ_p′(::typeof(project), ϕ, f, g)
+    return iszero(mean(f)) ? g : DeltaSumMean(ϕ, mean(f), g)
+end
+function k_p′(::typeof(project), ϕ, f, g)
+    return iszero(kernel(f)) ? g : DeltaSumKernel(ϕ, kernel(f))
+end
+function k_p′p(::typeof(project), ϕ, f, g, fp)
+    return iszero(kernel(f, fp)) ? g : LhsDeltaSumCrossKernel(ϕ, kernel(f, fp))
+end
+function k_pp′(fp, ::typeof(project), ϕ, f, g)
+    return iszero(kernel(f, fp)) ? g : RhsDeltaSumCrossKernel(kernel(f, fp), ϕ)
+end
