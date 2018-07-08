@@ -10,17 +10,47 @@ function project(ϕ, f::GP, g)
     return GP(project, ϕ, f, g)
 end
 
-project(ϕ, f::GP) = project(ϕ, f, ZeroMean{Float64}())
+function project(ϕ, f::GP)
+    if size(ϕ, 2) < Inf
+        return project(ϕ, f, FiniteZeroMean(eachindex(ϕ, 2)))
+    else
+        return ZeroMean{Float64}()
+    end
+end
 
 function μ_p′(::typeof(project), ϕ, f, g)
     return iszero(mean(f)) ? g : DeltaSumMean(ϕ, mean(f), g)
 end
 function k_p′(::typeof(project), ϕ, f, g)
-    return iszero(kernel(f)) ? g : DeltaSumKernel(ϕ, kernel(f))
+    if iszero(kernel(f))
+        return get_zero(size(ϕ, 2), size(ϕ, 2))
+    else
+        return DeltaSumKernel(ϕ, kernel(f))
+    end
 end
 function k_p′p(::typeof(project), ϕ, f, g, fp)
-    return iszero(kernel(f, fp)) ? g : LhsDeltaSumCrossKernel(ϕ, kernel(f, fp))
+    if iszero(kernel(f, fp))
+        return get_zero(size(ϕ, 2), length(fp))
+    else
+        return LhsDeltaSumCrossKernel(ϕ, kernel(f, fp))
+    end
 end
 function k_pp′(fp, ::typeof(project), ϕ, f, g)
-    return iszero(kernel(f, fp)) ? g : RhsDeltaSumCrossKernel(kernel(f, fp), ϕ)
+    if iszero(kernel(f, fp))
+        return get_zero(length(fp), size(ϕ, 2))
+    else
+        return RhsDeltaSumCrossKernel(kernel(f, fp), ϕ)
+    end
+end
+
+function get_zero(p::Real, q::Real)
+    if isfinite(p) && isfinite(q)
+        return p == q ? FiniteZeroKernel(1:p) : FiniteZeroCrossKernel(p, q)
+    elseif isfinite(p)
+        return LhsFiniteZeroCrossKernel(1:p)
+    elseif isfinite(q)
+        return RhsFiniteZeroCrossKernel(1:q)
+    else
+        return ZeroKernel{Float64}()
+    end
 end

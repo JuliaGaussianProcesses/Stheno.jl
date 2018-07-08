@@ -19,7 +19,7 @@ map(f::CompositeMean, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
 # CompositeKernel definitions.
 (k::CompositeKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
 (k::CompositeKernel)(x) = map(k.f, map(f->f(x), k.x)...)
-length(k::CompositeKernel) = length(k.x[1])
+length(k::CompositeKernel) = size(k.x[1], 1)
 isstationary(k::CompositeKernel) = all(map(isstationary, k.x))
 @noinline eachindex(k::CompositeKernel) = eachindex(k.x[1], 1)
 

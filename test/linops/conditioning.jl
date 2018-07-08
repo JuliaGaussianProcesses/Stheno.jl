@@ -170,6 +170,16 @@ let
     @show typeof(kernel(ĝb))
     display(cov(ĝb))
 
+
+    println(kernel(g′))
+    println(kernel(ĝ))
+    println(kernel(g′b))
+    println(kernel(ĝb))
+
+    # NEED RECURSIVE CHECKS FOR BLOCK MATRIX ZERO-NESS.
+    println(f′Z_approx)
+    println(kernel(f′Zb))
+
     @show eachindex(kernel(f′Zb)), typeof(eachindex(kernel(f′Zb)))
     @show eachindex(kernel(ĝb)), typeof(eachindex(kernel(ĝb)))
 

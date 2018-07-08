@@ -27,6 +27,7 @@ for T in [:ZeroMean, :FiniteZeroMean, :ZeroKernel, :FiniteZeroKernel,
 end
 
 function +(μ::MeanFunction, μ′::MeanFunction)
+    @show size(μ), size(μ′), typeof(μ), typeof(μ′)
     @assert size(μ) == size(μ′)
     if iszero(μ)
         return μ′

@@ -15,7 +15,9 @@ end
 function _map(μ::DeltaSumMean, X::AV)
     return pairwise(μ.ϕ, :, X)' * map(μ.μ, :) + map(μ.g, X)
 end
+length(μ::DeltaSumMean) = length(μ.g)
 eachindex(μ::DeltaSumMean) = eachindex(μ.g)
+
 
 """
     DeltaSumKernel{Tϕ} <: Kernel
