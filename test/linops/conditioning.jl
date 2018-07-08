@@ -139,10 +139,10 @@ let
 
     # Test that conditioning is indifferent to choice of Blocks.
     conditioner_blocked = Stheno.Titsias(fb, μb, Σb, gpc)
-    f′Zb, g′b, ĝb = f(BlockData([Z])) | conditioner_blocked
+    f′Zb, g′b, ĝb = f(Z) | conditioner_blocked
 
     @test isapprox(mean_vec(f′Z), mean_vec(f′Zb); rtol=1e-4)
-    # @test isapprox(cov(f′Z), cov(f′Zb); rtol=1e-4)
+    @test isapprox(cov(f′Z), cov(f′Zb); rtol=1e-4)
 
     # println("cov(f′Zb)")
     # @show typeof(kernel(f′Zb))
@@ -173,6 +173,8 @@ let
     @show eachindex(kernel(f′Zb)), typeof(eachindex(kernel(f′Zb)))
     @show eachindex(kernel(ĝb)), typeof(eachindex(kernel(ĝb)))
 
+    display(cov(f′Zb))
+
     # display((cov(f′Z) .- cov(f′Zb)) ./ 1)
     # display((cov(f′Z) .- cov(f′Zb)) ./ cov(f′Zb))
 
@@ -196,7 +198,17 @@ let
     # println("AbstractMatrix(kernel(ĝb).k) - AbstractMatrix(kernel(ĝ).k)")
     # display(AbstractMatrix(kernel(ĝb).k) - AbstractMatrix(kernel(ĝ).k))
 
-    
+    @which cov(f′Zb)
+    # cov(f::Stheno.AbstractGaussianProcess) in Stheno at /home/wct23/.julia/v0.6/Stheno/src/gp/abstract_gp.jl:50
+    @which AbstractMatrix(kernel(f′Zb))
+    # (::Type{AbstractArray{T,2} where T})(k::Stheno.Kernel) in Stheno at /home/wct23/.julia/v0.6/Stheno/src/mean_and_kernel/conversion.jl:19
+    @which pairwise(kernel(f′Zb), eachindex(kernel(f′Zb)))
+    @which Stheno._pairwise(kernel(f′Zb), eachindex(kernel(f′Zb)))
+
+    kgb = kernel(f′Zb)
+    x = eachindex(kgb)
+    k = kgb.x[2]
+
 
 
     # k = kernel(ĝ)

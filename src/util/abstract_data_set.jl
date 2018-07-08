@@ -58,7 +58,9 @@ end
 @inline eltype(D::BlockData{T}) where T = T
 function eachindex(D::BlockData)
     lengths = map(length, blocks(D))
+    # return 1:sum(length, blocks(D))
     return BlockArray(1:sum(lengths), lengths)
+    # return BlockData(lengths)
 end
 
 convert(::Type{BlockData}, x::BlockData) = x

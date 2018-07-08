@@ -13,8 +13,8 @@ end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
 length(μ::BlockMean) = sum(length.(μ.μ))
 ==(μ::BlockMean, μ′::BlockMean) = μ.μ == μ′.μ
-@noinline eachindex(μ::BlockMean) = BlockVector(eachindex.(μ.μ))
-map(μ::BlockMean, X::BlockVector) = BlockVector(map.(μ.μ, X.blocks))
+@noinline eachindex(μ::BlockMean) = BlockData(eachindex.(μ.μ))
+map(μ::BlockMean, X::BlockData) = BlockVector(map.(μ.μ, blocks(X)))
 
 """
     BlockCrossKernel <: CrossKernel
@@ -32,19 +32,19 @@ size(k::BlockCrossKernel, N::Int) = N == 1 ?
 ==(k::BlockCrossKernel, k′::BlockCrossKernel) = k.ks == k′.ks
 function eachindex(k::BlockCrossKernel, N::Int)
     if N == 1
-        return BlockVector(eachindex.(k.ks[:, 1], 1))
+        return BlockData(eachindex.(k.ks[:, 1], 1))
     elseif N == 2
-        return BlockVector(eachindex.(k.ks[1, :], 2))
+        return BlockData(eachindex.(k.ks[1, :], 2))
     else
         throw(error("N ∉ {1, 2}"))
     end
 end
-map(k::BlockCrossKernel, X::BlockVector) = BlockVector(map.(diag(k.ks), X.blocks))
-function map(k::BlockCrossKernel, X::BlockVector, X′::BlockVector)
-    return BlockVector(map.(diag(k.ks), X.blocks, X′.blocks))
+map(k::BlockCrossKernel, X::BlockData) = BlockVector(map.(diag(k.ks), blocks(X)))
+function map(k::BlockCrossKernel, X::BlockData, X′::BlockData)
+    return BlockVector(map.(diag(k.ks), blocks(X), blocks(X′)))
 end
-function pairwise(k::BlockCrossKernel, X::BlockVector, X′::BlockVector)
-    return BlockMatrix(broadcast(pairwise, k.ks, X.blocks, reshape(X′.blocks, 1, :)))
+function pairwise(k::BlockCrossKernel, X::BlockData, X′::BlockData)
+    return BlockMatrix(broadcast(pairwise, k.ks, blocks(X), reshape(blocks(X′), 1, :)))
 end
 
 """
@@ -66,17 +66,17 @@ struct BlockKernel <: Kernel
     ks_off::Matrix{<:CrossKernel}
 end
 size(k::BlockKernel, N::Int) = (N ∈ (1, 2)) ? sum(size.(k.ks_diag, 1)) : 1
-eachindex(k::BlockKernel) = BlockVector(eachindex.(k.ks_diag))
+eachindex(k::BlockKernel) = BlockData(eachindex.(k.ks_diag))
 
-map(k::BlockKernel, X::BlockVector) = BlockVector(map.(k.ks_diag, blocks(X)))
-function map(k::BlockKernel, X::BlockVector, X′::BlockVector)
+map(k::BlockKernel, X::BlockData) = BlockVector(map.(k.ks_diag, blocks(X)))
+function map(k::BlockKernel, X::BlockData, X′::BlockData)
     return BlockVector(map.(k.ks_diag, blocks(X), blocks(X′)))
 end
 
 Base.ctranspose(z::Zeros{T}) where {T} = Zeros{T}(reverse(size(z)))
 
-function pairwise(k::BlockKernel, X::BlockVector)
-    bX = X.blocks
+function pairwise(k::BlockKernel, X::BlockData)
+    bX = blocks(X)
     Σ = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX))
     for q in eachindex(k.ks_diag)
         setblock!(Σ, Matrix(pairwise(k.ks_diag[q], bX[q])), q, q)
@@ -87,8 +87,8 @@ function pairwise(k::BlockKernel, X::BlockVector)
     end
     return LazyPDMat(Σ)
 end
-function pairwise(k::BlockKernel, X::BlockVector, X′::BlockVector)
-    bX, bX′ = X.blocks, X′.blocks
+function pairwise(k::BlockKernel, X::BlockData, X′::BlockData)
+    bX, bX′ = blocks(X), blocks(X′)
     Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX′))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
         if p == q
@@ -101,3 +101,13 @@ function pairwise(k::BlockKernel, X::BlockVector, X′::BlockVector)
     end
     return Ω
 end
+
+# function pairwise(k::BlockKernel, q::AV{Int})
+#     if q == eachindex()
+
+# end
+
+# function pairwise(k::BlockKernel, q::AV{Int}, q′::AV{Int})
+
+
+# end

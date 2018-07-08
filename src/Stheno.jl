@@ -10,12 +10,13 @@ module Stheno
     const AVM{T} = AbstractVecOrMat{T}
     const AMRV{T} = Union{AbstractMatrix{T}, RowVector{T}}
 
-    # Various bits of utility that don't really belong in this package.
+    # Various bits of utility that aren't inherently GP-related.
     include("util/covariance_matrices.jl")
     include("util/woodbury.jl")
     include("util/abstract_data_set.jl")
     include("util/block_arrays.jl")
     include("util/eachindex_util.jl")
+    include("util/io.jl")
 
     # All mean function and kernel related functionality.
     include("mean_and_kernel/mean.jl")
@@ -28,6 +29,7 @@ module Stheno
     include("mean_and_kernel/input_transform.jl")
     include("mean_and_kernel/degenerate.jl")
     include("mean_and_kernel/conversion.jl")
+    include("mean_and_kernel/printing.jl")
 
     # # Basic Gaussian process definitions.
     include("gp/abstract_gp.jl")

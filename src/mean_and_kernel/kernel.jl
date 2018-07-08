@@ -1,5 +1,5 @@
 using IterTools
-import Base: +, *, ==, size, eachindex
+import Base: +, *, ==, size, eachindex, print
 import Distances: pairwise
 export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
     Exponential, ConstantKernel, isstationary, ZeroKernel

@@ -66,7 +66,6 @@ struct LhsFiniteCrossKernel <: CrossKernel
     X::AbstractVector
 end
 (k::LhsFiniteCrossKernel)(n, x) = k.k(getindex(k.X, n), x)
-lhsfinite(k::CrossKernel, X::AbstractVector) = LhsFiniteCrossKernel(k, X)
 size(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? length(k.X) : size(k.k, N)
 show(io::IO, k::LhsFiniteCrossKernel) = show(io, "LhsFiniteCrossKernel($(k.k))")
 eachindex(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex(k.k, 2)
@@ -76,6 +75,8 @@ _pairwise(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = pairwise(k.k, k.X[q], 
 # Sugar
 map(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = map(k, eachindex(k, 1), X′)
 pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = pairwise(k, eachindex(k, 1), X′)
+
+
 
 """
     RhsFiniteCrossKernel <: CrossKernel
@@ -88,7 +89,6 @@ struct RhsFiniteCrossKernel <: CrossKernel
     X′::AbstractVector
 end
 (k::RhsFiniteCrossKernel)(x, n′) = k.k(x, getindex(k.X′, n′))
-rhsfinite(k::CrossKernel, X′::AbstractVector) = RhsFiniteCrossKernel(k, X′)
 size(k::RhsFiniteCrossKernel, N::Int) = N == 2 ? length(k.X′) : size(k.k, N)
 show(io::IO, k::RhsFiniteCrossKernel) = show(io, "RhsFiniteCrossKernel($(k.k))")
 eachindex(k::RhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.k, 1) : eachindex(k.X′)
@@ -125,3 +125,11 @@ function pairwise(k::FiniteCrossKernel, ::Colon, ::Colon)
 end
 pairwise(k::FiniteCrossKernel, ::Colon, X′::IntVec) = pairwise(k, eachindex(k, 1), X′)
 pairwise(k::FiniteCrossKernel, X::IntVec, ::Colon) = pairwise(k, X, eachindex(k, 2))
+
+
+# More sugar.
+lhsfinite(k::CrossKernel, X::AbstractVector) = LhsFiniteCrossKernel(k, X)
+lhsfinite(k::RhsFiniteCrossKernel, X::AbstractVector) = FiniteCrossKernel(k.k, X, k.X′)
+
+rhsfinite(k::CrossKernel, X′::AbstractVector) = RhsFiniteCrossKernel(k, X′)
+rhsfinite(k::LhsFiniteCrossKernel, X′::AbstractVector) = FiniteCrossKernel(k.k, k.X, X′)

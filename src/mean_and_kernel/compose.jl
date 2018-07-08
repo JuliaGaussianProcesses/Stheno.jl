@@ -46,6 +46,7 @@ map(f::CompositeCrossKernel, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
 pairwise(f::CompositeCrossKernel, ::Colon) = map(f.f, map(f->pairwise(f, :), f.x)...)
 
 
+
 ############################## Multiply-by-Function Kernels ################################
 
 """
@@ -123,10 +124,10 @@ eachindex(k::OuterKernel) = eachindex(k.k)
 
 import Base: +, *, promote_rule, convert
 
-promote_rule(::Type{<:MeanFunction}, ::Type{<:Union{Real, Function}}) = MeanFunction
+promote_rule(::Type{<:MeanFunction}, ::Type{<:Real}) = MeanFunction
 convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
 
-promote_rule(::Type{<:Kernel}, ::Type{<:Union{Real, Function}}) = Kernel
+promote_rule(::Type{<:Kernel}, ::Type{<:Real}) = Kernel
 convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
 
 # Composing mean functions.
