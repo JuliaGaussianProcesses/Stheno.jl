@@ -6,15 +6,22 @@ using Base: OneTo
 
     let
         μ1, μ2 = ZeroMean{Float64}(), FiniteZeroMean(OneTo(10))
+        μ3, μ4 = BlockMean([μ1, μ1]), BlockMean([μ2, μ2])
         k1, k2 = ZeroKernel{Float64}(), FiniteZeroCrossKernel(OneTo(4), OneTo(5))
         k3, k4 = LhsFiniteZeroCrossKernel(OneTo(3)), RhsFiniteZeroCrossKernel(OneTo(5))
         k5, k6 = ZeroKernel{Float64}(), FiniteZeroKernel(OneTo(7))
 
+        k7, k8 = BlockCrossKernel([k1 k1; k1 k1]), BlockCrossKernel([k2 k2; k2 k2])
+        k9, k10 = BlockCrossKernel([k3 k3; k3 k3]), BlockCrossKernel([k4 k4; k4 k4])
+
+        k11 = BlockKernel([k5, k5], [k5 k5; k5 k5])
+        k12 = BlockKernel([k6, k6], [k6 k6; k6 k6])
+
         # Check addition of zero elements.
-        for x in [μ1, μ2, k1, k2, k3, k4, k5, k6]
-            @test zero(x) === x
-            @test x + x === zero(x)
-            @test x * x === x
+        for x in [μ1, μ2, μ3, μ4, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12]
+            @test zero(x) == x
+            @test x + x == zero(x)
+            @test x * x == x
         end
 
         # Check (element-wise) multiplication of zero elements.

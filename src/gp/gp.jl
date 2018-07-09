@@ -93,7 +93,21 @@ kernel(::GP, ::Union{Real, Function}) = ZeroKernel{Float64}()
 
 ##################################### Syntactic Sugar#######################################
 
-promote(f::GP, x::Union{Real, Function}) = (f, convert(GP, x, f.gpc))
-promote(x::Union{Real, Function}, f::GP) = reverse(promote(f, x))
-convert(::Type{<:GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), ZeroKernel{Float64}(), gpc)
-convert(::Type{<:GP}, f::Function, gpc::GPC) = GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
+get_zero(p::Int) = get_zero(p, p)
+function get_zero(p::Real, q::Real)
+    if isfinite(p) && isfinite(q)
+        return p == q ? FiniteZeroKernel(1:p) : FiniteZeroCrossKernel(p, q)
+    elseif isfinite(p)
+        return LhsFiniteZeroCrossKernel(1:p)
+    elseif isfinite(q)
+        return RhsFiniteZeroCrossKernel(1:q)
+    else
+        return ZeroKernel{Float64}()
+    end
+end
+
+promote(f::GP, x::Union{Real, Function, MeanFunction}) = (f, convert(GP, x, f.gpc))
+promote(x::Union{Real, Function, MeanFunction}, f::GP) = reverse(promote(f, x))
+convert(::Type{<:GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), get_zero(length(μ)), gpc)
+convert(::Type{<:GP}, f::Function, gpc::GPC) = GP(CustomMean(f), get_zero(length(μ)), gpc)
+convert(::Type{<:GP}, μ::MeanFunction, gpc::GPC) = GP(μ, get_zero(length(μ)), gpc)

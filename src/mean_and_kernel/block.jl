@@ -67,6 +67,7 @@ struct BlockKernel <: Kernel
 end
 length(k::BlockKernel) = sum(size.(k.ks_diag, 1))
 eachindex(k::BlockKernel) = BlockData(eachindex.(k.ks_diag))
+==(k::BlockKernel, k′::BlockKernel) = k.ks_diag == k′.ks_diag && k.ks_off == k′.ks_off
 
 map(k::BlockKernel, X::BlockData) = BlockVector(map.(k.ks_diag, blocks(X)))
 function map(k::BlockKernel, X::BlockData, X′::BlockData)

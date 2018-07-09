@@ -5,7 +5,6 @@ Convert `μ` into an `AbstractVector` if such a representation exists.
 """
 function AbstractVector(μ::MeanFunction)
     @assert isfinite(length(μ))
-    @show eachindex(μ)
     return map(μ, eachindex(μ))
 end
 AbstractVector(μ::EmpiricalMean) = μ.μ

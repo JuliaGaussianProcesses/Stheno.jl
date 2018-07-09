@@ -6,6 +6,7 @@ const ZK = ZeroKernel{Float64}
 # Define the zero element.
 
 zero(μ::MeanFunction) = length(μ) < Inf ? FiniteZeroMean(eachindex(μ)) : ZM()
+zero(μ::BlockMean) = BlockMean(zero.(μ.μ))
 
 function zero(k::CrossKernel)
     if size(k, 1) < Inf && size(k, 2) < Inf
@@ -18,7 +19,11 @@ function zero(k::CrossKernel)
         return ZeroKernel{Float64}()
     end
 end
+zero(k::BlockCrossKernel) = BlockCrossKernel(zero.(k.ks))
+
 zero(k::Kernel) = length(k) < Inf ? FiniteZeroKernel(eachindex(k)) : ZK()
+@noinline zero(k::BlockKernel) = BlockKernel(zero.(k.ks_diag), zero.(k.ks_off))
+
 
 # Define addition of zeros.
 for T in [:ZeroMean, :FiniteZeroMean, :ZeroKernel, :FiniteZeroKernel,
@@ -27,7 +32,6 @@ for T in [:ZeroMean, :FiniteZeroMean, :ZeroKernel, :FiniteZeroKernel,
 end
 
 function +(μ::MeanFunction, μ′::MeanFunction)
-    @show size(μ), size(μ′), typeof(μ), typeof(μ′)
     @assert size(μ) == size(μ′)
     if iszero(μ)
         return μ′

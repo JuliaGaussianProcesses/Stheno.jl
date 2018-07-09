@@ -14,7 +14,7 @@ function project(ϕ, f::GP)
     if size(ϕ, 2) < Inf
         return project(ϕ, f, FiniteZeroMean(eachindex(ϕ, 2)))
     else
-        return ZeroMean{Float64}()
+        return project(ϕ, f, ZeroMean{Float64}())
     end
 end
 
@@ -40,17 +40,5 @@ function k_pp′(fp, ::typeof(project), ϕ, f, g)
         return get_zero(length(fp), size(ϕ, 2))
     else
         return RhsDeltaSumCrossKernel(kernel(f, fp), ϕ)
-    end
-end
-
-function get_zero(p::Real, q::Real)
-    if isfinite(p) && isfinite(q)
-        return p == q ? FiniteZeroKernel(1:p) : FiniteZeroCrossKernel(p, q)
-    elseif isfinite(p)
-        return LhsFiniteZeroCrossKernel(1:p)
-    elseif isfinite(q)
-        return RhsFiniteZeroCrossKernel(1:q)
-    else
-        return ZeroKernel{Float64}()
     end
 end

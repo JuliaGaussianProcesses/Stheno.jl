@@ -74,14 +74,9 @@ end
 function |(g::GP, c::Titsias)
     g′ = g | (c.u←c.m′u)
     ĝ = project(kernel(c.u, g), c.γ)
-    println("kernel g′")
-    println(kernel(g′))
-    println("kernel ĝ")
-    println(kernel(ĝ))
-    println(kernel(g′, ĝ))
-    @show typeof(kernel(g′) + kernel(ĝ))
-    @show g′ + ĝ
-    return g′ + ĝ, g′, ĝ
+    println(g′)
+    println(ĝ)
+    return g′ + ĝ
 end
 
 function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)

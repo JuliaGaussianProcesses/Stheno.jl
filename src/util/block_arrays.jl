@@ -297,7 +297,6 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
               :Ac_ldiv_B, :A_ldiv_Bc, :Ac_ldiv_Bc,),]
     @eval function $foo_At_mul_B(A::ABM, B::AM)
         At = $foo(A)
-        @show At, B
         return At * B
     end
     @eval function $foo_At_mul_B(A::BlockTri, B::ABVM)

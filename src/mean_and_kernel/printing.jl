@@ -78,7 +78,6 @@ function print(io::IO, shunted::Shunted{T}) where T<:BlockCrossKernel
     end
 end
 function print(io::IO, shunted::Shunted{T}) where T<:BlockKernel
-    @show T
     k, shunt = shunted.x, shunted.shunt
     println(io, string(shunt) * "$T")
     for p in 1:size(k.ks_off, 1), q in 1:size(k.ks_off, 2)
