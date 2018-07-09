@@ -76,6 +76,8 @@ Make `k` periodic with period `f`.
 """
 periodic(μ::MeanFunction, f::Real) = ITMean(μ, Periodic(f))
 periodic(k::Kernel, f::Real) = ITKernel(k, Periodic(f))
+periodic(k::EQ, p::Real) = PerEQ(p)
+periodic(f::Union{MeanFunction, Kernel}) = periodic(f, 1.0)
 
 struct Periodic{Tf<:Real}
     f::Tf

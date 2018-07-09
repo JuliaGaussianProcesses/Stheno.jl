@@ -136,6 +136,20 @@ _pairwise(::EQ, X::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
 _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
 @inline eachindex(k::EQ) = eachindex_err(k)
 
+"""
+    PerEQ{Tp<:Real}
+
+The usual periodic kernel derived by mapping the input domain onto a circle.
+"""
+struct PerEQ{Tp<:Real} <: Kernel
+    p::Tp
+end
+isstationary(::Type{<:PerEQ}) = true
+(k::PerEQ)(x::Real, x′::Real) = exp(-2 * sin(π * abs(x - x′) / k.p)^2)
+(k::PerEQ)(x::Real) = one(typeof(x))
+@inline eachindex(k::PerEQ) = eachindex_err(k)
+
+
 # """
 #     RQ{T<:Real} <: Kernel
 

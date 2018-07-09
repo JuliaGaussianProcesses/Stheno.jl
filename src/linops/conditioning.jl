@@ -74,8 +74,6 @@ end
 function |(g::GP, c::Titsias)
     g′ = g | (c.u←c.m′u)
     ĝ = project(kernel(c.u, g), c.γ)
-    println(g′)
-    println(ĝ)
     return g′ + ĝ
 end
 
