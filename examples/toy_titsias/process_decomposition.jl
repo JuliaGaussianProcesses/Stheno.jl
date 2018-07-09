@@ -5,7 +5,7 @@ using Stheno
 
 ###########################  Define our model  ###########################
 
-σ² = 1e-3
+σ² = 1e-1
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 function model(gpc)
@@ -25,7 +25,7 @@ end
 
 # Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
 # at which to measure `f` using `y2`.
-rng, N₁, N₃, M = MersenneTwister(123546), 10, 11, 100;
+rng, N₁, N₃, M = MersenneTwister(123546), 10, 11, 25;
 Z = linspace(-15.0, 15.0, M);
 X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
 gpc = GPC();
@@ -58,6 +58,11 @@ fb, yb = BlockGP([f₁(X₁), f₃(X₃)]), BlockVector([ŷ₁, ŷ₃]);
 @show elbo(fb, yb, fb, sqrt(σ²));
 
 
+f1′, f2′, f3′ = (f₁, f₂, f₃) | (y₁(X₁)←ŷ₁, y₃(X₃)←ŷ₃);
+mf′1, σf′1 = marginals(f1′(Xp));
+mf′2, σf′2 = marginals(f2′(Xp));
+mf′3, σf′3 = marginals(f3′(Xp));
+
 ###########################  Plot results  ###########################
 
 
@@ -65,39 +70,59 @@ using Plots
 plotly();
 posterior_plot = plot();
 
-# # Plot posterior marginal variances
-# plot!(posterior_plot, Xp, [μf₁′ μf₁′];
+# Plot posterior marginal variances
+plot!(posterior_plot, Xp, [μf₁′ μf₁′];
+    linewidth=0.0,
+    fillrange=[μf₁′ .- 3 .* σf₁′, μf₁′ .+ 3 * σf₁′],
+    fillalpha=0.3,
+    fillcolor=:red,
+    label="");
+plot!(posterior_plot, Xp, [μf₂′ μf₂′];
+    linewidth=0.0,
+    fillrange=[μf₂′ .- 3 .* σf₂′, μf₂′ .+ 3 * σf₂′],
+    fillalpha=0.3,
+    fillcolor=:green,
+    label="");
+plot!(posterior_plot, Xp, [μf₃′ μf₃′];
+    linewidth=0.0,
+    fillrange=[μf₃′ .- 3 .* σf₃′, μf₃′ .+ 3 * σf₃′],
+    fillalpha=0.3,
+    fillcolor=:blue,
+    label="");
+
+# plot!(posterior_plot, Xp, [mf′1, mf′1];
 #     linewidth=0.0,
-#     fillrange=[μf₁′ .- 3 .* σf₁′, μf₁′ .+ 3 * σf₁′],
+#     fillrange=[mf′1 .- 3 .* σf′1, mf′1 .+ 3 * σf′1],
 #     fillalpha=0.3,
-#     fillcolor=:red,
+#     fillcolor=:cyan,
 #     label="");
-# plot!(posterior_plot, Xp, [μf₂′ μf₂′];
+# plot!(posterior_plot, Xp, [mf′2 mf′2];
 #     linewidth=0.0,
-#     fillrange=[μf₂′ .- 3 .* σf₂′, μf₂′ .+ 3 * σf₂′],
+#     fillrange=[mf′2 .- 3 .* σf′2, mf′2 .+ 3 * σf′2],
 #     fillalpha=0.3,
 #     fillcolor=:green,
 #     label="");
-# plot!(posterior_plot, Xp, [μf₃′ μf₃′];
+# plot!(posterior_plot, Xp, [mf′3 mf′3];
 #     linewidth=0.0,
-#     fillrange=[μf₃′ .- 3 .* σf₃′, μf₃′ .+ 3 * σf₃′],
+#     fillrange=[mf′3 .- 3 .* σf′3, mf′3 .+ 3 * σf′3],
 #     fillalpha=0.3,
 #     fillcolor=:blue,
 #     label="");
 
-# # Plot joint posterior samples
-# plot!(posterior_plot, Xp, f₁′Xp,
-#     linecolor=:red,
-#     linealpha=0.2,
-#     label="");
-# plot!(posterior_plot, Xp, f₂′Xp,
-#     linecolor=:green,
-#     linealpha=0.2,
-#     label="");
-# plot!(posterior_plot, Xp, f₃′Xp,
-#     linecolor=:blue,
-#     linealpha=0.2,
-#     label="");
+
+# Plot joint posterior samples
+plot!(posterior_plot, Xp, f₁′Xp,
+    linecolor=:red,
+    linealpha=0.2,
+    label="");
+plot!(posterior_plot, Xp, f₂′Xp,
+    linecolor=:green,
+    linealpha=0.2,
+    label="");
+plot!(posterior_plot, Xp, f₃′Xp,
+    linecolor=:blue,
+    linealpha=0.2,
+    label="");
 
 # Plot posterior means
 plot!(posterior_plot, Xp, μf₁′;
