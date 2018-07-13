@@ -42,13 +42,6 @@ function _map(k::DeltaSumKernel, X::AV, X′::AV)
     return diag_Xᵀ_A_Y(pairwise(k.ϕ, :, X), pairwise(k.k, :), pairwise(k.ϕ, :, X′))
 end
 @noinline function _pairwise(k::DeltaSumKernel, X::AV)
-    # println("pairwise(k.k, :)")
-    # display(unbox(unbox(pairwise(k.k, :))))
-    # # display(blocksizes(unbox(unbox(pairwise(k.k, :)))))
-    # println("pairwise(k.ϕ, :, X)")
-    # display(pairwise(k.ϕ, :, X))
-    # display(blocksizes(pairwise(k.ϕ, :, X)))
-    # @show @which Xt_A_X(pairwise(k.k, :), pairwise(k.ϕ, :, X))
     return Xt_A_X(pairwise(k.k, :), pairwise(k.ϕ, :, X))
 end
 function _pairwise(k::DeltaSumKernel, X::AV, X′::AV)

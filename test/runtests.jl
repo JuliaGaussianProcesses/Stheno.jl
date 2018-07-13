@@ -20,15 +20,15 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
     #     include("mean_and_kernel/block.jl")
     #     # include("mean_and_kernel/transform.jl")
     #     include("mean_and_kernel/input_transform.jl")
-        include("mean_and_kernel/zero.jl")
+        # include("mean_and_kernel/zero.jl")
     #     include("mean_and_kernel/degenerate.jl")
     #     include("mean_and_kernel/conversion.jl")
     # end
 
-    @testset "gp" begin
-        # include("gp/abstract_gp.jl")
-        include("gp/block_gp.jl")
-    end
+    # @testset "gp" begin
+    #     # include("gp/abstract_gp.jl")
+    #     include("gp/block_gp.jl")
+    # end
 
     @testset "linops" begin
         # include("linops/indexing.jl")
@@ -37,5 +37,9 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
         # # include("linops/integrate.jl")
         # include("linops/project.jl")
         # include("linops/conditioning.jl")
+    end
+
+    @testset "integration" begin
+        include("util/toeplitz_integration.jl")
     end
 end

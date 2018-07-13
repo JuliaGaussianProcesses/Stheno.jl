@@ -15,6 +15,7 @@ module Stheno
     include("util/woodbury.jl")
     include("util/abstract_data_set.jl")
     include("util/block_arrays.jl")
+    include("util/toeplitz.jl")
     include("util/eachindex_util.jl")
     include("util/io.jl")
 
@@ -47,4 +48,5 @@ module Stheno
 
     # # Code to make Stheno work with Turing.
     # include("turing_util.jl")
+    include("util/model.jl")
 end # module

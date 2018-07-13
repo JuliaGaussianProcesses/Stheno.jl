@@ -16,7 +16,6 @@ struct FiniteMean <: MeanFunction
 end
 (μ::FiniteMean)(n) = μ.μ(getindex(μ.X, n))
 ==(μ::FiniteMean, μ′::FiniteMean) = μ.μ == μ′.μ && μ.X == μ′.X
-finite(μ::MeanFunction, X::AbstractVector) = FiniteMean(μ, X)
 eachindex(μ::FiniteMean) = eachindex(μ.X)
 length(μ::FiniteMean) = length(μ.X)
 _map(μ::FiniteMean, q::IntVec) = map(μ.μ, μ.X[q])
@@ -105,7 +104,7 @@ size(k::RhsFiniteCrossKernel, N::Int) = N == 2 ? length(k.X′) : size(k.k, N)
 eachindex(k::RhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.k, 1) : eachindex(k.X′)
 _map(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = map(k.k, X, k.X′[q′])
 _pairwise(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = pairwise(k.k, X, k.X′[q′])
-function print(io::IO, k::LhsFiniteCrossKernel)
+function print(io::IO, k::RhsFiniteCrossKernel)
     println(io, "RhsFiniteCrossKernel $(size(k)):")
     print(io, Shunted(Shunt(4, ' '), k.k))
 end

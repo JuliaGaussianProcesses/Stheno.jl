@@ -11,3 +11,4 @@ examples/simple_sensor_fusion/*
 docs/build/*
 
 coverage
+scratch.jl

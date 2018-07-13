@@ -43,7 +43,7 @@ function get_check_gpc(args...)
     return gpc
 end
 
-show(io::IO, gp::GP) = print(io, "GP with μ = ($(gp.μ)) k=($(gp.k)))")
+show(io::IO, gp::GP) = print(io, gp)
 
 function Base.print(io::IO, gp::GP)
     println(io, "GP with mean:")

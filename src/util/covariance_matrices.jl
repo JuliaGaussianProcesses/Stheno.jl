@@ -1,5 +1,6 @@
 import Base: size, ==, +, -, *, isapprox, getindex, IndexStyle, map, broadcast,
     cov, logdet, chol, \, Matrix, UpperTriangular, transpose, ctranspose
+using ToeplitzMatrices: SymmetricToeplitz
 export cov, LazyPDMat, Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X
 
 """
@@ -9,6 +10,7 @@ Compute the log determinant by summing the logdet of the diagonal of an `UpperTr
 matrix. Implementing this here is a horrible bit of type piracy, but it's necessary.
 """
 logdet(U::UpperTriangular) = sum(logdet, view(U, diagind(U)))
+logdet(L::LowerTriangular) = sum(logdet, view(L, diagind(L)))
 
 """
     LazyPDMat{T<:Real, TΣ<:AbstractMatrix{T}} <: AbstractMatrix{T}
@@ -18,7 +20,7 @@ Please don't mutate it this object: `setindex!` isn't defined for a reason.
 """
 mutable struct LazyPDMat{T<:Real, TΣ<:AbstractMatrix{T}} <: AbstractMatrix{T}
     Σ::TΣ
-    U::Union{Void, UpperTriangular{T}}
+    U::Union{Void, LowerTriangular{T}, UpperTriangular{T}}
     ϵ::T
     LazyPDMat(Σ::TΣ) where {T<:Real, TΣ<:AM{T}} = new{T, TΣ}(Σ, nothing, 1e-6)
     LazyPDMat(Σ::TΣ, ϵ::Real) where TΣ<:AM{T} where T<:Real = new{T, TΣ}(Σ, nothing, ϵ)
@@ -35,12 +37,14 @@ isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(unbox(Σ1), unbox(Σ2))
 
 # Unary functions.
 logdet(Σ::LazyPDMat) = 2 * logdet(chol(Σ))
-function chol(Σ::LazyPDMat)
+function chol(Σ::LazyPDMat{<:Real, TΣ}) where TΣ
     if Σ.U == nothing
-        Σ.U = chol(Symmetric(unbox(Σ) + Σ.ϵ * I))
+        foo = unbox(Σ) + Σ.ϵ * I
+        Σ.U = chol(foo)
     end
     return Σ.U
 end
+
 
 # Binary functions.
 +(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(unbox(Σ1) + unbox(Σ2))
@@ -63,6 +67,7 @@ end
     return LazyPDMat(Symmetric(V'V))
 end
 @noinline Xt_invA_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A)' \ x)
+@noinline Xt_invA_X(A::LazyPDMat{<:Real, <:SymmetricToeplitz}, x::AV) = sum(abs2, chol(A) \ x)
 @noinline Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
 @noinline \(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
 

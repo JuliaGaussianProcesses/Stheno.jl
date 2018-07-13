@@ -1,18 +1,18 @@
 using Revise
 using Stheno, Plots
-
+using Stheno.@model
 
 
 ###########################  Define and inspect our model  ###########################
 
 # Define the vanilla GP-regression generative model.
-function model(gpc)
+@model function model()
 
     # Define a smooth latent process.
-    f = 1.5 * GP(EQ(), gpc)
+    f = 1.5 * GP(EQ())
 
     # Define a latent noise process.
-    noise = GP(Noise(1e-2), gpc)
+    noise = GP(Noise(1e-2))
 
     # Sum them to get the process of which we shall make observations.
     y = f + noise

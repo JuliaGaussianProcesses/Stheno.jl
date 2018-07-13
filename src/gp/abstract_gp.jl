@@ -87,6 +87,8 @@ function rand(rng::AbstractRNG, f::AbstractGP, N::Int)
     return mean_vec(f) .+ chol(cov(f))' * randn(rng, length(f), N)
 end
 rand(rng::AbstractRNG, f::AbstractGP) = vec(rand(rng, f, 1))
+rand(f::AbstractGP, N::Int) = rand(Base.Random.GLOBAL_RNG, f, N)
+rand(f::AbstractGP) = vec(rand(f, 1))
 
 """
     logpdf(f::AbstractGP, y::AbstractVector{<:Real})

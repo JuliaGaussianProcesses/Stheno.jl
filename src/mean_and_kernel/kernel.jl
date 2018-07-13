@@ -52,6 +52,14 @@ end
 pairwise(k::CrossKernel, X::BlockData) = pairwise(k, X, X)
 pairwise(k::CrossKernel, X::AV) = _pairwise(k, X)
 
+# Optimisation for Toeplitz covariance matrices.
+function pairwise(k::Kernel, X::StepRangeLen{<:Real})
+    if isstationary(k)
+        return LazyPDMat(SymmetricToeplitz(map(k, X, Fill(X[1], length(X)))))
+    else
+        return LazyPDMat(_pairwise(k, X))
+    end
+end
 
 # Binary pairwise / _pairwise
 function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
