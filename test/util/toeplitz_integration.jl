@@ -4,7 +4,7 @@ using ToeplitzMatrices: SymmetricToeplitz
 
 @testset "Toeplitz Integration" begin
 
-xl = linspace(-5.0, 5.0, 10_000);
+xl = linspace(-5.0, 5.0, 1000);
 x = collect(xl);
 
 # Simplest possible model.
@@ -24,8 +24,19 @@ y = rand(f(xl));
 @test cov(f(xl)) isa LazyPDMat{<:Real, <:SymmetricToeplitz}
 
 f, y = noisy_regression()
+ŷ = rand(y(xl))
 @test cov(f(xl)) isa LazyPDMat{<:Real, <:SymmetricToeplitz}
 @test cov(y(xl)) isa LazyPDMat{<:Real, <:SymmetricToeplitz}
+
+# fb_xl = BlockGP([f(xl), y(xl)])
+# fb_x = BlockGP([f(x), y(x)])
+
+
+# cov(fb_xl)
+
+# using BenchmarkTools
+# @benchmark cov($fb_x)
+# @benchmark cov($fb_xl)
 
 # @benchmark rand($f($xl))
 # @benchmark rand($f($x))

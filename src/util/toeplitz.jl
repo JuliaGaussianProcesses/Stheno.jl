@@ -1,5 +1,7 @@
 using ToeplitzMatrices
 
+import Base: transpose, ctranspose
+
 """
     chol!(L::AbstractMatrix, T::SymmetricToeplitz)
 
@@ -32,3 +34,6 @@ function +(T::SymmetricToeplitz, u::UniformScaling)
     t[1] += u.λ
     return SymmetricToeplitz(t)
 end
+
+transpose(T::Toeplitz) = Toeplitz(T.vr, T.vc)
+ctranspose(T::Toeplitz) = Toeplitz(T.vr, T.vc)

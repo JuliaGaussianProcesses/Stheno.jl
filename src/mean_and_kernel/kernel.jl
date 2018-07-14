@@ -24,6 +24,8 @@ size(k::Kernel) = (length(k), length(k))
 size(k::Kernel, dim::Int) = size(k)[dim]
 length(k::Kernel) = Inf
 
+
+
 ###################### `map` and `pairwise` fallback implementations #######################
 
 # Unary map / _map
@@ -52,14 +54,6 @@ end
 pairwise(k::CrossKernel, X::BlockData) = pairwise(k, X, X)
 pairwise(k::CrossKernel, X::AV) = _pairwise(k, X)
 
-# Optimisation for Toeplitz covariance matrices.
-function pairwise(k::Kernel, X::StepRangeLen{<:Real})
-    if isstationary(k)
-        return LazyPDMat(SymmetricToeplitz(map(k, X, Fill(X[1], length(X)))))
-    else
-        return LazyPDMat(_pairwise(k, X))
-    end
-end
 
 # Binary pairwise / _pairwise
 function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
@@ -85,6 +79,27 @@ for op in [:map, :pairwise]
         $op(k::CrossKernel, X::AV, ::Colon) = $op(k, X, eachindex(k, 2))
     end
 end
+
+
+# Optimisation for Toeplitz covariance matrices.
+function pairwise(k::Kernel, x::StepRangeLen{<:Real})
+    if isstationary(k)
+        return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
+    else
+        return LazyPDMat(_pairwise(k, x))
+    end
+end
+function pairwise(k::CrossKernel, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real})
+    if isstationary(k) && x.ref == x′.ref
+        return Toeplitz(
+            map(k, x, Fill(x′[1], length(x))),
+            map(k, Fill(x[1], length(x′)), x′),
+        )
+    else
+        return _pairwise(k, x, x′)
+    end
+end
+
 
 
 ################################ Define some basic kernels #################################

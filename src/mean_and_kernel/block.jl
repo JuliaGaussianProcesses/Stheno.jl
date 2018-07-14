@@ -80,7 +80,7 @@ function pairwise(k::BlockKernel, X::BlockData)
     bX = blocks(X)
     Σ = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX))
     for q in eachindex(k.ks_diag)
-        setblock!(Σ, Matrix(pairwise(k.ks_diag[q], bX[q])), q, q)
+        setblock!(Σ, unbox(pairwise(k.ks_diag[q], bX[q])), q, q)
         for p in 1:q-1
             setblock!(Σ, pairwise(k.ks_off[p, q], bX[p], bX[q]), p, q)
             setblock!(Σ, getblock(Σ, p, q)', q, p)
