@@ -83,7 +83,7 @@ function pairwise_tests(f, X::AbstractVector; rtol=eps())
     @test isapprox(pairwise(f, X), pairwise(f, X, X); rtol=rtol)
 end
 function pairwise_tests(f, X::BlockData; rtol=eps())
-    @test pairwise(f, X) isa LazyPDMat{T, <:AbstractBlockMatrix{T}} where T
+    @test pairwise(f, X) isa LazyPDMat{T, <:Symmetric{T, <:AbstractBlockMatrix{T}}} where T
     @test size(pairwise(f, X)) == (length(X), length(X))
     @test pairwise(f, X) ==
         BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X)])

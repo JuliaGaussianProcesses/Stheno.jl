@@ -86,7 +86,7 @@ function pairwise(k::BlockKernel, X::BlockData)
             setblock!(Σ, getblock(Σ, p, q)', q, p)
         end
     end
-    return LazyPDMat(Σ)
+    return LazyPDMat(Symmetric(Σ))
 end
 function pairwise(k::BlockKernel, X::BlockData, X′::BlockData)
     bX, bX′ = blocks(X), blocks(X′)

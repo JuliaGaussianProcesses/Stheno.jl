@@ -62,7 +62,7 @@ using FillArrays: Zeros, Fill
         bk = BlockKernel([k1, k2], ks_off)
         bf_k = FiniteKernel(bk, BlockData([x1, x2]))
 
-        @test AbstractMatrix(bf_k) isa LazyPDMat{Float64, <:BlockMatrix}
+        @test AbstractMatrix(bf_k) isa LazyPDMat{Float64, <:Symmetric{Float64, <:BlockMatrix}}
         @test AbstractMatrix(bf_k) == pairwise(bk, BlockData([x1, x2]))
     end
 

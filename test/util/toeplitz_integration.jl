@@ -28,9 +28,16 @@ ŷ = rand(y(xl))
 @test cov(f(xl)) isa LazyPDMat{<:Real, <:SymmetricToeplitz}
 @test cov(y(xl)) isa LazyPDMat{<:Real, <:SymmetricToeplitz}
 
-# fb_xl = BlockGP([f(xl), y(xl)])
-# fb_x = BlockGP([f(x), y(x)])
+@test cov(f(xl)) ≈ cov(f(x))
+@test cov(y(xl)) ≈ cov(y(x))
 
+fb_xl = BlockGP([f(xl), y(xl)])
+fb_x = BlockGP([f(x), y(x)])
+
+
+using Stheno: unbox
+Σl = unbox(cov(fb_xl)) + 1e-6I;
+U = chol(Σl);
 
 # cov(fb_xl)
 

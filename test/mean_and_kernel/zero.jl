@@ -29,8 +29,6 @@ using Base: OneTo
         @test_throws AssertionError k2 * FiniteZeroCrossKernel(randn(5), randn(1))
         @test_throws AssertionError k3 * LhsFiniteZeroCrossKernel(randn(4))
         @test_throws AssertionError k4 * RhsFiniteZeroCrossKernel(randn(2))
-
-        @show @which k6 * FiniteZeroKernel(randn(8))
         @test_throws AssertionError k6 * FiniteZeroKernel(randn(8))
 
         @test μ1 * ConstantMean(3.0) === μ1

@@ -117,7 +117,7 @@ let
     # Compute conditioner and exact posterior compute at test points.
     conditioner = Stheno.Titsias(f(XX′), μᵤ, Σᵤᵤ, gpc)
     f′Z = f(Z) | (y(XX′)←ŷ)
-    f′Z_approx, g′, ĝ = f(Z) | conditioner
+    f′Z_approx = f(Z) | conditioner
 
     # Check that exact and approximate posteriors match up.
     @test isapprox(mean_vec(f′Z), mean_vec(f′Z_approx); rtol=1e-4)
@@ -139,118 +139,10 @@ let
 
     # Test that conditioning is indifferent to choice of Blocks.
     conditioner_blocked = Stheno.Titsias(fb, μb, Σb, gpc)
-    f′Zb, g′b, ĝb = f(BlockData([Z])) | conditioner_blocked
+    f′Zb = f(BlockData([Z])) | conditioner_blocked
 
     @test isapprox(mean_vec(f′Z), mean_vec(f′Zb); rtol=1e-4)
     @test isapprox(cov(f′Z), cov(f′Zb); rtol=1e-4)
-
-    # println("cov(f′Zb)")
-    # @show typeof(kernel(f′Zb))
-    # display(cov(f′Zb))
-
-    # @show eachindex(kernel(f′Zb), 1)
-    # @show eachindex(kernel(ĝb), 1), typeof(eachindex(kernel(ĝb), 1))
-
-    # idx = eachindex(kernel(ĝb), 1)
-    # display(idx.X)
-
-    println("cov(g′)")
-    @show typeof(kernel(g′))
-    display(cov(g′))
-
-    println("cov(g′b)")
-    @show typeof(kernel(g′b))
-    display(cov(g′b))
-
-    println("cov(ĝ)")
-    @show typeof(kernel(ĝ))
-    display(cov(ĝ))
-
-    println("cov(ĝb))")
-    @show typeof(kernel(ĝb))
-    display(cov(ĝb))
-
-
-    println(kernel(g′))
-    println(kernel(ĝ))
-    println(kernel(g′b))
-    println(kernel(ĝb))
-
-    # NEED RECURSIVE CHECKS FOR BLOCK MATRIX ZERO-NESS.
-    println(f′Z_approx)
-    println(kernel(f′Zb))
-
-    @show eachindex(kernel(f′Zb)), typeof(eachindex(kernel(f′Zb)))
-    @show eachindex(kernel(ĝb)), typeof(eachindex(kernel(ĝb)))
-
-    display(cov(f′Zb))
-
-    # display((cov(f′Z) .- cov(f′Zb)) ./ 1)
-    # display((cov(f′Z) .- cov(f′Zb)) ./ cov(f′Zb))
-
-    Xb = BlockData([X, X′])
-    Kuu, Kuu_b = cov(f(XX′)), cov(f(Xb))
-
-    # # THESE ARE NOT DIFFERENT! WHAT THE HELL IS GOING ON TO MAKE THIS WRONG?!?!?!
-    # display(Stheno.Xtinv_A_Xinv(Σᵤᵤ, Kuu))
-    # display(Stheno.Xtinv_A_Xinv(Σb, Kuu_b))
-
-    # @show maximum(abs.(Stheno.Xtinv_A_Xinv(Σᵤᵤ, Kuu) - Stheno.Xtinv_A_Xinv(Σb, Kuu_b)))
-
-    # println("cov(g′) - cov(g′b)")
-    # display(cov(g′) - cov(g′b))
-    # println("cov(ĝ) - cov(ĝb)")
-    # display(cov(ĝ) - cov(ĝb))
-
-    # @show kernel(ĝ)
-    # @show kernel(ĝb)
-
-    # println("AbstractMatrix(kernel(ĝb).k) - AbstractMatrix(kernel(ĝ).k)")
-    # display(AbstractMatrix(kernel(ĝb).k) - AbstractMatrix(kernel(ĝ).k))
-
-    @which cov(f′Zb)
-    # cov(f::Stheno.AbstractGaussianProcess) in Stheno at /home/wct23/.julia/v0.6/Stheno/src/gp/abstract_gp.jl:50
-    @which AbstractMatrix(kernel(f′Zb))
-    # (::Type{AbstractArray{T,2} where T})(k::Stheno.Kernel) in Stheno at /home/wct23/.julia/v0.6/Stheno/src/mean_and_kernel/conversion.jl:19
-    @which pairwise(kernel(f′Zb), eachindex(kernel(f′Zb)))
-    @which Stheno._pairwise(kernel(f′Zb), eachindex(kernel(f′Zb)))
-
-    kgb = kernel(f′Zb)
-    x = eachindex(kgb)
-    k = kgb.x[2]
-
-
-
-    # k = kernel(ĝ)
-    # kb = kernel(ĝb)
-
-
-    # # deconstruct k call stack.
-    # @show @which cov(ĝ)
-    # k = kernel(ĝ);
-    # @show @which AbstractMatrix(k)
-    # X = eachindex(k, 1);
-    # @show @which pairwise(k, X)
-    # @show @which Stheno._pairwise(k, X)
-    # display(Xt_A_X(pairwise(k.k, :), pairwise(k.ϕ, :, X)))
-    # display(pairwise(k.ϕ, :, X))
-
-    # @show @which cov(ĝb)
-    # kb = kernel(ĝb)
-    # @show @which AbstractMatrix(kb)
-    # Xb = eachindex(kb)
-    # @show @which pairwise(kb, Xb)
-
-    # display(BlockMatrix([pairwise(kb, x, x′) for x in blocks(Xb), x′ in blocks(Xb)]))
-
-    # display(pairwise(kb, blocks(Xb)[1], blocks(Xb)[1]))
-    # @show @which pairwise(kb, blocks(Xb)[1], blocks(Xb)[1])
-    # @show @which Stheno._pairwise(kb, blocks(Xb)[1], blocks(Xb)[1])
-
-    # Xb1 = blocks(Xb)[1]
-    # display(Xt_A_Y(pairwise(kb.ϕ, :, Xb1), pairwise(kb.k, :), pairwise(kb.ϕ, :, Xb1)) - cov(ĝb))
-    # display(pairwise(kb.ϕ, :, Xb1))
-
 end
 
 end

@@ -7,7 +7,7 @@ using FillArrays: Fill
 import Base: +, *, size, getindex, eltype, copy, ctranspose, transpose, chol,
     UpperTriangular, LowerTriangular, \, logdet, Ac_mul_B, A_mul_Bc, Ac_mul_Bc, At_mul_B,
     A_mul_Bt, At_mul_Bt, Ac_rdiv_B, A_rdiv_Bc, Ac_rdiv_Bc, At_rdiv_B, A_rdiv_Bt, At_rdiv_Bt,
-    Ac_ldiv_B, A_ldiv_Bc, Ac_ldiv_Bc, At_ldiv_B, A_ldiv_Bt, At_ldiv_Bt, Symmetric
+    Ac_ldiv_B, A_ldiv_Bc, Ac_ldiv_Bc, At_ldiv_B, A_ldiv_Bt, At_ldiv_Bt, Symmetric, vec
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
 export BlockVector, BlockMatrix, blocksizes, blocklengths
@@ -187,8 +187,8 @@ function copy(a::BlockVector{T}) where T
     return b
 end
 
-function copy(A::BlockMatrix{T}) where T
-    B = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 2))
+function copy(A::BlockMatrix{T, V}) where {T, V<:AbstractMatrix{T}}
+    B = BlockMatrix{T, V}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 2))
     for q in 1:nblocks(B, 2), p in 1:nblocks(B, 1)
         setblock!(B, copy(getblock(A, p, q)), p, q)
     end
@@ -230,8 +230,6 @@ with block of the other matrix with which it will be multiplied. This ensures th
 result is itself straightforwardly representable as `BlockVecOrMat`.
 """
 function are_conformal(A::AVM, B::AVM)
-    # @show typeof(A), typeof(B)
-    # @show blocksizes(A, 2), blocksizes(B, 1)
     return blocksizes(A, 2) == blocksizes(B, 1)
 end
 
@@ -349,15 +347,16 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
 end
 
 """
-    chol(A::Symmetric{T, <:AbstractBlockMatrix{T}}) where T<:Real
+    chol(A::Symmetric{T, <:BlockMatrix{T}}) where T<:Real
 
 Get the Cholesky decomposition of `A` in the form of a `BlockMatrix`.
 
 Only works for `A` where `is_block_symmetric(A) == true`. Assumes that we want the
 upper triangular version.
 """
-function chol(A::Symmetric{T, <:AbstractBlockMatrix{T}}) where T<:Real
-    U = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 1))
+function chol(A::Symmetric{T, <:BlockMatrix{T, V}}) where {T<:Real, V<:AbstractMatrix{T}}
+
+    U = BlockMatrix{T, V}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 1))
 
     # Do an initial pass to fill each of the blocks with Zeros. This is cheap
     for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)

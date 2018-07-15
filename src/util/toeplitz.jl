@@ -1,6 +1,14 @@
 using ToeplitzMatrices
 
-import Base: transpose, ctranspose
+import Base: transpose, ctranspose, copy
+
+function copy(T::Toeplitz)
+    return Toeplitz(copy(T.vc), copy(T.vr), copy(T.vcvr_dft), copy(T.tmp), T.dft)
+end
+function copy(T::SymmetricToeplitz)
+    return SymmetricToeplitz(copy(T.vc), copy(T.vcvr_dft), copy(T.tmp), T.dft)
+end
+
 
 """
     chol!(L::AbstractMatrix, T::SymmetricToeplitz)
@@ -25,15 +33,21 @@ function chol!(L::AbstractMatrix, T::SymmetricToeplitz)
             L[n′, n + 1] = -sinθn * v[n′] + cosθn * L[n′ - 1, n]
         end
     end
-    return LowerTriangular(L)
+    return UpperTriangular(L')
 end
 chol(T::SymmetricToeplitz) = chol!(Matrix{eltype(T)}(size(T, 1), size(T, 1)), T)
 
 function +(T::SymmetricToeplitz, u::UniformScaling)
-    t = copy(T.vc)
-    t[1] += u.λ
-    return SymmetricToeplitz(t)
+    Tu = copy(T)
+    Tu.vc[1] += u.λ
+    Tu.vcvr_dft .+= u.λ
+    return Tu
 end
++(u::UniformScaling, T::SymmetricToeplitz) = T + u
 
 transpose(T::Toeplitz) = Toeplitz(T.vr, T.vc)
-ctranspose(T::Toeplitz) = Toeplitz(T.vr, T.vc)
+ctranspose(T::Toeplitz) = Toeplitz(conj.(T.vr), conj.(T.vc))
+transpose(T::SymmetricToeplitz) = T
+ctranspose(T::SymmetricToeplitz) = T
+
+@inline Base.Symmetric(T::SymmetricToeplitz) = T

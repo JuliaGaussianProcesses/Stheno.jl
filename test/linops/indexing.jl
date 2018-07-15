@@ -14,19 +14,19 @@ let
     @test kernel(f3) == FiniteKernel(k1, X)
     @test kernel(f3, f1) == LhsFiniteCrossKernel(kernel(f1), X)
     @test kernel(f1, f3) == RhsFiniteCrossKernel(kernel(f1), X)
-    @test kernel(f3, f2) == LhsFiniteCrossKernel(ZeroKernel{Float64}(), X)
-    @test kernel(f2, f3) == RhsFiniteCrossKernel(ZeroKernel{Float64}(), X)
+    @test kernel(f3, f2) == LhsFiniteZeroCrossKernel(X)
+    @test kernel(f2, f3) == RhsFiniteZeroCrossKernel(X)
 
     # Check that kernel types are correct.
     f4 = f1(X′)
     @test kernel(f4) isa FiniteKernel
     @test kernel(f4, f4) isa FiniteKernel
-    @test kernel(f4, f3) isa LhsFiniteCrossKernel
-    @test kernel(f3, f4) isa RhsFiniteCrossKernel
+    @test kernel(f4, f3) isa FiniteCrossKernel
+    @test kernel(f3, f4) isa FiniteCrossKernel
     @test kernel(f4, f1) isa LhsFiniteCrossKernel
     @test kernel(f1, f4) isa RhsFiniteCrossKernel
-    @test kernel(f2, f4) isa RhsFiniteCrossKernel
-    @test kernel(f4, f2) isa LhsFiniteCrossKernel
+    @test kernel(f2, f4) isa RhsFiniteZeroCrossKernel
+    @test kernel(f4, f2) isa LhsFiniteZeroCrossKernel
 
     # These tests are currently unnecessary as nested indexing has been removed.
 #     # Check that nested indexing works as expected.

@@ -40,7 +40,7 @@ logdet(Σ::LazyPDMat) = 2 * logdet(chol(Σ))
 function chol(Σ::LazyPDMat{<:Real, TΣ}) where TΣ
     if Σ.U == nothing
         foo = unbox(Σ) + Σ.ϵ * I
-        Σ.U = chol(foo)
+        Σ.U = chol(Symmetric(foo))
     end
     return Σ.U
 end
@@ -67,7 +67,7 @@ end
     return LazyPDMat(Symmetric(V'V))
 end
 @noinline Xt_invA_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A)' \ x)
-@noinline Xt_invA_X(A::LazyPDMat{<:Real, <:SymmetricToeplitz}, x::AV) = sum(abs2, chol(A) \ x)
+# @noinline Xt_invA_X(A::LazyPDMat{<:Real, <:SymmetricToeplitz}, x::AV) = sum(abs2, chol(A) \ x)
 @noinline Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
 @noinline \(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
 

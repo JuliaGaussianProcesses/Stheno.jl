@@ -108,6 +108,6 @@ end
 
 promote(f::GP, x::Union{Real, Function, MeanFunction}) = (f, convert(GP, x, f.gpc))
 promote(x::Union{Real, Function, MeanFunction}, f::GP) = reverse(promote(f, x))
-convert(::Type{<:GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), get_zero(length(μ)), gpc)
-convert(::Type{<:GP}, f::Function, gpc::GPC) = GP(CustomMean(f), get_zero(length(μ)), gpc)
+convert(::Type{<:GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), ZeroKernel{typeof(x)}(), gpc)
+convert(::Type{<:GP}, f::Function, gpc::GPC) = GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
 convert(::Type{<:GP}, μ::MeanFunction, gpc::GPC) = GP(μ, get_zero(length(μ)), gpc)
