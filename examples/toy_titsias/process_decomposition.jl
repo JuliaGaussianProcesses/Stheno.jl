@@ -1,6 +1,6 @@
 using Revise
 using Stheno
-
+using Stheno: @model
 
 
 ###########################  Define our model  ###########################
@@ -8,17 +8,17 @@ using Stheno
 σ² = 1e-1
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
-function model(gpc)
+@model function model()
 
     # Define latent processes.
-    f₁ = GP(ConstantMean(randn()), EQ(), gpc)
-    f₂ = GP(EQ(), gpc)
+    f₁ = GP(ConstantMean(randn()), EQ())
+    f₂ = GP(EQ())
     f₃ = f₁ + f₂
 
     # Define noisy versions of latent processes which we are permitted to observe.
-    y₁ = f₁ + GP(Noise(σ²), gpc)
-    y₂ = f₂ + GP(Noise(σ²), gpc)
-    y₃ = f₃ + GP(Noise(σ²), gpc)
+    y₁ = f₁ + GP(Noise(σ²))
+    y₂ = f₂ + GP(Noise(σ²))
+    y₃ = f₃ + GP(Noise(σ²))
 
     return f₁, f₂, f₃, y₁, y₂, y₃
 end

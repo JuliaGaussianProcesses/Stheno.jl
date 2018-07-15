@@ -1,4 +1,5 @@
 using Stheno
+using Stheno: @model
 
 
 
@@ -15,14 +16,14 @@ estimated this function, is why a sensor might possibly have such a weird mean e
 beyond the scope of this example) The second returns biased measurements of `f`, where the
 bias is known to be 3.5. The model below specifies a model for this scenario.
 =#
-function model(gpc)
+@model function model()
 
     # Define a smooth latent process that we wish to infer.
-    f = GP(EQ(), gpc)
+    f = GP(EQ())
 
     # Define the two noise processes described.
-    noise1 = GP(CustomMean(x->sin.(x) .- 5.0 .+ sqrt.(abs.(x))), Noise(1e-2), gpc)
-    noise2 = GP(ConstantMean(3.5), Noise(1e-1), gpc)
+    noise1 = GP(CustomMean(x->sin.(x) .- 5.0 .+ sqrt.(abs.(x))), Noise(1e-2))
+    noise2 = GP(ConstantMean(3.5), Noise(1e-1))
 
     # Define the processes that we get to observe.
     y1 = f + noise1
@@ -30,7 +31,7 @@ function model(gpc)
 
     return f, noise1, noise2, y1, y2
 end
-f, noise₁, noise₂, y₁, y₂ = model(GPC());
+f, noise₁, noise₂, y₁, y₂ = model();
 
 # Generate some toy observations of `y1` and `y2`.
 X₁, X₂ = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10);

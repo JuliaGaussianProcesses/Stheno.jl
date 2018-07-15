@@ -1,14 +1,15 @@
 using Revise
 using Stheno, Plots
+using Stheno: @model
 
 
 
 ###########################  Define our model  ###########################
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
-function model(gpc)
-    f₁ = GP(ConstantMean(randn()), EQ(), gpc)
-    f₂ = GP(EQ(), gpc)
+@model function model()
+    f₁ = GP(ConstantMean(randn()), EQ(), )
+    f₂ = GP(EQ(), )
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
 end
@@ -17,7 +18,7 @@ end
 # at which to measure `f` using `y2`.
 rng, N₁, N₃ = MersenneTwister(123546), 10, 11;
 X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
-f₁, f₂, f₃ = model(GPC());
+f₁, f₂, f₃ = model();
 
 # Generate some toy observations of `f₁` and `f₃`.
 ŷ₁, ŷ₃ = rand(rng, [f₁(X₁), f₃(X₃)]);

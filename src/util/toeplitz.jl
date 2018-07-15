@@ -1,6 +1,7 @@
 using ToeplitzMatrices
 
 import Base: transpose, ctranspose, copy
+import ToeplitzMatrices: Toeplitz
 
 function copy(T::Toeplitz)
     return Toeplitz(copy(T.vc), copy(T.vr), copy(T.vcvr_dft), copy(T.tmp), T.dft)
@@ -51,3 +52,5 @@ transpose(T::SymmetricToeplitz) = T
 ctranspose(T::SymmetricToeplitz) = T
 
 @inline Base.Symmetric(T::SymmetricToeplitz) = T
+
+Toeplitz(vc::AbstractVector, vr::AbstractVector) = Toeplitz(Vector(vc), Vector(vr))

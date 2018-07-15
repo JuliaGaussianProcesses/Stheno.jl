@@ -1,4 +1,5 @@
 using Stheno, Plots
+using Stheno: @model
 plotly();
 
 
@@ -7,18 +8,18 @@ plotly();
 #=
 
 =#
-function model(gpc)
+@model function model()
     g1, g2 = x::Real->sin(x), x::Real->x
-    w1, w2 = GP(EQ(), gpc), GP(EQ(), gpc)
+    w1, w2 = GP(EQ()), GP(EQ())
     f = g1 * w1 + g2 * w2
-    y = f + GP(Noise(0.001), gpc)
+    y = f + GP(Noise(0.001))
     return w1, w2, f, y
 end
 
 # Sample from the prior from plotting and for conditioning.
 rng, N, Nplot, S = MersenneTwister(123456), 250, 500, 100;
 X, Xp = sort(rand(rng, N) * 10), linspace(-2.5, 12.5, Nplot);
-w1, w2, f, y = model(GPC());
+w1, w2, f, y = model();
 w1s, w2s, fs, ŷ = rand(rng, [w1(Xp), w2(Xp), f(Xp), y(X)]);
 
 # Compute posterior distribution over f′.

@@ -4,15 +4,13 @@ using Stheno, Plots, Optim, Distributions
 ###########################  Define and inspect our model  ###########################
 
 # Define the vanilla GP-regression generative model.
-function model(θ::Vector{<:Real})
-
-    gpc = GPC()
+@model function model(θ::Vector{<:Real})
 
     # Define a smooth latent process.
-    f = GP(transform(EQ(), x->exp(θ[1]) * x), gpc)
+    f = GP(transform(EQ(), x->exp(θ[1]) * x))
 
     # Define a latent noise process.
-    noise = GP(Noise(exp(θ[2])), gpc)
+    noise = GP(Noise(exp(θ[2])))
 
     # Sum them to get the process of which we shall make observations.
     y = f + noise

@@ -12,32 +12,33 @@ First, a note for statistics / ML people who aren't too familiar with Julia: the
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. In particular our model is that there are two latent processes `f₁` and `f₂`, which are summed point-wise to generate `f₃`. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
 using Stheno
+using Stheno: @model
 
 # Explicitly set pseudo-randomness for reproducibility.
 rng = MersenneTwister(123456)
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
-function model(gpc)
-    f₁ = GP(ConstantMean(randn(rng)), EQ(), gpc)
-    f₂ = GP(EQ(), gpc)
+@model function model()
+    f₁ = GP(ConstantMean(randn(rng)), EQ())
+    f₂ = GP(EQ())
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
 end
-f₁, f₂, f₃ = model(GPC())
+f₁, f₂, f₃ = model()
 
 # Generate some toy observations of `f₁` and `f₃`.
 X₁, X₃ = sort(rand(rng, 10) * 10), sort(rand(rng, 11) * 10)
-ŷ₁, ŷ₃ = rand(rng, [f₁, f₃], [X₁, X₃])
+ŷ₁, ŷ₃ = rand(rng, [f₁(X₁), f₃(X₃)])
 
 # Compute the posterior processes.
 (f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁)←ŷ₁, f₃(X₃)←ŷ₃)
 
 # Sample jointly from the posterior processes and compute posterior marginals.
 Xp = linspace(-2.5, 12.5, 500)
-f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′, f₂′, f₃′], [Xp, Xp, Xp], 25)
-μf₁′, σf₁′ = marginals(f₁′, Xp)
-μf₂′, σf₂′ = marginals(f₂′, Xp)
-μf₃′, σf₃′ = marginals(f₃′, Xp)
+f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(Xp)], 25)
+μf₁′, σf₁′ = marginals(f₁′(Xp))
+μf₂′, σf₂′ = marginals(f₂′(Xp))
+μf₃′, σf₃′ = marginals(f₃′(Xp))
 ```
 ![Alternate Text](examples/toy/process_decomposition.png)
 
