@@ -1,11 +1,43 @@
-using Stheno: ZeroKernel, ConstantKernel
+using Stheno: CrossKernel, ZeroKernel, ConstantKernel, pairwise, EmpiricalKernel,
+    _pairwise_fallback
+
+struct FooKernel <: CrossKernel end
+(::FooKernel)(x, x′) = sum(abs2, x - x′)
 
 @testset "kernel" begin
+
+    # Test pairwise.
+    let
+        rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
+        X, X′ = ColsAreObs(randn(rng, D, P)), ColsAreObs(randn(rng, D, Q))
+        x, x′ = randn(rng, P), randn(rng, Q)
+        foo = FooKernel()
+
+        @test _pairwise_fallback(foo, X, X′) ==
+            [foo(X[1], X′[1]) foo(X[1], X′[2]);
+             foo(X[2], X′[1]) foo(X[2], X′[2]);
+             foo(X[3], X′[1]) foo(X[3], X′[2])]
+        @test _pairwise_fallback(foo, x, x′) ==
+            [foo(x[1], x′[1]) foo(x[1], x′[2]);
+             foo(x[2], x′[1]) foo(x[2], x′[2]);
+             foo(x[3], x′[1]) foo(x[3], x′[2])]
+
+        @test pairwise(foo, X, X′) == _pairwise_fallback(foo, X, X′)
+        @test pairwise(foo, x, x′) == _pairwise_fallback(foo, x, x′)
+        @test pairwise(foo, X) == pairwise(foo, X, X)
+        @test pairwise(foo, x) == pairwise(foo, x, x)
+
+        XB = BlockData([X, X′])
+        @test pairwise(foo, XB, XB) ==
+            vcat(hcat(pairwise(foo, X, X), pairwise(foo, X, X′)),
+                 hcat(pairwise(foo, X′, X), pairwise(foo, X′, X′)))
+    end
 
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = randn(rng, D, N), randn(rng, D, N), randn(rng, D, N′)
+        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        XB0, XB1, XB2 = BlockData([x0, X0]), BlockData([x1, X1]), BlockData([x2, X2])
 
         # Tests for ZeroKernel.
         k_zero = ZeroKernel{Float64}()
@@ -16,14 +48,29 @@ using Stheno: ZeroKernel, ConstantKernel
         @test ZeroKernel{Float64}() == ZeroKernel{Float32}()
         kernel_tests(k_zero, x0, x1, x2)
         kernel_tests(k_zero, X0, X1, X2)
+        kernel_tests(k_zero, XB0, XB1, XB2)
+
+        @test ZeroKernel{Float64}() + ZeroKernel{Float64}() == ZeroKernel{Float64}()
+        @test ZeroKernel{Float64}() * ZeroKernel{Float64}() === ZeroKernel{Float64}()
+        @test ZeroKernel{Float64}() * EQ() == ZeroKernel{Float64}()
 
         # Tests for ConstantKernel.
         k_const = ConstantKernel(randn(rng))
         @test isstationary(k_const)
+        @test k_const == k_const
         @test size(k_const, 1) == Inf && size(k_const, 2) == Inf
         @test size(k_const) == (Inf, Inf)
         kernel_tests(k_const, x0, x1, x2)
         kernel_tests(k_const, X0, X1, X2)
+        kernel_tests(k_const, XB0, XB1, XB2)
+
+        zro = ZeroKernel{Float64}()
+        @test k_const + k_const isa ConstantKernel
+        @test k_const * k_const == ConstantKernel(k_const.c^2)
+        @test zro + k_const === k_const
+        @test k_const + zro === k_const
+        @test zro * k_const === zro
+        @test k_const * zro === zro
 
         # Tests for EQ.
         @test isstationary(EQ())
@@ -31,6 +78,8 @@ using Stheno: ZeroKernel, ConstantKernel
         @test size(EQ()) == (Inf, Inf)
         kernel_tests(EQ(), x0, x1, x2)
         kernel_tests(EQ(), X0, X1, X2)
+        kernel_tests(EQ(), BlockData([x0, x0]), BlockData([x1, x1]), BlockData([x2, x2]))
+        kernel_tests(EQ(), BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2, X2]))
 
         # Tests for Linear.
         @test !isstationary(Linear)
@@ -38,12 +87,31 @@ using Stheno: ZeroKernel, ConstantKernel
         @test a == a && a ≠ b
         kernel_tests(a, x0, x1, x2)
         kernel_tests(a, X0, X1, X2)
+        kernel_tests(a, BlockData([x0, x0]), BlockData([x1, x1]), BlockData([x2, x2]))
+        kernel_tests(a, BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2, X2]))
 
         # Tests for Noise
         @test isstationary(Noise(randn(rng)))
         @test Noise(5.0) == Noise(5)
         kernel_tests(Noise(5.0), x0, x1, x2)
         kernel_tests(Noise(5.0), X0, X1, X2)
+        # kernel_tests(Noise(5.0), XB0, XB1, XB2)
+
+        # Tests for EmpiricalKernel.
+        A_ = randn(rng, N, N)
+        A = LazyPDMat(A_ * A_' + 1e-6I)
+        k = EmpiricalKernel(A)
+        Ds0, Ds1, Ds2 = 1:N, 1:N, 1:N-1
+        kernel_tests(k, Ds0, Ds1, Ds2)
+        kernel_tests(k, BlockData([Ds0, Ds0]), BlockData([Ds1, Ds1]), BlockData([Ds2, Ds2]))
+        @test size(k, 1) == N && size(k, 2) == N
+
+        @test map(k, :) == diag(A)
+        @test map(k, :, :) == diag(A)
+        @test pairwise(k, :) == A
+        @test pairwise(k, :, :) == A
+
+        @test_throws AssertionError AbstractMatrix(EQ())
     end
 
     # # Tests for Rational Quadratic (RQ) kernel.

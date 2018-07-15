@@ -1,5 +1,6 @@
 import Base: size, ==, +, -, *, isapprox, getindex, IndexStyle, map, broadcast,
-    cov, logdet, chol, \, Matrix, UpperTriangular
+    cov, logdet, chol, \, Matrix, UpperTriangular, transpose, ctranspose
+using ToeplitzMatrices: SymmetricToeplitz
 export cov, LazyPDMat, Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X
 
 """
@@ -9,6 +10,7 @@ Compute the log determinant by summing the logdet of the diagonal of an `UpperTr
 matrix. Implementing this here is a horrible bit of type piracy, but it's necessary.
 """
 logdet(U::UpperTriangular) = sum(logdet, view(U, diagind(U)))
+logdet(L::LowerTriangular) = sum(logdet, view(L, diagind(L)))
 
 """
     LazyPDMat{T<:Real, TΣ<:AbstractMatrix{T}} <: AbstractMatrix{T}
@@ -18,7 +20,7 @@ Please don't mutate it this object: `setindex!` isn't defined for a reason.
 """
 mutable struct LazyPDMat{T<:Real, TΣ<:AbstractMatrix{T}} <: AbstractMatrix{T}
     Σ::TΣ
-    U::Union{Void, UpperTriangular{T}}
+    U::Union{Void, LowerTriangular{T}, UpperTriangular{T}}
     ϵ::T
     LazyPDMat(Σ::TΣ) where {T<:Real, TΣ<:AM{T}} = new{T, TΣ}(Σ, nothing, 1e-6)
     LazyPDMat(Σ::TΣ, ϵ::Real) where TΣ<:AM{T} where T<:Real = new{T, TΣ}(Σ, nothing, ϵ)
@@ -35,12 +37,14 @@ isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(unbox(Σ1), unbox(Σ2))
 
 # Unary functions.
 logdet(Σ::LazyPDMat) = 2 * logdet(chol(Σ))
-function chol(Σ::LazyPDMat)
+function chol(Σ::LazyPDMat{<:Real, TΣ}) where TΣ
     if Σ.U == nothing
-        Σ.U = chol(Symmetric(unbox(Σ) + Σ.ϵ * I))
+        foo = unbox(Σ) + Σ.ϵ * I
+        Σ.U = chol(Symmetric(foo))
     end
     return Σ.U
 end
+
 
 # Binary functions.
 +(Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(unbox(Σ1) + unbox(Σ2))
@@ -53,16 +57,19 @@ map(::typeof(*), Σs::LazyPDMat...) = LazyPDMat(map(*, map(unbox, Σs)...))
 broadcast(::typeof(*), Σ1::LazyPDMat, Σ2::LazyPDMat) = LazyPDMat(unbox(Σ1) .* unbox(Σ2))
 
 # Specialised operations to exploit the Cholesky.
-Xt_A_X(A::LazyPDMat, X::AbstractMatrix) = LazyPDMat(Symmetric(X' * unbox(A) * X))
-Xt_A_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A) * x)
-Xt_A_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A) * X)' * (chol(A) * Y)
-function Xt_invA_X(A::LazyPDMat, X::AVM)
-    V = chol(A)' \ X
+@noinline function Xt_A_X(A::LazyPDMat, X::AbstractMatrix)
+    return LazyPDMat(Symmetric(X' * unbox(unbox(A)) * X))
+end
+@noinline Xt_A_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A) * x)
+@noinline Xt_A_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A) * X)' * (chol(A) * Y)
+@noinline function Xt_invA_X(A::LazyPDMat, X::AVM)
+    V = At_ldiv_B(chol(A), X)
     return LazyPDMat(Symmetric(V'V))
 end
-Xt_invA_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A)' \ x)
-Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
-\(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
+@noinline Xt_invA_X(A::LazyPDMat, x::AbstractVector) = sum(abs2, chol(A)' \ x)
+# @noinline Xt_invA_X(A::LazyPDMat{<:Real, <:SymmetricToeplitz}, x::AV) = sum(abs2, chol(A) \ x)
+@noinline Xt_invA_Y(X::AVM, A::LazyPDMat, Y::AVM) = (chol(A)' \ X)' * (chol(A)' \ Y)
+@noinline \(Σ::LazyPDMat, X::Union{AM, AV}) = chol(Σ) \ (chol(Σ)' \ X)
 
 # Some generic operations that are useful for operations involving covariance matrices.
 diag_AᵀA(A::AbstractMatrix) = vec(sum(abs2, A, 1))
@@ -80,6 +87,9 @@ diag_Xᵀ_invA_Y(X::AM, A::LazyPDMat, Y::AM) = diag_AᵀB(chol(A)' \ X, chol(A)'
 # Specialised solver routine, especially useful for Titsias conditionals.
 function Xtinv_A_Xinv(A::LazyPDMat, X::LazyPDMat)
     @assert size(A) == size(X)
-    C = ((chol(A) / chol(X)) / chol(X)')
-    return LazyPDMat(Symmetric(C'C))
+    C = chol(X) \ At_ldiv_B(chol(X), chol(A)')
+    return LazyPDMat(Symmetric(C * C'))
 end
+
+transpose(A::LazyPDMat) = A
+ctranspose(A::LazyPDMat) = A

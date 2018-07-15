@@ -10,22 +10,44 @@ end
 end
 
 # CompositeMean definitions.
+eachindex(c::CompositeMean) = eachindex(c.x[1])
 length(c::CompositeMean) = length(c.x[1])
 (μ::CompositeMean)(x) = map(μ.f, map(f->f(x), μ.x)...)
-unary_obswise(f::CompositeMean, X::AVM) = map(f.f, map(f->unary_obswise(f, X), f.x)...)
+_map(f::CompositeMean, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
+map(f::CompositeMean, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
 
-# CompositeKernel and CompositeCrossKernel definitions.
-for T in [:CompositeKernel, :CompositeCrossKernel]
-    @eval (k::$T)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
-    @eval size(k::$T, N::Int) = size(k.x[1], N)
-    @eval isstationary(k::$T) = all(map(isstationary, k.x))
-    for foo in [:binary_obswise, :pairwise]
-        @eval $foo(f::$T, X::AVM) = map(f.f, map(f->$foo(f, X), f.x)...)
-        @eval $foo(f::$T, X::AVM, X′::AVM) = map(f.f, map(f->$foo(f, X, X′), f.x)...)
-    end
+# CompositeKernel definitions.
+(k::CompositeKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
+(k::CompositeKernel)(x) = map(k.f, map(f->f(x), k.x)...)
+length(k::CompositeKernel) = size(k.x[1], 1)
+isstationary(k::CompositeKernel) = all(map(isstationary, k.x))
+@noinline eachindex(k::CompositeKernel) = eachindex(k.x[1], 1)
+
+_map(f::CompositeKernel, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
+_pairwise(f::CompositeKernel, X::AV) = LazyPDMat(map(f.f, map(f->pairwise(f, X), f.x)...))
+_map(f::CompositeKernel, X::AV, X′::AV) = map(f.f, map(f->map(f, X, X′), f.x)...)
+_pairwise(f::CompositeKernel, X::AV, X′::AV) = map(f.f, map(f->pairwise(f, X, X′), f.x)...)
+
+map(f::CompositeKernel, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
+pairwise(f::ConstantKernel, ::Colon) = LazyPDMat(map(f.f, map(f->pairwise(f, :), f.x)...))
+
+# CompositeCrossKernel definitions.
+(k::CompositeCrossKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
+size(k::CompositeCrossKernel, N::Int) = size(k.x[1], N)
+isstationary(k::CompositeCrossKernel) = all(map(isstationary, k.x))
+eachindex(k::CompositeCrossKernel, dim::Int) = eachindex(k.x[1], dim)
+
+_map(f::CompositeCrossKernel, X::AV, X′::AV) = map(f.f, map(f->map(f, X, X′), f.x)...)
+function _pairwise(f::CompositeCrossKernel, X::AV, X′::AV)
+    return map(f.f, map(f->pairwise(f, X, X′), f.x)...)
 end
 
-pairwise(f::CompositeKernel, X::AVM) = LazyPDMat(map(f.f, map(f->pairwise(f, X), f.x)...))
+map(f::CompositeCrossKernel, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
+pairwise(f::CompositeCrossKernel, ::Colon) = map(f.f, map(f->pairwise(f, :), f.x)...)
+
+
+
+############################## Multiply-by-Function Kernels ################################
 
 """
     LhsCross <: CrossKernel
@@ -38,7 +60,11 @@ struct LhsCross <: CrossKernel
 end
 (k::LhsCross)(x, x′) = k.f(x) * k.k(x, x′)
 size(k::LhsCross, N::Int) = size(k.k, N)
-pairwise(k::LhsCross, X::AVM, X′::AVM) = unary_obswise(k.f, X) .* pairwise(k.k, X, X′)
+_pairwise(k::LhsCross, X::AV, X′::AV) = map(k.f, X) .* pairwise(k.k, X, X′)
+eachindex(k::LhsCross, dim::Int) = eachindex(k.k, dim)
+
+# map(k::LhsCross, ::Colon) = map(k.f, :) .* map(k.k, :)
+# pairwise(k::LhsCross, ::Colon) = map(k.f, :) .* pairwise(k.k, :)
 
 """
     RhsCross <: CrossKernel
@@ -51,7 +77,11 @@ struct RhsCross <: CrossKernel
 end
 (k::RhsCross)(x, x′) = k.k(x, x′) * k.f(x′)
 size(k::RhsCross, N::Int) = size(k.k, N)
-pairwise(k::RhsCross, X::AVM, X′::AVM) = pairwise(k.k, X, X′) .* unary_obswise(k.f, X′)'
+_pairwise(k::RhsCross, X::AV, X′::AV) = pairwise(k.k, X, X′) .* map(k.f, X′)'
+eachindex(k::RhsCross, dim::Int) = eachindex(k.k, dim)
+
+# map(k::RhsCross, ::Colon) = map(k.k, :) .* map(k.f, :)
+# pairwise(k::RhsCross, ::Colon) = pairwise(k.k, :) .* map(k.f, :)'
 
 """
     OuterCross <: CrossKernel
@@ -64,8 +94,12 @@ struct OuterCross <: CrossKernel
 end
 (k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 size(k::OuterCross, N::Int) = size(k.k, N)
-pairwise(k::OuterCross, X::AVM, X′::AVM) =
-    unary_obswise(k.f, X) .* pairwise(k.k, X, X′) .* unary_obswise(k.f, X′)'
+function _pairwise(k::OuterCross, X::AV, X′::AV)
+    return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
+end
+eachindex(k::OuterCross, dim::Int) = eachindex(k.k, dim)
+
+# map(k::OuterCross, ::Colon) = map(k.f, :) .* pairwise(k.k, :) .* map(k.f, :)'
 
 """
     OuterKernel <: Kernel
@@ -77,36 +111,35 @@ struct OuterKernel <: Kernel
     k::Kernel
 end
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
-size(k::OuterKernel, N::Int) = size(k.k, N)
-pairwise(k::OuterKernel, X::AVM) = Xt_A_X(pairwise(k.k, X), Diagonal(unary_obswise(k.f, X)))
-pairwise(k::OuterKernel, X::AVM, X′::AVM) =
-    unary_obswise(k.f, X) .* pairwise(k.k, X, X′) .* unary_obswise(k.f, X′)'
+(k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
+length(k::OuterKernel) = length(k.k)
+_pairwise(k::OuterKernel, X::AV) = Xt_A_X(pairwise(k.k, X), Diagonal(map(k.f, X)))
+function _pairwise(k::OuterKernel, X::AV, X′::AV)
+    return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
+end
+eachindex(k::OuterKernel) = eachindex(k.k)
 
 
 ############################## Convenience functionality ##############################
 
 import Base: +, *, promote_rule, convert
 
-promote_rule(::Type{<:MeanFunction}, ::Type{<:Union{Real, Function}}) = MeanFunction
+promote_rule(::Type{<:MeanFunction}, ::Type{<:Real}) = MeanFunction
 convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
 
-promote_rule(::Type{<:Kernel}, ::Type{<:Union{Real, Function}}) = Kernel
+promote_rule(::Type{<:Kernel}, ::Type{<:Real}) = Kernel
 convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
 
-# Composing mean functions.
-+(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(+, μ, μ′)
+# Composing mean functions with Reals.
 +(μ::MeanFunction, μ′::Real) = +(promote(μ, μ′)...)
 +(μ::Real, μ′::MeanFunction) = +(promote(μ, μ′)...)
 
-*(μ::MeanFunction, μ′::MeanFunction) = CompositeMean(*, μ, μ′)
 *(μ::MeanFunction, μ′::Real) = *(promote(μ, μ′)...)
 *(μ::Real, μ′::MeanFunction) = *(promote(μ, μ′)...)
 
-# Composing kernels.
-+(k::Kernel, k′::Kernel) = CompositeKernel(+, k, k′)
-+(k::Kernel, k′::Real) = +(promote(k, k′)...)
-+(k::Real, k′::Kernel) = +(promote(k, k′)...)
+# Composing kernels with Reals.
++(k::CrossKernel, k′::Real) = +(promote(k, k′)...)
++(k::Real, k′::CrossKernel) = +(promote(k, k′)...)
 
-*(k::Kernel, k′::Kernel) = CompositeKernel(*, k, k′)
-*(k::Kernel, k′::Real) = *(promote(k, k′)...)
-*(k::Real, k′::Kernel) = *(promote(k, k′)...)
+*(k::CrossKernel, k′::Real) = *(promote(k, k′)...)
+*(k::Real, k′::CrossKernel) = *(promote(k, k′)...)

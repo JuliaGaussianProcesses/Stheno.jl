@@ -1,54 +1,105 @@
-import Base: |
+import Base: |, merge
 export ←, |
 
-# """
-#     |(g::Union{GP, Tuple{Vararg{GP}}}, c::Union{Observation, Tuple{Vararg{Observation}}})
+"""
+    Observation
 
-# `|` is NOT bit-wise logical OR in this context, it is the conditioning operator. That is, it
-# returns the conditional (posterior) distribution over everything on the left given the
-# `Observation`(s) on the right.
-# """
-# |(g::GP, c::Observation) = ((g,) | (c,))[1]
-# function |(g::GP, c::Observation)
-#     f, y = c.f, c.y
-#     f_q, X = f.args[1], f.args[2]
-#     μf, kff = mean(f_q), kernel(f_q)
-#     cache = CondCache(kff, μf, X, y)
-#     return GP(|, g, f_q, cache)
-# end
-# μ_p′(::typeof(|), g::GP, f::GP, cache::CondCache) =
-#     ConditionalMean(cache, mean(g), kernel(f, g))
-# k_p′(::typeof(|), g::GP, f::GP, cache::CondCache) =
-#     ConditionalKernel(cache, kernel(f, g), kernel(g))
-# k_p′p((_, g, f, cache)::Tuple{typeof(|), GP, GP, CondCache}, h::GP) =
-#     ConditionalCrossKernel(cache, kernel(f, g), kernel(f, h), kernel(g, h))
-# k_pp′(h::GP, (_, g, f, cache)::Tuple{typeof(|), GP, GP, CondCache}) =
-#     ConditionalCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
+Represents fixing a paricular (finite) GP to have a particular (vector) value.
+"""
+struct Observation{Tf<:AbstractGP, Ty<:AbstractVector}
+    f::Tf
+    y::Ty
+end
+←(f, y) = Observation(f, y)
+get_f(c::Observation) = c.f
+get_y(c::Observation) = c.y
+merge(c::Tuple{Vararg{Observation}}) = BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
 
-# All of the code below is a stop-gap while I'm figuring out what to do about the
-# concatenation of GPs.
-|(g::GP, c::Observation) = ((g,) | (c,))[1]
-|(g::GP, c::Tuple{Vararg{Observation}}) = ((g,) | c)[1]
-|(g::Tuple{Vararg{GP}}, c::Observation) = g | (c,)
-function |(g::Tuple{Vararg{GP}}, c::Tuple{Vararg{Observation}})
-    f, y = [getfield.(c, :f)...], BlockVector([getfield.(c, :y)...])
-    f_qs, Xs = [f_.args[1] for f_ in f], [f_.args[2] for f_ in f]
-    μf = CatMean(mean.(f_qs))
-    kff = CatKernel(kernel.(f_qs), kernel.(f_qs, permutedims(f_qs)))
-    return map(g_->GP(|, g_, f_qs, CondCache(kff, μf, Xs, y)), g)
+"""
+    |(g::AbstractGP, c::Observation)
+
+Condition `g` on observation `c`.
+"""
+|(g::GP, c::Observation) = GP(|, g, c.f, CondCache(mean_vec(c.f), cov(c.f), c.y))
+|(g::BlockGP, c::Observation) = BlockGP(g.fs .| c)
+
+function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+    return iszero(kernel(f, g)) ?
+        mean(g) :
+        ConditionalMean(cache, mean(g), kernel(f, g))
 end
-function μ_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
-    return ConditionalMean(cache, mean(g), CatCrossKernel(kernel.(f, Ref(g))))
+function k_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+    return iszero(kernel(f, g)) ?
+        kernel(g) :
+        ConditionalKernel(cache, kernel(f, g), kernel(g))
 end
-function k_p′(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
-    return ConditionalKernel(cache, CatCrossKernel(kernel.(f, Ref(g))), kernel(g))
+function k_p′p(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache, h::AbstractGP)
+    return iszero(kernel(f, g)) || iszero(kernel(f, h)) ?
+        kernel(g, h) :
+        ConditionalCrossKernel(cache, kernel(f, g), kernel(f, h), kernel(g, h))
 end
-function k_p′p(::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache, h::GP)
-    kfg, kfh = CatCrossKernel(kernel.(f, Ref(g))), CatCrossKernel(kernel.(f, Ref(h)))
-    return ConditionalCrossKernel(cache, kfg, kfh, kernel(g, h))
+function k_pp′(h::AbstractGP, ::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+    return iszero(kernel(f, g)) || iszero(kernel(f, h)) ?
+        kernel(h, g) :
+        ConditionalCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
 end
-function k_pp′(h::GP, ::typeof(|), g::GP, f::Vector{<:GP}, cache::CondCache)
-    kfh, kfg = CatCrossKernel(kernel.(f, Ref(h))), CatCrossKernel(kernel.(f, Ref(g)))
-    return ConditionalCrossKernel(cache, kfh, kfg, kernel(h, g))
+
+# Sugar
+|(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)
+|(g::Tuple{Vararg{AbstractGP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
+function |(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}})
+    return deconstruct(BlockGP([g...]) | merge(c))
 end
-length(::typeof(|), f::GP, ::GP, f̂::Vector) = length(f)
+
+abstract type AbstractConditioner end
+
+FillArrays.Zeros(x::BlockVector) = BlockVector(Zeros.(x.blocks))
+
+"""
+    Titsias <: AbstractConditioner
+
+Construct an object which is able to compute an approximate posterior.
+"""
+struct Titsias{Tu<:AbstractGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
+    u::Tu
+    m′u::Tm
+    γ::Tγ
+    function Titsias(u::Tu, m′u::Tm, Σ′uu::AM, gpc::GPC) where {Tu, Tm}
+        μ = EmpiricalMean(Zeros(m′u))
+        Σ = EmpiricalKernel(Xtinv_A_Xinv(Σ′uu, cov(u)))
+        γ = GP(μ, Σ, gpc)
+        return new{Tu, Tm, typeof(γ)}(u, m′u, γ)
+    end
+end
+function |(g::GP, c::Titsias)
+    g′ = g | (c.u←c.m′u)
+    ĝ = project(kernel(c.u, g), c.γ)
+    return g′ + ĝ
+end
+
+function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)
+    μᵤ, Σᵤᵤ = mean_vec(u), cov(u)
+    U = chol(Σᵤᵤ)
+    Γ = (U' \ xcov(u, f)) ./ σ
+    Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean_vec(f)
+    Σ′ᵤᵤ = Xt_invA_X(Ω, U)
+    μ′ᵤ = μᵤ + U' * (Ω \ (Γ * δ)) ./ σ
+    return μ′ᵤ, Σ′ᵤᵤ
+end
+
+# Sugar.
+function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AbstractGP, σ::Real)
+    return optimal_q(BlockGP(f), BlockVector(y), u, σ)
+end
+function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AV{<:AbstractGP}, σ::Real)
+    return optimal_q(f, y, BlockGP(u), σ)
+end
+function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AV{<:AbstractGP}, σ::Real)
+    return optimal_q(BlockGP(f), BlockVector(y), BlockGP(u), σ)
+end
+
+|(g::Tuple{Vararg{AbstractGP}}, c::Titsias) = deconstruct(BlockGP([g...]) | c)
+function |(g::BlockGP, c::Titsias)
+    return BlockGP(g.fs .| c)
+end
+

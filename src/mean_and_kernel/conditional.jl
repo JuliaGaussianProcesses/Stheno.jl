@@ -1,3 +1,6 @@
+import Distances: pairwise
+import Base: eachindex
+
 """
     CondCache
 
@@ -7,11 +10,12 @@ Avoids recomputing the covariance `Σff` and the Kriging vector `α`.
 struct CondCache
     Σff::LazyPDMat
     α::AV{<:Real}
-    X::AVM
-    CondCache(mf::AV{<:Real}, Σff::AM, X::AVM, f::AV{<:Real}) = new(Σff, Σff \ (f - mf), X)
+    function CondCache(mf::AV{<:Real}, Σff::AM, f::AV{<:Real})
+        return new(Σff, Σff \ (f - mf))
+    end
 end
-function CondCache(kff::Kernel, μf::MeanFunction, X::AVM, f::AV{<:Real})
-    return CondCache(unary_obswise(μf, X), pairwise(kff, X), X, f)
+function CondCache(kff::Kernel, μf::MeanFunction, X::AV, f::AV{<:Real})
+    return CondCache(map(μf, X), pairwise(kff, X), f)
 end
 show(io::IO, ::CondCache) = show(io, "CondCache")
 
@@ -26,10 +30,11 @@ struct ConditionalMean <: MeanFunction
     kfg::CrossKernel
 end
 length(μ::ConditionalMean) = length(μ.μg)
-(μ::ConditionalMean)(x::Number) = unary_obswise(μ, [x])[1]
-(μ::ConditionalMean)(x::AbstractVector) = unary_obswise(μ, reshape(x, length(x), 1))[1]
-function unary_obswise(μ::ConditionalMean, Xg::AVM)
-    return unary_obswise(μ.μg, Xg) + pairwise(μ.kfg, μ.c.X, Xg)' * μ.c.α
+eachindex(μ::ConditionalMean) = eachindex(μ.μg)
+(μ::ConditionalMean)(x::Number) = map(μ, [x])[1]
+(μ::ConditionalMean)(x::AbstractVector) = map(μ, ColsAreObs(reshape(x, length(x), 1)))[1]
+function _map(μ::ConditionalMean, Xg::AV)
+    return map(μ.μg, Xg) + pairwise(μ.kfg, :, Xg)' * μ.c.α
 end
 
 """
@@ -42,35 +47,36 @@ struct ConditionalKernel <: Kernel
     kfg::CrossKernel
     kgg::Kernel
 end
-(k::ConditionalKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
+(k::ConditionalKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 (k::ConditionalKernel)(x::AV, x′::AV) =
-    binary_obswise(k, reshape(x, length(x), 1), reshape(x′, length(x′), 1))[1]
-size(k::ConditionalKernel, N::Int) = size(k.kgg, N)
+    map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
+length(k::ConditionalKernel) = length(k.kgg)
+eachindex(k::ConditionalKernel) = eachindex(k.kgg)
 
-function binary_obswise(k::ConditionalKernel, X::AVM)
-    σgg = binary_obswise(k.kgg, X)
-    Σfg_X = pairwise(k.kfg, k.c.X, X)
+function _map(k::ConditionalKernel, X::AV)
+    σgg = map(k.kgg, X)
+    Σfg_X = pairwise(k.kfg, :, X)
     σ′gg = diag_Xᵀ_invA_X(k.c.Σff, Σfg_X)
     return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
 end
-function binary_obswise(k::ConditionalKernel, X::AVM, X′::AVM)
-    σgg = binary_obswise(k.kgg, X, X′)
-    Σfg_X = pairwise(k.kfg, k.c.X, X)
-    Σfg_X′ = pairwise(k.kfg, k.c.X, X′)
+function _map(k::ConditionalKernel, X::AV, X′::AV)
+    σgg = map(k.kgg, X, X′)
+    Σfg_X = pairwise(k.kfg, :, X)
+    Σfg_X′ = pairwise(k.kfg, :, X′)
     σ′gg = diag_Xᵀ_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
     return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
 end
 
-function pairwise(k::ConditionalKernel, X::AVM)
+function _pairwise(k::ConditionalKernel, X::AV)
     Σgg = AbstractMatrix(pairwise(k.kgg, X))
-    Σfg_X = pairwise(k.kfg, k.c.X, X)
+    Σfg_X = pairwise(k.kfg, :, X)
     Σ′gg = AbstractMatrix(Xt_invA_X(k.c.Σff, Σfg_X))
-    return LazyPDMat((Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg))
+    return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
 end
-function pairwise(k::ConditionalKernel, X::AVM, X′::AVM)
+function _pairwise(k::ConditionalKernel, X::AV, X′::AV)
     Σgg = pairwise(k.kgg, X, X′)
-    Σfg_X = pairwise(k.kfg, k.c.X, X)
-    Σfg_X′ = pairwise(k.kfg, k.c.X, X′)
+    Σfg_X = pairwise(k.kfg, :, X)
+    Σfg_X′ = pairwise(k.kfg, :, X′)
     Σ′gg = Xt_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
     return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
 end
@@ -86,23 +92,24 @@ struct ConditionalCrossKernel <: CrossKernel
     kfh::CrossKernel
     kgh::CrossKernel
 end
-(k::ConditionalCrossKernel)(x::Number, x′::Number) = binary_obswise(k, [x], [x′])[1]
+(k::ConditionalCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 (k::ConditionalCrossKernel)(x::AV, x′::AV) =
-    binary_obswise(k, reshape(x, length(x), 1), reshape(x′, length(x′), 1))[1]
+    map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
 size(k::ConditionalCrossKernel, N::Int) = size(k.kgh, N)
+eachindex(k::ConditionalCrossKernel, N::Int) = eachindex(k.kgh, N)
 
-function binary_obswise(k::ConditionalCrossKernel, X::AVM, X′::AVM)
-    σgh = binary_obswise(k.kgh, X, X′)
-    Σfg_X = pairwise(k.kfg, k.c.X, X)
-    Σfh_X′ = pairwise(k.kfh, k.c.X, X′)
+function _map(k::ConditionalCrossKernel, X::AV, X′::AV)
+    σgh = map(k.kgh, X, X′)
+    Σfg_X = pairwise(k.kfg, :, X)
+    Σfh_X′ = pairwise(k.kfh, :, X′)
     σ′gh = diag_Xᵀ_invA_Y(Σfg_X, k.c.Σff, Σfh_X′)
     return (σgh .- σ′gh) .* .!(σgh .≈ σ′gh)
 end
 
-function pairwise(k::ConditionalCrossKernel, Xg::AVM, Xh::AVM)
+function _pairwise(k::ConditionalCrossKernel, Xg::AV, Xh::AV)
     Σgh = pairwise(k.kgh, Xg, Xh)
-    Σfg_Xg = pairwise(k.kfg, k.c.X, Xg)
-    Σfh_Xh = pairwise(k.kfh, k.c.X, Xh)
+    Σfg_Xg = pairwise(k.kfg, :, Xg)
+    Σfh_Xh = pairwise(k.kfh, :, Xh)
     Σ′gh = Xt_invA_Y(Σfg_Xg, k.c.Σff, Σfh_Xh)
     return (Σgh .- Σ′gh) .* .!(Σgh .≈ Σ′gh)
 end

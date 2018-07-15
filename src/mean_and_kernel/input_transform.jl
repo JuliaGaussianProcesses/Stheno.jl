@@ -1,3 +1,5 @@
+import Base: map, eachindex
+import Distances: pairwise
 export transform, pick_dims, periodic, scale
 
 """
@@ -13,7 +15,8 @@ end
 (μ::ITMean)(x) = μ.μ(μ.f(x))
 ITMean(μ::MeanFunction, ::typeof(identity)) = μ
 length(μ::ITMean) = length(μ.μ)
-unary_obswise(μ::ITMean, X::AVM) = unary_obswise(μ.μ, unary_obswise(μ.f, X))
+eachindex(μ::ITMean) = eachindex(μ.μ)
+_map(μ::ITMean, X::AV) = map(μ.μ, map(μ.f, X))
 
 """
     ITKernel{Tk<:Kernel, Tf} <: Kernel
@@ -27,14 +30,14 @@ struct ITKernel{Tk<:Kernel, Tf} <: Kernel
 end
 (k::ITKernel)(x, x′) = k.k(k.f(x), k.f(x′))
 ITKernel(k::Kernel, ::typeof(identity)) = k
-size(k::ITKernel, N::Int...) = size(k.k, N...)
+length(k::ITKernel) = length(k.k)
 isstationary(k::ITKernel) = isstationary(k.k)
+eachindex(k::ITKernel) = eachindex(k.k)
 
-binary_obswise(k::ITKernel, X::AVM, X′::AVM) =
-    binary_obswise(k.k, unary_obswise(k.f, X), unary_obswise(k.f, X′))
-pairwise(k::ITKernel, X::AVM) = pairwise(k.k, unary_obswise(k.f, X))
-pairwise(k::ITKernel, X::AVM, X′::AVM) =
-    pairwise(k.k, unary_obswise(k.f, X), unary_obswise(k.f, X′))
+_map(k::ITKernel, X::AV) = map(k.k, map(k.f, X))
+_map(k::ITKernel, X::AV, X′::AV) = map(k.k, map(k.f, X), map(k.f, X′))
+_pairwise(k::ITKernel, X::AV) = pairwise(k.k, map(k.f, X))
+_pairwise(k::ITKernel, X::AV, X′::AV) = pairwise(k.k, map(k.f, X), map(k.f, X′))
 
 """
     transform(f::Union{MeanFunction, Kernel}, ϕ)
@@ -55,7 +58,7 @@ struct Scale{T<:Real}
     l::T
 end
 (s::Scale)(x) = s.l * x
-unary_obswise(s::Scale, x::AVM) = s.l .* x
+map(s::Scale, x::AVM) = s.l .* x
 
 """
     pick_dims(x::Union{MeanFunction, Kernel}, I)
@@ -73,11 +76,14 @@ Make `k` periodic with period `f`.
 """
 periodic(μ::MeanFunction, f::Real) = ITMean(μ, Periodic(f))
 periodic(k::Kernel, f::Real) = ITKernel(k, Periodic(f))
+periodic(k::EQ, p::Real) = PerEQ(p)
+periodic(f::Union{MeanFunction, Kernel}) = periodic(f, 1.0)
 
 struct Periodic{Tf<:Real}
     f::Tf
 end
 (p::Periodic)(t::Real) = [cos((2π * p.f) * t), sin((2π * p.f) * t)]
-unary_obswise(p::Periodic, t::AV) =
-    vcat(RowVector(cos.((2π * p.f) .* t)),
-         RowVector(sin.((2π * p.f) .* t)))
+function map(p::Periodic, t::AV)
+    return ColsAreObs(vcat(RowVector(map(x->cos((2π * p.f) * x), t)),
+                        RowVector(map(x->sin((2π * p.f) * x), t))))
+end

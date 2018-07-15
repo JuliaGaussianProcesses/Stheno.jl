@@ -1,10 +1,13 @@
 # This file contains a number of additions to BlockArrays.jl. These are completely
 # independent of Stheno.jl, and will (hopefully) move over to BlockArrays.jl at some point.
 
+using FillArrays
+using FillArrays: Fill
+
 import Base: +, *, size, getindex, eltype, copy, ctranspose, transpose, chol,
     UpperTriangular, LowerTriangular, \, logdet, Ac_mul_B, A_mul_Bc, Ac_mul_Bc, At_mul_B,
     A_mul_Bt, At_mul_Bt, Ac_rdiv_B, A_rdiv_Bc, Ac_rdiv_Bc, At_rdiv_B, A_rdiv_Bt, At_rdiv_Bt,
-    Ac_ldiv_B, A_ldiv_Bc, Ac_ldiv_Bc, At_ldiv_B, A_ldiv_Bt, At_ldiv_Bt, Symmetric
+    Ac_ldiv_B, A_ldiv_Bc, Ac_ldiv_Bc, At_ldiv_B, A_ldiv_Bt, At_ldiv_Bt, Symmetric, vec
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
 export BlockVector, BlockMatrix, blocksizes, blocklengths
@@ -18,6 +21,11 @@ const ABVM{T} = AbstractBlockVecOrMat{T}
 const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM}
 
 
+unbox(X::AbstractBlockMatrix) = X
+unbox(X::Symmetric) = unbox(X.data)
+unbox(X::AbstractMatrix) = X
+
+
 
 ####################################### Various util #######################################
 
@@ -26,7 +34,7 @@ const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM
 
 Construct a `BlockVector` from a collection of `AbstractVector`s.
 """
-function BlockVector(xs::Vector{<:AbstractVector{T}}) where T
+function BlockArrays.BlockVector(xs::Vector{<:AbstractVector{T}}) where T
     x = BlockVector{T}(uninitialized_blocks, length.(xs))
     for (n, x_) in enumerate(xs)
         setblock!(x, x_, n)
@@ -47,6 +55,7 @@ function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
     return X
 end
 BlockMatrix(Xs::Vector{<:AbstractVecOrMat}) = BlockMatrix(reshape(Xs, length(Xs), 1))
+BlockMatrix(x::AbstractVecOrMat) = BlockMatrix([x])
 
 """
     BlockMatrix(xs::Vector{<:AM}, P::Int, Q::Int)
@@ -99,6 +108,10 @@ end
 
 
 ######################## Util for triangular block matrices ######################
+
+const BlockUT{T} = UpperTriangular{T, <:ABM{T}}
+const BlockLT{T} = LowerTriangular{T, <:ABM{T}}
+const BlockTri{T} = Union{BlockUT{T}, BlockLT{T}}
 
 @inline unbox(U::UpperTriangular{T, <:ABM{T}} where T) = U.data
 function blocksize(U::UpperTriangular{T, <:ABM{T}} where T, p::Int, q::Int)
@@ -174,8 +187,8 @@ function copy(a::BlockVector{T}) where T
     return b
 end
 
-function copy(A::BlockMatrix{T}) where T
-    B = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 2))
+function copy(A::BlockMatrix{T, V}) where {T, V<:AbstractMatrix{T}}
+    B = BlockMatrix{T, V}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 2))
     for q in 1:nblocks(B, 2), p in 1:nblocks(B, 1)
         setblock!(B, copy(getblock(A, p, q)), p, q)
     end
@@ -216,7 +229,9 @@ that for general matrices / vectors as we additionally require that each block b
 with block of the other matrix with which it will be multiplied. This ensures that the
 result is itself straightforwardly representable as `BlockVecOrMat`.
 """
-are_conformal(A::AVM, B::AVM) = blocksizes(A, 2) == blocksizes(B, 1)
+function are_conformal(A::AVM, B::AVM)
+    return blocksizes(A, 2) == blocksizes(B, 1)
+end
 
 """
     *(A::BlockMatrix, x::BlockVector)
@@ -239,6 +254,10 @@ function *(A::ABM{T}, b::AV{T}) where {T}
     @assert nblocks(A, 2) == 1
     return A * BlockVector([b])
 end
+# function *(A::ABM{T}, b::FillArrays.Zeros{T,1}) where T
+#     @show size(A), size(b)
+#     return invoke(*, Tuple{AbstractMatrix, typeof(b)}, A, b)
+# end
 
 """
     *(A::BlockMatrix, B::BlockMatrix)
@@ -278,9 +297,10 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
         At = $foo(A)
         return At * B
     end
-    @eval function $foo_At_mul_B(A::UpperTriangular, B::ABM)
-        return $foo_At_mul_B(BlockMatrix(A), B)
+    @eval function $foo_At_mul_B(A::BlockTri, B::ABVM)
+        return $foo_At_mul_B(unbox(A), B)
     end
+    @eval $foo_At_mul_B(A::BlockTri, B::BlockTri) = $foo_At_mul_B(unbox(A), unbox(B))
     @eval function $foo_At_mul_B(A::ABM, B::AV)
         At = $foo(A)
         return At * B
@@ -313,6 +333,9 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
         At = $foo(A)
         return At \ B
     end
+    @eval function $foo_At_ldiv_B(A::BlockTri, B::BlockTri)
+        return $foo_At_ldiv_B(A, unbox(B))
+    end
     # @eval function $foo_A_ldiv_Bt(A::ABVM, B::ABM)
     #     Bt = $foo(B)
     #     return A \ Bt
@@ -324,15 +347,16 @@ for (foo, foo_At_mul_B, foo_A_mul_Bt, foo_At_mul_Bt,
 end
 
 """
-    chol(A::Symmetric{T, <:AbstractBlockMatrix{T}}) where T<:Real
+    chol(A::Symmetric{T, <:BlockMatrix{T}}) where T<:Real
 
 Get the Cholesky decomposition of `A` in the form of a `BlockMatrix`.
 
 Only works for `A` where `is_block_symmetric(A) == true`. Assumes that we want the
 upper triangular version.
 """
-function chol(A::Symmetric{T, <:AbstractBlockMatrix{T}}) where T<:Real
-    U = BlockMatrix{T}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 1))
+function chol(A::Symmetric{T, <:BlockMatrix{T, V}}) where {T<:Real, V<:AbstractMatrix{T}}
+
+    U = BlockMatrix{T, V}(uninitialized_blocks, blocksizes(A, 1), blocksizes(A, 1))
 
     # Do an initial pass to fill each of the blocks with Zeros. This is cheap
     for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
@@ -458,4 +482,19 @@ for foo in [:+, :-]
         end
         return C
     end
+end
+
+
+
+#################################### Higher Order ##########################################
+
+import Base: broadcast
+
+# Very specific `broadcast` method for particular use case. Needs to be generalised.
+function broadcast(f, A::AbstractBlockVector, b::Real)
+    return BlockVector([broadcast(f, getblock(A, p), b) for p in 1:nblocks(A, 1)])
+end
+function broadcast(f, A::AbstractBlockMatrix, b::Real)
+    return BlockMatrix([broadcast(f, getblock(A, p, q), b)
+        for p in 1:nblocks(A, 1), q in 1:nblocks(A, 2)])
 end

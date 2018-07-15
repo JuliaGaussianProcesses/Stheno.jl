@@ -1,6 +1,7 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
+*.DS_store
 
 test_dispatch.jl
 
@@ -9,4 +10,6 @@ examples/simple_sensor_fusion/*
 
 docs/build/*
 
+
+coverage
 scratch.jl

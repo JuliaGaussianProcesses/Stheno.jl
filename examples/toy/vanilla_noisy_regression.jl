@@ -1,18 +1,18 @@
 using Revise
 using Stheno, Plots
-
+using Stheno.@model
 
 
 ###########################  Define and inspect our model  ###########################
 
 # Define the vanilla GP-regression generative model.
-function model(gpc)
+@model function model()
 
     # Define a smooth latent process.
-    f = 1.5 * GP(EQ(), gpc)
+    f = 1.5 * GP(EQ())
 
     # Define a latent noise process.
-    noise = GP(Noise(1e-2), gpc)
+    noise = GP(Noise(1e-2))
 
     # Sum them to get the process of which we shall make observations.
     y = f + noise
@@ -40,7 +40,8 @@ f, noise, y = model(GPC());
 ###########################  Sample jointly from the prior  ###########################
 
 # Sample jointly from the prior distribution over the three processes.
-fX, noiseX, yX = rand(rng, [f, noise, y], [X_prior, X_prior, X_prior]);
+fX, noiseX, yX = rand(rng, [f(X_prior), noise(X_prior), y(X_prior)]);
+
 
 
 #######################  Do posterior inference give a few samples  #######################
@@ -48,18 +49,19 @@ fX, noiseX, yX = rand(rng, [f, noise, y], [X_prior, X_prior, X_prior]);
 # Sample a few points from the prior and compute the posterior processes.
 N = 15;
 X = sort(rand(rng, N) * 10);
-ŷ = rand(rng, y, X);
+ŷ = rand(rng, y(X));
 f′, noise′, y′ = (f, noise, y) | (y(X) ← ŷ);
 
-# There appear to be some substantial numerical problems associated with generating samples
-# jointly from all three processes, thus only f′ and noise′ are considered.
 Nplot, S = 500, 100;
 Xplot = linspace(-2.0, 12.0, Nplot);
-f′Xp, noise′Xp = rand(rng, [f′, noise′], [Xplot, Xplot], S);
+f′Xplot_, noise′Xplot_ = f′(Xplot), noise′(Xplot)
+f′Xp, noise′Xp = rand(rng, [f′Xplot_, noise′Xplot_], S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
-μ′f, σ′f = marginals(f′, Xplot);
-σ′y = diag_std(y′, Xplot);
+μ′f, σ′f = marginals(f′(Xplot));
+σ′y = marginal_std(y′(Xplot));
+
+
 
 ####################################  Plot results  ####################################
 
@@ -106,3 +108,5 @@ scatter!(posterior_plot, X, ŷ;
     legend=false);
 joint_plot = plot(prior_plot, posterior_plot, layout=(2, 1));
 display(joint_plot);
+
+

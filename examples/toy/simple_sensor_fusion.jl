@@ -1,10 +1,11 @@
 using Stheno
+using Stheno: @model
 
 
 
 ###########################  Define and inspect our model  ###########################
 
-rng = MersenneTwister(123456)
+rng = MersenneTwister(123456);
 
 #=
 In this example, `f` is an unknown real-valued function that we wish to infer. To achieve
@@ -15,14 +16,14 @@ estimated this function, is why a sensor might possibly have such a weird mean e
 beyond the scope of this example) The second returns biased measurements of `f`, where the
 bias is known to be 3.5. The model below specifies a model for this scenario.
 =#
-function model(gpc)
+@model function model()
 
     # Define a smooth latent process that we wish to infer.
-    f = GP(EQ(), gpc)
+    f = GP(EQ())
 
     # Define the two noise processes described.
-    noise1 = GP(CustomMean(x->sin.(x) .- 5.0 .+ sqrt.(abs.(x))), Noise(1e-2), gpc)
-    noise2 = GP(ConstantMean(3.5), Noise(1e-1), gpc)
+    noise1 = GP(CustomMean(x->sin.(x) .- 5.0 .+ sqrt.(abs.(x))), Noise(1e-2))
+    noise2 = GP(ConstantMean(3.5), Noise(1e-1))
 
     # Define the processes that we get to observe.
     y1 = f + noise1
@@ -30,42 +31,42 @@ function model(gpc)
 
     return f, noise1, noise2, y1, y2
 end
-f, noise1, noise2, y1, y2 = model(GPC());
+f, noise₁, noise₂, y₁, y₂ = model();
 
 # Generate some toy observations of `y1` and `y2`.
-X1, X2 = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10);
-ŷ1, ŷ2 = rand(rng, [y1, y2], [X1, X2]);
+X₁, X₂ = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10);
+ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)]);
 
 # Compute the posterior processes.
-(f′, y1′, y2′) = (f, y1, y2) | (y1(X1)←ŷ1, y2(X2)←ŷ2);
+(f′, y₁′, y₂′) = (f, y₁, y₂) | (y₁(X₁)←ŷ₁, y₂(X₂)←ŷ₂);
 
 # Sample jointly from the posterior processes and compute posterior marginals.
 Xp = linspace(-2.5, 12.5, 500);
-f′Xp, y1′Xp, y2′Xp = rand(rng, [f′, y1′, y2′], [Xp, Xp, Xp], 100);
-μf′, σf′ = marginals(f′, Xp);
-μy1′, σy1′ = marginals(y1′, Xp);
-μy2′, σy2′ = marginals(y2′, Xp);
+f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp), y₁′(Xp), y₂′(Xp)], 100);
+μf′, σf′ = marginals(f′(Xp));
+μy₁′, σy₁′ = marginals(y₁′(Xp));
+μy₂′, σy₂′ = marginals(y₂′(Xp));
 
 
 
 ###########################  Plot results  ###########################
 
 using Plots
-# plotly();
-gr();
+plotly();
+# gr();
 
 posterior_plot = plot();
 
 # Plot posterior marginal std. dev.
-plot!(posterior_plot, Xp, [μy1′ μy1′];
+plot!(posterior_plot, Xp, [μy₁′ μy₁′];
     linewidth=0.0,
-    fillrange=[μy1′ .- 3 .* σy1′, μy1′ .+ 3 * σy1′],
+    fillrange=[μy₁′ .- 3 .* σy₁′, μy₁′ .+ 3 * σy₁′],
     fillalpha=0.3,
     fillcolor=:red,
     label="");
-plot!(posterior_plot, Xp, [μy2′ μy2′];
+plot!(posterior_plot, Xp, [μy₂′ μy₂′];
     linewidth=0.0,
-    fillrange=[μy2′ .- 3 .* σy2′, μy2′ .+ 3 * σy2′],
+    fillrange=[μy₂′ .- 3 .* σy₂′, μy₂′ .+ 3 * σy₂′],
     fillalpha=0.3,
     fillcolor=:green,
     label="");
@@ -77,14 +78,14 @@ plot!(posterior_plot, Xp, [μf′ μf′];
     label="");
 
 # Plot posterior marginal samples.
-scatter!(posterior_plot, Xp, y1′Xp,
+scatter!(posterior_plot, Xp, y₁′Xp,
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=0.5,
     markeralpha=0.3,
     label="");
-scatter!(posterior_plot, Xp, y2′Xp,
+scatter!(posterior_plot, Xp, y₂′Xp,
     markercolor=:green,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -97,11 +98,11 @@ plot!(posterior_plot, Xp, f′Xp;
     label="");
 
 # Plot posterior means
-plot!(posterior_plot, Xp, μy1′;
+plot!(posterior_plot, Xp, μy₁′;
     linecolor=:red,
     linewidth=2.0,
     label="");
-plot!(posterior_plot, Xp, μy2′;
+plot!(posterior_plot, Xp, μy₂′;
     linecolor=:green,
     linewidth=2.0,
     label="");
@@ -111,14 +112,14 @@ plot!(posterior_plot, Xp, μf′;
     label="Latent Function");
 
 # Plot posterior of first noise process.
-scatter!(posterior_plot, X1, ŷ1;
+scatter!(posterior_plot, X₁, ŷ₁;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
     markeralpha=0.8,
     label="Sensor 1");
-scatter!(posterior_plot, X2, ŷ2;
+scatter!(posterior_plot, X₂, ŷ₂;
     markercolor=:green,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -127,5 +128,5 @@ scatter!(posterior_plot, X2, ŷ2;
     label="Sensor 2");
 
 
-# display(posterior_plot);
-savefig(posterior_plot, "simple_sensor_fusion.png")
+display(posterior_plot);
+# savefig(posterior_plot, "simple_sensor_fusion.png")

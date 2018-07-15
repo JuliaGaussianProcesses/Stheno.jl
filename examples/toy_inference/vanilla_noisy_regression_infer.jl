@@ -4,15 +4,13 @@ using Stheno, Plots, Optim, Distributions
 ###########################  Define and inspect our model  ###########################
 
 # Define the vanilla GP-regression generative model.
-function model(θ::Vector{<:Real})
-
-    gpc = GPC()
+@model function model(θ::Vector{<:Real})
 
     # Define a smooth latent process.
-    f = GP(transform(EQ(), x->exp(θ[1]) * x), gpc)
+    f = GP(transform(EQ(), x->exp(θ[1]) * x))
 
     # Define a latent noise process.
-    noise = GP(Noise(exp(θ[2])), gpc)
+    noise = GP(Noise(exp(θ[2])))
 
     # Sum them to get the process of which we shall make observations.
     y = f + noise
@@ -28,7 +26,7 @@ model_obs(θ) = model(θ)[3]
 rng, N = MersenneTwister(123546), 500;
 X_prior = sort(rand(rng, N) * 10);
 f, noise, y = model(log.([1.0 , 1e-2]));
-fX, noiseX, yX = rand(rng, [f, noise, y], [X_prior, X_prior, X_prior]);
+fX, noiseX, yX = rand(rng, [f(X_prior), noise(X_prior), y(X_prior)]);
 
 
 ###############  Do learning and posterior inference give a few samples  #################
@@ -36,7 +34,7 @@ fX, noiseX, yX = rand(rng, [f, noise, y], [X_prior, X_prior, X_prior]);
 # Sample a few points from the prior and compute the posterior processes.
 N = 25;
 X = sort(rand(rng, N) * 10);
-ŷ = rand(rng, y, X);
+ŷ = rand(rng, y(X));
 
 # Optimise the model parameters using a gradient-free method.
 options = Optim.Options(show_trace=true, iterations=100);

@@ -7,5 +7,6 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "BlockArrays extensions" => "block_arrays_ext.md",
+        "Interfaces" => "mean_and_kernel_interfaces.md",
     ],
 )
