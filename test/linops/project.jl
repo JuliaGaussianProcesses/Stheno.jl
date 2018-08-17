@@ -1,4 +1,4 @@
-using Stheno: project, pairwise, lhsfinite, unbox
+using Stheno: project, pairwise, lhsfinite, unbox, Xt_A_X, Xt_A_Y
 
 @testset "project" begin
 
@@ -21,7 +21,7 @@ let
     ϕb = lhsfinite(BlockCrossKernel(reshape([EQ(), EQ()], :, 1)), Zb)
     f_pr_b = project(ϕb, f(Zb), cos)
  
-    @test mean_vec(f_pr_b(X)) == pairwise(EQ(), X, Zb) * mean_vec(f(Zb)) + cos.(X)
+    @test mean_vec(f_pr_b(X)) == pairwise(EQ(), Zb, X)' * mean_vec(f(Zb)) .+ cos.(X)
     ϕZX, ϕZX′, ϕZ = pairwise(EQ(), Zb, X), pairwise(EQ(), Zb, X′), cov(f(Zb))
     @test cov(f_pr_b(X)) == Xt_A_X(ϕZ, ϕZX)
     @test xcov(f_pr_b(X), f_pr_b(X′)) == Xt_A_Y(ϕZX, ϕZ, ϕZX′)

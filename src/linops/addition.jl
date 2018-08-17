@@ -13,8 +13,8 @@ Produces a GP `f` satisfying `f(x) = fa(x) + fb(x)`.
 Same as above, but for a collection of GPs.
 """
 +(fa::BlockGP, fb::BlockGP) = BlockGP(fa.fs .+ fb.fs)
-+(fa::BlockGP, fb::GP) = BlockGP(fa.fs .+ fb)
-+(fa::GP, fb::BlockGP) = BlockGP(fa .+ fb.fs)
++(fa::BlockGP, fb::GP) = BlockGP(fa.fs .+ Ref(fb))
++(fa::GP, fb::BlockGP) = BlockGP(Ref(fa) .+ fb.fs)
 
 μ_p′(::typeof(+), fa, fb) = mean(fa) + mean(fb)
 function k_p′(::typeof(+), fa, fb)

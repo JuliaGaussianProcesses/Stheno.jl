@@ -1,4 +1,4 @@
-import Base: print, IO
+import Base: show, IO
 
 """
     Shunt
@@ -14,11 +14,11 @@ struct Shunt
     end
 end
 
-function print(io::IO, x::Shunt)
+function show(io::IO, x::Shunt)
     if x.n > 1
-        print(io, x.n == 1 ? x.s : x.s^x.n)
+        show(io, x.n == 1 ? x.s : x.s^x.n)
     elseif x.n == 1
-        print(io, x.s)
+        show(io, x.s)
     end
 end
 
@@ -34,17 +34,17 @@ struct Shunted{Tx}
     x::Tx
 end
 
-function print(io::IO, shunted::Shunted)
-    print(io, shunted.shunt)
-    print(io, shunted.x)
+function show(io::IO, shunted::Shunted)
+    show(io, shunted.shunt)
+    show(io, shunted.x)
 end
 
 dummy_shunt(x) = Shunted(Shunt(0, ' '), x)
 
 function print_shunted_list(io::IO, shunt::Shunt, X::AbstractVector)
     for (j, x) in enumerate(X)
-        print(io, Shunted(shunt, x))
-        j != length(X) && print('\n')
+        show(io, Shunted(shunt, x))
+        j != length(X) && show('\n')
     end
 end
 @noinline print_shunted_list(io::IO, shunt::Shunt, x::Tuple) = print_shunted_list(io, shunt, [x...])

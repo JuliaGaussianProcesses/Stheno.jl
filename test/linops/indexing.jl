@@ -1,3 +1,7 @@
+using Random, LinearAlgebra
+using Stheno: FiniteKernel, FiniteCrossKernel, LhsFiniteCrossKernel, RhsFiniteCrossKernel,
+    LhsFiniteZeroCrossKernel, RhsFiniteZeroCrossKernel
+
 @testset "indexing" begin
 
 let

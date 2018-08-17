@@ -42,6 +42,6 @@ For all of the above, we require "sensible" implementations of the following una
 - `setblock!`
 - `copy`
 - `transpose` (0.6-specific, changes in 0.7 / 1.0)
-- `ctranspose` (0.6-specific, changes in 0.7 / 1.0)
+- `adjoint` (0.6-specific, changes in 0.7 / 1.0)
 
 

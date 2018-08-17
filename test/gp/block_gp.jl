@@ -1,8 +1,9 @@
+using Random, LinearAlgebra
 using Stheno: BlockGP
+using Distributions: MvNormal, PDMat
 
 @testset "block_gp" begin
 
-    using Distributions: MvNormal, PDMat
     let
         rng, N, N′, D, gpc = MersenneTwister(123456), 3, 4, 2, GPC()
         X, X′ = ColsAreObs(rand(rng, D, N)), ColsAreObs(rand(rng, D, N′))

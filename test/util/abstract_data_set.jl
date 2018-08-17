@@ -1,3 +1,4 @@
+using Random, LinearAlgebra
 using Stheno: ColsAreObs, BlockData
 
 @testset "util/abstract_data_set" begin

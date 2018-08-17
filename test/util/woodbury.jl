@@ -1,4 +1,5 @@
-using Stheno: WoodburyMat, Xt_invA_X
+using Random, LinearAlgebra
+using Stheno: WoodburyMat, Xt_invA_X, LazyPDMat
 
 @testset "woodbury" begin
 

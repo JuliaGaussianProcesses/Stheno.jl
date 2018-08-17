@@ -70,7 +70,7 @@ using FillArrays
 
         # Construct BlockKernel.
         k11, k22, k12 = EQ(), EQ(), ZeroKernel{Float64}()
-        ks_off = Matrix{Stheno.CrossKernel}(2, 2)
+        ks_off = Matrix{Stheno.CrossKernel}(undef, 2, 2)
         ks_off[1, 2] = k12
         k = BlockKernel([k11, k22], ks_off)
 
@@ -92,7 +92,7 @@ using FillArrays
         # Tests for finite case.
         k11f, k22f = FiniteKernel(k11, X0), FiniteKernel(k22, X1)
         k12f = FiniteCrossKernel(k12, X0, X1)
-        ks_off_f = Matrix{Stheno.CrossKernel}(2, 2)
+        ks_off_f = Matrix{Stheno.CrossKernel}(undef, 2, 2)
         ks_off_f[1, 2] = k12f
         k = BlockKernel([k11f, k22f], ks_off_f)
 

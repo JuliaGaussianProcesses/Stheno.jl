@@ -1,5 +1,4 @@
-using Revise
-using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
+using Stheno, Test, Random, LinearAlgebra, Statistics
 
 @testset "Stheno" begin
 
@@ -27,6 +26,7 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
 
     @testset "gp" begin
         include("gp/abstract_gp.jl")
+        include("gp/gp.jl")
         include("gp/block_gp.jl")
     end
 
@@ -39,7 +39,7 @@ using Stheno, Base.Test, QuadGK, BlockArrays, FillArrays
         include("linops/conditioning.jl")
     end
 
-    @testset "integration" begin
-        include("util/toeplitz_integration.jl")
-    end
+    # @testset "integration" begin
+    #     include("util/toeplitz_integration.jl")
+    # end
 end

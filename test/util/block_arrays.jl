@@ -1,4 +1,5 @@
-using Stheno: BS
+using Random, LinearAlgebra, BlockArrays, FillArrays
+using Stheno: BS, unbox, are_conformal, chol, ABM, LazyPDMat, Xt_invA_X, Xt_invA_Y
 
 @testset "block_arrays" begin
 
@@ -156,10 +157,9 @@ using Stheno: BS
         X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
         X = BlockMatrix(reshape([X11, X21, X31, X12, X22, X32], 3, 2))
 
-        for foo in [ctranspose, transpose]
+        for foo in [adjoint, transpose]
 
-            @test foo(X) isa AbstractBlockMatrix
-            @test Matrix(transpose(X)) == transpose(Matrix(X))
+            @test Matrix(foo(X)) == foo(Matrix(X))
 
             @test nblocks(foo(X), 1) == nblocks(X, 2)
             @test nblocks(foo(X), 2) == nblocks(X, 1)
@@ -182,19 +182,19 @@ using Stheno: BS
         X = BlockMatrix(reshape([X11, X21, X12, X22], 2, 2))
         B = Symmetric(X)
 
-        for foo in [ctranspose, transpose]
+        for foo in [adjoint, transpose]
             @test foo(B) isa BS
             @test foo(B) === B
         end
 
         # Triangular block matrices
-        for foo in [ctranspose, transpose]
+        for foo in [adjoint, transpose]
             U = UpperTriangular(X)
-            @test foo(U) isa LowerTriangular{T, <:AbstractBlockMatrix{T}} where T
+            # @test foo(U) isa LowerTriangular{T, <:AbstractBlockMatrix{T}} where T
             @test Matrix(foo(U)) == foo(Matrix(U))
 
             L = LowerTriangular(X)
-            @test foo(L) isa UpperTriangular{T, <:AbstractBlockMatrix{T}} where T
+            # @test foo(L) isa UpperTriangular{T, <:AbstractBlockMatrix{T}} where T
             @test Matrix(foo(L)) == foo(Matrix(L))
         end
     end
@@ -202,10 +202,11 @@ using Stheno: BS
     # # # Test transposition of block vectors.
     # # let
     # #     # @test transpose(getblock(x̂, 1)) == getblock(transpose(x̂), 1)
-    # #     # @test ctranspose(getblock(x̂, 1)) == getblock(ctranspose(x̂), 1)
+    # #     # @test adjoint(getblock(x̂, 1)) == getblock(adjoint(x̂), 1)
     # #     # @test blocklengths(x̂) == blocklengths(transpose(x̂))
-    # #     # @test blocklengths(x̂) == blocklengths(ctranspose(x̂))
+    # #     # @test blocklengths(x̂) == blocklengths(adjoint(x̂))
     # # end
+
 
     # Test multiplication of a `BlockMatrix` by a `BlockVector`.
     let
@@ -216,28 +217,24 @@ using Stheno: BS
         A, x = BlockMatrix([X11, X21, X12, X22], 2, 2), BlockVector([x1, x2])
 
         @test length(A * x) == P1 + P2
+        @test are_conformal(A, x)
         @test A * x isa AbstractBlockVector
         @test A * x ≈ Matrix(A) * Vector(x)
 
         x̂1, x̂2 = randn(rng, P1), randn(rng, P2)
         x̂ = BlockVector([x̂1, x̂2])
 
-        @test At_mul_B(A, x̂) isa AbstractBlockVector
-        @test Vector(At_mul_B(A, x̂)) ≈ At_mul_B(Matrix(A), Vector(x̂))
+        @test are_conformal(A', x̂)
+        @test A' * x̂ isa AbstractBlockVector
+        @test Vector(A' * x̂) ≈ Matrix(A)' * Vector(x̂)
 
-        @test Ac_mul_B(A, x̂) isa AbstractBlockVector
-        @test Vector(Ac_mul_B(A, x̂)) ≈ Ac_mul_B(Matrix(A), Vector(x̂))
+        @test are_conformal(transpose(A), x̂)
+        @test transpose(A) * x̂ isa AbstractBlockVector
+        @test Vector(transpose(A) * x̂) ≈ transpose(Matrix(A)) * Vector(x̂)
 
         @test_throws AssertionError A * Vector(x)
-        @test_throws AssertionError At_mul_B(A, Vector(x̂))
-        @test_throws AssertionError Ac_mul_B(A, Vector(x̂))
-
-        # for foo in [ctranspose, transpose]
-        #     @test foo(A) isa AbstractBlockMatrix
-        #     @test foo(A) * x̂ isa AbstractBlockVector
-        #     @test foo(A) * x̂ ≈ Matrix(A)' * Vector(x̂)
-        #     @test foo(A) * x̂ ≈ foo(Matrix(A)) * x̂
-        # end
+        @test_throws AssertionError transpose(A) * Vector(x̂)
+        @test_throws AssertionError A' * Vector(x̂)
     end
 
     # Test multiplication of a `BlockMatrix` by a `BlockMatrix`.
@@ -252,25 +249,11 @@ using Stheno: BS
         @test size(A * B, 1) == P1 + P2
         @test size(A * B, 2) == R1 + R2 + R3
 
+        @test are_conformal(A, B)
         @test A * B isa AbstractBlockMatrix
         @test A * B ≈ Matrix(A) * Matrix(B)
 
-        @test At_mul_Bt(B, A) isa AbstractBlockMatrix
-        @test Matrix(At_mul_Bt(B, A)) ≈ At_mul_Bt(Matrix(B), Matrix(A))
-        @test Ac_mul_Bc(B, A) isa AbstractBlockMatrix
-        @test Matrix(Ac_mul_Bc(B, A)) ≈ Ac_mul_Bc(Matrix(B), Matrix(A))
-
-        @test At_mul_B(B, B) isa AbstractBlockMatrix
-        @test Matrix(At_mul_B(B, B)) ≈ At_mul_B(Matrix(B), Matrix(B))
-        @test Ac_mul_B(B, B) isa AbstractBlockMatrix
-        @test Matrix(Ac_mul_B(B, B)) ≈ Ac_mul_B(Matrix(B), Matrix(B))
-
-        @test A_mul_Bt(B, B) isa AbstractBlockMatrix
-        @test Matrix(A_mul_Bt(B, B)) ≈ A_mul_Bt(Matrix(B), Matrix(B))
-        @test A_mul_Bc(B, B) isa AbstractBlockMatrix
-        @test Matrix(A_mul_Bc(B, B)) ≈ A_mul_Bc(Matrix(B), Matrix(B))
-
-        for foo in [ctranspose, transpose]
+        for foo in [adjoint, transpose]
             @test foo(B) * foo(A) isa AbstractBlockMatrix
             @test foo(B) * foo(A) ≈ foo(Matrix(B)) * foo(Matrix(A))
 
@@ -291,7 +274,8 @@ using Stheno: BS
         @assert A_ == A
 
         # Compute chols and compare.
-        U_, U = chol(Symmetric(A_)), chol(Symmetric(A))
+        U_, U = cholesky(Symmetric(A_)).U, cholesky(Symmetric(A)).U
+        @test U isa UpperTriangular{<:Real, <:ABM}
         @test U_ ≈ U
         @test U_ ≈ Matrix(U)
 
@@ -306,13 +290,13 @@ using Stheno: BS
         @test size(U \ x) == size(U_ \ Vector(x))
         @test U \ x ≈ U_ \ Vector(x)
 
-        @test U' isa LowerTriangular{<:Real, <:AbstractBlockMatrix}
         @test U' \ x isa AbstractBlockVector
-        @test Ac_ldiv_B(U, x) isa AbstractBlockVector
+        @test typeof(U') <: Adjoint{<:Real, <:UpperTriangular{<:Real, <:ABM}}
         @test size(U' \ x) == size(U_' \ Vector(x))
         @test U' \ x ≈ U_' \ Vector(x)
 
         @test transpose(U) \ x isa AbstractBlockVector
+        @test typeof(transpose(U)) <: Transpose{<:Real, <:UpperTriangular{<:Real, <:ABM}}
         @test size(transpose(U) \ x) == size(U_' \ Vector(x))
         @test transpose(U) \ x ≈ U_' \ Vector(x)
 

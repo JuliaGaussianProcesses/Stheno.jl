@@ -57,7 +57,7 @@ using FillArrays: Zeros, Fill
         # Check that `BlockKernel`s play nicely when made finite.
         x1, x2 = randn(rng, 11), randn(rng, 7)
         k1, k2, k12 = EQ(), Linear(1.0), ZeroKernel{Float64}()
-        ks_off = Matrix{Stheno.CrossKernel}(2, 2)
+        ks_off = Matrix{Stheno.CrossKernel}(undef, 2, 2)
         ks_off[1, 2] = k12
         bk = BlockKernel([k1, k2], ks_off)
         bf_k = FiniteKernel(bk, BlockData([x1, x2]))

@@ -21,7 +21,7 @@ merge(c::Tuple{Vararg{Observation}}) = BlockGP([get_f.(c)...])←BlockVector([ge
 Condition `g` on observation `c`.
 """
 |(g::GP, c::Observation) = GP(|, g, c.f, CondCache(mean_vec(c.f), cov(c.f), c.y))
-|(g::BlockGP, c::Observation) = BlockGP(g.fs .| c)
+|(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))
 
 function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
     return iszero(kernel(f, g)) ?
@@ -79,11 +79,11 @@ end
 
 function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)
     μᵤ, Σᵤᵤ = mean_vec(u), cov(u)
-    U = chol(Σᵤᵤ)
-    Γ = (U' \ xcov(u, f)) ./ σ
-    Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean_vec(f)
+    U = cholesky(Σᵤᵤ).U
+    Γ = broadcast(/, U' \ xcov(u, f), σ)
+    Ω, δ = LazyPDMat(Symmetric(Γ * Γ' + I), 0), y - mean_vec(f)
     Σ′ᵤᵤ = Xt_invA_X(Ω, U)
-    μ′ᵤ = μᵤ + U' * (Ω \ (Γ * δ)) ./ σ
+    μ′ᵤ = μᵤ + broadcast(/, U' * (Ω \ (Γ * δ)), σ)
     return μ′ᵤ, Σ′ᵤᵤ
 end
 
@@ -100,6 +100,6 @@ end
 
 |(g::Tuple{Vararg{AbstractGP}}, c::Titsias) = deconstruct(BlockGP([g...]) | c)
 function |(g::BlockGP, c::Titsias)
-    return BlockGP(g.fs .| c)
+    return BlockGP(g.fs .| Ref(c))
 end
 

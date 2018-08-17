@@ -1,5 +1,5 @@
-using IterTools
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise
+using IterTools, BlockArrays, LinearAlgebra
+using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise, LazyPDMat
 
 """
     unary_map_tests(f, X::AbstractVector)
@@ -61,7 +61,7 @@ function pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
     N, N′ = length(X), length(X′)
     @test pairwise(f, X, X′) isa AbstractMatrix
     @test size(pairwise(f, X, X′)) == (N, N′)
-    @test pairwise(f, X, X′) ≈ reshape([f(x, x′) for (x, x′) in product(X, X′)], N, N′)
+    @test pairwise(f, X, X′) ≈ reshape([f(x, x′) for (x, x′) in Iterators.product(X, X′)], N, N′)
     @test pairwise(f, X, X′) ≈ Stheno._pairwise_fallback(f, X, X′)
 end
 function pairwise_tests(f, X::BlockData, X′::BlockData)
@@ -105,9 +105,9 @@ end
 function __mean_function_tests(μ::MeanFunction, X::AbstractVector)
 
     # Test compulsory interface passes.
-    @test !(μ(X[1]) isa Void)
+    @test !(μ(X[1]) isa Nothing)
 
-    @test method_exists(eachindex, Tuple{typeof(μ)})
+    @test hasmethod(eachindex, Tuple{typeof(μ)})
 
     # Test optional interface.
     unary_map_tests(μ, X)
@@ -130,7 +130,7 @@ function __cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
     @assert length(X0) == length(X1)
     @assert length(X0) ≠ length(X2)
 
-    @test method_exists(eachindex, Tuple{typeof(k), Int})
+    @test hasmethod(eachindex, Tuple{typeof(k), Int})
 
     binary_map_tests(k, X0, X1)
     pairwise_tests(k, X0, X2)
@@ -153,7 +153,7 @@ function __kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
     @assert length(X0) == length(X1)
     @assert length(X0) ≠ length(X2)
 
-    @test method_exists(eachindex, Tuple{typeof(k)})
+    @test hasmethod(eachindex, Tuple{typeof(k)})
 
     # Generic tests.
     cross_kernel_tests(k, X0, X1, X2)

@@ -1,9 +1,20 @@
-import Base: mean, ==, map, AbstractVector, map, +, *
+import Base: ==, map, AbstractVector, map, +, *, length, size, zero, iszero
+import Statistics: mean
 
 export CustomMean, ZeroMean, ConstantMean, mean
 
 abstract type MeanFunction end
 abstract type BaseMeanFunction <: MeanFunction end
+
+"""
+    AbstractVector(μ::MeanFunction)
+
+Convert `μ` into an `AbstractVector` if such a representation exists.
+"""
+function AbstractVector(μ::MeanFunction)
+    @assert isfinite(length(μ))
+    return map(μ, eachindex(μ))
+end
 
 eachindex(μ::BaseMeanFunction) = throw(ErrorException("Cannot construct indices for $μ"))
 length(::BaseMeanFunction) = Inf
@@ -35,6 +46,9 @@ struct ZeroMean{T<:Real} <: BaseMeanFunction end
 @inline (::ZeroMean{T})(x) where T = zero(T)
 @inline _map(z::ZeroMean{T}, D::AbstractVector) where T = Zeros{T}(length(D))
 ==(::ZeroMean, ::ZeroMean) = true
+
+const ZM = ZeroMean{Float64}
+zero(μ::MeanFunction) = length(μ) < Inf ? FiniteZeroMean(eachindex(μ)) : ZM()
 
 """
     ConstantMean{T} <: BaseMeanFunction
@@ -72,4 +86,21 @@ function _map(μ::EmpiricalMean, X::AV)
     else
         return μ[X]
     end
+end
+AbstractVector(μ::EmpiricalMean) = μ.μ
+
++(x::ZeroMean, x′::ZeroMean) = zero(x)
+function +(μ::MeanFunction, μ′::MeanFunction)
+    @assert size(μ) == size(μ′)
+    if iszero(μ)
+        return μ′
+    elseif iszero(μ′)
+        return μ
+    else
+        return CompositeMean(+, μ, μ′)
+    end
+end
+function *(μ::MeanFunction, μ′::MeanFunction)
+    @assert size(μ) == size(μ′)
+    return iszero(μ) || iszero(μ′) ? zero(μ) : CompositeMean(*, μ, μ′)
 end

@@ -1,7 +1,14 @@
-import Base: eachindex, rand, mean, cov
+import Base: eachindex, rand
+import Statistics: mean, cov
 import Distributions: logpdf, ContinuousMultivariateDistribution
 export AbstractGP, kernel, rand, logpdf, elbo, marginal_cov, marginal_std, marginals,
-    mean_vec, xcov
+    mean_vec, xcov, GPC
+
+# A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
+mutable struct GPC
+    n::Int
+    GPC() = new(0)
+end
 
 """
     AbstractGaussianProcess <: ContinuousMultivariateDistribution
@@ -87,7 +94,7 @@ function rand(rng::AbstractRNG, f::AbstractGP, N::Int)
     return mean_vec(f) .+ chol(cov(f))' * randn(rng, length(f), N)
 end
 rand(rng::AbstractRNG, f::AbstractGP) = vec(rand(rng, f, 1))
-rand(f::AbstractGP, N::Int) = rand(Base.Random.GLOBAL_RNG, f, N)
+rand(f::AbstractGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 rand(f::AbstractGP) = vec(rand(f, 1))
 
 """
