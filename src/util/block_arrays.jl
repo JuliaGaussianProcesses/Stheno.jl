@@ -289,6 +289,25 @@ end
 *(A::AdjTransTriABM{T}, B::AM{T}) where T = A * BlockMatrix([B])
 *(A::AM{T}, B::AdjTransTriABM{T}) where T = BlockMatrix([A]) * B
 
+# THIS CODE SHOULD BE REMOVED ONCE A NEW VERSION OF FILLARRAYS HAS BEEN TAGGED!
+function *(a::Adjoint{T, <:AbstractVector{T}}, b::Zeros{S, 1}) where {T, S}
+    la, lb = length(a), length(b)
+    if la ≠ lb
+        throw(DimensionMismatch("dot product arguments have lengths $la and $lb"))
+    end
+    return zero(promote_type(T, S))
+end
+*(a::Adjoint{T, <:AbstractMatrix{T}} where T, b::Zeros{<:Any, 1}) = FillArrays.mult_zeros(a, b)
+
+function *(a::Transpose{T, <:AbstractVector{T}}, b::Zeros{T, 1}) where T<:Real
+    la, lb = length(a), length(b)
+    if la ≠ lb
+        throw(DimensionMismatch("dot product arguments have lengths $la and $lb"))
+    end
+    return zero(T)
+end
+*(a::Transpose{T, <:AbstractMatrix{T}}, b::Zeros{T, 1}) where T<:Real = FillArrays.mult_zeros(a, b)
+
 const UpperOrAdjLower{T} = Union{
     UpperTriangular{T, <:ABM{T}},
     AdjOrTrans{T, <:LowerTriangular{T, <:ABM{T}}},
