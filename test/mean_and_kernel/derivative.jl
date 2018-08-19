@@ -17,7 +17,7 @@ end
 f, ∇f = gp()
 
 # Sample prior at random locations.
-Xf = rand(Uniform(-5, 5), 8)
+Xf = rand(Uniform(-5, 5), 5)
 X∇f = rand(Uniform(-5, 5), 15)
 X∇f = Xf
 f_, ∇f_ = rand([f(Xf), ∇f(X∇f)])
@@ -37,7 +37,7 @@ Xp = range(-6; stop=6, length=Np);
 f′Xp = rand(rng, f′(Xp), S);
 
 ∇Xp = range(-6; stop=6, length=Np);
-∇f′Xp = rand(rng, f′(∇Xp), S);
+∇f′Xp = rand(rng, ∇f′(∇Xp), S);
 
 # Get posterior mean and marginals f′ and y′ and write them for plotting.
 μ′f, σ′f = marginals(f′(Xp));
@@ -96,7 +96,7 @@ scatter!(posterior_plot, Xf, f_;
     markercolor=:green,
     markershape=:circle,
     markerstrokewidth=0.0,
-    markersize=10,
+    markersize=5,
     markeralpha=0.9,
     label="f_");
 
