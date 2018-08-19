@@ -44,6 +44,6 @@ rand(f::BlockGP) = rand(Base.Random.GLOBAL_RNG, f)
 # Convenience methods for invoking `logpdf` and `rand` with multiple processes.
 rand(rng::AbstractRNG, fs::AV{<:AbstractGP}) = vec.(rand(rng, fs, 1))
 rand(rng::AbstractRNG, fs::AV{<:AbstractGP}, N::Int) = rand(rng, BlockGP(fs), N).blocks
-rand(fs::AV{<:AbstractGP}, N::Int) = rand(Base.Random.GLOBAL_RNG, fs, N)
-rand(fs::AV{<:AbstractGP}) = vec.(rand(Base.Random.GLOBAL_RNG, fs))
+rand(fs::AV{<:AbstractGP}, N::Int) = rand(Random.GLOBAL_RNG, fs, N)
+rand(fs::AV{<:AbstractGP}) = vec.(rand(Random.GLOBAL_RNG, fs))
 logpdf(fs::AV{<:AbstractGP}, ys::AV{<:AV{<:Real}}) = logpdf(BlockGP(fs), BlockVector(ys))

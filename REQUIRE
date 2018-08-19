@@ -6,3 +6,4 @@ IterTools
 Distributions
 ToeplitzMatrices
 MacroTools
+ForwardDiff 0.1.0

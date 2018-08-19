@@ -26,6 +26,7 @@ module Stheno
     # include("mean_and_kernel/transform.jl")
     include("mean_and_kernel/input_transform.jl")
     include("mean_and_kernel/degenerate.jl")
+    include("mean_and_kernel/derivative.jl")
     include("mean_and_kernel/zero.jl")
     include("mean_and_kernel/printing.jl")
 
@@ -41,6 +42,7 @@ module Stheno
     # include("linops/integrate.jl")
     include("linops/project.jl")
     include("linops/conditioning.jl")
+    include("linops/gradient.jl")
 
     # Code to make Stheno work with Turing.
     # include("turing_util.jl")

@@ -28,6 +28,7 @@ struct ITKernel{Tk<:Kernel, Tf} <: Kernel
     k::Tk
     f::Tf
 end
+(k::ITKernel)(x) = k.k(k.f(x))
 (k::ITKernel)(x, x′) = k.k(k.f(x), k.f(x′))
 ITKernel(k::Kernel, ::typeof(identity)) = k
 length(k::ITKernel) = length(k.k)
