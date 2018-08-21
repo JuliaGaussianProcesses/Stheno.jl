@@ -4,7 +4,6 @@ environment:
   - julia_version: nightly
 
 platform:
-  - x86 # 32-bit
   - x64 # 64-bit
 
 matrix:
