@@ -44,7 +44,6 @@ module Stheno
     include("linops/conditioning.jl")
     include("linops/gradient.jl")
 
-    # Code to make Stheno work with Turing.
-    # include("turing_util.jl")
+    # The @model macro.
     include("util/model.jl")
 end # module
