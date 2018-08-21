@@ -1,5 +1,4 @@
-using Revise
-using Stheno, Plots
+using Stheno, Plots, Random
 using Stheno: @model
 
 
@@ -28,7 +27,7 @@ ŷ₁, ŷ₃ = rand(rng, [f₁(X₁), f₃(X₃)]);
 
 # Define some plotting stuff.
 Np, S = 500, 25;
-Xp = linspace(-2.5, 12.5, Np);
+Xp = range(-2.5, stop=12.5, length=Np);
 
 # Sample jointly from the posterior over each process.
 f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(Xp)], S);
@@ -42,7 +41,6 @@ f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(X
 
 ###########################  Plot results  ###########################
 
-using Plots
 plotly();
 posterior_plot = plot();
 
@@ -111,5 +109,3 @@ scatter!(posterior_plot, X₃, ŷ₃;
     label="");
 
 display(posterior_plot);
-
-# savefig(posterior_plot, "process_decomposition.png")

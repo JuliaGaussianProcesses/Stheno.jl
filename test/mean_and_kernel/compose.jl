@@ -138,7 +138,7 @@ using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean
     let
         rng, N, D = MersenneTwister(123456), 5, 2
         X, s = ColsAreObs(randn(rng, D, N)), randn(rng)
-        μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->vec(s .* sum(sin.(x), 2)))
+        μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->sum(s .* x))
 
         # Test conversion and promotion.
         c = randn(rng)

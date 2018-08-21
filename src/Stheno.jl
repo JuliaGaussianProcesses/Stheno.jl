@@ -1,20 +1,17 @@
-__precompile__(true)
-
 module Stheno
 
-    using Distributions, Distances, BlockArrays, FillArrays, IterTools
-    import Base: mean, cov, show, size, length, rand, vcat, convert, promote, eachindex
+    using Distributions, Distances, BlockArrays, FillArrays, IterTools, Statistics, Random
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
-    const AMRV{T} = Union{AbstractMatrix{T}, RowVector{T}}
+    # const AMRV{T} = Union{AbstractMatrix{T}, RowVector{T}}
 
     # Various bits of utility that aren't inherently GP-related.
     include("util/covariance_matrices.jl")
     include("util/woodbury.jl")
-    include("util/abstract_data_set.jl")
     include("util/block_arrays.jl")
+    include("util/abstract_data_set.jl")
     include("util/toeplitz.jl")
     include("util/eachindex_util.jl")
     include("util/io.jl")
@@ -29,11 +26,11 @@ module Stheno
     # include("mean_and_kernel/transform.jl")
     include("mean_and_kernel/input_transform.jl")
     include("mean_and_kernel/degenerate.jl")
+    include("mean_and_kernel/derivative.jl")
     include("mean_and_kernel/zero.jl")
-    include("mean_and_kernel/conversion.jl")
     include("mean_and_kernel/printing.jl")
 
-    # # Basic Gaussian process definitions.
+    # Basic Gaussian process definitions.
     include("gp/abstract_gp.jl")
     include("gp/gp.jl")
     include("gp/block_gp.jl")
@@ -45,8 +42,8 @@ module Stheno
     # include("linops/integrate.jl")
     include("linops/project.jl")
     include("linops/conditioning.jl")
+    include("linops/gradient.jl")
 
-    # # Code to make Stheno work with Turing.
-    # include("turing_util.jl")
+    # The @model macro.
     include("util/model.jl")
 end # module

@@ -1,4 +1,5 @@
 using Stheno: get_f, get_y, Observation, merge
+using BlockArrays
 
 @testset "conditioning" begin
 

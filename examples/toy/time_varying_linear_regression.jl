@@ -1,7 +1,5 @@
-using Stheno, Plots
+using Stheno, Plots, Random
 using Stheno: @model
-plotly();
-
 
 ###########################  Define and inspect our model  ###########################
 
@@ -18,7 +16,7 @@ end
 
 # Sample from the prior from plotting and for conditioning.
 rng, N, Nplot, S = MersenneTwister(123456), 250, 500, 100;
-X, Xp = sort(rand(rng, N) * 10), linspace(-2.5, 12.5, Nplot);
+X, Xp = sort(rand(rng, N) * 10), range(-2.5, stop=12.5, length=Nplot);
 w1, w2, f, y = model();
 w1s, w2s, fs, ŷ = rand(rng, [w1(Xp), w2(Xp), f(Xp), y(X)]);
 

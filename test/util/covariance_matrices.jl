@@ -1,13 +1,14 @@
-using Stheno: unbox
+using Stheno: unbox, LazyPDMat, Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X
+using Random, LinearAlgebra
 
 @testset "covariance_matrices" begin
 
     let
         rng, N, P, Q = MersenneTwister(123456), 5, 6, 2
         B = randn(rng, N, N)
-        A_ = B' * B + UniformScaling(1e-6)
-        U = chol(A_)
-        @test 2 * logdet(U) ≈ logdet(A_)
+        A_ = B' * B + 1e-6I
+        @test logdet(cholesky(A_)) ≈ logdet(A_)
+        @test logdet(A_) == logdet(A_')
     end
 
     # Test that the AbstractArray interface works.
@@ -43,7 +44,7 @@ using Stheno: unbox
 
         # Test unary operations.
         @test logdet(A) ≈ logdet(A_)
-        @test chol(A) == chol(A_ + A.ϵ * I)
+        @test cholesky(A).U == cholesky(A_ + A.ϵ * I).U
 
         # Test binary operations.
         @test A + A isa LazyPDMat
@@ -95,7 +96,7 @@ using Stheno: unbox
         @test Stheno.diag_Xᵀ_invA_Y(X, A, Y) ≈ diag(Xt_invA_Y(X, A, Y))
 
         @test transpose(A) === A
-        @test ctranspose(A) === A
+        @test adjoint(A) === A
     end
 
     let

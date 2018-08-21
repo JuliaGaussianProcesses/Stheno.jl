@@ -1,8 +1,9 @@
-julia 0.6.3
+julia 1.0.0
 Distances
 BlockArrays
-FillArrays
+FillArrays 0.1.0
 IterTools
 Distributions
 ToeplitzMatrices
 MacroTools
+ForwardDiff 0.1.0

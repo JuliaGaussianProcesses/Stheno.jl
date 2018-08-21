@@ -1,15 +1,6 @@
-export GPC, GP
+export GP
 
 ###################### Implementation of AbstractGaussianProcess interface #################
-
-# Pre-0.7 hack.
-Base.permutedims(v::Vector) = reshape(v, 1, length(v))
-
-# A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
-mutable struct GPC
-    n::Int
-    GPC() = new(0)
-end
 
 """
     GP{Tμ<:MeanFunction, Tk<:Kernel}
@@ -92,6 +83,8 @@ kernel(::GP, ::Union{Real, Function}) = ZeroKernel{Float64}()
 
 
 ##################################### Syntactic Sugar#######################################
+
+import Base: promote, convert
 
 get_zero(p::Int) = get_zero(p, p)
 function get_zero(p::Real, q::Real)

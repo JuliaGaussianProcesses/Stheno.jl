@@ -28,6 +28,7 @@ struct ITKernel{Tk<:Kernel, Tf} <: Kernel
     k::Tk
     f::Tf
 end
+(k::ITKernel)(x) = k.k(k.f(x))
 (k::ITKernel)(x, x′) = k.k(k.f(x), k.f(x′))
 ITKernel(k::Kernel, ::typeof(identity)) = k
 length(k::ITKernel) = length(k.k)
@@ -84,6 +85,8 @@ struct Periodic{Tf<:Real}
 end
 (p::Periodic)(t::Real) = [cos((2π * p.f) * t), sin((2π * p.f) * t)]
 function map(p::Periodic, t::AV)
-    return ColsAreObs(vcat(RowVector(map(x->cos((2π * p.f) * x), t)),
-                        RowVector(map(x->sin((2π * p.f) * x), t))))
+    return ColsAreObs(vcat(
+        map(x->cos((2π * p.f) * x), t)',
+        map(x->sin((2π * p.f) * x), t)',
+    ))
 end

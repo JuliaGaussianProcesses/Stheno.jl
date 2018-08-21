@@ -1,4 +1,5 @@
 import Base: size, getindex, Matrix, *, \, /
+import LinearAlgebra: logdet
 
 """
     WoodburyMat{T} <: AbstractMatrix{T}

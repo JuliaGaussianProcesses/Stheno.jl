@@ -1,15 +1,4 @@
 """
-    AbstractVector(μ::MeanFunction)
-
-Convert `μ` into an `AbstractVector` if such a representation exists.
-"""
-function AbstractVector(μ::MeanFunction)
-    @assert isfinite(length(μ))
-    return map(μ, eachindex(μ))
-end
-AbstractVector(μ::EmpiricalMean) = μ.μ
-
-"""
     AbstractMatrix(k::Kernel)
 
 Convert `k` into an `AbstractMatrix`, if such a representation exists.

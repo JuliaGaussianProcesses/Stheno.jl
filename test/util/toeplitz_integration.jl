@@ -1,10 +1,10 @@
 using Stheno
-using Stheno.@model
+using Stheno: @model
 using ToeplitzMatrices: SymmetricToeplitz
 
 @testset "Toeplitz Integration" begin
 
-xl = linspace(-5.0, 5.0, 1000);
+xl = range(-5.0; stop=5.0, length=1000);
 x = collect(xl);
 
 # Simplest possible model.

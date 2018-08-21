@@ -1,6 +1,5 @@
-using Revise
-using Stheno, Plots
-using Stheno.@model
+using Stheno, Plots, Random
+using Stheno: @model
 
 
 ###########################  Define and inspect our model  ###########################
@@ -24,7 +23,7 @@ end
 # Generate some input locations and sample from the prior.
 rng, N = MersenneTwister(123546), 500;
 X_prior = sort(rand(rng, N) * 10);
-f, noise, y = model(GPC());
+f, noise, y = model();
 
 # Take a look at the mean function and kernel of y.
 @show mean(y), kernel(y);
@@ -53,7 +52,7 @@ ŷ = rand(rng, y(X));
 f′, noise′, y′ = (f, noise, y) | (y(X) ← ŷ);
 
 Nplot, S = 500, 100;
-Xplot = linspace(-2.0, 12.0, Nplot);
+Xplot = range(-2.0, stop=12.0, length=Nplot);
 f′Xplot_, noise′Xplot_ = f′(Xplot), noise′(Xplot)
 f′Xp, noise′Xp = rand(rng, [f′Xplot_, noise′Xplot_], S);
 

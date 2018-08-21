@@ -16,6 +16,9 @@ length(μ::BlockMean) = sum(length.(μ.μ))
 @noinline eachindex(μ::BlockMean) = BlockData(eachindex.(μ.μ))
 map(μ::BlockMean, X::BlockData) = BlockVector(map.(μ.μ, blocks(X)))
 
+# Define the zero element.
+zero(μ::BlockMean) = BlockMean(zero.(μ.μ))
+
 """
     BlockCrossKernel <: CrossKernel
 
@@ -24,8 +27,10 @@ A cross kernel comprising lots of other kernels.
 struct BlockCrossKernel <: CrossKernel
     ks::Matrix
 end
-BlockCrossKernel(ks::Vector) = BlockCrossKernel(reshape(ks, length(ks), 1))
-BlockCrossKernel(ks::RowVector) = BlockCrossKernel(reshape(ks, 1, length(ks)))
+BlockCrossKernel(ks::AbstractVector) = BlockCrossKernel(reshape(ks, length(ks), 1))
+function BlockCrossKernel(ks::Adjoint{T, AbstractVector{T}} where T)
+    return BlockCrossKernel(reshape(ks, 1, length(ks)))
+end
 size(k::BlockCrossKernel, N::Int) = N == 1 ?
     sum(size.(k.ks[:, 1], Ref(1))) :
     N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
@@ -46,6 +51,7 @@ end
 function pairwise(k::BlockCrossKernel, X::BlockData, X′::BlockData)
     return BlockMatrix(broadcast(pairwise, k.ks, blocks(X), reshape(blocks(X′), 1, :)))
 end
+zero(k::BlockCrossKernel) = BlockCrossKernel(zero.(k.ks))
 
 """
     BlockKernel <: Kernel
@@ -74,11 +80,11 @@ function map(k::BlockKernel, X::BlockData, X′::BlockData)
     return BlockVector(map.(k.ks_diag, blocks(X), blocks(X′)))
 end
 
-Base.ctranspose(z::Zeros{T}) where {T} = Zeros{T}(reverse(size(z)))
+Base.adjoint(z::Zeros{T}) where {T} = Zeros{T}(reverse(size(z)))
 
 function pairwise(k::BlockKernel, X::BlockData)
     bX = blocks(X)
-    Σ = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX))
+    Σ = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX))
     for q in eachindex(k.ks_diag)
         setblock!(Σ, unbox(pairwise(k.ks_diag[q], bX[q])), q, q)
         for p in 1:q-1
@@ -90,7 +96,7 @@ function pairwise(k::BlockKernel, X::BlockData)
 end
 function pairwise(k::BlockKernel, X::BlockData, X′::BlockData)
     bX, bX′ = blocks(X), blocks(X′)
-    Ω = BlockArray(uninitialized_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX′))
+    Ω = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX′))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
         if p == q
             setblock!(Ω, pairwise(k.ks_diag[p], bX[p], bX′[p]), p, p)
@@ -102,3 +108,4 @@ function pairwise(k::BlockKernel, X::BlockData, X′::BlockData)
     end
     return Ω
 end
+@noinline zero(k::BlockKernel) = BlockKernel(zero.(k.ks_diag), zero.(k.ks_off))

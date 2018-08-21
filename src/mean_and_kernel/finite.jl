@@ -135,6 +135,18 @@ function print(io::IO, k::FiniteCrossKernel)
     print(io, Shunted(Shunt(4, ' '), k.k))
 end
 
+function zero(k::CrossKernel)
+    if size(k, 1) < Inf && size(k, 2) < Inf
+        return FiniteZeroCrossKernel(eachindex(k, 1), eachindex(k, 2))
+    elseif size(k, 1) < Inf
+        return LhsFiniteZeroCrossKernel(eachindex(k, 1))
+    elseif size(k, 2) < Inf
+        return RhsFiniteZeroCrossKernel(eachindex(k, 2))
+    else
+        return ZeroKernel{Float64}()
+    end
+end
+
 # Sugar
 map(k::FiniteCrossKernel, ::Colon, ::Colon) = map(k, eachindex(k, 1), eachindex(k, 2))
 function pairwise(k::FiniteCrossKernel, ::Colon, ::Colon)
@@ -167,6 +179,8 @@ _map(k::FiniteZeroKernel, q::AV) = Zeros(length(q))
 _map(k::FiniteZeroKernel, q::AV, q′::AV) = Zeros(length(q))
 _pairwise(k::FiniteZeroKernel, q::AV) = Zeros(length(q), length(q))
 _pairwise(k::FiniteZeroKernel, q::AV, q′::AV) = Zeros(length(q), length(q′))
+
++(x::FiniteZeroMean, x′::FiniteZeroMean) = zero(x)
 
 struct FiniteZeroCrossKernel{TX, TX′} <: CrossKernel
     X::TX

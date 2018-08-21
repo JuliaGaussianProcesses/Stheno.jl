@@ -1,5 +1,5 @@
 using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKernel,
-    ConstantMean, ZeroMean, ZeroKernel, ConstantKernel, pairwise
+    ConstantMean, ZeroMean, ZeroKernel, ConstantKernel, pairwise, chol
 
 @testset "conditional" begin
 

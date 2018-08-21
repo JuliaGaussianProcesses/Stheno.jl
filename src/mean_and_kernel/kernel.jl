@@ -1,9 +1,10 @@
-using IterTools
+using IterTools, LinearAlgebra
+import LinearAlgebra: AbstractMatrix
 import Base: +, *, ==, size, eachindex, print
 import Distances: pairwise
 export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
     Exponential, ConstantKernel, isstationary, ZeroKernel
-
+using IterTools: product
 
 
 ############################# Define CrossKernels and Kernels ##############################
@@ -18,11 +19,31 @@ abstract type Kernel <: CrossKernel end
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
 size(k::CrossKernel) = (size(k, 1), size(k, 2))
 
-
 eachindex(k::Kernel, N::Int) = eachindex(k)
 size(k::Kernel) = (length(k), length(k))
 size(k::Kernel, dim::Int) = size(k)[dim]
 length(k::Kernel) = Inf
+
+"""
+    AbstractMatrix(k::Kernel)
+
+Convert `k` into an `AbstractMatrix`, if such a representation exists.
+"""
+function AbstractMatrix(k::Kernel)
+    @assert isfinite(size(k, 1))
+    return pairwise(k, eachindex(k, 1))
+end
+
+"""
+    AbstractMatrix(k::CrossKernel)
+
+Convert `k` into an `AbstractMatrix`, if such a representation exists.
+"""
+function AbstractMatrix(k::CrossKernel)
+    @assert isfinite(size(k, 1))
+    @assert isfinite(size(k, 2))
+    return pairwise(k, eachindex(k, 1), eachindex(k, 2))
+end
 
 
 
@@ -84,21 +105,23 @@ end
 
 # Optimisation for Toeplitz covariance matrices.
 function pairwise(k::Kernel, x::StepRangeLen{<:Real})
-    if isstationary(k)
-        return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
-    else
-        return LazyPDMat(_pairwise(k, x))
-    end
+    return LazyPDMat(_pairwise(k, x))
+    # if isstationary(k)
+    #     return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
+    # else
+    #     return LazyPDMat(_pairwise(k, x))
+    # end
 end
 function pairwise(k::CrossKernel, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real})
-    if isstationary(k) && x.ref == x′.ref
-        return Toeplitz(
-            map(k, x, Fill(x′[1], length(x))),
-            map(k, Fill(x[1], length(x′)), x′),
-        )
-    else
-        return _pairwise(k, x, x′)
-    end
+    return _pairwise(k, x, x′)
+    # if isstationary(k) && x.ref == x′.ref
+    #     return Toeplitz(
+    #         map(k, x, Fill(x′[1], length(x))),
+    #         map(k, Fill(x[1], length(x′)), x′),
+    #     )
+    # else
+    #     return _pairwise(k, x, x′)
+    # end
 end
 
 
@@ -125,6 +148,9 @@ isstationary(::Type{<:ZeroKernel}) = true
 end
 @inline ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 @inline eachindex(k::ZeroKernel) = eachindex_err(k)
+
+const ZK = ZeroKernel{Float64}
+zero(k::Kernel) = length(k) < Inf ? FiniteZeroKernel(eachindex(k)) : ZK()
 
 """
     ConstantKernel{T<:Real} <: Kernel
@@ -155,6 +181,7 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
+(::EQ)(x::Real, x′::Real) = exp(-0.5 * (x - x′)^2)
 (::EQ)(x::T) where T = one(Float64)
 _pairwise(::EQ, X::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
 _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
@@ -202,9 +229,9 @@ end
 (k::Linear)(x) = sum(abs2, x .- k.c)
 @inline eachindex(k::Linear) = eachindex_err(k)
 
-@inline _pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(RowVector(x)))
+@inline _pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(x'))
 @inline function _pairwise(k::Linear, x::AV, x′::AV)
-    return _pairwise(k, ColsAreObs(RowVector(x)), ColsAreObs(RowVector(x′)))
+    return _pairwise(k, ColsAreObs(x'), ColsAreObs(x′'))
 end
 
 function _pairwise(k::Linear, D::ColsAreObs)
@@ -305,4 +332,35 @@ function _pairwise(k::EmpiricalKernel, X::AV, X′::AV)
     else
         return k.Σ[X, X′]
     end
+end
+AbstractMatrix(k::EmpiricalKernel) = k.Σ
+
++(x::ZeroKernel, x′::ZeroKernel) = zero(x)
+function +(k::CrossKernel, k′::CrossKernel)
+    @assert size(k) == size(k′)
+    if iszero(k)
+        return k′
+    elseif iszero(k′)
+        return k
+    else
+        return CompositeCrossKernel(+, k, k′)
+    end
+end
+function +(k::Kernel, k′::Kernel)
+    @assert size(k) == size(k′)
+    if iszero(k)
+        return k′
+    elseif iszero(k′)
+        return k
+    else
+        return CompositeKernel(+, k, k′)
+    end
+end
+function *(k::Kernel, k′::Kernel)
+    @assert size(k) == size(k′)
+    return iszero(k) || iszero(k′) ? zero(k) : CompositeKernel(*, k, k′)
+end
+function *(k::CrossKernel, k′::CrossKernel)
+    @assert size(k) == size(k′)
+    return iszero(k) || iszero(k′) ? zero(k) : CompositeCrossKernel(*, k, k′)
 end

@@ -1,6 +1,7 @@
 using ToeplitzMatrices
+import LinearAlgebra: Symmetric
 
-import Base: transpose, ctranspose, copy
+import Base: transpose, adjoint, copy
 import ToeplitzMatrices: Toeplitz
 
 function copy(T::Toeplitz)
@@ -47,10 +48,10 @@ end
 +(u::UniformScaling, T::SymmetricToeplitz) = T + u
 
 transpose(T::Toeplitz) = Toeplitz(T.vr, T.vc)
-ctranspose(T::Toeplitz) = Toeplitz(conj.(T.vr), conj.(T.vc))
+adjoint(T::Toeplitz) = Toeplitz(conj.(T.vr), conj.(T.vc))
 transpose(T::SymmetricToeplitz) = T
-ctranspose(T::SymmetricToeplitz) = T
+adjoint(T::SymmetricToeplitz) = T
 
-@inline Base.Symmetric(T::SymmetricToeplitz) = T
+@inline LinearAlgebra.Symmetric(T::SymmetricToeplitz) = T
 
 Toeplitz(vc::AbstractVector, vr::AbstractVector) = Toeplitz(Vector(vc), Vector(vr))
