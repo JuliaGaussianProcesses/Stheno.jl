@@ -1,7 +1,5 @@
-using Stheno
+using Stheno, Random, Plots
 using Stheno: @model
-
-
 
 ###########################  Define and inspect our model  ###########################
 
@@ -41,7 +39,7 @@ ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)]);
 (f′, y₁′, y₂′) = (f, y₁, y₂) | (y₁(X₁)←ŷ₁, y₂(X₂)←ŷ₂);
 
 # Sample jointly from the posterior processes and compute posterior marginals.
-Xp = linspace(-2.5, 12.5, 500);
+Xp = range(-2.5, stop=12.5, length=500);
 f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp), y₁′(Xp), y₂′(Xp)], 100);
 μf′, σf′ = marginals(f′(Xp));
 μy₁′, σy₁′ = marginals(y₁′(Xp));
@@ -51,9 +49,7 @@ f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp), y₁′(Xp), y₂′(Xp)], 1
 
 ###########################  Plot results  ###########################
 
-using Plots
 plotly();
-# gr();
 
 posterior_plot = plot();
 
@@ -129,4 +125,3 @@ scatter!(posterior_plot, X₂, ŷ₂;
 
 
 display(posterior_plot);
-# savefig(posterior_plot, "simple_sensor_fusion.png")

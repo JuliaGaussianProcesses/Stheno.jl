@@ -105,21 +105,23 @@ end
 
 # Optimisation for Toeplitz covariance matrices.
 function pairwise(k::Kernel, x::StepRangeLen{<:Real})
-    if isstationary(k)
-        return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
-    else
-        return LazyPDMat(_pairwise(k, x))
-    end
+    return LazyPDMat(_pairwise(k, x))
+    # if isstationary(k)
+    #     return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
+    # else
+    #     return LazyPDMat(_pairwise(k, x))
+    # end
 end
 function pairwise(k::CrossKernel, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real})
-    if isstationary(k) && x.ref == x′.ref
-        return Toeplitz(
-            map(k, x, Fill(x′[1], length(x))),
-            map(k, Fill(x[1], length(x′)), x′),
-        )
-    else
-        return _pairwise(k, x, x′)
-    end
+    return _pairwise(k, x, x′)
+    # if isstationary(k) && x.ref == x′.ref
+    #     return Toeplitz(
+    #         map(k, x, Fill(x′[1], length(x))),
+    #         map(k, Fill(x[1], length(x′)), x′),
+    #     )
+    # else
+    #     return _pairwise(k, x, x′)
+    # end
 end
 
 

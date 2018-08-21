@@ -45,7 +45,7 @@ isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(unbox(Σ1), unbox(Σ2))
 logdet(Σ::LazyPDMat) = logdet(cholesky(Σ))
 function cholesky(Σ::LazyPDMat{T, <:AbstractMatrix{T}} where T<:Real)
     if Σ.C == nothing
-        Σ.C = cholesky(unbox(Σ) + Σ.ϵ * I)
+        Σ.C = cholesky(Symmetric(unbox(Σ) + Σ.ϵ * I))
     end
     return Σ.C
 end

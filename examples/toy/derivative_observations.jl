@@ -1,3 +1,5 @@
+# This example is a WIP. It works, but is a bit rough around the edges.
+
 using Stheno, Random, Distributions, Plots, ColorTypes, FixedPointNumbers
 using Stheno: @model, ∇
 
