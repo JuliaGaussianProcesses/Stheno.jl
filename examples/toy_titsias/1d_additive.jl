@@ -1,4 +1,4 @@
-using Stheno, Plots
+using Stheno, Plots, Random
 plotly();
 
 # Define model.

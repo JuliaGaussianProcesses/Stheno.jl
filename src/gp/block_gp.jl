@@ -21,6 +21,15 @@ kernel(f1::BlockGP, f2::GP) = BlockCrossKernel(kernel.(f1.fs, Ref(f2)))
 
 deconstruct(f::BlockGP) = (f.fs...,)
 
+# Return a gpc object from one of the children.
+function getproperty(f::BlockGP, d::Symbol)
+    if d === :gpc
+        return f.fs[1].gpc
+    else
+        return getfield(f, d)
+    end
+end
+
 
 
 ##################################### Syntactic Sugar ######################################

@@ -289,6 +289,10 @@ end
 *(A::AdjTransTriABM{T}, B::AM{T}) where T = A * BlockMatrix([B])
 *(A::AM{T}, B::AdjTransTriABM{T}) where T = BlockMatrix([A]) * B
 
+function *(A::LazyPDMat{T, <:Symmetric{T, <:ABM{T}}}, B::AdjTransTriABM{T}) where T
+    return unbox(unbox(A)) * B
+end
+
 # THIS CODE SHOULD BE REMOVED ONCE A NEW VERSION OF FILLARRAYS HAS BEEN TAGGED!
 function *(a::Adjoint{T, <:AbstractVector{T}}, b::Zeros{S, 1}) where {T, S}
     la, lb = length(a), length(b)

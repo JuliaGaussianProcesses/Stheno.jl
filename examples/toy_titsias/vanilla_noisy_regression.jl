@@ -1,101 +1,111 @@
-using Revise
+using Stheno, Plots, Distributions, ColorTypes, Random, FixedPointNumbers
+using Stheno: @model, Titsias
+
+
+rng = MersenneTwister(12345);
+
+###########################  Define and inspect our model  ###########################
+
+# Specify generative model.
+@model function gp(σ²)
+    f = 1.5 * GP(EQ())
+    y = f + GP(Noise(σ²))
+    return f, y
+end
+
+# Construct generative model.
+σ² = 1.0;
+f, y = gp(σ²);
+
+# Sample prior at random locations.
+Xy = rand(Uniform(-5, 5), 100);
+y_ = rand(y(Xy));
+
+# Approximately condition processes. Play around with different lengths of Z.
+Z = range(-5, stop=5, length=10);
+f′ = f | Titsias(f(Xy)←y_, f(Z), sqrt(σ²));
+f′_exact = f | (y(Xy)←y_);
 
 
 
-############################ Modeling and Approximate Inference ############################
+#######################  Do posterior inference give a few samples  #######################
 
-using Stheno
+Np, S = 500, 10;
+Xp = range(-6; stop=6, length=Np);
+f′Xp = rand(rng, f′(Xp), S);
 
-# A vanilla noisy regression model.
-gpc, σ = GPC(), sqrt(1e-1);
-f = GP(EQ(), gpc);
-y = f + GP(Noise(σ^2), gpc);
-
-# Make the problem concrete.
-rng, N, P, M = MersenneTwister(123456), 100, 300, 25;
-X, Xp, Z = linspace(-7.5, 7.5, N), linspace(-10.0, 10.0, P), linspace(-10.0, 10.0, M);
-ŷ = rand(rng, y(X));
-
-# Compute exact posterior processes + corresponding marginals.
-f′, y′ = (f, y) | (y(X) ← ŷ);
-f′μ, f′σ = marginals(f′(Xp));
-y′μ, y′σ = marginals(y′(Xp));
-
-# Compute approximate posterior processes + corresponding marginals.
-m′u, Σ′uu = Stheno.optimal_q(f(X), ŷ, f(Z), σ);
-conditioner = Stheno.Titsias(f(Z), m′u, Σ′uu, gpc);
-fq = f | conditioner;
-fqμ, fqσ = marginals(fq(Xp));
-
-yq = y | conditioner;
-yqμ, yqσ = marginals(yq(Xp));
-
-@show logpdf(y(X), ŷ), elbo(f(X), ŷ, f(Z), σ);
+# Get posterior marginals for approximate and exact conditioning.
+μ′f, σ′f = marginals(f′(Xp));
+μf′_exact, σf′_exact = marginals(f′_exact(Xp));
 
 
 
-############################ Plotting ############################
+####################################  Plot results  ####################################
 
-using Plots
 plotly();
 
-# Plot observations.
-posterior_plot = plot();
-scatter!(posterior_plot, X, ŷ;
-    markercolor=:red,
-    markershape=:circle,
-    markerstrokewidth=0.0,
-    markersize=4,
-    markeralpha=0.8,
-    label="Observations");
+posterior_plot = plot(
+    legend=:topright,
+    legendfont=Plots.Font(
+        "sans-serif",
+        10,
+        :hcenter,
+        :vcenter,
+        0.0,
+        RGB{Normed{UInt8, 8}}(0.0,0.0,0.0)
+    ),
+    background_color_legend=RGBA(1, 1, 1, 0),
+    foreground_color_legend=RGBA(1, 1, 1, 0),
+);
 
-# Plot exact posterior marginals for noisy process and latent process.
-plot!(posterior_plot, Xp, [y′μ y′μ];
-    linewidth=0.0,
-    fillrange=[y′μ .- 3 .* y′σ, y′μ .+ 3 * y′σ],
-    fillalpha=0.3,
-    fillcolor=:red,
-    label="");
-plot!(posterior_plot, Xp, f′μ;
-    linecolor=:blue,
+plot!(posterior_plot, Xp, μf′_exact;
     linewidth=2.0,
-    label="f′");
-plot!(posterior_plot, Xp, [f′μ f′μ];
+    linecolor=:blue,
+    label="");
+plot!(posterior_plot, Xp, μf′_exact;
     linewidth=0.0,
-    fillrange=[f′μ .- 3 .* f′σ, f′μ .+ 3 * f′σ],
-    fillalpha=0.3,
+    linecolor=:blue,
+    linealpha=0.2,
+    fillrange=[μf′_exact.- 3  .* σf′_exact],
+    fillalpha=0.2,
+    fillcolor=:blue,
+    label=["exact posterior, f", ""]);
+plot!(posterior_plot, Xp, μf′_exact;
+    linewidth=0.0,
+    linecolor=:blue,
+    linealpha=0.2,
+    fillrange=[μf′_exact .+ 3 .* σf′_exact],
+    fillalpha=0.2,
     fillcolor=:blue,
     label="");
 
-# Plot the approximate posterior marginals over the noisy process.
-plot!(posterior_plot, Xp, yqμ;
-    linecolor=:cyan,
+plot!(posterior_plot, Xp, μ′f;
     linewidth=2.0,
-    label="qy");
-plot!(posterior_plot, Xp, [yqμ yqμ];
+    linecolor=:red,
+    label="");
+plot!(posterior_plot, Xp, μ′f;
     linewidth=0.0,
-    fillrange=[yqμ .- 3 .* yqσ, yqμ .+ 3 * yqσ],
-    fillalpha=0.3,
-    fillcolor=:cyan,
+    linecolor=:red,
+    linealpha=0.2,
+    fillrange=[μ′f.- 3  .* σ′f],
+    fillalpha=0.2,
+    fillcolor=:red,
+    label=["posterior, f", ""]);
+plot!(posterior_plot, Xp, μ′f;
+    linewidth=0.0,
+    linecolor=:red,
+    linealpha=0.2,
+    fillrange=[μ′f .+ 3 .* σ′f],
+    fillalpha=0.2,
+    fillcolor=:red,
     label="");
 
-# Plot the approximate posterior marginals over the latent function.
-scatter!(posterior_plot, Z, zeros(M);
-    markercolor=:black,
+scatter!(posterior_plot, Xy, y_;
+    markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
-    markersize=4,
-    markeralpha=0.8,
-    label="Z");
-plot!(posterior_plot, Xp, fqμ;
-    linecolor=:green,
-    linewidth=2.0,
-    label="qf");
-plot!(posterior_plot, Xp, [fqμ fqμ];
-    linewidth=0.0,
-    fillrange=[fqμ .- 3 .* fqσ, fqμ .+ 3 * fqσ],
-    fillalpha=0.3,
-    fillcolor=:green,
-    label="");
+    markersize=6,
+    markeralpha=0.3,
+    label="y_");
 
 display(posterior_plot);

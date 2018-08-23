@@ -47,4 +47,6 @@ function print_shunted_list(io::IO, shunt::Shunt, X::AbstractVector)
         j != length(X) && show('\n')
     end
 end
-@noinline print_shunted_list(io::IO, shunt::Shunt, x::Tuple) = print_shunted_list(io, shunt, [x...])
+@noinline function print_shunted_list(io::IO, shunt::Shunt, x::Tuple)
+    return print_shunted_list(io, shunt, [x...])
+end
