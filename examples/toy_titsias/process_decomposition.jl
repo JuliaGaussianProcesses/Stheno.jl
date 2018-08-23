@@ -1,6 +1,6 @@
-using Revise
-using Stheno
-using Stheno: @model
+using Stheno, Random, Plots
+using Stheno: @model, Titsias
+
 
 
 ###########################  Define our model  ###########################
@@ -23,13 +23,14 @@ using Stheno: @model
     return f₁, f₂, f₃, y₁, y₂, y₃
 end
 
+f₁, f₂, f₃, y₁, y₂, y₃ = model();
+
 # Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
 # at which to measure `f` using `y2`.
 rng, N₁, N₃, M = MersenneTwister(123546), 100, 100, 50;
-Z = linspace(-15.0, 15.0, M);
-X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
-gpc = GPC();
-f₁, f₂, f₃, y₁, y₂, y₃ = model(gpc);
+Z = range(-15.0, stop=15.0, length=M);
+X₁ = sort(rand(rng, N₁) * 10);
+X₃ = sort(rand(rng, N₃) * 10);
 
 # Generate some toy observations of `f₁` and `f₃`.
 ŷ₁, ŷ₃ = rand(rng, [y₁(X₁), y₃(X₃)]);
@@ -38,13 +39,11 @@ ŷ₁, ŷ₃ = rand(rng, [y₁(X₁), y₃(X₃)]);
 f, ŷ = BlockGP([f₁(X₁), f₃(X₃)]), BlockVector([ŷ₁, ŷ₃]);
 u = BlockGP([f₁(Z), f₃(Z)]);
 
-m′u, Σ′uu = Stheno.optimal_q(f, ŷ, u, sqrt(σ²));
-conditioner = Stheno.Titsias(u, m′u, Σ′uu, gpc);
-f₁′, f₂′, f₃′, y₁′, y₂′, y₃′ = (f₁, f₂, f₃, y₁, y₂, y₃) | conditioner;
+f₁′, f₂′, f₃′, y₁′, y₂′, y₃′ = (f₁, f₂, f₃, y₁, y₂, y₃) | Titsias(f←ŷ, u, sqrt(σ²));
 
 # Define some plotting stuff.
 Np, S = 500, 25;
-Xp = linspace(-2.5, 12.5, Np);
+Xp = range(-2.5, stop=12.5, length=Np);
 
 # Sample jointly from the posterior over each process.
 f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(Xp)], S);
@@ -69,7 +68,6 @@ mf′3, σf′3 = marginals(f′3(Xp));
 
 ###########################  Plot results  ###########################
 
-using Plots
 plotly();
 approximate_posterior_plot = plot();
 
