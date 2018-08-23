@@ -12,7 +12,7 @@ First, a note for statistics / ML people who aren't too familiar with Julia: the
 
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
-using Stheno
+using Stheno, Random
 using Stheno: @model
 
 # Explicitly set pseudo-randomness for reproducibility.
@@ -35,7 +35,7 @@ ŷ₁, ŷ₃ = rand(rng, [f₁(X₁), f₃(X₃)])
 (f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁)←ŷ₁, f₃(X₃)←ŷ₃)
 
 # Sample jointly from the posterior processes and compute posterior marginals.
-Xp = linspace(-2.5, 12.5, 500)
+Xp = range(-2.5, stop=12.5, length=500)
 f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(Xp)], 25)
 μf₁′, σf₁′ = marginals(f₁′(Xp))
 μf₂′, σf₂′ = marginals(f₂′(Xp))
@@ -43,12 +43,12 @@ f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp), f₂′(Xp), f₃′(X
 ```
 ![Alternate Text](examples/toy/process_decomposition.png)
 
-In the above graph, we have visualised the posterior distribution of all of the processes. Bold lines are posterior means, and shaded areas are three posterior standard deviations from these means. Thin lines are samples from the posterior processes. Note that each of these samples are performed jointly.
+In the above figure, we have visualised the posterior distribution of all of the processes. Bold lines are posterior means, and shaded areas are three posterior standard deviations from these means. Thin lines are samples from the posterior processes.
 
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
 ```julia
-using Stheno
+using Stheno, Random
 using Stheno: @model
 
 # Explicitly set pseudo-randomness for reproducibility.
@@ -79,7 +79,7 @@ ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)])
 (f′, y₁′, y₂′) = (f, y₁, y₂) | (y₁(X₁)←ŷ₁, y₂(X₂)←ŷ₂)
 
 # Sample jointly from the posterior processes and compute posterior marginals.
-Xp = linspace(-2.5, 12.5, 500)
+Xp = range(-2.5, stop=12.5, length=500)
 f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp), y₁′(Xp), y₂′(Xp)], 100)
 μf′, σf′ = marginals(f′(Xp))
 μy₁′, σy₁′ = marginals(y₁′(Xp))
@@ -87,12 +87,12 @@ f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp), y₁′(Xp), y₂′(Xp)], 1
 ```
 ![Alternate Text](examples/toy/simple_sensor_fusion.png)
 
-As before we visualise the posterior distribution through its marginal statistics and joint samples. Note that the posterior samples over the unobserved process are (unsurprisingly) smooth, whereas the posterior samples over the noisy processes still look uncorrelated and noise-like.
+As before, we visualise the posterior distribution through its marginal statistics and joint samples. Note that the posterior samples over the unobserved process are (unsurprisingly) smooth, whereas the posterior samples over the noisy processes still look uncorrelated and noise-like.
 
 
 ## Performance, scalability, etc
 
-Stheno (currently) makes no claims regarding performance or scalability relative to existing Gaussian process packages. It should be viewed as a (hopefully interesting) baseline implementation for solving small-ish problems. We do provide a baseline implementation of (interdomain-) pseudo-point approximations, and can exploit Toeplitz structure in covariance matrices, but these have yet to be fully optimised.
+Stheno (currently) makes no claims regarding performance or scalability relative to existing Gaussian process packages. It should be viewed as a (hopefully interesting) baseline implementation for solving small-ish problems. We do provide a baseline implementation of (inter-domain) pseudo-point approximations, and can exploit Toeplitz structure in covariance matrices, but these have yet to be fully optimised.
 
 
 ## Non-Gaussian problems
@@ -101,6 +101,18 @@ Stheno is designed for jointly Gaussian problems, and there are no plans to supp
 
 Example usage will be made available in the near future.
 
+This is not to say that there would be no value in the creation of a separate package that extends Stheno to handle, for example, non-Gaussian likelihoods.
 
 ## The Elephant in the Room
-You can't currently perform gradient-based kernel parameter optimisation in Stheno. This an automatic-differentiation related issue, which will definitely be resolved in 0.7 / 1.0 once [Capstan.jl](https://github.com/JuliaDiff/Capstan.jl) or some other [Cassette.jl](https://github.com/jrevels/Cassette.jl)-based AD package is available. There's not a lot more to say than that really. Apologies.
+You can't currently perform gradient-based kernel parameter optimisation in Stheno. This an automatic-differentiation related issue, which will definitely be resolved in the 1.0 timeline, once [Capstan.jl](https://github.com/JuliaDiff/Capstan.jl) or some other [Cassette.jl](https://github.com/jrevels/Cassette.jl)-based AD package is available, and [DiffRules.jl](https://github.com/JuliaDiff/DiffRules.jl) has support for Linear Algebra primitives. There's not a lot more to say than that really. Apologies.
+
+## Things that are definitely up for grabs
+Obviously, improvements to code documentation are always welcome, and if you want to write add some units tests, please feel free. In terms of larger items that require some attention, here are some thoughts:
+- An implementation of SVI from [Gaussian Processes for Big Data](https://arxiv.org/abs/1309.6835).
+- Kronecker-factored matrices: this is quite a general issue which might be best be addressed by the creation of a separate package. It would be very helpful to have an implementation of the `AbstractMatrix` interface which implements multiplication, inversion, eigenfactorisation etc, which can then be utilised in Stheno.
+- All the Stochastic Differential Equation representation of GP related optimisations. See Arno Solin's thesis for a primer. This is quite a big problem that should probably be tackled in pieces.
+- Primitives for multi-output GPs: although Stheno does fundamentally have support for multi-output GPs, in the same way that it's helpful to implement so-called "fat" nodes in Automatic Differentiation systems, it may well be helpful to implement specialised multi-output processes in Stheno for performance's sake.
+- Moving stuff from the `src/util` directory to the appropriate upstream package. There are two candidates here: block_arrays.jl and toeplitz.jl being moved to BlockArrays.jl and Toeplitz.jl respectively. This will likely involve making significant changes to the existing code such that it satisfies the requirements of both Stheno, and the relevant upstream package. This is a slightly strange item as it will ultimately involve removing a significant amount of code from Stheno. This is a good thing though.
+- Some decent benchmarks: development has not focused on performance so far, but it would be extremely helpful to have a wide range of benchmarks so that we can begin to ensure that time is spent optimally. This would involve comparing against [GaussianProcesses.jl](https://github.com/STOR-i/GaussianProcesses.jl), but also some other non-Julia packages.
+
+If you are interested in any of the above, please either open an issue or PR. Better still, if there's something not listed here that you think would be good to see, please open an issue to start a discussion regarding it.

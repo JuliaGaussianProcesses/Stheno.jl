@@ -16,7 +16,9 @@ end
 struct DerivativeKernel{Tk<:Kernel} <: Kernel
     k::Tk
 end
-(k::DerivativeKernel)(x::Real, x′::Real) = derivative(x′->derivative(x->k.k(x, x′), x), x′)
+function (k::DerivativeKernel)(x::Real, x′::Real)
+    return derivative(x′->derivative(x->k.k(x, x′), x), x′)
+end
 (k::DerivativeKernel)(x::Real) = k(x, x)
 
 """
@@ -26,7 +28,9 @@ end
 struct DerivativeLhsCross{Tk<:CrossKernel} <: CrossKernel
     k::Tk
 end
-(k::DerivativeLhsCross)(x::Real, x′::Real) = derivative(x->k.k(x, x′), x)
+function (k::DerivativeLhsCross)(x::Real, x′::Real)
+    return derivative(x->k.k(x, x′), x)
+end
 
 """
     DerivativeRhsCross{Tk<:CrossKernel} <: CrossKernel
@@ -35,7 +39,9 @@ end
 struct DerivativeRhsCross{Tk<:CrossKernel} <: CrossKernel
     k::Tk
 end
-(k::DerivativeRhsCross)(x::Real, x′::Real) = derivative(x′->k.k(x, x′), x′)
+function (k::DerivativeRhsCross)(x::Real, x′::Real)
+    return derivative(x′->k.k(x, x′), x′)
+end
 
 """
     DerivativeCross{Tk<:CrossKernel} <: CrossKernel
@@ -44,5 +50,7 @@ end
 struct DerivativeCross{Tk<:CrossKernel} <: CrossKernel
     k::Tk
 end
-(k::DerivativeCross)(x::Real, x′::Real) = derivative(x′->derivative(x->k.k(x, x′), x), x′)
+function (k::DerivativeCross)(x::Real, x′::Real)
+    return derivative(x′->derivative(x->k.k(x, x′), x), x′)
+end
 (k::DerivativeCross)(x::Real) = k(x, x)
