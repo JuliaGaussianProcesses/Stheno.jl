@@ -116,7 +116,7 @@ let
     @test isapprox(Σᵤᵤ, cov(f′XX′); rtol=1e-4)
 
     # Compute conditioner and exact posterior compute at test points.
-    conditioner = Stheno.Titsias(f(XX′), μᵤ, Σᵤᵤ, gpc)
+    conditioner = Stheno.Titsias(f(XX′), μᵤ, Σᵤᵤ)
     f′Z = f(Z) | (y(XX′)←ŷ)
     f′Z_approx = f(Z) | conditioner
 
@@ -139,7 +139,7 @@ let
     @test Σb ≈ Σᵤᵤ
 
     # Test that conditioning is indifferent to choice of Blocks.
-    conditioner_blocked = Stheno.Titsias(fb, μb, Σb, gpc)
+    conditioner_blocked = Stheno.Titsias(fb, μb, Σb)
     f′Zb = f(BlockData([Z])) | conditioner_blocked
 
     @test isapprox(mean_vec(f′Z), mean_vec(f′Zb); rtol=1e-4)

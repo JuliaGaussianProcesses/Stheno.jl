@@ -1,6 +1,10 @@
 import Base: |, merge
 export ←, |
 
+
+
+################################## Exact Conditioning ######################################
+
 """
     Observation
 
@@ -53,6 +57,10 @@ function |(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}})
     return deconstruct(BlockGP([g...]) | merge(c))
 end
 
+
+
+################################# Approximate Conditioning #################################
+
 abstract type AbstractConditioner end
 
 FillArrays.Zeros(x::BlockVector) = BlockVector(Zeros.(x.blocks))
@@ -66,10 +74,10 @@ struct Titsias{Tu<:AbstractGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
     u::Tu
     m′u::Tm
     γ::Tγ
-    function Titsias(u::Tu, m′u::Tm, Σ′uu::AM, gpc::GPC) where {Tu, Tm}
+    function Titsias(u::Tu, m′u::Tm, Σ′uu::AM) where {Tu, Tm}
         μ = EmpiricalMean(Zeros(m′u))
         Σ = EmpiricalKernel(Xtinv_A_Xinv(Σ′uu, cov(u)))
-        γ = GP(μ, Σ, gpc)
+        γ = GP(μ, Σ, u.gpc)
         return new{Tu, Tm, typeof(γ)}(u, m′u, γ)
     end
 end
@@ -88,6 +96,7 @@ function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)
     μ′ᵤ = μᵤ + broadcast(/, U' * (Ω \ (Γ * δ)), σ)
     return μ′ᵤ, Σ′ᵤᵤ
 end
+optimal_q(c::Observation, u::AbstractGP, σ::Real) = optimal_q(c.f, c.y, u, σ)
 
 # Sugar.
 function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AbstractGP, σ::Real)
