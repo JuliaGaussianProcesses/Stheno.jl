@@ -132,3 +132,6 @@ end
 function Titsias(c::Observation, u::Vector{<:AbstractGP}, σ::Real)
     return Titsias(c, BlockGP(u), σ::Real)
 end
+function Titsias(c::Vector{<:Observation}, u::AbstractGP, σ::Real)
+    return Titsias(merge(c), u,  σ)
+end
