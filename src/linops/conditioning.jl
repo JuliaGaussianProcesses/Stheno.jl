@@ -13,7 +13,9 @@ end
 ←(f, y) = Observation(f, y)
 get_f(c::Observation) = c.f
 get_y(c::Observation) = c.y
-merge(c::Tuple{Vararg{Observation}}) = BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
+function merge(c::Union{AbstractVector{<:Observation}, Tuple{Vararg{Observation}}})
+    return BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
+end
 
 """
     |(g::AbstractGP, c::Observation)
@@ -103,3 +105,21 @@ function |(g::BlockGP, c::Titsias)
     return BlockGP(g.fs .| Ref(c))
 end
 
+"""
+    Titsias(
+        c::Union{Observation, Vector{<:Observation}},
+        u::Union{AbstractGP, Vector{<:AbstractGP}},
+        σ::Real,
+    )
+
+Instantiate the saturated Titsias conditioner.
+"""
+function Titsias(c::Observation, u::AbstractGP, σ::Real)
+    return Titsias(u, optimal_q(c, u, σ)...)
+end
+function Titsias(c::Vector{<:Observation}, u::Vector{<:AbstractGP}, σ::Real)
+    return Titsias(merge(c), BlockGP(u), σ)
+end
+function Titsias(c::Observation, u::Vector{<:AbstractGP}, σ::Real)
+    return Titsias(c, BlockGP(u), σ::Real)
+end

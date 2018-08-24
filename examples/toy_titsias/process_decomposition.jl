@@ -31,16 +31,9 @@ X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
 gpc = GPC();
 f₁, f₂, f₃, y₁, y₂, y₃ = model(gpc);
 
-# Generate some toy observations of `f₁` and `f₃`.
+# Generate some toy observations of `f₁` and `f₃` and approximately condition.
 ŷ₁, ŷ₃ = rand(rng, [y₁(X₁), y₃(X₃)]);
-
-# Compute approximation to the posterior by placing data in the simply way.
-f, ŷ = BlockGP([f₁(X₁), f₃(X₃)]), BlockVector([ŷ₁, ŷ₃]);
-u = BlockGP([f₁(Z), f₃(Z)]);
-
-m′u, Σ′uu = Stheno.optimal_q(f, ŷ, u, sqrt(σ²));
-conditioner = Stheno.Titsias(u, m′u, Σ′uu, gpc);
-f₁′, f₂′, f₃′, y₁′, y₂′, y₃′ = (f₁, f₂, f₃, y₁, y₂, y₃) | conditioner;
+f₁′, f₂′, f₃′ = (f₁, f₂, f₃) | Titsias([f₁(X₁)←ŷ₁, f₃(X₃)←ŷ₃], [f₁(Z), f₃(Z)], sqrt(σ²));
 
 # Define some plotting stuff.
 Np, S = 500, 25;
