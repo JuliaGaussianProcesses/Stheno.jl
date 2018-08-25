@@ -124,6 +124,27 @@ eachindex(k::OuterKernel) = eachindex(k.k)
 
 import Base: +, *, promote_rule, convert
 
+function *(f, k::CrossKernel)
+    return iszero(k) ? k : LhsCross(f, k)
+end
+function *(k::CrossKernel, f)
+    return iszero(k) ? k : RhsCross(k, f)
+end
+function *(f, k::RhsCross)
+    if k.k isa Kernel && f == k.f
+        return OuterKernel(f, k.k)
+    else
+        return LhsCross(f, k)
+    end
+end
+function *(k::LhsCross, f)
+    if k.k isa Kernel && f == k.f
+        return OuterKernel(f, k.k)
+    else
+        return RhsCross(k, f)
+    end
+end
+
 promote_rule(::Type{<:MeanFunction}, ::Type{<:Real}) = MeanFunction
 convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
 
