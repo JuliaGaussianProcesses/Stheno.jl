@@ -35,6 +35,43 @@ length(k::ITKernel) = length(k.k)
 isstationary(k::ITKernel) = isstationary(k.k)
 eachindex(k::ITKernel) = eachindex(k.k)
 
+"""
+    LhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
+
+"LhsInputTransformationCrossKernel": The kernel `k′` given by `k′(x, x′) = k(f(x), x′)`.
+"""
+struct LhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
+    k::Tk
+    f::Tf
+end
+(k::LhsITCross)(x, x′) = k.k(k.f(x), x′)
+size(k::LhsITCross, n::Int) = size(k.k, n)
+
+"""
+    RhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
+
+"RhsInputTransformationCrossKernel": The kernel `k′` given by `k′(x, x′) = k(x, f(x′))`.
+"""
+struct RhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
+    k::Tk
+    f::Tf
+end
+(k::RhsITCross)(x, x′) = k.k(x, k.f(x′))
+size(k::RhsITCross, n::Int) = size(k.k, n)
+
+"""
+    ITCross{Tk<:Kernel, Tf, Tf′} <: CrossKernel
+
+"InputTransformationCrossKernel": the kernel `k′` given by `k′(x, x′) = k(f(x), f′(x′))`.
+"""
+struct ITCross{Tk<:Kernel, Tf, Tf′} <: CrossKernel
+    k::Tk
+    f::Tf
+    f′::Tf′
+end
+(k::ITCross)(x, x′) = k.k(k.f(x), k.f′(x′))
+size(k::ITCross, n::Int) = size(k.k, n)
+
 _map(k::ITKernel, X::AV) = map(k.k, map(k.f, X))
 _map(k::ITKernel, X::AV, X′::AV) = map(k.k, map(k.f, X), map(k.f, X′))
 _pairwise(k::ITKernel, X::AV) = pairwise(k.k, map(k.f, X))
@@ -46,7 +83,13 @@ _pairwise(k::ITKernel, X::AV, X′::AV) = pairwise(k.k, map(k.f, X), map(k.f, X�
 Applies the input-transform `ϕ` to `f`.
 """
 transform(μ::MeanFunction, ϕ) = ITMean(μ, ϕ)
+transform(μ::MeanFunction, ::typeof(identity)) = μ
+transform(μ::ZeroMean, ϕ) = μ
+transform(μ::ZeroMean, ::typeof(identity)) = μ
 transform(k::Kernel, ϕ) = ITKernel(k, ϕ)
+transform(k::CrossKernel, ϕ, ::Val{1}) = LhsITCross(k, ϕ)
+transform(k::CrossKernel, ϕ, ::Val{2}) = RhsITCross(k, ϕ)
+transform(k::CrossKernel, ϕ, ϕ′) = ITCross(k, ϕ, ϕ′)
 
 """
     scale(f::Union{MeanFunction, Kernel}, l::Real)

@@ -5,7 +5,6 @@ module Stheno
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
-    # const AMRV{T} = Union{AbstractMatrix{T}, RowVector{T}}
 
     # Various bits of utility that aren't inherently GP-related.
     include("util/covariance_matrices.jl")
@@ -39,10 +38,11 @@ module Stheno
     include("linops/indexing.jl")
     include("linops/addition.jl")
     include("linops/product.jl")
-    # include("linops/integrate.jl")
+    include("linops/compose.jl")
     include("linops/project.jl")
     include("linops/conditioning.jl")
     include("linops/gradient.jl")
+    # include("linops/integrate.jl")
 
     # The @model macro.
     include("util/model.jl")
