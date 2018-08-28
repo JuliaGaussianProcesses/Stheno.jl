@@ -1,6 +1,6 @@
 import Base: map, eachindex
 import Distances: pairwise
-export transform, pick_dims, periodic, scale
+export transform, pick_dims, periodic, scale, Indexer
 
 """
     ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
@@ -83,13 +83,24 @@ _pairwise(k::ITKernel, X::AV, X′::AV) = pairwise(k.k, map(k.f, X), map(k.f, X�
 Applies the input-transform `ϕ` to `f`.
 """
 transform(μ::MeanFunction, ϕ) = ITMean(μ, ϕ)
+
 transform(μ::MeanFunction, ::typeof(identity)) = μ
 transform(μ::ZeroMean, ϕ) = μ
 transform(μ::ZeroMean, ::typeof(identity)) = μ
+
 transform(k::Kernel, ϕ) = ITKernel(k, ϕ)
+transform(k::Kernel, ::typeof(identity)) = k
+transform(k::ZeroKernel, ϕ) = k
+transform(k::ZeroKernel, ::typeof(identity)) = k
+
 transform(k::CrossKernel, ϕ, ::Val{1}) = LhsITCross(k, ϕ)
 transform(k::CrossKernel, ϕ, ::Val{2}) = RhsITCross(k, ϕ)
+
+transform(k::ZeroKernel, ϕ, ::Val{1}) = k
+transform(k::ZeroKernel, ϕ, ::Val{2}) = k
+
 transform(k::CrossKernel, ϕ, ϕ′) = ITCross(k, ϕ, ϕ′)
+
 
 """
     scale(f::Union{MeanFunction, Kernel}, l::Real)
@@ -133,3 +144,14 @@ function map(p::Periodic, t::AV)
         map(x->sin((2π * p.f) * x), t)',
     ))
 end
+
+"""
+    Indexer
+
+Pulls out the `n`th index of whatever object is passed.
+"""
+struct Indexer
+    n::Int
+end
+(indexer::Indexer)(x) = x[indexer.n]
+map(indexer::Indexer, x::ColsAreObs) = view(x.X, indexer.n, :)
