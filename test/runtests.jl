@@ -40,7 +40,7 @@ using Stheno, Test, Random, LinearAlgebra, Statistics
         include("linops/conditioning.jl")
     end
 
-    # @testset "integration" begin
-    #     include("util/toeplitz_integration.jl")
-    # end
+    @testset "integration" begin
+        include("util/toeplitz_integration.jl")
+    end
 end
