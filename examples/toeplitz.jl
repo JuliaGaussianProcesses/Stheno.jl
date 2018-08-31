@@ -32,7 +32,7 @@ ŷ = rand(rng, y(x));
 ######################## Example 2: Block Vanilla Toeplitz ########################
 
 # Suppose that we have two separate blocks of regularly spaced data eg. missing data.
-xl, xr = linspace(-5.0, 0.0, 5000), linspace(0.0, 5.0, 5000);
+xl, xr = range(-5.0, stop=0.0, length=5000), range(0.0, stop=5.0, length=5000);
 
 # If we inspect the underlying blocks of the covariance, we see they are all still Toeplitz.
 using Stheno: unbox
@@ -40,8 +40,6 @@ f_xl_xr = BlockGP([f(xl), f(xr)]);
 y_xl_xr = BlockGP([y(xl), y(xr)]);
 Σff = cov(f_xl_xr);
 display(typeof.(unbox(unbox(Σff)).blocks));
-
-# DOESN'T APPEAR TO WORK WITH f(BlockData([xl, xr]))!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # THIS CURRENTLY SEEMS A BIT SLOW! COMPARE TO DENSE PROPERLY!
 rng = MersenneTwister(123456);
@@ -76,8 +74,8 @@ display(typeof.(unbox(unbox(Σ12)).blocks));
 ######################### Example 4: Temporally mis-aligned data ##########################
 
 # What if each output has the same sampling rate, but the data are misaligned?
-x₁ = linspace(-5.0, 5.0, 5000);
-x₂ = x₁ + 0.3;
+x₁ = range(-5.0, stop=5.0, length=5000);
+x₂ = x₁ .+ 0.3;
 
 # The joint covariance still comprises Toeplitz matrices.
 y_x1_x2 = BlockGP([y₁(x₁), y₂(x₂)]);

@@ -112,7 +112,7 @@ function pairwise(k::Kernel, x::StepRangeLen{<:Real})
     end
 end
 function pairwise(k::CrossKernel, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real})
-    if isstationary(k) && x.ref == x′.ref
+    if isstationary(k) && x.step == x′.step
         return Toeplitz(
             map(k, x, Fill(x′[1], length(x))),
             map(k, Fill(x[1], length(x′)), x′),

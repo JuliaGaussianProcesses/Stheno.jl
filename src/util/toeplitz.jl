@@ -1,5 +1,5 @@
 using ToeplitzMatrices
-import LinearAlgebra: Symmetric, cholesky
+import LinearAlgebra: Symmetric, cholesky, *, mul!
 
 import Base: transpose, adjoint, copy
 import ToeplitzMatrices: Toeplitz
@@ -56,3 +56,23 @@ adjoint(T::SymmetricToeplitz) = T
 @inline LinearAlgebra.Symmetric(T::SymmetricToeplitz) = T
 
 Toeplitz(vc::AbstractVector, vr::AbstractVector) = Toeplitz(Vector(vc), Vector(vr))
+
+# """
+#     mul!(C::Matrix, A::AbstractToeplitz, B::AbstractToeplitz)
+
+# `O(prod(size(C)))` matrix multiplication for Toeplitz matrices. Follows from a skeleton of
+# an algorithm on stackoverflow:
+# https://stackoverflow.com/questions/15889521/product-of-two-toeplitz-matrices
+# """
+# function mul!(C::Matrix, A::AbstractToeplitz, B::AbstractToeplitz)
+#     for q in 1:size(C, 2)
+#         for p in 1:size(C, 1)
+#             C[p, q]
+#         end
+#     end
+#     return C
+# end
+
+# # function *(A::AbstractToeplitz, B::AbstractToeplitz)
+
+# # end
