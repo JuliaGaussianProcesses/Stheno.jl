@@ -103,6 +103,10 @@ Example usage will be made available in the near future.
 
 This is not to say that there would be no value in the creation of a separate package that extends Stheno to handle, for example, non-Gaussian likelihoods.
 
+## GPs + Deep Learning
+
+The plan is again not to support the combination of GPs and Deep Learning explicitly, but rather to ensure that Stheno and [Flux.jl](https://github.com/FluxML/Flux.jl) play nicely with one another. Once the AD-related issues below have been resolved, example usage will be provided.
+
 ## The Elephant in the Room
 You can't currently perform gradient-based kernel parameter optimisation in Stheno. This an automatic-differentiation related issue, which will definitely be resolved in the 1.0 timeline, once [Capstan.jl](https://github.com/JuliaDiff/Capstan.jl) or some other [Cassette.jl](https://github.com/jrevels/Cassette.jl)-based AD package is available, and [DiffRules.jl](https://github.com/JuliaDiff/DiffRules.jl) has support for Linear Algebra primitives. There's not a lot more to say than that really. Apologies.
 
