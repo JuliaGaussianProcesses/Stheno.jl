@@ -1,5 +1,5 @@
 using Stheno
-using Stheno: @model
+using Stheno: @model, LazyPDMat
 using ToeplitzMatrices: SymmetricToeplitz
 
 @testset "Toeplitz Integration" begin
@@ -35,7 +35,7 @@ fb_xl = BlockGP([f(xl), y(xl)])
 fb_x = BlockGP([f(x), y(x)])
 
 
-using Stheno: unbox
+using Stheno: unbox, chol
 Σl = unbox(cov(fb_xl)) + 1e-6I;
 U = chol(Σl);
 
