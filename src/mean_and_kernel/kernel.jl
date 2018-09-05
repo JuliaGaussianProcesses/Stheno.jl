@@ -198,6 +198,16 @@ isstationary(::Type{<:PerEQ}) = true
 (k::PerEQ)(x::Real) = one(typeof(x))
 @inline eachindex(k::PerEQ) = eachindex_err(k)
 
+"""
+    Exponential <: Kernel
+
+The standardised Exponential kernel.
+"""
+struct Exponential <: Kernel end
+isstationary(::Type{<:Exponential}) = true
+(::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
+(::Exponential)(x) = one(Float64)
+@inline eachindex(k::Exponential) = eachindex_err(k)
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -293,15 +303,7 @@ end
 #     min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
 # show(io::IO, ::WienerVelocity) = show(io, "WienerVelocity")
 
-# """
-#     Exponential <: Kernel
 
-# The standardised Exponential kernel.
-# """
-# struct Exponential <: Kernel end
-# @inline (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
-# isstationary(::Type{<:Exponential}) = true
-# show(io::IO, ::Exponential) = show(io, "Exp")
 
 """
     EmpiricalKernel <: Kernel
