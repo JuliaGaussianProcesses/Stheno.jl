@@ -105,23 +105,21 @@ end
 
 # Optimisation for Toeplitz covariance matrices.
 function pairwise(k::Kernel, x::StepRangeLen{<:Real})
-    return LazyPDMat(_pairwise(k, x))
-    # if isstationary(k)
-    #     return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
-    # else
-    #     return LazyPDMat(_pairwise(k, x))
-    # end
+    if isstationary(k)
+        return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
+    else
+        return LazyPDMat(_pairwise(k, x))
+    end
 end
 function pairwise(k::CrossKernel, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real})
-    return _pairwise(k, x, x′)
-    # if isstationary(k) && x.ref == x′.ref
-    #     return Toeplitz(
-    #         map(k, x, Fill(x′[1], length(x))),
-    #         map(k, Fill(x[1], length(x′)), x′),
-    #     )
-    # else
-    #     return _pairwise(k, x, x′)
-    # end
+    if isstationary(k) && x.step == x′.step
+        return Toeplitz(
+            map(k, x, Fill(x′[1], length(x))),
+            map(k, Fill(x[1], length(x′)), x′),
+        )
+    else
+        return _pairwise(k, x, x′)
+    end
 end
 
 
@@ -200,6 +198,16 @@ isstationary(::Type{<:PerEQ}) = true
 (k::PerEQ)(x::Real) = one(typeof(x))
 @inline eachindex(k::PerEQ) = eachindex_err(k)
 
+"""
+    Exponential <: Kernel
+
+The standardised Exponential kernel.
+"""
+struct Exponential <: Kernel end
+isstationary(::Type{<:Exponential}) = true
+(::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
+(::Exponential)(x) = one(Float64)
+@inline eachindex(k::Exponential) = eachindex_err(k)
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -295,15 +303,7 @@ end
 #     min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
 # show(io::IO, ::WienerVelocity) = show(io, "WienerVelocity")
 
-# """
-#     Exponential <: Kernel
 
-# The standardised Exponential kernel.
-# """
-# struct Exponential <: Kernel end
-# @inline (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
-# isstationary(::Type{<:Exponential}) = true
-# show(io::IO, ::Exponential) = show(io, "Exp")
 
 """
     EmpiricalKernel <: Kernel

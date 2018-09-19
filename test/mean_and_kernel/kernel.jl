@@ -81,6 +81,13 @@ struct FooKernel <: CrossKernel end
         kernel_tests(EQ(), BlockData([x0, x0]), BlockData([x1, x1]), BlockData([x2, x2]))
         kernel_tests(EQ(), BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2, X2]))
 
+        # Tests for Exponential.
+        @test isstationary(EQ())
+        @test size(Exponential(), 1) == Inf && size(Exponential(), 2) == Inf
+        @test size(Exponential()) == (Inf, Inf)
+        kernel_tests(Exponential(), x0, x1, x2)
+        kernel_tests(EQ(), BlockData([x0, x0]), BlockData([x1, x1]), BlockData([x2, x2]))
+
         # Tests for Linear.
         @test !isstationary(Linear)
         a, b = Linear(randn(rng)), Linear(randn(rng))
