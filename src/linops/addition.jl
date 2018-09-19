@@ -27,3 +27,12 @@ function k_p′(::typeof(+), fa, fb)
 end
 k_pp′(fp::GP, ::typeof(+), fa, fb) = kernel(fp, fa) + kernel(fp, fb)
 k_p′p(::typeof(+), fa, fb, fp::GP) = kernel(fa, fp) + kernel(fb, fp)
+
+"""
+    +(c::Real, f::GP)
+    +(f::GP, c::Real)
+
+Adding a constant to a GP just shifts the mean.
+"""
++(c::T, f::GP) where T<:Real = GP(c, ZeroKernel{T}(), f.gpc) + f
++(f::GP, c::T) where T<:Real = f + GP(c, ZeroKernel{T}(), f.gpc)

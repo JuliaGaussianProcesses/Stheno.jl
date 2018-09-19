@@ -43,4 +43,13 @@
         @test mean_vec((f2 + fj2)(BlockData([X, X′]))) ==
             BlockData([mean_vec((f2 + f2)(X)), mean_vec((f2 + f1)(X′))])
     end
+
+    # Check that adding a constant to a GP yields a GP with a shifted mean.
+    let
+        rng, N, D = MersenneTwister(123456), 5, 6, 2
+        X = ColsAreObs(randn(rng, D, N))
+        c, f = randn(rng), GP(5.0, EQ(), GPC())
+        @test map(mean(f + c), X) == map(mean(f), X) .+ c
+        @test map(mean(c + f), X) == c .+ map(mean(f), X)
+    end
 end

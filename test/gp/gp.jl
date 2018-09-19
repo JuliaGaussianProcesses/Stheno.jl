@@ -12,6 +12,12 @@
     #     @test Stheno.permutedims(x) == x'
     # end
 
+    # Check various ways to construct a GP do what you would expect.
+    let
+        m = 5.1
+        @test mean(GP(m, EQ(), GPC())) == ConstantMean(m)
+    end
+
     # Test the creation of indepenent GPs.
     let rng = MersenneTwister(123456)
 
