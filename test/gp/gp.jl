@@ -20,6 +20,9 @@
         @test mean_vec(GP(m, FiniteKernel(EQ(), randn(10)), GPC())) == fill(m, 10)
         @test mean(GP(zero(m), FiniteKernel(EQ(), randn(10)), GPC())) ==
             zero(FiniteMean(ConstantMean(m), randn(10)))
+
+        x = randn(10)
+        @test map(mean(GP(sin, EQ(), GPC())), x) == sin.(x)
     end
 
     # Test the creation of indepenent GPs.

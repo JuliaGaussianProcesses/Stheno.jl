@@ -29,10 +29,10 @@ k_pp′(fp::GP, ::typeof(+), fa, fb) = kernel(fp, fa) + kernel(fp, fb)
 k_p′p(::typeof(+), fa, fb, fp::GP) = kernel(fa, fp) + kernel(fb, fp)
 
 """
-    +(c::Real, f::GP)
-    +(f::GP, c::Real)
+    +(c, f::GP)
+    +(f::GP, c)
 
-Adding a constant to a GP just shifts the mean.
+Adding a deterministic quantity to a GP just shifts the mean.
 """
-+(c::T, f::GP) where T<:Real = GP(c, zero(kernel(f)), f.gpc) + f
-+(f::GP, c::T) where T<:Real = f + GP(c, zero(kernel(f)), f.gpc)
++(c, f::GP) = GP(c, zero(kernel(f)), f.gpc) + f
++(f::GP, c) = f + GP(c, zero(kernel(f)), f.gpc)
