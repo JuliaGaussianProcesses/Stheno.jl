@@ -16,6 +16,7 @@
     let
         m = 5.1
         @test mean(GP(m, EQ(), GPC())) == ConstantMean(m)
+        @test mean_vec(GP(m, FiniteKernel(EQ(), randn(10)), GPC())) == fill(m, 10)
     end
 
     # Test the creation of indepenent GPs.

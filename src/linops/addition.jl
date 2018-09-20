@@ -34,5 +34,5 @@ k_p′p(::typeof(+), fa, fb, fp::GP) = kernel(fa, fp) + kernel(fb, fp)
 
 Adding a constant to a GP just shifts the mean.
 """
-+(c::T, f::GP) where T<:Real = GP(c, ZeroKernel{T}(), f.gpc) + f
-+(f::GP, c::T) where T<:Real = f + GP(c, ZeroKernel{T}(), f.gpc)
++(c::T, f::GP) where T<:Real = GP(c, zero(kernel(f)), f.gpc) + f
++(f::GP, c::T) where T<:Real = f + GP(c, zero(kernel(f)), f.gpc)

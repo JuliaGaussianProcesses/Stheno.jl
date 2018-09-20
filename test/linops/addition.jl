@@ -51,5 +51,8 @@
         c, f = randn(rng), GP(5.0, EQ(), GPC())
         @test map(mean(f + c), X) == map(mean(f), X) .+ c
         @test map(mean(c + f), X) == c .+ map(mean(f), X)
+
+        g = f(randn(rng, 10))
+        @test mean_vec(g + c) == mean_vec(g) .+ c
     end
 end
