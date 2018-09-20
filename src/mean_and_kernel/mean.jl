@@ -48,6 +48,8 @@ struct ZeroMean{T<:Real} <: BaseMeanFunction end
 ==(::ZeroMean, ::ZeroMean) = true
 
 const ZM = ZeroMean{Float64}
+zero(::Type{<:MeanFunction}, N::Int) = FiniteZeroMean(1:N)
+zero(::Type{<:MeanFunction}) = ZeroMean{Float64}()
 zero(μ::MeanFunction) = length(μ) < Inf ? FiniteZeroMean(eachindex(μ)) : ZM()
 
 """
