@@ -1,4 +1,4 @@
-import Base: +
+import Base: +, -
 
 """
     +(fa::GP, fb::GP)
@@ -36,3 +36,9 @@ Adding a deterministic quantity to a GP just shifts the mean.
 """
 +(c, f::GP) = GP(c, zero(kernel(f)), f.gpc) + f
 +(f::GP, c) = f + GP(c, zero(kernel(f)), f.gpc)
+
+# Define negation in terms of other operations.
+-(f::GP) = -1 * f
+-(f::GP, c) = f + (-c)
+-(c, f::GP) = c + (-f)
+-(f::GP, g::GP) = f + (-g)

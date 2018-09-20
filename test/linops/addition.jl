@@ -56,6 +56,11 @@ using Stheno: pairwise
         @test pairwise(kernel(f + c), X) == pairwise(kernel(f), X)
         @test pairwise(kernel(c + f), X) == pairwise(kernel(f), X)
 
+        @test map(mean(f - c), X) == map(mean(f), X) .- c
+        @test map(mean(c - f), X) == c .- map(mean(f), X)
+        @test pairwise(kernel(f - c), X) == pairwise(kernel(f), X)
+        @test pairwise(kernel(c - f), X) == pairwise(kernel(f), X)
+
         g = f(randn(rng, 10))
         @test mean_vec(g + c) == mean_vec(g) .+ c
 
