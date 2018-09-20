@@ -1,3 +1,5 @@
+using Stheno: pairwise
+
 @testset "addition" begin
     let
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
@@ -42,5 +44,30 @@
         # Addition of a GP and a BlockGP.
         @test mean_vec((f2 + fj2)(BlockData([X, X′]))) ==
             BlockData([mean_vec((f2 + f2)(X)), mean_vec((f2 + f1)(X′))])
+    end
+
+    # Check that adding a constant to a GP yields a GP with a shifted mean.
+    let
+        rng, N, D = MersenneTwister(123456), 5, 6, 2
+        X = ColsAreObs(randn(rng, D, N))
+        c, f = randn(rng), GP(5.0, EQ(), GPC())
+        @test map(mean(f + c), X) == map(mean(f), X) .+ c
+        @test map(mean(c + f), X) == c .+ map(mean(f), X)
+        @test pairwise(kernel(f + c), X) == pairwise(kernel(f), X)
+        @test pairwise(kernel(c + f), X) == pairwise(kernel(f), X)
+
+        @test map(mean(f - c), X) == map(mean(f), X) .- c
+        @test map(mean(c - f), X) == c .- map(mean(f), X)
+        @test pairwise(kernel(f - c), X) == pairwise(kernel(f), X)
+        @test pairwise(kernel(c - f), X) == pairwise(kernel(f), X)
+
+        g = f(randn(rng, 10))
+        @test mean_vec(g + c) == mean_vec(g) .+ c
+
+        x = randn(rng, N + D)
+        @test map(mean(f + sin), x) == map(mean(f), x) + map(sin, x)
+        @test map(mean(sin + f), x) == map(sin, x) + map(mean(f), x)
+        @test pairwise(kernel(f + sin), x) == pairwise(kernel(f), x)
+        @test pairwise(kernel(sin + f), x) == pairwise(kernel(f), x)
     end
 end

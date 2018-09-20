@@ -1,4 +1,4 @@
-import Base: +
+import Base: +, -
 
 """
     +(fa::GP, fb::GP)
@@ -27,3 +27,18 @@ function k_p′(::typeof(+), fa, fb)
 end
 k_pp′(fp::GP, ::typeof(+), fa, fb) = kernel(fp, fa) + kernel(fp, fb)
 k_p′p(::typeof(+), fa, fb, fp::GP) = kernel(fa, fp) + kernel(fb, fp)
+
+"""
+    +(c, f::GP)
+    +(f::GP, c)
+
+Adding a deterministic quantity to a GP just shifts the mean.
+"""
++(c, f::GP) = GP(c, zero(kernel(f)), f.gpc) + f
++(f::GP, c) = f + GP(c, zero(kernel(f)), f.gpc)
+
+# Define negation in terms of other operations.
+-(f::GP) = -1 * f
+-(f::GP, c) = f + (-c)
+-(c, f::GP) = c + (-f)
+-(f::GP, g::GP) = f + (-g)

@@ -21,7 +21,25 @@ struct GP{Tμ<:MeanFunction, Tk<:Kernel} <: AbstractGaussianProcess
     end
     GP{Tμ, Tk}(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk} = GP{Tμ, Tk}(nothing, μ, k, gpc)
 end
-GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk} = GP{Tμ, Tk}(μ, k, gpc)
+GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ<:MeanFunction, Tk<:Kernel} = GP{Tμ, Tk}(μ, k, gpc)
+
+# GP initialised with a constant mean. Zero is specially handled.
+function GP(m::Real, k::Kernel, gpc::GPC)
+    if isfinite(length(k))
+        if iszero(m)
+            return GP(zero(EmpiricalMean(Zeros(length(k)))), k, gpc)  # hack
+        else
+            return GP(FiniteMean(ConstantMean(m), eachindex(k)), k, gpc)
+        end
+    else
+        if iszero(m)
+            return GP(zero(ConstantMean(m)), k, gpc)  # hack
+        else
+            return GP(ConstantMean(m), k, gpc)
+        end
+    end
+end
+GP(m, k::Kernel, gpc::GPC) = GP(CustomMean(m), k, gpc)
 GP(k::Kernel, gpc::GPC) = GP(ZeroMean{Float64}(), k, gpc)
 function GP(args...)
     μ, k, gpc = μ_p′(args...), k_p′(args...), get_check_gpc(args...)

@@ -12,6 +12,19 @@
     #     @test Stheno.permutedims(x) == x'
     # end
 
+    # Check various ways to construct a GP do what you would expect.
+    let
+        m = 5.1
+        @test mean(GP(m, EQ(), GPC())) == ConstantMean(m)
+        @test mean(GP(zero(m), EQ(), GPC())) === ZeroMean{typeof(m)}()
+        @test mean_vec(GP(m, FiniteKernel(EQ(), randn(10)), GPC())) == fill(m, 10)
+        @test mean(GP(zero(m), FiniteKernel(EQ(), randn(10)), GPC())) ==
+            zero(FiniteMean(ConstantMean(m), randn(10)))
+
+        x = randn(10)
+        @test map(mean(GP(sin, EQ(), GPC())), x) == sin.(x)
+    end
+
     # Test the creation of indepenent GPs.
     let rng = MersenneTwister(123456)
 
