@@ -43,12 +43,12 @@ function rand(rng::AbstractRNG, f::BlockGP, N::Int)
     end
     return M + chol(cov(f))' * BlockMatrix(randn.(Ref(rng), length.(f.fs), N))
 end
-rand(f::BlockGP, N::Int) = rand(Base.Random.GLOBAL_RNG, f, N)
+rand(f::BlockGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 
 function rand(rng::AbstractRNG, f::BlockGP)
     return mean_vec(f) + chol(cov(f))' * BlockVector(randn.(Ref(rng), length.(f.fs)))
 end
-rand(f::BlockGP) = rand(Base.Random.GLOBAL_RNG, f)
+rand(f::BlockGP) = rand(Random.GLOBAL_RNG, f)
 
 # Convenience methods for invoking `logpdf` and `rand` with multiple processes.
 rand(rng::AbstractRNG, fs::AV{<:AbstractGP}) = vec.(rand(rng, fs, 1))

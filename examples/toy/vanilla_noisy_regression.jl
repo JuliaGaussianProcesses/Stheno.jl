@@ -51,7 +51,7 @@ X = sort(rand(rng, N) * 10);
 ŷ = rand(rng, y(X));
 f′, noise′, y′ = (f, noise, y) | (y(X) ← ŷ);
 
-Nplot, S = 500, 100;
+Nplot, S = 500, 25;
 Xplot = range(-2.0, stop=12.0, length=Nplot);
 f′Xplot_, noise′Xplot_ = f′(Xplot), noise′(Xplot)
 f′Xp, noise′Xp = rand(rng, [f′Xplot_, noise′Xplot_], S);
@@ -66,20 +66,23 @@ f′Xp, noise′Xp = rand(rng, [f′Xplot_, noise′Xplot_], S);
 
 plotly();
 
-prior_plot = plot(X_prior, fX, label="f");
-scatter!(prior_plot, X_prior, noiseX,
-    label="noise",
-    markershape=:xcross,
-    markerstrokewidth=0.0,
-    markersize=2);
-scatter!(prior_plot, X_prior, yX,
-    label="y",
-    markershape=:xcross,
-    markerstrokewidth=0.0,
-    markersize=2);
-plot!(prior_plot, X_prior, fX + noiseX - yX,
-    label="f + noise - y",
-    linecolor=:red);
+
+gr();
+
+# prior_plot = plot(X_prior, fX, label="f");
+# scatter!(prior_plot, X_prior, noiseX,
+#     label="noise",
+#     markershape=:xcross,
+#     markerstrokewidth=0.0,
+#     markersize=2);
+# scatter!(prior_plot, X_prior, yX,
+#     label="y",
+#     markershape=:xcross,
+#     markerstrokewidth=0.0,
+#     markersize=2);
+# plot!(prior_plot, X_prior, fX + noiseX - yX,
+#     label="f + noise - y",
+#     linecolor=:red);
 
 posterior_plot = plot(Xplot, f′Xp;
     linecolor=:blue,
@@ -88,16 +91,17 @@ posterior_plot = plot(Xplot, f′Xp;
 plot!(posterior_plot, Xplot, μ′f;
     linewidth=2.0,
     linecolor=:blue);
-plot!(posterior_plot, Xplot, [μ′f μ′f];
-    linewidth=0.0,
-    fillrange=[μ′f .- 3 .* σ′y, μ′f .+ 3 * σ′y],
-    fillalpha=0.3,
-    fillcolor=:red);
+# plot!(posterior_plot, Xplot, [μ′f μ′f];
+#     linewidth=0.0,
+#     fillrange=[μ′f .- 3 .* σ′y, μ′f .+ 3 * σ′y],
+#     fillalpha=0.3,
+#     fillcolor=:red);
 plot!(posterior_plot, Xplot, [μ′f μ′f];
     linewidth=0.0,
     fillrange=[μ′f.- 3  .* σ′f μ′f .+ 3 .* σ′f],
     fillalpha=0.5,
-    fillcolor=:blue);
+    fillcolor=:blue,
+    linecolor=:blue);
 scatter!(posterior_plot, X, ŷ;
     markercolor=:red,
     markershape=:circle,
@@ -105,7 +109,13 @@ scatter!(posterior_plot, X, ŷ;
     markersize=4,
     markeralpha=0.7,
     legend=false);
-joint_plot = plot(prior_plot, posterior_plot, layout=(2, 1));
-display(joint_plot);
+
+savefig(posterior_plot, "/home/wct23/vanilla_regression.pdf");
+
+display(posterior_plot)
+
+
+# joint_plot = plot(prior_plot, posterior_plot, layout=(2, 1));
+# display(joint_plot);
 
 
