@@ -6,6 +6,8 @@ Stheno is designed to make doing non-standard things with Gaussian processes str
 
 [We also have a Python version of the package](https://github.com/wesselb/stheno)
 
+A technical report / pre-print detailing this work will be made available before Christmas 2018.
+
 ## A Couple of Examples
 
 First, a note for statistics / ML people who aren't too familiar with Julia: the first execution of the examples below will take a while as Julia has to compile the code. On subsequent runs (e.g. if you were repeatedly evaluating the `logpdf` for kernel parameter learning) it will progress _much_ faster.
