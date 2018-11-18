@@ -1,4 +1,4 @@
-using IterTools, BlockArrays, LinearAlgebra
+using BlockArrays, LinearAlgebra
 using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise, LazyPDMat
 
 """

@@ -1,6 +1,6 @@
 module Stheno
 
-    using Distributions, Distances, BlockArrays, FillArrays, IterTools, Statistics, Random
+    using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
