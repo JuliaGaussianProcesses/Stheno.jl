@@ -46,4 +46,6 @@ module Stheno
 
     # The @model macro.
     include("util/model.jl")
+    include("util/flux_rules.jl")
+
 end # module
