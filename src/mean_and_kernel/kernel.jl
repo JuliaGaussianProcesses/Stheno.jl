@@ -176,10 +176,12 @@ The standardised Exponentiated Quadratic kernel with no free parameters.
 struct EQ <: Kernel end
 isstationary(::Type{<:EQ}) = true
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-(::EQ)(x::Real, x′::Real) = exp(-0.5 * (x - x′)^2)
 (::EQ)(x::T) where T = one(Float64)
+(::EQ)(x::Real, x′::Real) = exp(-0.5 * (x - x′)^2)
 _pairwise(::EQ, X::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
-_pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
+function _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs)
+    return exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
+end
 
 """
     PerEQ{Tp<:Real}

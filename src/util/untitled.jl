@@ -139,22 +139,16 @@ l, σ̄ = forward(loss, 1.0)
 
 
 """
-    Op{Tf, Tvalue, Targs}
+    Op{Tf, Tvalue, Targs, Tkwargs}
 
 The totality of a call to a (pure) primtive function `f` at `args` and `kwargs`,
 producing `value`.
 """
-struct Op{Tf, Tvalue, Targs}
+struct Op{Tf, Tvalue, Targs, Tkwargs}
     f::Tf
     value::Tvalue
     args::Targs
-    function Op(f::Tf, args...) where Tf
-        value = f(args...)
-        return new{Tf, typeof(value), typeof(args)}(f, value, args)
-    end
-    function Op(value::T) where T
-        return new{Nothing, T, Nothing}(nothing, value, nothing)
-    end
+    kwargs::Tkwargs
 end
 
 # Alias for distinguishing between leaves and branches.
@@ -185,7 +179,7 @@ value(op::Op) = op.value
 # operation(pair::TapePair) = pair.op
 # positions(pair::TapePair) = pair.positions
 
-const Tape = Vector{Any}
+const Tape = Vector{Op}
 
 # function show(io::IO, mime::MIME"text/plain", tape::Tape)
 #     if length(tape) == 0
@@ -212,8 +206,9 @@ const Tape = Vector{Any}
 
 # A sprinkling of contextual execution.
 using Cassette
+using Core: kwftype
 using Cassette: @context, overdub, OverdubInstead, enabletagging
-import Cassette: execute
+import Cassette: prehook, execute, posthook
 @context FluxCtx
 
 # Define what is tracked and what isn't.
@@ -224,65 +219,14 @@ is_tracked(::TrackedReal) = true
 untrack(x::Union{TrackedReal, TrackedArray}) = x.data
 untrack(x) = x
 
-function Cassette.prehook(ctx::FluxCtx, ::typeof(track), f, args...; kwargs...)
-    println("Inside general tracking prehook")
-    println(f)
-    println(args)
+function posthook(ctx::FluxCtx, tmp, ::kwftype(typeof(track)), kwargs, ::typeof(track), f, args...)
+    push!(ctx.metadata, Op(f, tmp, args, kwargs))
 end
-function Cassette.prehook(ctx::FluxCtx, ::typeof(track), call::Call, args...)
-    println("Inside Call-specific prehook")
-    push!(ctx.metadata, call.func)
+function posthook(ctx::FluxCtx, tmp, ::typeof(track), f, args...)
+    push!(ctx.metadata, Op(f, tmp, args, nothing))
 end
-# function Cassette.prehook(ctx::FluxCtx, ::typeof(sum), f, args...; kwargs...)
-
-#     println("Inside sum tracking prehook")
-# end
-using Flux.Tracker: ∇broadcast
-function Cassette.prehook(ctx::FluxCtx, ::typeof(∇broadcast), f, args...)
-    println("Inside broadcast prehook")
-end
-
-# """
-#     execute(ctx::FluxCtx, ::typeof(track), f, args...; kwargs...)
-
-# Intercept calls to Flux.track.
-# """
-# function execute(ctx::FluxCtx, ::typeof(track), f, args...; kwargs...)
-#     println("In main method")
-#     @show f
-#     @show args
-#     any(is_tracked, args) && push!(ctx.metadata, Op(f, map(untrack, args)...))
-#     return track(f, args...; kwargs...)
-# end
-
-# function execute(ctx::FluxCtx, ::typeof(track), args...; kwargs...)
-#     println("In fallback")
-#     @show args
-#     return OverdubInstead()
-# end
-
-# import Flux.Tracker: ∇broadcast
-# function execute(ctx::FluxCtx, ::typeof(∇broadcast), f, args...)
-#     println("In broadcast thingy")
-#     any(is_tracked, args) && push!(ctx.metadata, Op(∇broadcast, f, map(untrack, args)...))
-#     return OverdubInstead()
-# end
-
-# function execute(ctx::FluxCtx, ::typeof(track), f::Call, args...; kwargs...)
-#     println("In call version")
-#     @show f
-#     @show typeof(f)
-#     @show args
-#     return OverdubInstead()
-# end
-
-# function execute(ctx::FluxCtx, ::typeof(track), ::typeof(sum), args...; kwargs...)
-#     println("Inside shitty sum thing")
-# end
-
-# function execute(ctx::FluxCtx, ::typeof(track), ::typeof(sum), args...)
-#     println("Inside shitty other sum thing.")
-# end
+posthook(ctx::FluxCtx, tmp, ::kwftype(typeof(track)), kwargs, ::typeof(track), ::Call, args...) = nothing
+posthook(ctx::FluxCtx, tmp, ::typeof(track), ::Call, args...) = nothing
 
 # # Toy example
 # baz = x->sin(cos(x))
@@ -302,16 +246,19 @@ tape
 
 
 
-using Cassette
+# using Cassette
 
-f(x;y) = x+y
-Cassette.@context FooCtx
-Cassette.execute(ctx::FooCtx, ::typeof(f), x; y)  = x+y+1
-Cassette.execute(ctx::FooCtx, ::typeof(Core.kwfunc(f)), kw::Any, ::typeof(f), x) = 
-    Core.kwfunc(Cassette.execute)(kw, Cassette.execute, ctx, f, x)
+# f(x; y) = x+y
+# Cassette.@context FooCtx
+# Cassette.execute(ctx::FooCtx, ::typeof(f), x; y)  = x+y+1
+# Cassette.execute(ctx::FooCtx, ::typeof(Core.kwfunc(f)), kw::Any, ::typeof(f), x) = 
+#     Core.kwfunc(Cassette.execute)(kw, Cassette.execute, ctx, f, x)
 
-julia> Cassette.@overdub FooCtx() f(1;y=3)
-5
+# julia> Cassette.@overdub FooCtx() f(1;y=3)
+# 5
 
-
+# using Core: kwftype
+# function execute(ctx::FluxCtx, ::kwftype(typeof(f)), kwargs::Any, ::typeof(f), args...)
+#     return Cassette.execute(ctx, f, args...; kwargs...)
+# end
 
