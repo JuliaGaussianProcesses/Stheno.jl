@@ -131,6 +131,8 @@ function eachindex_err(::T) where T<:Kernel
     throw(ArgumentError("`eachindex` undefined for kernel of type $T."))
 end
 
+eachindex(k::Kernel) = eachindex_err(k)
+
 """
     ZeroKernel <: Kernel
 
@@ -140,12 +142,9 @@ struct ZeroKernel{T<:Real} <: Kernel end
 (::ZeroKernel{T})(x, x′) where T = zero(T)
 (::ZeroKernel{T})(x) where T = zero(T)
 isstationary(::Type{<:ZeroKernel}) = true
-@inline _map(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X))
-@inline function _pairwise(::ZeroKernel{T}, X::AV, X′::AV) where T
-    return Zeros{T}(length(X), length(X′))
-end
-@inline ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
-@inline eachindex(k::ZeroKernel) = eachindex_err(k)
+_map(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X))
+_pairwise(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X), length(X′))
+==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
 
 const ZK = ZeroKernel{Float64}
 zero(k::Kernel) = length(k) < Inf ? FiniteZeroKernel(eachindex(k)) : ZK()
@@ -165,7 +164,6 @@ isstationary(::Type{<:ConstantKernel}) = true
 _map(k::ConstantKernel, X::AV, ::AV) = Fill(k.c, length(X))
 _pairwise(k::ConstantKernel, X::AV, X′::AV) = Fill(k.c, length(X), length(X′))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
-@inline eachindex(k::ConstantKernel) = eachindex_err(k)
 
 # ConstantKernel-specific optimisations.
 +(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c + k′.c)
@@ -183,7 +181,6 @@ isstationary(::Type{<:EQ}) = true
 (::EQ)(x::T) where T = one(Float64)
 _pairwise(::EQ, X::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
 _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
-@inline eachindex(k::EQ) = eachindex_err(k)
 
 """
     PerEQ{Tp<:Real}
@@ -196,7 +193,6 @@ end
 isstationary(::Type{<:PerEQ}) = true
 (k::PerEQ)(x::Real, x′::Real) = exp(-2 * sin(π * abs(x - x′) / k.p)^2)
 (k::PerEQ)(x::Real) = one(typeof(x))
-@inline eachindex(k::PerEQ) = eachindex_err(k)
 
 """
     Exponential <: Kernel
@@ -207,7 +203,6 @@ struct Exponential <: Kernel end
 isstationary(::Type{<:Exponential}) = true
 (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
 (::Exponential)(x) = one(Float64)
-@inline eachindex(k::Exponential) = eachindex_err(k)
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -235,12 +230,9 @@ end
 ==(a::Linear, b::Linear) = a.c == b.c
 (k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
 (k::Linear)(x) = sum(abs2, x .- k.c)
-@inline eachindex(k::Linear) = eachindex_err(k)
 
-@inline _pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(x'))
-@inline function _pairwise(k::Linear, x::AV, x′::AV)
-    return _pairwise(k, ColsAreObs(x'), ColsAreObs(x′'))
-end
+_pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(x'))
+_pairwise(k::Linear, x::AV, x′::AV) = _pairwise(k, ColsAreObs(x'), ColsAreObs(x′'))
 
 function _pairwise(k::Linear, D::ColsAreObs)
     Δ = D.X .- k.c
@@ -281,7 +273,6 @@ function _pairwise(k::Noise, X::AV, X′::AV)
             for p in eachindex(X), q in eachindex(X′)]
     end
 end
-@inline eachindex(k::Noise) = eachindex_err(k)
 
 # """
 #     Wiener <: Kernel
@@ -318,20 +309,10 @@ end
 @inline length(k::EmpiricalKernel) = size(k.Σ, 1)
 eachindex(k::EmpiricalKernel) = eachindex(k.Σ, 1)
 
-function _pairwise(k::EmpiricalKernel, X::AV)
-    if X == eachindex(k)
-        return k.Σ
-    else
-        return k.Σ[X, X]
-    end
-end
+_pairwise(k::EmpiricalKernel, X::AV) = X == eachindex(k) ? k.Σ : k.Σ[X, X]
 
 function _pairwise(k::EmpiricalKernel, X::AV, X′::AV)
-    if X == eachindex(k) && X′ == eachindex(k)
-        return k.Σ
-    else
-        return k.Σ[X, X′]
-    end
+    return X == eachindex(k) && X′ == eachindex(k) ? k.Σ : k.Σ[X, X′]
 end
 AbstractMatrix(k::EmpiricalKernel) = k.Σ
 

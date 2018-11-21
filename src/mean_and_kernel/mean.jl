@@ -1,7 +1,7 @@
 import Base: ==, map, AbstractVector, map, +, *, length, size, zero, iszero
 import Statistics: mean
 
-export CustomMean, ZeroMean, ConstantMean, mean
+export MeanFunction, CustomMean, ZeroMean, ConstantMean, mean
 
 abstract type MeanFunction end
 abstract type BaseMeanFunction <: MeanFunction end

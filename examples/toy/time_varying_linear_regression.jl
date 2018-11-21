@@ -1,4 +1,4 @@
-using Stheno, Plots, Random
+using Stheno, Plots, Random, ColorTypes, FixedPointNumbers
 using Stheno: @model
 
 ###########################  Define and inspect our model  ###########################
@@ -7,10 +7,10 @@ using Stheno: @model
 
 =#
 @model function model()
-    g1, g2 = x::Real->sin(x), x::Real->x
-    w1, w2 = GP(EQ()), GP(EQ())
+    g1, g2 = sin, cos
+    w1, w2 = GP(EQ()) ∘ (x->0.1 * x), GP(EQ()) ∘ (x->0.1 * x)
     f = g1 * w1 + g2 * w2
-    y = f + GP(Noise(0.001))
+    y = f + 0.3 * GP(Exponential())
     return w1, w2, f, y
 end
 
@@ -35,32 +35,74 @@ w1′s, w2′s, y′s = rand(rng, [w1′(Xp), w2′(Xp), y′(Xp)], S);
 
 ###########################  Plot results - USE ONLY Julia-0.6!  ###########################
 
-posterior_plot = plot();
+gr();
+posterior_plot = plot(
+    legend=:topright,
+    legendfont=Plots.Font(
+        "sans-serif",
+        10,
+        :hcenter,
+        :vcenter,
+        0.0,
+        RGB{Normed{UInt8, 8}}(0.0,0.0,0.0)
+    ),
+    background_color_legend=RGBA(1, 1, 1, 0),
+    foreground_color_legend=RGBA(1, 1, 1, 0),
+);
+
+
+# Plot posterior over w1.
+plot!(posterior_plot, Xp, μw1′;
+    linecolor=:green,
+    linewidth=2.0,
+    label="w1");
+plot!(posterior_plot, Xp, [μw1′ μw1′];
+    linewidth=0.0,
+    fillrange=[μw1′ .- 3 .* σw1′, μw1′ .+ 3 * σw1′],
+    fillalpha=0.2,
+    fillcolor=:green,
+    label="");
+plot!(posterior_plot, Xp, w1′s;
+    linecolor=:green,
+    linealpha=0.1,
+    label="");
+
+# Plot posterior over w2.
+plot!(posterior_plot, Xp, μw2′;
+    linecolor=:magenta,
+    linewidth=2.0,
+    label="w2");
+plot!(posterior_plot, Xp, [μw2′ μw2′];
+    linewidth=0.0,
+    fillrange=[μw2′ .- 3 .* σw2′, μw2′ .+ 3 * σw2′],
+    fillalpha=0.2,
+    fillcolor=:magenta,
+    label="");
+plot!(posterior_plot, Xp, w2′s;
+    linecolor=:magenta,
+    linealpha=0.1,
+    label="");
+
+
+# Plot x1 and x2
+plot!(posterior_plot, Xp, sin.(Xp);
+    linecolor=:black,
+    linewidth=1.0,
+    label="sin");
+plot!(posterior_plot, Xp, cos.(Xp);
+    linecolor=:black,
+    linewidth=1.0,
+    linestyle=:dash,
+    label="cos");
 
 # Plot samples against which we're regressing.
-plot!(posterior_plot, X, ŷ;
+scatter!(posterior_plot, X, ŷ;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
     markeralpha=0.7,
     label="");
-
-# # Plot posterior over `f`.
-# plot!(posterior_plot, Xp, μf′;
-#     linecolor=:blue,
-#     linewidth=2.0,
-#     label="f");
-# plot!(posterior_plot, Xp, [μf′ μf′];
-#     linewidth=0.0,
-#     fillrange=[μf′ .- 3 .* σf′, μf′ .+ 3 * σf′],
-#     fillalpha=0.3,
-#     fillcolor=:blue,
-#     label="");
-# plot!(posterior_plot, Xp, f′s;
-#     linecolor=:blue,
-#     linealpha=0.2,
-#     label="");
 
 # Plot posterior over `y`.
 plot!(posterior_plot, Xp, μy′;
@@ -73,43 +115,7 @@ plot!(posterior_plot, Xp, [μy′ μy′];
     fillalpha=0.3,
     fillcolor=:blue,
     label="");
-plot!(posterior_plot, Xp, y′s;
-    linecolor=:blue,
-    linealpha=0.2,
-    label="");
 
+savefig(posterior_plot, "plotting_research_talk/tv_blr.pdf");
 
-# Plot posterior over w1.
-plot!(posterior_plot, Xp, μw1′;
-    linecolor=:green,
-    linewidth=2.0,
-    label="w1");
-plot!(posterior_plot, Xp, [μw1′ μw1′];
-    linewidth=0.0,
-    fillrange=[μw1′ .- 3 .* σw1′, μw1′ .+ 3 * σw1′],
-    fillalpha=0.3,
-    fillcolor=:green,
-    label="");
-plot!(posterior_plot, Xp, w1′s;
-    linecolor=:green,
-    linealpha=0.2,
-    label="");
-
-
-# Plot posterior over w2.
-plot!(posterior_plot, Xp, μw2′;
-    linecolor=:magenta,
-    linewidth=2.0,
-    label="w2");
-plot!(posterior_plot, Xp, [μw2′ μw2′];
-    linewidth=0.0,
-    fillrange=[μw2′ .- 3 .* σw2′, μw2′ .+ 3 * σw2′],
-    fillalpha=0.3,
-    fillcolor=:magenta,
-    label="");
-plot!(posterior_plot, Xp, w2′s;
-    linecolor=:magenta,
-    linealpha=0.2,
-    label="");
-
-display(posterior_plot);
+# display(posterior_plot);
