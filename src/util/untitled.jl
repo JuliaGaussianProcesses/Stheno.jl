@@ -1,7 +1,7 @@
 using Revise
 using LinearAlgebra
 using LinearAlgebra: RealHermSymComplexHerm, copytri!
-import LinearAlgebra: cholesky, UpperTriangular, logdet, \
+import LinearAlgebra: cholesky, UpperTriangular, logdet, \, /
 const chol_type = Union{StridedMatrix, RealHermSymComplexHerm{<:Real, <:StridedMatrix}}
 
 using Flux.Tracker
@@ -243,10 +243,37 @@ tape
 # tape = Tape();
 # overdub(FluxCtx(metadata=tape), Tracker.forward, x->sum(abs.(x)), randn(10));
 
+using Stheno: pairwise
+tape = Tape();
+P, Q, D = 100, 200, 10;
+X, Y = randn(D, P), randn(D, Q);
+overdub(
+    FluxCtx(metadata=tape),
+    Tracker.forward,
+    (X, Y)->pairwise(EQ(), ColsAreObs(X), ColsAreObs(Y)),
+    X, Y,
+)
+tape
+
+using BenchmarkTools, Distances
+
+D, back = Tracker._forward(pairwise, SqEuclidean(), X, Y);
+
+@benchmark pairwise(SqEuclidean(), $X, $Y)
+@benchmark Tracker._forward(pairwise, SqEuclidean(), $X, $Y)
+
+D̄ = fill(1.0, size(D));
+@benchmark back($D̄)
 
 
+D, back = Tracker._forward(pairwise, SqEuclidean(), X);
+D̄ = fill(1.0, size(D));
 
-# using Cassette
+@benchmark pairwise(SqEuclidean(), $X)
+@benchmark Tracker._forward(pairwise, SqEuclidean(), $X)
+
+@benchmark back($D̄)
+
 
 # f(x; y) = x+y
 # Cassette.@context FooCtx
@@ -262,3 +289,58 @@ tape
 #     return Cassette.execute(ctx, f, args...; kwargs...)
 # end
 
+# Naive implementation (I think).
+julia> @benchmark back($D̄)
+BenchmarkTools.Trial: 
+  memory estimate:  121.53 KiB
+  allocs estimate:  24
+  --------------
+  minimum time:     72.786 μs (0.00% GC)
+  median time:      75.986 μs (0.00% GC)
+  mean time:        85.634 μs (10.59% GC)
+  maximum time:     2.023 ms (91.87% GC)
+  --------------
+  samples:          10000
+  evals/sample:     1
+
+# Slightly less naive.
+julia> @benchmark back($D̄)
+BenchmarkTools.Trial: 
+  memory estimate:  105.78 KiB
+  allocs estimate:  23
+  --------------
+  minimum time:     71.024 μs (0.00% GC)
+  median time:      74.116 μs (0.00% GC)
+  mean time:        82.504 μs (9.38% GC)
+  maximum time:     2.030 ms (91.54% GC)
+  --------------
+  samples:          10000
+  evals/sample:     1
+
+# Marginally less naive again.
+julia> @benchmark back($D̄)
+BenchmarkTools.Trial: 
+  memory estimate:  97.84 KiB
+  allocs estimate:  22
+  --------------
+  minimum time:     70.347 μs (0.00% GC)
+  median time:      73.588 μs (0.00% GC)
+  mean time:        81.789 μs (9.31% GC)
+  maximum time:     2.037 ms (91.16% GC)
+  --------------
+  samples:          10000
+  evals/sample:     1
+
+# Fuse some stuff.
+julia> @benchmark back($D̄)
+BenchmarkTools.Trial: 
+memory estimate:  74.16 KiB
+allocs estimate:  20
+--------------
+minimum time:     67.989 μs (0.00% GC)
+median time:      69.936 μs (0.00% GC)
+mean time:        77.438 μs (8.47% GC)
+maximum time:     2.218 ms (94.07% GC)
+--------------
+samples:          10000
+evals/sample:     1

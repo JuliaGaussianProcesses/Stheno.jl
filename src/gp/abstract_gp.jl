@@ -65,25 +65,11 @@ The cross-covariance matrix between `f` and `g`, if
 xcov(f::AbstractGP, g::AbstractGP) = AbstractMatrix(kernel(f, g))
 
 """
-    marginal_cov(f::AbstractGP)
-
-Efficiently compute of `diag(cov(f))`.
-"""
-marginal_cov(f::AbstractGP) = map(kernel(f), eachindex(f))
-
-"""
-    marginal_std(f::AbstractGP)
-
-Efficiently compute `sqrt.(diag(cov(f)))`.
-"""
-marginal_std(f::AbstractGP) = sqrt.(marginal_cov(f))
-
-"""
     marginals(f::AbstractGP)
 
-Sugar, equivalent to `(mean(f), marginal_std(f))`.
+Sugar, returns a vector of Normal distributions representing the marginals of `f`.
 """
-marginals(f::AbstractGP) = (mean_vec(f), marginal_std(f))
+marginals(f::AbstractGP) = Normal.(mean_vec(f), sqrt.(map(kernel(f), eachindex(f))))
 
 """
     rand(rng::AbstractRNG, f::AbstractGP, N::Int=1)
@@ -116,5 +102,5 @@ function elbo(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)
     Γ = (chol(cov(u))' \ xcov(u, f)) ./ σ
     Ω, δ = LazyPDMat(Γ * Γ' + I, 0), y - mean_vec(f)
     return -0.5 * (length(y) * log(2π * σ^2) + logdet(Ω) - sum(abs2, Γ) +
-        (sum(abs2, δ) - sum(abs2, chol(Ω)' \ (Γ * δ)) + sum(marginal_cov(f))) / σ^2)
+        (sum(abs2, δ) - sum(abs2, chol(Ω)' \ (Γ * δ)) + sum(var, marginals(f))) / σ^2)
 end

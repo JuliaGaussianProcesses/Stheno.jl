@@ -1,0 +1,18 @@
+name = "Stheno"
+uuid = "8188c328-b5d6-583d-959b-9690869a5511"
+
+[deps]
+BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
+
+[extras]
+FDM = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
+
+[targets]
+test = ["FDM"]
