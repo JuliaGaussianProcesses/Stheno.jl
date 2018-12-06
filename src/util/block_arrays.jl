@@ -6,7 +6,7 @@ using FillArrays: Fill
 
 import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty
 import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
-    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky
+    adjoint, AdjOrTrans, AdjOrTransAbsMat
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
 
@@ -366,16 +366,15 @@ function \(L::LowerOrAdjUpper{T}, X::Adjoint{T, <:UpperTriangular{T, <:ABM{T}}})
     return _block_ldiv_mat_lower(L, X)
 end
 
-
 """
-    _chol(A::Symmetric{T, <:BlockMatrix{T}}) where T<:Real
+    chol(A::Symmetric{T, <:BlockMatrix{T}}) where T<:Real
 
 Get the Cholesky decomposition of `A` in the form of a `BlockMatrix`.
 
 Only works for `A` where `is_block_symmetric(A) == true`. Assumes that we want the
 upper triangular version.
 """
-function _chol(A::Symmetric{T, <:BlockMatrix{T, V}}) where {T<:Real, V<:AbstractMatrix{T}}
+function chol(A::Symmetric{T, <:BlockMatrix{T, V}}) where {T<:Real, V<:AbstractMatrix{T}}
 
     U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
 
@@ -403,14 +402,9 @@ function _chol(A::Symmetric{T, <:BlockMatrix{T, V}}) where {T<:Real, V<:Abstract
             Ukk, Ukj = getblock(U, k, k), getblock(U, k, j)
             setblock!(U, getblock(U, j, j) - Ukj' * Ukj, j, j)
         end
-        setblock!(U, cholesky(getblock(U, j, j)).U, j, j)
+        setblock!(U, chol(Symmetric(getblock(U, j, j))), j, j)
     end
-    return U
-end
-
-# Get only implement one of these methods for now.
-function cholesky(A::Symmetric{T, <:BlockMatrix{T, <:AbstractMatrix{T}}} where T<:Real)
-    return Cholesky(_chol(A), :U, 0)
+    return UpperTriangular(U)
 end
 
 logdet(A::Cholesky{T, <:AbstractBlockMatrix{T}}) where T = 2 * logdet(A.U)

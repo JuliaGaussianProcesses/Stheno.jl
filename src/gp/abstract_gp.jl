@@ -90,6 +90,12 @@ The log probability density of `y` under `f`.
 """
 function logpdf(f::AbstractGP, y::AbstractVector{<:Real})
     μ, Σ = mean_vec(f), cov(f)
+    # return Xt_invA_X(Σ, y - μ)
+    # @show typeof(Σ.Σ)
+    # return sum(Σ.Σ)
+    # return Xt_invA_X(Σ, y - μ)
+    # return logdet(Σ)
+    # return -0.5 * (length(y) * log(2π) + logdet(Σ))
     return -0.5 * (length(y) * log(2π) + logdet(Σ) + Xt_invA_X(Σ, y - μ))
 end
 

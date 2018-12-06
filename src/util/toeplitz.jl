@@ -1,5 +1,5 @@
 using ToeplitzMatrices
-import LinearAlgebra: Symmetric, cholesky, *, mul!
+import LinearAlgebra: Symmetric, *, mul!
 
 import Base: transpose, adjoint, copy
 import ToeplitzMatrices: Toeplitz
@@ -12,12 +12,12 @@ function copy(T::SymmetricToeplitz)
 end
 
 """
-    cholesky(T::SymmetricToeplitz)
+    chol!(L::AbstractMatrix, T::SymmetricToeplitz)
 
 Implementation adapted from "On the stability of the Bareiss and related
-Toeplitz factorization algorithms", Bojanczyk et al, 1993.
+Toeplitz factorization algorithms", Bojanczyk et al, 1993. LOWER TRIANGULAR!
 """
-function cholesky!(L::AbstractMatrix, T::SymmetricToeplitz)
+function chol!(L::AbstractMatrix, T::SymmetricToeplitz)
 
     # Initialize.
     L[:, 1] .= T.vc ./ sqrt(T.vc[1])
@@ -34,11 +34,9 @@ function cholesky!(L::AbstractMatrix, T::SymmetricToeplitz)
             L[n′, n + 1] = -sinθn * v[n′] + cosθn * L[n′ - 1, n]
         end
     end
-    return Cholesky(L, 'L', 0) 
+    return L
 end
-function cholesky(T::SymmetricToeplitz)
-    return cholesky!(Matrix{eltype(T)}(undef, size(T, 1), size(T, 1)), T)
-end
+chol(T::SymmetricToeplitz) = chol!(Matrix{eltype(T)}(undef, size(T, 1), size(T, 1)), T)'
 
 function +(T::SymmetricToeplitz, u::UniformScaling)
     Tu = copy(T)

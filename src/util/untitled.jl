@@ -8,85 +8,85 @@ using Flux.Tracker
 using Flux.Tracker: tracker, Call, track, TrackedVecOrMat, Tracked, TrackedArray,
     TrackedReal
 
-# This probably isn't optimal, but probably isn't horrific.
-function chol_sensitivity(
-    U::AbstractMatrix{T},
-    Ū::AbstractMatrix{T},
-    Σ::AbstractMatrix{T},
-) where T<:Real
-    Σ̄ = Ū * UpperTriangular(U)'
-    Σ̄ = copytri!(Σ̄, 'U')
-    Σ̄ = ldiv!(UpperTriangular(U), Σ̄)
-    BLAS.trsm!('R', 'U', 'T', 'N', one(T), U, Σ̄)
-    @inbounds for n in diagind(Σ̄)
-        Σ̄[n] *= 0.5
-    end
-    return UpperTriangular(Σ̄)
-end
+# # This probably isn't optimal, but probably isn't horrific.
+# function chol_sensitivity(
+#     U::AbstractMatrix{T},
+#     Ū::AbstractMatrix{T},
+#     Σ::AbstractMatrix{T},
+# ) where T<:Real
+#     Σ̄ = Ū * UpperTriangular(U)'
+#     Σ̄ = copytri!(Σ̄, 'U')
+#     Σ̄ = ldiv!(UpperTriangular(U), Σ̄)
+#     BLAS.trsm!('R', 'U', 'T', 'N', one(T), U, Σ̄)
+#     @inbounds for n in diagind(Σ̄)
+#         Σ̄[n] *= 0.5
+#     end
+#     return UpperTriangular(Σ̄)
+# end
 
-# This is a fairly incomplete implementation of the Cholesky that just about works in the
-# most basic situation. It should, in principle, be straightforward to generalise.
-function cholesky(Σ::TrackedMatrix{<:Real, <:chol_type})
+# # This is a fairly incomplete implementation of the Cholesky that just about works in the
+# # most basic situation. It should, in principle, be straightforward to generalise.
+# function cholesky(Σ::TrackedMatrix{<:Real, <:chol_type})
 
-    # Compute the Cholesky factorisation as per usual.
-    C_raw = cholesky(Tracker.data(Σ))
-    U = C_raw.factors
+#     # Compute the Cholesky factorisation as per usual.
+#     C_raw = cholesky(Tracker.data(Σ))
+#     U = C_raw.factors
 
-    # Compute reverse-pass function.
-    C̄ = Ū->(chol_sensitivity(Tracker.data(U), Tracker.data(Ū), Tracker.data(Σ)),)
+#     # Compute reverse-pass function.
+#     C̄ = Ū->(chol_sensitivity(Tracker.data(U), Tracker.data(Ū), Tracker.data(Σ)),)
 
-    # Track factors from Cholesky factorisation. Nothing else needs to be touched.
-    tracked_factors = track(Call(C̄, (tracker(Σ),)), U)
+#     # Track factors from Cholesky factorisation. Nothing else needs to be touched.
+#     tracked_factors = track(Call(C̄, (tracker(Σ),)), U)
 
-    # Pack everything into a Cholesky.
-    return Cholesky{eltype(Σ), typeof(tracked_factors)}(tracked_factors, C_raw.uplo, C_raw.info)
-end
+#     # Pack everything into a Cholesky.
+#     return Cholesky{eltype(Σ), typeof(tracked_factors)}(tracked_factors, C_raw.uplo, C_raw.info)
+# end
 
-# This is also a hack, but does the job nicely.
-logdet(C::Cholesky{<:Real, <:TrackedMatrix}) = 2 * sum(log, C.factors[diagind(C.factors)])
+# # This is also a hack, but does the job nicely.
+# logdet(C::Cholesky{<:Real, <:TrackedMatrix}) = 2 * sum(log, C.factors[diagind(C.factors)])
 
-# Sensible implementation of UpperTriangular.
-using Flux.Tracker: @grad
+# # Sensible implementation of UpperTriangular.
+# using Flux.Tracker: @grad
 
-# U = UpperTriangular(X)
-UpperTriangular(X::TrackedMatrix) = Tracker.track(UpperTriangular, X)
-@grad function UpperTriangular(X)
-    return UpperTriangular(Tracker.data(X)), function (Ū)
-        return (UpperTriangular(copy(Ū)),)
-    end
-end
+# # U = UpperTriangular(X)
+# UpperTriangular(X::TrackedMatrix) = Tracker.track(UpperTriangular, X)
+# @grad function UpperTriangular(X)
+#     return UpperTriangular(Tracker.data(X)), function (Ū)
+#         return (UpperTriangular(copy(Ū)),)
+#     end
+# end
 
-# L = LowerTriangular(X)
-LowerTriangular(X::TrackedMatrix) = Tracker.track(LowerTriangular, X)
-@grad function LowerTriangular(X)
-    return LowerTriangular(Tracker.data(X)), function(L̄)
-        return (LowerTriangular(copy(L̄)),)
-    end
-end
+# # L = LowerTriangular(X)
+# LowerTriangular(X::TrackedMatrix) = Tracker.track(LowerTriangular, X)
+# @grad function LowerTriangular(X)
+#     return LowerTriangular(Tracker.data(X)), function(L̄)
+#         return (LowerTriangular(copy(L̄)),)
+#     end
+# end
 
-# Y = A \ B
-\(A::TrackedMatrix, B::TrackedVecOrMat) = Tracker.track(\, A, B)
-\(A::AbstractMatrix, B::TrackedVecOrMat) = Tracker.track(\, A, B)
-\(A::TrackedMatrix, B::AbstractVecOrMat) = Tracker.track(\, A, B)
-@grad function \(A::AbstractMatrix, B::AbstractVector)
-    Y = Tracker.data(A) \ Tracker.data(B)
-    return Y, function(Ȳ)
-        B̄ = A' \ Ȳ
-        return (-B̄ * Y', B̄)
-    end
-end
+# # Y = A \ B
+# \(A::TrackedMatrix, B::TrackedVecOrMat) = Tracker.track(\, A, B)
+# \(A::AbstractMatrix, B::TrackedVecOrMat) = Tracker.track(\, A, B)
+# \(A::TrackedMatrix, B::AbstractVecOrMat) = Tracker.track(\, A, B)
+# @grad function \(A::AbstractMatrix, B::AbstractVector)
+#     Y = Tracker.data(A) \ Tracker.data(B)
+#     return Y, function(Ȳ)
+#         B̄ = A' \ Ȳ
+#         return (-B̄ * Y', B̄)
+#     end
+# end
 
-# Y = A / B
-/(A::TrackedVecOrMat, B::TrackedMatrix) = Tracker.track(/, A, B)
-/(A::AbstractVecOrMat, B::TrackedMatrix) = Tracker.track(/, A, B)
-/(A::TrackedVecOrMat, B::AbstractMatrix) = Tracker.track(/, A, B)
-@grad function /(A::AbstractVecOrMat, B::AbstractMatrix)
-    Y = Tracker.data(A) / Tracker.data(B)
-    return Y, function(Ȳ)
-        Ā = Ȳ / B'
-        return (Ā, -Y' * Ā)
-    end
-end
+# # Y = A / B
+# /(A::TrackedVecOrMat, B::TrackedMatrix) = Tracker.track(/, A, B)
+# /(A::AbstractVecOrMat, B::TrackedMatrix) = Tracker.track(/, A, B)
+# /(A::TrackedVecOrMat, B::AbstractMatrix) = Tracker.track(/, A, B)
+# @grad function /(A::AbstractVecOrMat, B::AbstractMatrix)
+#     Y = Tracker.data(A) / Tracker.data(B)
+#     return Y, function(Ȳ)
+#         Ā = Ȳ / B'
+#         return (Ā, -Y' * Ā)
+#     end
+# end
 
 
 N = 4
@@ -257,23 +257,44 @@ tape
 
 using BenchmarkTools, Distances
 
-D, back = Tracker._forward(pairwise, SqEuclidean(), X, Y);
+# D, back = Tracker._forward(pairwise, SqEuclidean(), X, Y);
 
+# @benchmark pairwise(SqEuclidean(), $X, $Y)
+# @benchmark Tracker._forward(pairwise, SqEuclidean(), $X, $Y)
+
+# D̄ = fill(1.0, size(D));
+# @benchmark back($D̄)
+
+
+# D, back = Tracker._forward(pairwise, SqEuclidean(), X);
+# D̄ = fill(1.0, size(D));
+
+# @benchmark pairwise(SqEuclidean(), $X)
+# @benchmark Tracker._forward(pairwise, SqEuclidean(), $X)
+
+# @benchmark back($D̄)
+
+
+x, y = randn(P), randn(Q)
+D, back = Tracker._forward(pairwise, SqEuclidean(), x, y);
+D̄ = fill(1.0, size(D));
+
+X, Y = reshape(x, 1, length(x)), reshape(y, 1, length(y));
+
+
+@benchmark pairwise(SqEuclidean(), $x, $y)
 @benchmark pairwise(SqEuclidean(), $X, $Y)
+
+@benchmark Tracker._forward(pairwise, SqEuclidean(), $x, $y)
 @benchmark Tracker._forward(pairwise, SqEuclidean(), $X, $Y)
 
-D̄ = fill(1.0, size(D));
+@benchmark back($D̄)
+out_xy = back(D̄)
+
+D, back = Tracker._forward(pairwise, SqEuclidean(), X, Y);
 @benchmark back($D̄)
 
-
-D, back = Tracker._forward(pairwise, SqEuclidean(), X);
-D̄ = fill(1.0, size(D));
-
-@benchmark pairwise(SqEuclidean(), $X)
-@benchmark Tracker._forward(pairwise, SqEuclidean(), $X)
-
-@benchmark back($D̄)
-
+out_XY = back(D̄)
 
 # f(x; y) = x+y
 # Cassette.@context FooCtx
@@ -344,3 +365,92 @@ maximum time:     2.218 ms (94.07% GC)
 --------------
 samples:          10000
 evals/sample:     1
+
+
+
+############# Load some stuff ################
+
+using Revise
+using Stheno, Flux, Flux.Tracker, Random, BenchmarkTools, Distances
+using Stheno: @model
+using Flux: gradient
+using Distances: SqEuclidean
+
+Ns = [10, 100, 1_000, 10_000]
+Ns = [10, 100, 1_000]
+
+
+############# Check gradient of pairwise(SqEuclidean()...) ##########
+
+rng = MersenneTwister(123456);
+X = randn(rng, 2, 10);
+obj(X) = sum(Stheno.pairwise(SqEuclidean(), X))
+
+@benchmark obj($X)
+@benchmark gradient(obj, $X)
+
+
+
+############ Check gradient of broadcasted operations over a distance matrix ###############
+
+rng = MersenneTwister(123456);
+D = pairwise(SqEuclidean(), randn(rng, 2, 100));
+obj(D) = sum(-0.5 .* D)
+
+for N in Ns
+    println(N)
+    display(@benchmark obj($(randn(N))))
+    display(@benchmark gradient(obj, $(randn(N))))
+    display(@benchmark ∇(obj)($(randn(N))))
+end
+
+
+
+############# Check gradient of EQ covariance #############
+
+rng = MersenneTwister(123456);
+obj(x) = sum(Stheno._pairwise(EQ(), ColsAreObs(x)))
+
+for N in Ns
+    println(N)
+    X = randn(rng, 2, N)
+    display(@benchmark obj($X))
+    display(@benchmark gradient(obj, $X))
+end
+
+
+
+############# Check gradient of logpdf w.r.t. inputs of a very simple model ##############
+
+
+rng = MersenneTwister(123456);
+obj(X, y) = logpdf(GP(EQ(), GPC())(ColsAreObs(X)), y)
+
+for N in Ns
+    println(N)
+    X = randn(rng, 2, N)
+    y = rand(rng, GP(EQ(), GPC())(ColsAreObs(X)))
+    display(@benchmark (X->obj(X, $y))($X))
+    display(@benchmark gradient(X->obj(X, $y), $X))
+end
+
+
+############# Check gradient of model ###############
+
+@model function foo(log_σ::Real)
+    return exp(log_σ) * GP(EQ())
+end
+
+rng = MersenneTwister(123456);
+x = randn(rng, 10);
+y = rand(rng, foo(0.0)(x));
+
+function obj(log_σ::Real)
+    return logpdf(foo(log_σ)(x), y)
+end
+
+gradient(obj, 5.0)
+
+@benchmark obj(0.0)
+@benchmark gradient(obj, 0.0)
+

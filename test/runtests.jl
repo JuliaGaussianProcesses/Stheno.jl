@@ -1,4 +1,4 @@
-using Stheno, Test, Random, LinearAlgebra, Statistics, FDM
+using Stheno, Test
 
 @testset "Stheno" begin
 

@@ -265,7 +265,7 @@ using Stheno: BS, unbox, are_conformal, chol, ABM, LazyPDMat, Xt_invA_X, Xt_invA
         end
     end
 
-    # Test `chol`, logdet, and backsolving.
+    # Test `chol`, `logdet`, and backsolving.
     let
         rng, P1, P2, P3 = MersenneTwister(123456), 3, 4, 5
         tmp = randn(rng, P1 + P2 + P3, P1 + P2 + P3)
@@ -274,7 +274,7 @@ using Stheno: BS, unbox, are_conformal, chol, ABM, LazyPDMat, Xt_invA_X, Xt_invA
         @assert A_ == A
 
         # Compute chols and compare.
-        U_, U = cholesky(Symmetric(A_)).U, cholesky(Symmetric(A)).U
+        U_, U = chol(Symmetric(A_)), chol(Symmetric(A))
         @test U isa UpperTriangular{<:Real, <:ABM}
         @test U_ ≈ U
         @test U_ ≈ Matrix(U)
@@ -354,7 +354,7 @@ using Stheno: BS, unbox, are_conformal, chol, ABM, LazyPDMat, Xt_invA_X, Xt_invA
         # Test unary operations.
         @test logdet(A) ≈ logdet(Matrix(A_))
         @test chol(A) isa UpperTriangular{T, <:AbstractBlockMatrix{T}} where T
-        @test chol(A) ≈ chol(Matrix(A_) + A.ϵ * I)
+        @test chol(A) ≈ cholesky(Matrix(A_) + A.ϵ * I).U
  
         # Test binary operations.
         @test x + x isa AbstractBlockVector
