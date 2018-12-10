@@ -33,9 +33,7 @@ length(μ::ConditionalMean) = length(μ.μg)
 eachindex(μ::ConditionalMean) = eachindex(μ.μg)
 (μ::ConditionalMean)(x::Number) = map(μ, [x])[1]
 (μ::ConditionalMean)(x::AbstractVector) = map(μ, ColsAreObs(reshape(x, length(x), 1)))[1]
-function _map(μ::ConditionalMean, Xg::AV)
-    return map(μ.μg, Xg) + pairwise(μ.kfg, :, Xg)' * μ.c.α
-end
+_map(μ::ConditionalMean, Xg::AV) = map(μ.μg, Xg) + pairwise(μ.kfg, :, Xg)' * μ.c.α
 
 """
     ConditionalKernel <: Kernel

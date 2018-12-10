@@ -89,31 +89,31 @@ using Flux.Tracker: tracker, Call, track, TrackedVecOrMat, Tracked, TrackedArray
 # end
 
 
-N = 4
-B = randn(N, N)
-x = randn(N)
-A = B' * B
-C = cholesky(Symmetric(A))
+# N = 4
+# B = randn(N, N)
+# x = randn(N)
+# A = B' * B
+# C = cholesky(Symmetric(A))
 
-foo(A) = logdet(cholesky(A))
-bar(A) = sum(abs2, cholesky(A).U \ x)
-
-
-using Flux.Tracker: forward
-l, Ā = forward(foo, A)
-Ā(1.0)[1]
-
-l, Ā = forward(bar, A)
-Ā(1.0)[1]
-
-using Test
+# foo(A) = logdet(cholesky(A))
+# bar(A) = sum(abs2, cholesky(A).U \ x)
 
 
+# using Flux.Tracker: forward
+# l, Ā = forward(foo, A)
+# Ā(1.0)[1]
+
+# l, Ā = forward(bar, A)
+# Ā(1.0)[1]
+
+# using Test
 
 
-using ForwardDiff: gradient
-gradient(foo, A)
-gradient(bar, A)
+
+
+# using ForwardDiff: gradient
+# gradient(foo, A)
+# gradient(bar, A)
 
 
 
@@ -371,9 +371,8 @@ evals/sample:     1
 ############# Load some stuff ################
 
 using Revise
-using Stheno, Flux, Flux.Tracker, Random, BenchmarkTools, Distances
+using Stheno, Flux, Flux.Tracker, Random, BenchmarkTools, Distances, Zygote
 using Stheno: @model
-using Flux: gradient
 using Distances: SqEuclidean
 
 Ns = [10, 100, 1_000, 10_000]
@@ -386,8 +385,14 @@ rng = MersenneTwister(123456);
 X = randn(rng, 2, 10);
 obj(X) = sum(Stheno.pairwise(SqEuclidean(), X))
 
+println("Forward")
 @benchmark obj($X)
-@benchmark gradient(obj, $X)
+
+println("Flux")
+@benchmark Flux.gradient(obj, $X)
+
+println("Zygote")
+@benchmark Zygote.gradient(obj, $X)
 
 
 
@@ -395,43 +400,69 @@ obj(X) = sum(Stheno.pairwise(SqEuclidean(), X))
 
 rng = MersenneTwister(123456);
 D = pairwise(SqEuclidean(), randn(rng, 2, 100));
-obj(D) = sum(-0.5 .* D)
+obj_pairwise(D) = sum(-0.5 .* D)
 
 for N in Ns
     println(N)
-    display(@benchmark obj($(randn(N))))
-    display(@benchmark gradient(obj, $(randn(N))))
-    display(@benchmark ∇(obj)($(randn(N))))
+    D = pairwise(SqEuclidean(), randn(rng, 2, N));
+
+    println("Forward")
+    display(@benchmark obj_pairwise($D))
+
+    println("Flux")
+    display(@benchmark Flux.gradient(obj_pairwise, $D))
+
+    println("Zygote")
+    display(@benchmark Zygote.gradient(obj_pairwise, $D))
 end
 
 
 
 ############# Check gradient of EQ covariance #############
 
+println("EQ covariance")
 rng = MersenneTwister(123456);
-obj(x) = sum(Stheno._pairwise(EQ(), ColsAreObs(x)))
+obj_eq(x) = sum(Stheno._pairwise(EQ(), ColsAreObs(x)))
 
 for N in Ns
     println(N)
     X = randn(rng, 2, N)
-    display(@benchmark obj($X))
-    display(@benchmark gradient(obj, $X))
+
+    println("Forward")
+    display(@benchmark obj_eq($X))
+
+    println("Flux")
+    display(@benchmark Flux.gradient(obj_eq, $X))
+
+    println("Zygote")
+    display(@benchmark Zygote.gradient(obj_eq, $X))
 end
 
 
 
 ############# Check gradient of logpdf w.r.t. inputs of a very simple model ##############
 
-
+println("Gradient w.r.t. inputs")
 rng = MersenneTwister(123456);
-obj(X, y) = logpdf(GP(EQ(), GPC())(ColsAreObs(X)), y)
+obj_simple(X, y) = logpdf(GP(EQ(), GPC())(ColsAreObs(X)), y)
 
 for N in Ns
     println(N)
     X = randn(rng, 2, N)
     y = rand(rng, GP(EQ(), GPC())(ColsAreObs(X)))
-    display(@benchmark (X->obj(X, $y))($X))
-    display(@benchmark gradient(X->obj(X, $y), $X))
+
+    println("Forward")
+    display(@benchmark (X->obj_simple(X, $y))($X))
+
+    println("Flux")
+    display(@benchmark Flux.gradient(X->obj_simple(X, $y), $X))
+    display(@benchmark Flux.gradient(y->obj_simple($X, y), $y))
+    display(@benchmark Flux.gradient(obj_simple, $X, $y))
+
+    println("Zygote")
+    display(@benchmark Zygote.gradient(X->obj_simple(X, $y), $X))
+    display(@benchmark Zygote.gradient(y->obj_simple($X, y), $y))
+    display(@benchmark Zygote.gradient(obj_simple, $X, $y))
 end
 
 
@@ -442,15 +473,22 @@ end
 end
 
 rng = MersenneTwister(123456);
-x = randn(rng, 10);
-y = rand(rng, foo(0.0)(x));
 
-function obj(log_σ::Real)
-    return logpdf(foo(log_σ)(x), y)
+function obj_logpdf(log_σ::Real, x, y)
+    return logpdf(foo(log_σ)(ColsAreObs(x)), y)
 end
 
-gradient(obj, 5.0)
+for N in Ns
+    x = randn(rng, 2, N)
+    y = rand(rng, foo(0.0)(ColsAreObs(x)))
+    println(N)
 
-@benchmark obj(0.0)
-@benchmark gradient(obj, 0.0)
+    println("Forward")
+    display(@benchmark obj_logpdf(0.0, $x, $y))
 
+    println("Flux")
+    display(@benchmark Flux.gradient(logσ->obj_logpdf(logσ, $x, $y), 0.0))
+
+    println("Zygote")
+    display(@benchmark Flux.gradient((x, y)->obj_logpdf(0.0, x, y), $x, $y))
+end

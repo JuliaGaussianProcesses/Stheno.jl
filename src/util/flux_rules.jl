@@ -60,8 +60,9 @@ import Base: *
 \(A::TrackedMatrix, B::TrackedVecOrMat) = track(\, A, B)
 \(A::AbstractMatrix, B::TrackedVecOrMat) = track(\, A, B)
 \(A::TrackedMatrix, B::AbstractVecOrMat) = track(\, A, B)
-\(A::Adjoint, B::TrackedVecOrMat) = track(\, A, B)
-@grad function \(A::AbstractMatrix, B::AbstractVector)
+\(A::Adjoint, B::TrackedMatrix) = track(\, A, B)
+\(A::Adjoint{<:Real, <:UpperTriangular}, b::TrackedVector) = track(\, A, b)
+@grad function \(A::AbstractMatrix, B::AbstractVecOrMat)
     Y = data(A) \ data(B)
     return Y, function(Ȳ)
         B̄ = A' \ Ȳ
@@ -85,7 +86,7 @@ end
 # Construction of Symmetric matrices.
 Symmetric(A::TrackedMatrix) = track(Symmetric, A)
 @grad function Symmetric(A::TrackedMatrix)
-    return Symmetric(data(A)), Δ->(Matrix(symmetric_back(Δ)),)
+    return Symmetric(data(A)), Δ->(symmetric_back(Δ),)
 end
 symmetric_back(Δ) = UpperTriangular(Δ) + LowerTriangular(Δ)' - Diagonal(Δ)
 symmetric_back(Δ::UpperTriangular) = Δ
@@ -102,20 +103,20 @@ chol(Σ::TrackedMatrix) = track(chol, Σ)
         @inbounds for n in diagind(Σ̄)
             Σ̄[n] *= 0.5
         end
-        return (Matrix(UpperTriangular(Σ̄)),)
+        return (UpperTriangular(Σ̄),)
     end
 end
 
 diag(A::TrackedMatrix) = track(diag, A)
 @grad function diag(A::TrackedMatrix)
-    return diag(data(A)), Δ->(Matrix(Diagonal(Δ)),)
+    return diag(data(A)), Δ->(Diagonal(Δ),)
 end
 
 # Specialised logdet sensitivity for UpperTriangular matrices.
 const StridedTriangular{T} = AbstractTriangular{T, <:StridedMatrix{T}}
 logdet(U::TrackedMatrix{T, <:StridedTriangular{T}} where T) = track(logdet, U)
 @grad function logdet(U::TrackedMatrix{T, <:StridedTriangular{T}} where T)
-    return logdet(data(U)), Δ->(Matrix(Diagonal(Δ ./ diag(data(U)))),)
+    return logdet(data(U)), Δ->(UpperTriangular(Matrix(Diagonal(Δ ./ diag(data(U))))),)
 end
 
 # Addition of `TrackedMatrix` and `UniformScaling`, where it is assumed that the scaling

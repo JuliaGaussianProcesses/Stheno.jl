@@ -88,15 +88,17 @@ eachindex(k::RhsCross, dim::Int) = eachindex(k.k, dim)
 
 A kernel given by `k(x, x′) = f(x) * k(x, x′) * f(x′)`.
 """
-struct OuterCross <: CrossKernel
-    f
+struct OuterCross{T} <: CrossKernel
+    f::T
     k::CrossKernel
 end
 (k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
+(k::OuterCross{<:Real})(x, x′) = k.f^2 * k.k(x, x′)
 size(k::OuterCross, N::Int) = size(k.k, N)
 function _pairwise(k::OuterCross, X::AV, X′::AV)
     return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
 end
+_pairwise(k::OuterCross{<:Real}, X::AV, X′::AV) = k.f^2 .* pairwise(k.k, X, X′)
 eachindex(k::OuterCross, dim::Int) = eachindex(k.k, dim)
 
 # map(k::OuterCross, ::Colon) = map(k.f, :) .* pairwise(k.k, :) .* map(k.f, :)'
@@ -106,23 +108,31 @@ eachindex(k::OuterCross, dim::Int) = eachindex(k.k, dim)
 
 A kernel given by `k(x, x′) = f(x) * k(x, x′) * f(x′)`.
 """
-struct OuterKernel <: Kernel
-    f
+struct OuterKernel{T} <: Kernel
+    f::T
     k::Kernel
 end
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
+(k::OuterKernel{<:Real})(x, x′) = k.f^2 * k.k(x, x′)
 (k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
+(k::OuterKernel{<:Real})(x) = k.f^2 * k.k(x)
 length(k::OuterKernel) = length(k.k)
 _pairwise(k::OuterKernel, X::AV) = Xt_A_X(pairwise(k.k, X), Diagonal(map(k.f, X)))
+_pairwise(k::OuterKernel{<:Real}, X::AV) = k.f^2 .* pairwise(k.k, X)
 function _pairwise(k::OuterKernel, X::AV, X′::AV)
     return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
 end
+_pairwise(k::OuterKernel{<:Real}, X::AV, X′::AV) = k.f^2 .* pairwise(k.k, X, X′)
 eachindex(k::OuterKernel) = eachindex(k.k)
 
 
 ############################## Convenience functionality ##############################
 
 import Base: +, *, promote_rule, convert
+
+function *(f, μ::MeanFunction)
+    return iszero(μ) ? μ : CompositeMean(f, μ)
+end
 
 function *(f, k::CrossKernel)
     return iszero(k) ? k : LhsCross(f, k)

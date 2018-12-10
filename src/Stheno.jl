@@ -44,8 +44,9 @@ module Stheno
     include("linops/gradient.jl")
     # include("linops/integrate.jl")
 
-    # The @model macro.
+    # Various stuff for convenience.
     include("util/model.jl")
     include("util/flux_rules.jl")
+    include("util/zygote_rules.jl")
 
 end # module

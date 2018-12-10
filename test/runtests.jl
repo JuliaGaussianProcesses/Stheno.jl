@@ -42,6 +42,7 @@ using Stheno, Test
 
     @testset "integration" begin
         # include("util/toeplitz_integration.jl")
-        include("util/flux_rules.jl")
+        # include("util/flux_rules.jl")
+        include("util/zygote_rules.jl")
     end
 end
