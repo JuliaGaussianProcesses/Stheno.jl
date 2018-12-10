@@ -1,9 +1,14 @@
 using LinearAlgebra
-import LinearAlgebra: AbstractMatrix
+using Base.Broadcast: DefaultArrayStyle
+
+import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec
 import Base: +, *, ==, size, eachindex, print
 import Distances: pairwise
+import Base.Broadcast: broadcasted
+
 export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
     Exponential, ConstantKernel, isstationary, ZeroKernel
+
 
 
 ############################# Define CrossKernels and Kernels ##############################
@@ -46,83 +51,6 @@ end
 
 
 
-###################### `map` and `pairwise` fallback implementations #######################
-
-# Unary map / _map
-_map_fallback(k::CrossKernel, X::AV) = [k(x, x) for x in X]
-_map_fallback(k::Kernel, X::AV) = [k(x) for x in X]
-_map(k::CrossKernel, X::AV) = _map_fallback(k, X)
-map(k::CrossKernel, X::BlockData) = BlockVector([map(k, x) for x in blocks(X)])
-map(k::CrossKernel, X::AV) = _map(k, X)
-
-
-# Binary map / _map
-_map_fallback(k::CrossKernel, X::AV, X′::AV) = [k(x, x′) for (x, x′) in zip(X, X′)]
-_map(k::CrossKernel, X::AV, X′::AV) = _map_fallback(k, X, X′)
-function map(k::CrossKernel, X::BlockData, X′::BlockData)
-    return BlockVector([map(k, x, x′) for (x, x′) in zip(blocks(X), blocks(X′))])
-end
-map(k::CrossKernel, X::AV, X′::AV) = _map(k, X, X′)
-
-
-# Unary pairwise / _pairwise
-_pairwise(k::Kernel, X::AV) = _pairwise(k, X, X)
-pairwise(k::Kernel, X::AV) = LazyPDMat(_pairwise(k, X))
-function pairwise(k::Kernel, X::BlockData)
-    Σ = BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X)])
-    return LazyPDMat(Symmetric(Σ))
-end
-pairwise(k::CrossKernel, X::BlockData) = pairwise(k, X, X)
-pairwise(k::CrossKernel, X::AV) = _pairwise(k, X)
-
-
-# Binary pairwise / _pairwise
-function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
-    return [k(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
-end
-_pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise_fallback(k, X, X′)
-_pairwise(k::CrossKernel, X::AV) = _pairwise(k, X, X)
-
-pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise(k, X, X′)
-function pairwise(k::CrossKernel, X::BlockData, X′::BlockData)
-    return BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X′)])
-end
-pairwise(k::CrossKernel, X::BlockData, X′::AV) = pairwise(k, X, BlockData([X′]))
-pairwise(k::CrossKernel, X::AV, X′::BlockData) = pairwise(k, BlockData([X]), X′)
-
-
-# Sugar for `eachindex` things.
-for op in [:map, :pairwise]
-    @eval begin
-        $op(k::CrossKernel, ::Colon) = $op(k, eachindex(k))
-        $op(k::CrossKernel, ::Colon, ::Colon) = $op(k, :)
-        $op(k::CrossKernel, ::Colon, X′::AV) = $op(k, eachindex(k, 1), X′)
-        $op(k::CrossKernel, X::AV, ::Colon) = $op(k, X, eachindex(k, 2))
-    end
-end
-
-
-# Optimisation for Toeplitz covariance matrices.
-function pairwise(k::Kernel, x::StepRangeLen{<:Real})
-    if isstationary(k)
-        return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
-    else
-        return LazyPDMat(_pairwise(k, x))
-    end
-end
-function pairwise(k::CrossKernel, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real})
-    if isstationary(k) && x.step == x′.step
-        return Toeplitz(
-            map(k, x, Fill(x′[1], length(x))),
-            map(k, Fill(x[1], length(x′)), x′),
-        )
-    else
-        return _pairwise(k, x, x′)
-    end
-end
-
-
-
 ################################ Define some basic kernels #################################
 
 # An error that Kernels may throw if `eachindex` is undefined.
@@ -130,6 +58,7 @@ function eachindex_err(::T) where T<:Kernel
     throw(ArgumentError("`eachindex` undefined for kernel of type $T."))
 end
 
+# By default, don't defined indexing.
 eachindex(k::Kernel) = eachindex_err(k)
 
 """
@@ -141,6 +70,7 @@ struct ZeroKernel{T<:Real} <: Kernel end
 (::ZeroKernel{T})(x, x′) where T = zero(T)
 (::ZeroKernel{T})(x) where T = zero(T)
 isstationary(::Type{<:ZeroKernel}) = true
+
 _map(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X))
 _pairwise(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X), length(X′))
 ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
@@ -183,6 +113,13 @@ function _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs)
     return exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
 end
 
+function broadcasted(::DefaultArrayStyle{2}, ::EQ, x::AbstractVector, x′::AdjOrTransAbsVec)
+    println("woohoo inside broadcasted")
+    return exp.(-0.5 .* pairwise(SqEuclidean(), x, x′.parent))
+end
+
+
+
 """
     PerEQ{Tp<:Real}
 
@@ -204,20 +141,6 @@ struct Exponential <: Kernel end
 isstationary(::Type{<:Exponential}) = true
 (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
 (::Exponential)(x) = one(Float64)
-
-# """
-#     RQ{T<:Real} <: Kernel
-
-# The standardised Rational Quadratic. `RQ(α)` creates an `RQ` `Kernel{Stationary}` whose
-# kurtosis is `α`.
-# """
-# struct RQ{T<:Real} <: Kernel
-#     α::T
-# end
-# @inline (k::RQ)(x::Real, y::Real) = (1 + 0.5 * abs2(x - y) / k.α)^(-k.α)
-# ==(a::RQ, b::RQ) = a.α == b.α
-# isstationary(::Type{<:RQ}) = true
-# show(io::IO, k::RQ) = show(io, "RQ($(k.α))")
 
 """
     Linear{T<:Real} <: Kernel
@@ -241,18 +164,6 @@ function _pairwise(k::Linear, D::ColsAreObs)
 end
 _pairwise(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
 
-# """
-#     Poly{Tσ<:Real} <: Kernel
-
-# Standardised Polynomial kernel. `Poly(p, σ)` creates a `Poly`.
-# """
-# struct Poly{Tσ<:Real} <: Kernel
-#     p::Int
-#     σ::Tσ
-# end
-# @inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
-# show(io::IO, k::Poly) = show(io, "Poly($(k.p))")
-
 """
     Noise{T<:Real} <: Kernel
 
@@ -274,6 +185,32 @@ function _pairwise(k::Noise, X::AV, X′::AV)
             for p in eachindex(X), q in eachindex(X′)]
     end
 end
+
+# """
+#     RQ{T<:Real} <: Kernel
+
+# The standardised Rational Quadratic. `RQ(α)` creates an `RQ` `Kernel{Stationary}` whose
+# kurtosis is `α`.
+# """
+# struct RQ{T<:Real} <: Kernel
+#     α::T
+# end
+# @inline (k::RQ)(x::Real, y::Real) = (1 + 0.5 * abs2(x - y) / k.α)^(-k.α)
+# ==(a::RQ, b::RQ) = a.α == b.α
+# isstationary(::Type{<:RQ}) = true
+# show(io::IO, k::RQ) = show(io, "RQ($(k.α))")
+
+# """
+#     Poly{Tσ<:Real} <: Kernel
+
+# Standardised Polynomial kernel. `Poly(p, σ)` creates a `Poly`.
+# """
+# struct Poly{Tσ<:Real} <: Kernel
+#     p::Int
+#     σ::Tσ
+# end
+# @inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
+# show(io::IO, k::Poly) = show(io, "Poly($(k.p))")
 
 # """
 #     Wiener <: Kernel
@@ -346,3 +283,103 @@ function *(k::CrossKernel, k′::CrossKernel)
     @assert size(k) == size(k′)
     return iszero(k) || iszero(k′) ? zero(k) : CompositeCrossKernel(*, k, k′)
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###################### `map` and `pairwise` fallback implementations #######################
+
+# # Unary map / _map
+# _map_fallback(k::CrossKernel, X::AV) = [k(x, x) for x in X]
+# _map_fallback(k::Kernel, X::AV) = [k(x) for x in X]
+# _map(k::CrossKernel, X::AV) = _map_fallback(k, X)
+# map(k::CrossKernel, X::BlockData) = BlockVector([map(k, x) for x in blocks(X)])
+# map(k::CrossKernel, X::AV) = _map(k, X)
+
+
+# # Binary map / _map
+# _map_fallback(k::CrossKernel, X::AV, X′::AV) = [k(x, x′) for (x, x′) in zip(X, X′)]
+# _map(k::CrossKernel, X::AV, X′::AV) = _map_fallback(k, X, X′)
+# function map(k::CrossKernel, X::BlockData, X′::BlockData)
+#     return BlockVector([map(k, x, x′) for (x, x′) in zip(blocks(X), blocks(X′))])
+# end
+# map(k::CrossKernel, X::AV, X′::AV) = _map(k, X, X′)
+
+
+# # Unary pairwise / _pairwise
+# _pairwise(k::Kernel, X::AV) = _pairwise(k, X, X)
+# pairwise(k::Kernel, X::AV) = LazyPDMat(_pairwise(k, X))
+# function pairwise(k::Kernel, X::BlockData)
+#     Σ = BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X)])
+#     return LazyPDMat(Symmetric(Σ))
+# end
+# pairwise(k::CrossKernel, X::BlockData) = pairwise(k, X, X)
+# pairwise(k::CrossKernel, X::AV) = _pairwise(k, X)
+
+
+# # Binary pairwise / _pairwise
+# function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
+#     return [k(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
+# end
+# _pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise_fallback(k, X, X′)
+# _pairwise(k::CrossKernel, X::AV) = _pairwise(k, X, X)
+
+# pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise(k, X, X′)
+# function pairwise(k::CrossKernel, X::BlockData, X′::BlockData)
+#     return BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X′)])
+# end
+# pairwise(k::CrossKernel, X::BlockData, X′::AV) = pairwise(k, X, BlockData([X′]))
+# pairwise(k::CrossKernel, X::AV, X′::BlockData) = pairwise(k, BlockData([X]), X′)
+
+
+# # Sugar for `eachindex` things.
+# for op in [:map, :pairwise]
+#     @eval begin
+#         $op(k::CrossKernel, ::Colon) = $op(k, eachindex(k))
+#         $op(k::CrossKernel, ::Colon, ::Colon) = $op(k, :)
+#         $op(k::CrossKernel, ::Colon, X′::AV) = $op(k, eachindex(k, 1), X′)
+#         $op(k::CrossKernel, X::AV, ::Colon) = $op(k, X, eachindex(k, 2))
+#     end
+# end
+
+
+# # Optimisation for Toeplitz covariance matrices.
+# function pairwise(k::Kernel, x::StepRangeLen{<:Real})
+#     if isstationary(k)
+#         return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
+#     else
+#         return LazyPDMat(_pairwise(k, x))
+#     end
+# end
+# function pairwise(k::CrossKernel, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real})
+#     if isstationary(k) && x.step == x′.step
+#         return Toeplitz(
+#             map(k, x, Fill(x′[1], length(x))),
+#             map(k, Fill(x[1], length(x′)), x′),
+#         )
+#     else
+#         return _pairwise(k, x, x′)
+#     end
+# end

@@ -2,20 +2,19 @@ using BlockArrays, LinearAlgebra
 using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise, LazyPDMat
 
 """
-    unary_map_tests(f, X::AbstractVector)
+    unary_broadcast_tests(f, X::AbstractVector)
 
 Consistency tests intended for use with `MeanFunction`s.
 """
-function unary_map_tests(f, X::AbstractVector)
-    @test map(f, X) isa AbstractVector
-    @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ [f(x) for x in X]
-    @test map(f, X) ≈ Stheno._map_fallback(f, X)
+function unary_broadcast_tests(f, X::AbstractVector)
+    @test f.(X) isa AbstractVector
+    @test length(f.(X)) == length(X)
+    @test f.(X) ≈ [f(x) for x in X]
 end
-function unary_map_tests(f, X::BlockData)
-    @test map(f, X) isa AbstractBlockVector
+function unary_broadcast_tests(f, X::BlockData)
+    @test f.(X) isa AbstractBlockVector
     @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ BlockVector([map(f, x) for x in blocks(X)])
+    @test f.(X) ≈ BlockVector([f.(x) for x in blocks(X)])
 end
 
 """
@@ -110,7 +109,7 @@ function __mean_function_tests(μ::MeanFunction, X::AbstractVector)
     @test hasmethod(eachindex, Tuple{typeof(μ)})
 
     # Test optional interface.
-    unary_map_tests(μ, X)
+    unary_broadcast_tests(μ, X)
 end
 
 """

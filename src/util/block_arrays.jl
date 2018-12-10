@@ -4,6 +4,8 @@
 using FillArrays, LinearAlgebra, BlockArrays
 using FillArrays: Fill
 
+using BlockArrays: cumulsizes, blocksizes
+
 import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty
 import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
     adjoint, AdjOrTrans, AdjOrTransAbsMat
@@ -70,23 +72,23 @@ Construct a block matrix with `P` rows and `Q` columns of blocks.
 """
 BlockMatrix(xs::Vector{<:AM}, P::Int, Q::Int) = BlockMatrix(reshape(xs, P, Q))
 
-"""
-    blocksizes(X::AbstractBlockArray, d::Int)
+# """
+#     blocksizes(X::AbstractBlockArray, d::Int)
 
-Get a vector containing the block sizes over the `d`th dimension of `X`. 
-"""
-function blocksizes(X::AbstractBlockArray, d::Int)
-    @assert d > 0 && d <= ndims(X)
-    idxs = [1 for _ in 1:length(size(X))]
-    block_sizes = Vector{Int}(undef, nblocks(X, d))
-    for p in eachindex(block_sizes)
-        idxs[d] = p
-        block_sizes[p] = blocksize(X, idxs...)[d]
-    end
-    return block_sizes
-end
-blocksizes(X::AbstractBlockArray) = ([blocksizes(X, d) for d in 1:length(size(X))]...,)
-blocklengths(x::BlockVector) = blocksizes(x, 1)
+# Get a vector containing the block sizes over the `d`th dimension of `X`. 
+# """
+# function blocksizes(X::AbstractBlockArray, d::Int)
+#     @assert d > 0 && d <= ndims(X)
+#     idxs = [1 for _ in 1:length(size(X))]
+#     block_sizes = Vector{Int}(undef, nblocks(X, d))
+#     for p in eachindex(block_sizes)
+#         idxs[d] = p
+#         block_sizes[p] = blocksize(X, idxs...)[d]
+#     end
+#     return block_sizes
+# end
+# blocksizes(X::AbstractBlockArray) = ([blocksizes(X, d) for d in 1:length(size(X))]...,)
+# blocklengths(x::BlockVector) = blocksizes(x, 1)
 
 
 
@@ -96,11 +98,11 @@ const BS{T} = Symmetric{T, <:AbstractBlockMatrix{T}}
 unbox(X::BS) = X.data
 nblocks(X::BS) = nblocks(unbox(X))
 nblocks(X::BS, i::Int) = nblocks(unbox(X), i)
-blocksize(X::BS, N::Int...) = blocksize(unbox(X), N...)
-blocksizes(X::BS, d::Int...) = blocksizes(unbox(X), d...)
+# blocksize(X::BS, N::Int...) = blocksize(unbox(X), N...)
+# blocksizes(X::BS, d::Int...) = blocksizes(unbox(X), d...)
 
 function getblock(X::BS, p::Int, q::Int)
-    @assert blocksizes(X, 1) == blocksizes(X, 2)
+    @assert cumulsizes(X, 1) == cumulsizes(X, 2)
     X_, uplo = unbox(X), X.uplo
     if p < q
         return uplo == 'U' ? getblock(X_, p, q) : transpose(getblock(X_, q, p))
@@ -119,10 +121,10 @@ end
 function blocksize(U::UpperTriangular{T, <:ABM{T}} where T, p::Int, q::Int)
     return blocksize(unbox(U), p, q)
 end
-blocksizes(U::UpperTriangular{T, <:ABM{T}} where T, d::Int) = blocksizes(unbox(U), d)
-blocksizes(U::UpperTriangular{T, <:ABM{T}} where T) = blocksizes(unbox(U))
+# blocksizes(U::UpperTriangular{T, <:ABM{T}} where T, d::Int) = blocksizes(unbox(U), d)
+# blocksizes(U::UpperTriangular{T, <:ABM{T}} where T) = blocksizes(unbox(U))
 function getblock(U::UpperTriangular{T, <:ABM{T}}, p::Int, q::Int) where T
-    @assert blocksizes(U, 1) == blocksizes(U, 2)
+    @assert cumulsizes(U, 1) == cumulsizes(U, 2)
     if p > q
         return Zeros{T}(blocksize(U, p, q)...)
     elseif p == q
@@ -134,6 +136,7 @@ end
 nblocks(U::UpperTriangular{T, <:ABM{T}} where T, d::Int...) = nblocks(unbox(U), d...)
 function BlockMatrix(U::UpperTriangular{T, <:ABM{T}}) where T
     B = BlockMatrix{T}(undef_blocks, blocksizes(U)...)
+    B = 
     for q in 1:nblocks(U, 2)
         for p in 1:q-1
             setblock!(B, getblock(U, p, q), p, q)

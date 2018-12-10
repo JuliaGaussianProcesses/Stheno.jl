@@ -16,6 +16,21 @@ length(c::CompositeMean) = length(c.x[1])
 _map(f::CompositeMean, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
 map(f::CompositeMean, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
 
+function +(μ::MeanFunction, μ′::MeanFunction)
+    @assert size(μ) == size(μ′)
+    if iszero(μ)
+        return μ′
+    elseif iszero(μ′)
+        return μ
+    else
+        return CompositeMean(+, μ, μ′)
+    end
+end
+function *(μ::MeanFunction, μ′::MeanFunction)
+    @assert size(μ) == size(μ′)
+    return iszero(μ) || iszero(μ′) ? zero(μ) : CompositeMean(*, μ, μ′)
+end
+
 # CompositeKernel definitions.
 (k::CompositeKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
 (k::CompositeKernel)(x) = map(k.f, map(f->f(x), k.x)...)

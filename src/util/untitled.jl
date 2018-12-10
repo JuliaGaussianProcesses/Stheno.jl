@@ -422,20 +422,22 @@ end
 
 println("EQ covariance")
 rng = MersenneTwister(123456);
-obj_eq(x) = sum(Stheno._pairwise(EQ(), ColsAreObs(x)))
+# obj_eq(x) = sum(Stheno._pairwise(EQ(), ColsAreObs(x)))
+obj_eq(x) = sum(Stheno._pairwise(EQ(), x))
 
 for N in Ns
     println(N)
     X = randn(rng, 2, N)
+    x = randn(rng, N)
 
     println("Forward")
-    display(@benchmark obj_eq($X))
+    display(@benchmark obj_eq($x))
 
     println("Flux")
-    display(@benchmark Flux.gradient(obj_eq, $X))
+    display(@benchmark Flux.gradient(obj_eq, $x))
 
     println("Zygote")
-    display(@benchmark Zygote.gradient(obj_eq, $X))
+    display(@benchmark Zygote.gradient(obj_eq, $x))
 end
 
 
@@ -459,10 +461,10 @@ for N in Ns
     display(@benchmark Flux.gradient(y->obj_simple($X, y), $y))
     display(@benchmark Flux.gradient(obj_simple, $X, $y))
 
-    println("Zygote")
-    display(@benchmark Zygote.gradient(X->obj_simple(X, $y), $X))
-    display(@benchmark Zygote.gradient(y->obj_simple($X, y), $y))
-    display(@benchmark Zygote.gradient(obj_simple, $X, $y))
+    # println("Zygote")
+    # display(@benchmark Zygote.gradient(X->obj_simple(X, $y), $X))
+    # display(@benchmark Zygote.gradient(y->obj_simple($X, y), $y))
+    # display(@benchmark Zygote.gradient(obj_simple, $X, $y))
 end
 
 
@@ -489,6 +491,6 @@ for N in Ns
     println("Flux")
     display(@benchmark Flux.gradient(logσ->obj_logpdf(logσ, $x, $y), 0.0))
 
-    println("Zygote")
-    display(@benchmark Zygote.gradient((x, y)->obj_logpdf(0.0, x, y), $x, $y))
+    # println("Zygote")
+    # display(@benchmark Zygote.gradient((x, y)->obj_logpdf(0.0, x, y), $x, $y))
 end
