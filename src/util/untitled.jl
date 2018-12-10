@@ -490,5 +490,5 @@ for N in Ns
     display(@benchmark Flux.gradient(logσ->obj_logpdf(logσ, $x, $y), 0.0))
 
     println("Zygote")
-    display(@benchmark Flux.gradient((x, y)->obj_logpdf(0.0, x, y), $x, $y))
+    display(@benchmark Zygote.gradient((x, y)->obj_logpdf(0.0, x, y), $x, $y))
 end
