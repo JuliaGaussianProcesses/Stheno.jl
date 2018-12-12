@@ -10,6 +10,6 @@ function eachindex(X::AbstractBlockMatrix, dim::Int)
         throw(ErrorException("Bad dimension."))
     end
 end
-eachindex(X::BS, dim::Int) = eachindex(X.data, dim)
+eachindex(X::BlockSymmetric, dim::Int) = eachindex(X.data, dim)
 eachindex(X::BlockTri, dim::Int) = eachindex(X.data, dim)
 eachindex(X::LazyPDMat, dim::Int) = eachindex(X.Σ, dim)

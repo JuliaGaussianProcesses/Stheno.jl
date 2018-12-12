@@ -20,6 +20,8 @@ using FillArrays: Zeros, Fill
         # Test `EmpiricalMean` converts correctly.
         @test AbstractVector(EmpiricalMean(x)) === x
 
+        @test_throws AssertionError AbstractVector(CustomMean(cos))
+
         # Check that `BlockMean`s behave well in both shallow finite scenarios.
         x1, x2 = randn(rng, 11), randn(rng, 7)
         μ1, μ2 = ConstantMean(randn(rng)), ZeroMean{Float64}()

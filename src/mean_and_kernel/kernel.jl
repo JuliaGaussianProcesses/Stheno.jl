@@ -1,10 +1,10 @@
 using LinearAlgebra
 using Base.Broadcast: DefaultArrayStyle
 
-import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec
+import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
 import Base: +, *, ==, size, eachindex, print
 import Distances: pairwise
-import Base.Broadcast: broadcasted
+import Base.Broadcast: broadcasted, Broadcasted, BroadcastStyle, materialize
 
 export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
     Exponential, ConstantKernel, isstationary, ZeroKernel
@@ -16,8 +16,8 @@ export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, Wien
 abstract type CrossKernel end
 abstract type Kernel <: CrossKernel end
 
-@inline isstationary(::Type{<:CrossKernel}) = false
-@inline isstationary(x::CrossKernel) = isstationary(typeof(x))
+isstationary(::Type{<:CrossKernel}) = false
+isstationary(x::CrossKernel) = isstationary(typeof(x))
 
 # Some fallback definitions.
 size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
@@ -49,6 +49,45 @@ function AbstractMatrix(k::CrossKernel)
     return pairwise(k, eachindex(k, 1), eachindex(k, 2))
 end
 
+"""
+    map(k, x::AV)
+
+map `k` over `x`, with the convention that `k(x) := k(x, x)`.
+"""
+map(k::CrossKernel, x::AV) = materialize(_map(k, x))
+
+"""
+    map(k::CrossKernel, x::AV, x′::AV)
+
+map `k` over the elements of `x` and `x′`.
+"""
+map(k::CrossKernel, x::AV, x′::AV) = materialize(_map(k, x, x′))
+
+# Fused fallbacks.
+_map(k::CrossKernel, x::AV, x′::AV) = Broadcasted(k, x, x′)
+_map(k::CrossKernel, x::AV) = Broadcasted(k, x)
+
+"""
+    pairwise(f, x::AV)
+
+Compute the `length(x) × length(x′)` matrix whose `(p, q)`th element is `k(x[p], x[q])`.
+`_pairwise` is called and `materialize`d, meaning that operations can be fused using Julia's
+broadcasting machinery if required.
+"""
+pairwise(k::CrossKernel, x::AV) = materialize(_pairwise(k, x))
+
+"""
+    pairwise(f, x::AV, x′::AV)
+
+Compute the `length(x) × length(x′)` matrix whose `(p, q)`th element is `k(x[p], x′[q])`.
+`_pairwise` is called and `materialize`d, meaning that operations can be fused using Julia's
+broadcasting machinery if required.
+"""
+pairwise(k::CrossKernel, x::AV, x′::AV) = materialize(_pairwise(k, x, x′))
+
+# Fused fallbacks.
+_pairwise(k::CrossKernel, x::AV, x′::AV) = Broadcasted(k, x, permutedims(x′))
+_pairwise(k::CrossKernel, x::AV) = _pairwise(k, x, x)
 
 
 ################################ Define some basic kernels #################################
@@ -68,15 +107,12 @@ A rank 0 `Kernel` that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
 (::ZeroKernel{T})(x, x′) where T = zero(T)
-(::ZeroKernel{T})(x) where T = zero(T)
 isstationary(::Type{<:ZeroKernel}) = true
-
-_map(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X))
-_pairwise(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X), length(X′))
-==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
-
-const ZK = ZeroKernel{Float64}
-zero(k::Kernel) = length(k) < Inf ? FiniteZeroKernel(eachindex(k)) : ZK()
+==(::ZeroKernel, ::ZeroKernel) = true
+function broadcasted(::DAS{1}, ::ZeroKernel{T}, x::AV, x′::AV) where T
+    return Zeros{T}(broadcast_shape(size(x), size(x′)))
+end
+_pairwise(k::ZeroKernel{T}, x::AV, x′::AV) where T = Zeros{T}(length(x), length(x′))
 
 """
     ConstantKernel{T<:Real} <: Kernel
@@ -88,15 +124,12 @@ struct ConstantKernel{T<:Real} <: Kernel
     c::T
 end
 (k::ConstantKernel)(x::T, x′::T) where T = k.c
-(k::ConstantKernel)(x) = k.c
 isstationary(::Type{<:ConstantKernel}) = true
-_map(k::ConstantKernel, X::AV, ::AV) = Fill(k.c, length(X))
-_pairwise(k::ConstantKernel, X::AV, X′::AV) = Fill(k.c, length(X), length(X′))
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
-
-# ConstantKernel-specific optimisations.
-+(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c + k′.c)
-*(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c * k′.c)
+function broadcasted(::DAS{1}, k::ConstantKernel, x::AV, x′::AV)
+    return Fill(k.c, broadcast_shape(size(x), size(x′)))
+end
+_pairwise(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′))
 
 """
     EQ <: Kernel
@@ -104,21 +137,29 @@ _pairwise(k::ConstantKernel, X::AV, X′::AV) = Fill(k.c, length(X), length(X′
 The standardised Exponentiated Quadratic kernel with no free parameters.
 """
 struct EQ <: Kernel end
-isstationary(::Type{<:EQ}) = true
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-(::EQ)(x::T) where T = one(Float64)
 (::EQ)(x::Real, x′::Real) = exp(-0.5 * (x - x′)^2)
-_pairwise(::EQ, X::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
+isstationary(::Type{<:EQ}) = true
+
+function broadcasted(::DAS{1}, k::EQ, x::AV, x′::AV)
+    return x === x′ ? Fill(1, broadcast_shape(size(x), size(x′))) : Broadcasted(k, (x, x′))
+end
+
+# Matrices of observations.
+function broadcasted(::DAS{1}, k::EQ, X::ColsAreObs, X′::ColsAreObs)
+    if X === X′
+        return Fill(1, broadcast_shape(size(X), size(X′)))
+    else
+        return exp.(-0.5 .* colwise(SqEuclidean(), X.X, X′.X))
+    end
+end
 function _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs)
-    return exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
+    if X === X′
+        return Fill(1, length(X), length(X′))
+    else
+        return Broadcasted(x->exp(-0.5 * x), (pairwise(SqEuclidean(), X.X, X′.X),))
+    end
 end
-
-function broadcasted(::DefaultArrayStyle{2}, ::EQ, x::AbstractVector, x′::AdjOrTransAbsVec)
-    println("woohoo inside broadcasted")
-    return exp.(-0.5 .* pairwise(SqEuclidean(), x, x′.parent))
-end
-
-
 
 """
     PerEQ{Tp<:Real}

@@ -25,7 +25,7 @@ view(D::ColsAreObs, n) = ColsAreObs(view(D.X, :, n))
 eltype(D::ColsAreObs{T}) where T = Vector{T}
 zero(D::ColsAreObs) = ColsAreObs(zero(D.X))
 
-
+const AdjColsAreObs{T, TX} = ColsAreObs{T, TX}
 
 ################################ Fancy block data set type #################################
 
