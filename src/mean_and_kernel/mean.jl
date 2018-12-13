@@ -41,7 +41,7 @@ _map(μ::ConstantMean, D::AV) = Fill(μ.c, length(D))
 struct CustomMean{T} <: MeanFunction
     f::T
 end
-(f::CustomMean)(x) = f.f(x)
+@inline (f::CustomMean)(x) = f.f(x)
 
 """
     EmpiricalMean <: MeanFunction
@@ -52,7 +52,7 @@ struct EmpiricalMean{Tμ<:AbstractVector} <: MeanFunction
     μ::Tμ
 end
 (μ::EmpiricalMean)(n) = μ.μ[n]
-==(μ1::EmpiricalMean, μ2::EmpiricalMean) = μ1.μ == μ2.μ
+==(μ₁::EmpiricalMean, μ₂::EmpiricalMean) = μ₁.μ == μ₂.μ
 _map(μ::EmpiricalMean, x::AV) = x == eachindex(μ) ? μ.μ : μ[x]
 length(μ::EmpiricalMean) = length(μ.μ)
 eachindex(μ::EmpiricalMean) = eachindex(μ.μ)
