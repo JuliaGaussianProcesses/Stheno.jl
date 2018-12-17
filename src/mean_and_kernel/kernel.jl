@@ -3,7 +3,7 @@ using Base.Broadcast: DefaultArrayStyle
 
 import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
 import Base: +, *, ==, size, eachindex, print
-import Distances: pairwise
+import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
 import Base.Broadcast: broadcasted, Broadcasted, BroadcastStyle, materialize
 
 export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
@@ -64,8 +64,8 @@ map `k` over the elements of `x` and `x′`.
 map(k::CrossKernel, x::AV, x′::AV) = materialize(_map(k, x, x′))
 
 # Fused fallbacks.
-_map(k::CrossKernel, x::AV, x′::AV) = Broadcasted(k, x, x′)
-_map(k::CrossKernel, x::AV) = Broadcasted(k, x)
+_map(k::CrossKernel, x::AV, x′::AV) = broadcasted(k, x, x′)
+_map(k::CrossKernel, x::AV) = broadcasted(k, x)
 
 """
     pairwise(f, x::AV)
@@ -86,8 +86,34 @@ broadcasting machinery if required.
 pairwise(k::CrossKernel, x::AV, x′::AV) = materialize(_pairwise(k, x, x′))
 
 # Fused fallbacks.
-_pairwise(k::CrossKernel, x::AV, x′::AV) = Broadcasted(k, x, permutedims(x′))
+_pairwise(k::CrossKernel, x::AV, x′::AV) = broadcasted(k, x, permutedims(x′))
 _pairwise(k::CrossKernel, x::AV) = _pairwise(k, x, x)
+
+
+
+################################ Util. for Toeplitz matrices ###############################
+
+function toep_pw(k::CrossKernel, x::StepRangeLen, x′::StepRangeLen)
+    if x.step == x′.step
+        return Toeplitz(
+            map(k, x, Fill(x′[1], length(x))),
+            map(k, Fill(x[1], length(x′)), x′),
+        )
+    else
+        return invoke(_pairwise, Tuple{typeof(k), AV, AV}, k, x, x′)
+    end
+end
+
+toep_pw(k::Kernel, x::StepRangeLen) = SymmetricToeplitz(map(k, x, Fill(x[1], length(x))))
+
+function toep_map(k::Kernel, x::StepRangeLen, x′::StepRangeLen)
+    if x.step == x′.step
+        return Fill(x[1] - x′[1], broadcast_shape(size(x), size(x′)))
+    else
+        return invoke(_map, Tuple{typeof(k), AV, AV}, k, x, x′)
+    end
+end
+
 
 
 ################################ Define some basic kernels #################################
@@ -100,19 +126,26 @@ end
 # By default, don't defined indexing.
 eachindex(k::Kernel) = eachindex_err(k)
 
+
 """
     ZeroKernel <: Kernel
 
 A rank 0 `Kernel` that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
-(::ZeroKernel{T})(x, x′) where T = zero(T)
 isstationary(::Type{<:ZeroKernel}) = true
 ==(::ZeroKernel, ::ZeroKernel) = true
-function broadcasted(::DAS{1}, ::ZeroKernel{T}, x::AV, x′::AV) where T
-    return Zeros{T}(broadcast_shape(size(x), size(x′)))
-end
+
+# Binary methods.
+(::ZeroKernel{T})(x, x′) where T = zero(T)
+_map(::ZeroKernel{T}, x::AV, x′::AV) where T = Zeros{T}(broadcast_shape(size(x), size(x′)))
 _pairwise(k::ZeroKernel{T}, x::AV, x′::AV) where T = Zeros{T}(length(x), length(x′))
+
+# Unary methods.
+(::ZeroKernel{T})(x) where T = zero(T)
+_map(::ZeroKernel{T}, x::AV) where T = Zeros{T}(length(x))
+_pairwise(k::ZeroKernel{T}, x::AV) where T = Zeros{T}(length(x), length(x))
+
 
 """
     ConstantKernel{T<:Real} <: Kernel
@@ -123,13 +156,19 @@ but (almost certainly) shouldn't be used as a base `Kernel`.
 struct ConstantKernel{T<:Real} <: Kernel
     c::T
 end
-(k::ConstantKernel)(x::T, x′::T) where T = k.c
 isstationary(::Type{<:ConstantKernel}) = true
 ==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
-function broadcasted(::DAS{1}, k::ConstantKernel, x::AV, x′::AV)
-    return Fill(k.c, broadcast_shape(size(x), size(x′)))
-end
+
+# Binary methods.
+(k::ConstantKernel)(x, x′) = k(x)
+_map(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, broadcast_shape(size(x), size(x′)))
 _pairwise(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′))
+
+# Unary methods.
+(k::ConstantKernel)(x) = k.c
+_map(k::ConstantKernel, x::AV) = Fill(k.c, length(x))
+_pairwise(k::ConstantKernel, x::AV) = Fill(k.c, length(x), length(x))
+
 
 """
     EQ <: Kernel
@@ -137,29 +176,28 @@ _pairwise(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′
 The standardised Exponentiated Quadratic kernel with no free parameters.
 """
 struct EQ <: Kernel end
-(::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-(::EQ)(x::Real, x′::Real) = exp(-0.5 * (x - x′)^2)
 isstationary(::Type{<:EQ}) = true
+==(::EQ, ::EQ) = true
 
-function broadcasted(::DAS{1}, k::EQ, x::AV, x′::AV)
-    return x === x′ ? Fill(1, broadcast_shape(size(x), size(x′))) : Broadcasted(k, (x, x′))
-end
-
-# Matrices of observations.
-function broadcasted(::DAS{1}, k::EQ, X::ColsAreObs, X′::ColsAreObs)
-    if X === X′
-        return Fill(1, broadcast_shape(size(X), size(X′)))
-    else
-        return exp.(-0.5 .* colwise(SqEuclidean(), X.X, X′.X))
-    end
+# Binary methods.
+(::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
+function _map(k::EQ, X::ColsAreObs, X′::ColsAreObs)
+    return broadcasted(x->exp(-0.5 * x), colwise(SqEuclidean(), X.X, X′.X))
 end
 function _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs)
-    if X === X′
-        return Fill(1, length(X), length(X′))
-    else
-        return Broadcasted(x->exp(-0.5 * x), (pairwise(SqEuclidean(), X.X, X′.X),))
-    end
+    return broadcasted(x->exp(-0.5 * x), pairwise(SqEuclidean(), X.X, X′.X))
 end
+_map(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+_pairwise(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+
+# Unary methods.
+(::EQ)(x) = 1
+_map(k::EQ, x::AV) = Fill(1, length(x))
+function _pairwise(k::EQ, X::ColsAreObs)
+    return broadcasted(x->exp(-0.5 * x), pairwise(SqEuclidean(), X.X))
+end
+_pairwise(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+
 
 """
     PerEQ{Tp<:Real}

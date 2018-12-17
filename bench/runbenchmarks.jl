@@ -1,3 +1,4 @@
+using Revise
 using Stheno, BenchmarkTools, Flux, Zygote
 using BenchmarkTools: median
 # plotly();
@@ -41,9 +42,17 @@ using BenchmarkTools: median
 # function get_times()
 
 include("mean_and_kernel/mean.jl")
+include("mean_and_kernel/kernel.jl")
+
+function construct_benchmarks()
+    suite = BenchmarkGroup()
+    # suite["mean_and_kernel/mean.jl"] = mean_benchmarks()
+    suite["mean_and_kernel/kernel.jl"] = kernel_benchmarks()
+    return suite
+end
 
 println("Constructing:")
-suite = mean_benchmarks()
+suite = construct_benchmarks()
 println("Tuning:")
 tune!(suite)
 println("Running:")

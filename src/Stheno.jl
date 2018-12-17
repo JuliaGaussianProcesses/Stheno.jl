@@ -20,7 +20,7 @@ module Stheno
 
     # All mean function and kernel related functionality.
     include("mean_and_kernel/mean.jl")
-    # include("mean_and_kernel/kernel.jl")
+    include("mean_and_kernel/kernel.jl")
     # include("mean_and_kernel/compose.jl")
     # include("mean_and_kernel/finite.jl")
     # include("mean_and_kernel/conditional.jl")
