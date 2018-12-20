@@ -33,6 +33,7 @@ IndexStyle(::Type{<:LazyPDMat}) = IndexLinear()
 isapprox(Σ1::LazyPDMat, Σ2::LazyPDMat) = isapprox(unbox(Σ1), unbox(Σ2))
 
 # Unary functions.
+chol(Σ::AbstractMatrix) = chol(Symmetric(Σ))
 chol(Σ::Symmetric) = cholesky(Σ).U
 function chol(Σ::LazyPDMat)
     if Σ.U == nothing

@@ -77,7 +77,7 @@ marginals(f::AbstractGP) = Normal.(mean_vec(f), sqrt.(map(kernel(f), eachindex(f
 Obtain `N` independent samples from the GP `f` using `rng`, if `isfinite(length(f))`.
 """
 function rand(rng::AbstractRNG, f::AbstractGP, N::Int)
-    return mean_vec(f) .+ chol(cov(f))' * randn(rng, length(f), N)
+    return mean_vec(f) .+ chol(cov(f) + 1e-6I)' * randn(rng, length(f), N)
 end
 rand(rng::AbstractRNG, f::AbstractGP) = vec(rand(rng, f, 1))
 rand(f::AbstractGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
@@ -90,13 +90,10 @@ The log probability density of `y` under `f`.
 """
 function logpdf(f::AbstractGP, y::AbstractVector{<:Real})
     μ, Σ = mean_vec(f), cov(f)
-    # return Xt_invA_X(Σ, y - μ)
-    # @show typeof(Σ.Σ)
-    # return sum(Σ.Σ)
-    # return Xt_invA_X(Σ, y - μ)
-    # return logdet(Σ)
-    # return -0.5 * (length(y) * log(2π) + logdet(Σ))
-    return -0.5 * (length(y) * log(2π) + logdet(Σ) + Xt_invA_X(Σ, y - μ))
+    U = chol(Σ + 1e-6I)
+    # return sum(abs2.(U' \ (y - μ)))
+    # # return -0.5 * (length(y) * log(2π) + 2 * logdet(U))
+    return -0.5 * (length(y) * log(2π) + 2 * logdet(U) + sum(abs2.(U' \ (y - μ))))
 end
 
 """

@@ -11,10 +11,20 @@ length(::MeanFunction) = Inf
 size(μ::MeanFunction) = (length(μ),)
 
 # Mapping now allows for fused operations.
-map(μ::MeanFunction, x::AV) = materialize(_map(μ, x))
+map(μ::MeanFunction, x::Union{AV, Colon}) = materialize(_map(μ, x))
 map(μ::MeanFunction, x::BlockData) = BlockVector([map(μ, x) for x in blocks(x)])
-map(μ::MeanFunction, ::Colon) = map(μ, eachindex(μ))
 _map(μ::MeanFunction, x) = broadcasted(μ, x)
+
+"""
+    AbstractVector(μ::MeanFunction)
+
+Convert `μ` into an `AbstractVector` if such a representation exists.
+"""
+function AbstractVector(μ::MeanFunction)
+    @assert isfinite(length(μ))
+    return map(μ, :)
+end
+
 
 """
     ZeroMean{T<:Real} <: MeanFunction
@@ -25,6 +35,7 @@ struct ZeroMean{T<:Real} <: MeanFunction end
 (::ZeroMean{T})(x) where T = zero(T)
 ==(::ZeroMean, ::ZeroMean) = true
 _map(::ZeroMean{T}, x::AV) where T = Zeros{T}(length(x))
+
 
 """
     ConstantMean{T} <: MeanFunction
@@ -43,6 +54,7 @@ struct CustomMean{T} <: MeanFunction
 end
 @inline (f::CustomMean)(x) = f.f(x)
 
+
 """
     EmpiricalMean <: MeanFunction
 
@@ -56,14 +68,17 @@ end
 _map(μ::EmpiricalMean, x::AV) = x == eachindex(μ) ? μ.μ : μ[x]
 length(μ::EmpiricalMean) = length(μ.μ)
 eachindex(μ::EmpiricalMean) = eachindex(μ.μ)
+AbstractVector(μ::EmpiricalMean) = μ.μ
+
 
 struct UnaryMean{Top, Tμ} <: MeanFunction
     op::Top
     μ::Tμ
 end
-(μ::UnaryMean)(x) = μ.op(μ.μ(x))
+@inline (μ::UnaryMean)(x) = μ.op(μ.μ(x))
 ==(μ::UnaryMean, μ′::UnaryMean) = μ.op == μ′.op && μ.μ == μ′.μ
 _map(μ::UnaryMean, x::AV) = broadcasted(μ.op, _map(μ.μ, x))
+
 
 struct BinaryMean{Top, Tμ₁, Tμ₂} <: MeanFunction
     op::Top
@@ -71,6 +86,8 @@ struct BinaryMean{Top, Tμ₁, Tμ₂} <: MeanFunction
     μ₂::Tμ₂
 end
 (μ::BinaryMean)(x) = μ.op(μ.μ₁(x), μ.μ₂(x))
+(μ::BinaryMean{<:Any, <:Real, <:Any})(x) = μ.op(μ.μ₁, μ.μ₂(x))
+(μ::BinaryMean{<:Any, <:Any, <:Real})(x) = μ.op(μ.μ₁(x), μ.μ₂)
 ==(μ::BinaryMean, μ′::BinaryMean) = μ.op == μ′.op && μ.μ₁ == μ′.μ₁ && μ.μ₂ == μ′.μ₂
 _map(μ::BinaryMean, x::AV) = broadcasted(μ.op, _map(μ.μ₁, x), _map(μ.μ₂, x))
 
@@ -110,5 +127,8 @@ function *(μ::MeanFunction, μ′::MeanFunction)
     end
 end
 *(μ::ConstantMean, μ′::ConstantMean) = ConstantMean(μ.c * μ′.c)
-*(a::Real, μ::MeanFunction) = UnaryMean(m->a * m, μ)
-*(μ::MeanFunction, a::Real) = UnaryMean(m->m * a, μ)
+# *(a::Real, μ::MeanFunction) = UnaryMean(m->a * m, μ)
+# *(μ::MeanFunction, a::Real) = UnaryMean(m->m * a, μ)
+
+@inline *(a::Real, μ::MeanFunction) = BinaryMean(*, a, μ)
+@inline *(μ::MeanFunction, a::Real) = BinaryMean(*, μ, a)

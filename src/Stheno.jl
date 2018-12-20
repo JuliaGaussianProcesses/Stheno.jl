@@ -1,7 +1,8 @@
 module Stheno
 
-    using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random
+    using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random, Zygote
     using Base.Broadcast: DefaultArrayStyle, broadcast_shape
+    using Zygote: @adjoint
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
@@ -22,7 +23,7 @@ module Stheno
     include("mean_and_kernel/mean.jl")
     include("mean_and_kernel/kernel.jl")
     # include("mean_and_kernel/compose.jl")
-    # include("mean_and_kernel/finite.jl")
+    include("mean_and_kernel/finite.jl")
     # include("mean_and_kernel/conditional.jl")
     # include("mean_and_kernel/block.jl")
     # # include("mean_and_kernel/transform.jl")
@@ -33,12 +34,12 @@ module Stheno
     # include("mean_and_kernel/printing.jl")
 
     # # Basic Gaussian process definitions.
-    # include("gp/abstract_gp.jl")
-    # include("gp/gp.jl")
-    # include("gp/block_gp.jl")
+    include("gp/abstract_gp.jl")
+    include("gp/gp.jl")
+    include("gp/block_gp.jl")
 
     # # Affine transformations of GPs.
-    # include("linops/indexing.jl")
+    include("linops/indexing.jl")
     # include("linops/addition.jl")
     # include("linops/product.jl")
     # include("linops/compose.jl")
@@ -49,7 +50,7 @@ module Stheno
 
     # # Various stuff for convenience.
     # include("util/model.jl")
-    # include("util/flux_rules.jl")
-    # include("util/zygote_rules.jl")
+    include("util/flux_rules.jl")
+    include("util/zygote_rules.jl")
 
 end # module

@@ -1,21 +1,50 @@
-using FDM, Zygote, Distances, Random, LinearAlgebra
+using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays
 using Stheno: chol
 
 @testset "zygote_rules" begin
+
+# # Check FillArrays work as expected.
+# let
+#     @test Zygote.gradient(x->sum(Fill(x, 10)), randn())[1] == 10
+#     @test Zygote.gradient(x->sum(Fill(x, (10, 3, 4))), randn())[1] == 10 * 3 * 4
+# end
 
 # Check squared-euclidean distance implementation (AbstractMatrix)
 let
     fdm = central_fdm(5, 1)
     rng, P, Q, D = MersenneTwister(123456), 10, 9, 8
+
+    # Check sqeuclidean.
+    x, y = randn(rng, D), randn(rng, D)
+    f_el_1 = x->sqeuclidean(x, y)
+    @test all(abs.(Zygote.gradient(f_el_1, x)[1] .- FDM.grad(fdm, f_el_1, x)) .< 1e-8) 
+
+    f_el_2 = y->sqeuclidean(x, y)
+    @test all(abs.(Zygote.gradient(f_el_2, y)[1] .- FDM.grad(fdm, f_el_2, y)) .< 1e-8)
+
+    # Check binary colwise
+    X, Y = randn(rng, D, P), randn(rng, D, P)
+    f_col_1 = X->sum(colwise(SqEuclidean(), X, Y))
+    @test all(abs.(Zygote.gradient(f_col_1, X)[1] .- FDM.grad(fdm, f_col_1, X)) .< 1e-8)
+
+    f_col_2 = Y->sum(colwise(SqEuclidean(), X, Y))
+    @test all(abs.(Zygote.gradient(f_col_2, Y)[1] .- FDM.grad(fdm, f_col_2, Y)) .< 1e-8)
+end
+
+let
+    fdm = central_fdm(5, 1)
+    rng, P, Q, D = MersenneTwister(123456), 10, 9, 8
+
+    # Generate differing-length vectors for pairwise.
     X, Y = randn(rng, D, P), randn(rng, D, Q)
 
     # Check first argument of binary pairwise.
-    f = X->sum(pairwise(SqEuclidean(), X, Y))
-    @test all(Zygote.gradient(f, X)[1] .- FDM.grad(fdm, f, X) .< 1e-8)
+    f_pw_1 = X->sum(pairwise(SqEuclidean(), X, Y))
+    @test all(Zygote.gradient(f_pw_1, X)[1] .- FDM.grad(fdm, f_pw_1, X) .< 1e-8)
 
     # Check second argument of binary pairwise.
-    f = Y->sum(pairwise(SqEuclidean(), X, Y))
-    @test all(Zygote.gradient(f, Y)[1] .- FDM.grad(fdm, f, Y) .< 1e-8)
+    f_pw_2 = Y->sum(pairwise(SqEuclidean(), X, Y))
+    @test all(Zygote.gradient(f_pw_2, Y)[1] .- FDM.grad(fdm, f_pw_2, Y) .< 1e-8)
 
     # Check unary pairwise.
     @test Zygote.gradient(X->sum(pairwise(SqEuclidean(), X)), X)[1] ≈
@@ -134,6 +163,48 @@ let
 
     f = A->sum(A + 5I)
     @test all(Zygote.gradient(f, A)[1] .- FDM.grad(fdm, f, A) .< 1e-8)
+end
+
+# EQ evaluation.
+let
+    fdm, rng = central_fdm(5, 1), MersenneTwister(123456)
+
+    x, x′ = randn(rng), randn(rng)
+    f_eval_1 = x->EQ()(x, x′)
+    @test abs(Zygote.gradient(f_eval_1, x)[1] - fdm(f_eval_1, x)) < 1e-8
+    f_eval_2 = x′->EQ()(x, x′)
+    @test abs(Zygote.gradient(f_eval_2, x′)[1] - fdm(f_eval_2, x′)) < 1e-8
+end
+
+function eq_check_op_gradients(fdm, op, x, x′)
+
+    # Check lhs argument.
+    grad_ad_lhs = Zygote.gradient(x->sum(op(EQ(), x, x′)), x)[1]
+    grad_fdm_lhs = FDM.grad(fdm, x->sum(op(EQ(), x, x′)), x)
+    @test all(abs.(grad_ad_lhs .- grad_fdm_lhs) .< 1e-8)
+
+    # Check rhs argument.
+    grad_ad_rhs = Zygote.gradient(x′->sum(op(EQ(), x, x′)), x′)[1]
+    grad_fdm_rhs = FDM.grad(fdm, x′->sum(op(EQ(), x, x′)), x′)
+    @test all(abs.(grad_ad_rhs .- grad_fdm_rhs) .< 1e-8)
+end
+
+# Operations over EQ.
+let
+    fdm = central_fdm(5, 1)
+    rng, P, D = MersenneTwister(123456), 10, 2
+
+    # Irregularly-spaced scalar inputs.
+    x, x′ = randn(rng, P), randn(rng, P)
+    eq_check_op_gradients(fdm, map, x, x′)
+    eq_check_op_gradients(fdm, pairwise, x, x′)
+
+    # Regularly-spaced scalar inputs.
+    δ = randn(rng)
+    x = range(randn(rng), step=δ, length=P)
+    x′ = range(randn(rng), step=δ, length=P)
+    eq_check_op_gradients(fdm, map, x, x′)
+    eq_check_op_gradients(fdm, pairwise, x, x′)
 end
 
 end

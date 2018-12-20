@@ -4,28 +4,25 @@ export FiniteMean, FiniteKernel, LhsFiniteCrossKernel, RhsFiniteCrossKernel,
 
 const IntVec = AbstractVector{<:Integer}
 
+
 """
     FiniteMean <: Function
 
 A mean function defined on a finite index set. Has a method of `mean` which requires no
 additional data.
 """
-struct FiniteMean <: MeanFunction
-    μ::MeanFunction
-    X::AbstractVector
+struct FiniteMean{Tμ<:MeanFunction, TX<:AbstractVector} <: MeanFunction
+    μ::Tμ
+    X::TX
 end
-(μ::FiniteMean)(n) = μ.μ(getindex(μ.X, n))
 ==(μ::FiniteMean, μ′::FiniteMean) = μ.μ == μ′.μ && μ.X == μ′.X
 eachindex(μ::FiniteMean) = eachindex(μ.X)
 length(μ::FiniteMean) = length(μ.X)
-_map(μ::FiniteMean, q::IntVec) = map(μ.μ, μ.X[q])
-function print(io::IO, μ::FiniteMean)
-    println(io, "FiniteMean ($(length(μ))):")
-    print(io, Shunted(Shunt(4, ' '), μ.μ))
-end
 
-# Sugar
-map(μ::FiniteMean, ::Colon) = map(μ, eachindex(μ))
+(μ::FiniteMean)(n) = μ.μ(getindex(μ.X, n))
+# _map(μ::FiniteMean, q::IntVec) = _map(μ.μ, view(μ.X, q))
+_map(μ::FiniteMean, ::Colon) = _map(μ.μ, μ.X)
+
 
 """
     FiniteKernel <: Kernel
@@ -33,33 +30,32 @@ map(μ::FiniteMean, ::Colon) = map(μ, eachindex(μ))
 A kernel valued on a finite index set. Has a method of `cov` which requires no additional
 data.
 """
-struct FiniteKernel <: Kernel
-    k::Kernel
-    X::AbstractVector
+struct FiniteKernel{Tk<:Kernel, TX<:AbstractVector} <: Kernel
+    k::Tk
+    X::TX
 end
-(k::FiniteKernel)(n, n′) = k.k(getindex(k.X, n), getindex(k.X, n′))
-(k::FiniteKernel)(n) = k.k(k.X[n], k.X[n])
 ==(k::FiniteKernel, k′::FiniteKernel) = k.k == k′.k && k.X == k′.X
 eachindex(k::FiniteKernel) = eachindex(k.X)
 length(k::FiniteKernel) = length(k.X)
-function print(io::IO, k::FiniteKernel)
-    println(io, "FiniteKernel $(size(k)):")
-    print(io, Shunted(Shunt(4, ' '), k.k))
-end
-_map(k::FiniteKernel, q::IntVec) = map(k.k, k.X[q])
-_map(k::FiniteKernel, q::IntVec, q′::IntVec) = map(k.k, k.X[q], k.X[q′])
-function _pairwise(k::FiniteKernel, q::IntVec)
-    return pairwise(k.k, k.X[q])
-end
-_pairwise(k::FiniteKernel, q::IntVec, q′::IntVec) = pairwise(k.k, k.X[q], k.X[q′])
 
-# Sugar
-map(k::FiniteKernel, ::Colon) = map(k, eachindex(k))
-map(k::FiniteKernel, ::Colon, ::Colon) = map(k, eachindex(k), eachindex(k))
-pairwise(k::FiniteKernel, ::Colon) = pairwise(k, eachindex(k))
-pairwise(k::FiniteKernel, ::Colon, ::Colon) = pairwise(k, eachindex(k), eachindex(k))
-pairwise(k::FiniteKernel, ::Colon, q′::IntVec) = pairwise(k, eachindex(k), q′)
-pairwise(k::FiniteKernel, q::IntVec, ::Colon) = eachindex(k, q, eachindex(k))
+(k::FiniteKernel)(n, n′) = k.k(getindex(k.X, n), getindex(k.X, n′))
+# function _map(k::FiniteKernel, q::IntVec, q′::IntVec)
+#     return _map(k.k, view(k.X, q), view(k.X, q′))
+# end
+# function _pairwise(k::FiniteKernel, q::IntVec, q′::IntVec)
+#     return _pairwise(k.k, view(k.X, q), view(k.X, q′))
+# end
+_map(k::FiniteKernel, ::Colon, ::Colon) = _map(k.k, k.X, k.X)
+_pairwise(k::FiniteKernel, ::Colon, ::Colon) = _pairwise(k.k, k.X, k.X)
+# _pairwise(k::FiniteKernel, ::Colon, q′::IntVec) = _pairwise(k.k, k.X, view(k.X, q′))
+# _pairwise(k::FiniteKernel, q::IntVec, ::Colon) = _pairwise(k.k, view(k.X, q), k.X)
+
+(k::FiniteKernel)(n) = k.k(k.X[n], k.X[n])
+# _map(k::FiniteKernel, q::IntVec) = _map(k.k, view(k.X, q))
+# _pairwise(k::FiniteKernel, q::IntVec) = _pairwise(k.k, view(k.X, q))
+_map(k::FiniteKernel, ::Colon) = _map(k.k, k.X)
+_pairwise(k::FiniteKernel, ::Colon) = _pairwise(k.k, k.X)
+
 
 """
     LhsFiniteCrossKernel <: CrossKernel
@@ -67,25 +63,20 @@ pairwise(k::FiniteKernel, q::IntVec, ::Colon) = eachindex(k, q, eachindex(k))
 A cross kernel whose first argument is defined on a finite index set. Useful for defining
 cross-covariance between a Finite kernel and other non-Finite kernels.
 """
-struct LhsFiniteCrossKernel <: CrossKernel
-    k::CrossKernel
-    X::AbstractVector
+struct LhsFiniteCrossKernel{Tk<:CrossKernel, TX<:AbstractVector} <: CrossKernel
+    k::Tk
+    X::TX
 end
-(k::LhsFiniteCrossKernel)(n, x) = k.k(getindex(k.X, n), x)
+
 ==(k::LhsFiniteCrossKernel, k′::LhsFiniteCrossKernel) = k.k == k′.k && k.X == k′.X
 size(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? length(k.X) : size(k.k, N)
 eachindex(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex(k.k, 2)
-_map(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = map(k.k, k.X[q], X′)
-_pairwise(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = pairwise(k.k, k.X[q], X′)
-function print(io::IO, k::LhsFiniteCrossKernel)
-    println(io, "LhsFiniteCrossKernel $(size(k)):")
-    print(io, Shunted(Shunt(4, ' '), k.k))
-end
 
-# Sugar
-map(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = map(k, eachindex(k, 1), X′)
-pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = pairwise(k, eachindex(k, 1), X′)
-
+(k::LhsFiniteCrossKernel)(n, x) = k.k(k.X[n], x)
+_map(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = _map(k.k, view(k.X, q), X′)
+_pairwise(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = _pairwise(k.k, view(k.X, q), X′)
+_map(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = _map(k.k, k.X, X′)
+_pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = _pairwise(k.k, k.X, X′)
 
 
 """
@@ -94,24 +85,21 @@ pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = pairwise(k, eachindex(k, 
 A cross kernel whose second argument is defined on a finite index set. You can't really do
 anything with this object other than use it to construct other objects.
 """
-struct RhsFiniteCrossKernel <: CrossKernel
-    k::CrossKernel
-    X′::AbstractVector
+struct RhsFiniteCrossKernel{Tk<:CrossKernel, TX′<:AbstractVector} <: CrossKernel
+    k::Tk
+    X′::TX′
 end
-(k::RhsFiniteCrossKernel)(x, n′) = k.k(x, getindex(k.X′, n′))
+
 ==(k::RhsFiniteCrossKernel, k′::RhsFiniteCrossKernel) = k.k == k′.k && k.X′ == k′.X′
 size(k::RhsFiniteCrossKernel, N::Int) = N == 2 ? length(k.X′) : size(k.k, N)
 eachindex(k::RhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.k, 1) : eachindex(k.X′)
-_map(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = map(k.k, X, k.X′[q′])
-_pairwise(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = pairwise(k.k, X, k.X′[q′])
-function print(io::IO, k::RhsFiniteCrossKernel)
-    println(io, "RhsFiniteCrossKernel $(size(k)):")
-    print(io, Shunted(Shunt(4, ' '), k.k))
-end
 
-# Sugar
-map(k::RhsFiniteCrossKernel, X::AV, ::Colon) = map(k, X, eachindex(k, 2))
-pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = pairwise(k, X, eachindex(k, 2))
+(k::RhsFiniteCrossKernel)(x, n′) = k.k(x, k.X′[n′])
+_map(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = _map(k.k, X, view(k.X′, q′))
+_pairwise(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = _pairwise(k.k, X, view(k.X′, q′))
+_map(k::RhsFiniteCrossKernel, X::AV, ::Colon) = _map(k, X, k.X′)
+_pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = _pairwise(k, X, k.X′)
+
 
 """
     FiniteCrossKernel <: CrossKernel
@@ -119,21 +107,24 @@ pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = pairwise(k, X, eachindex(k, 
 A cross kernel valued on a finite index set. Has a method of `xcov` which requires no
 additional data.
 """
-struct FiniteCrossKernel <: CrossKernel
-    k::CrossKernel
-    X::AbstractVector
-    X′::AbstractVector
+struct FiniteCrossKernel{Tk<:CrossKernel, TX<:AV, TX′<:AV} <: CrossKernel
+    k::Tk
+    X::TX
+    X′::TX′
 end
-(k::FiniteCrossKernel)(n, n′) = k.k(getindex(k.X, n), getindex(k.X′, n′))
 ==(k::FiniteCrossKernel, k′::FiniteCrossKernel) = k.k == k′.k && k.X == k′.X && k.X′ == k′.X′
 size(k::FiniteCrossKernel, N::Int) = N == 1 ? length(k.X) : (N == 2 ? length(k.X′) : 1)
 eachindex(k::FiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex(k.X′)
-_map(k::FiniteCrossKernel, q::IntVec, q′::IntVec) = map(k.k, k.X[q], k.X′[q′])
-_pairwise(k::FiniteCrossKernel, q::IntVec, q′::IntVec) = pairwise(k.k, k.X[q], k.X′[q′])
-function print(io::IO, k::FiniteCrossKernel)
-    println(io, "FiniteCrossKernel $(size(k)):")
-    print(io, Shunted(Shunt(4, ' '), k.k))
-end
+
+(k::FiniteCrossKernel)(n::Integer, n′::Integer) = k.k(k.X[n], k.X′[n′])
+_map(k::FiniteCrossKernel, q::IntVec, q′::IntVec) = _map(k.k, k.X[q], k.X′[q′])
+_pairwise(k::FiniteCrossKernel, q::IntVec, q′::IntVec) = _pairwise(k.k, k.X[q], k.X′[q′])
+_map(k::FiniteCrossKernel, ::Colon, ::Colon) = _map(k.k, k.X, k.X′)
+_map(k::FiniteCrossKernel, q::IntVec, ::Colon) = _map(k.k, view(k.X, q), k.X′)
+_map(k::FiniteCrossKernel, ::Colon, q′::IntVec) = _map(k.k, k.X, view(k.X′, q′))
+_pairwise(k::FiniteCrossKernel, ::Colon, ::Colon) = _map(k.k, k.X, k.X′)
+_pairwise(k::FiniteCrossKernel, q::IntVec, ::Colon) = _map(k.k, view(k.X, q), k.X′)
+_pairwise(k::FiniteCrossKernel, ::Colon, q′::IntVec) = _map(k.k, k.X, view(k.X′, q′))
 
 function zero(k::CrossKernel)
     if size(k, 1) < Inf && size(k, 2) < Inf
@@ -147,14 +138,6 @@ function zero(k::CrossKernel)
     end
 end
 
-# Sugar
-map(k::FiniteCrossKernel, ::Colon, ::Colon) = map(k, eachindex(k, 1), eachindex(k, 2))
-function pairwise(k::FiniteCrossKernel, ::Colon, ::Colon)
-    return pairwise(k, eachindex(k, 1), eachindex(k, 2))
-end
-pairwise(k::FiniteCrossKernel, ::Colon, X′::IntVec) = pairwise(k, eachindex(k, 1), X′)
-pairwise(k::FiniteCrossKernel, X::IntVec, ::Colon) = pairwise(k, X, eachindex(k, 2))
-
 
 
 ################################## Optimisations for zeros #################################
@@ -165,8 +148,9 @@ end
 length(μ::FiniteZeroMean) = length(μ.X)
 ==(μ::FiniteZeroMean, μ′::FiniteZeroMean) = length(μ) == length(μ′)
 eachindex(μ::FiniteZeroMean) = eachindex(μ.X)
-print(io::IO, μ::FiniteZeroMean) = print(io, "FiniteZeroMean ($(length(μ)))")
+
 _map(μ::FiniteZeroMean, q::AV) = Zeros(length(q))
+_map(μ::FiniteZeroMean, ::Colon) = Zeros(length(μ.X))
 
 struct FiniteZeroKernel{TX} <: Kernel
     X::TX

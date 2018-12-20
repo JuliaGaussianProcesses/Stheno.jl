@@ -4,10 +4,10 @@ using Base.Broadcast: DefaultArrayStyle
 import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
 import Base: +, *, ==, size, eachindex, print
 import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
-import Base.Broadcast: broadcasted, Broadcasted, BroadcastStyle, materialize
+import Base.Broadcast: broadcasted, materialize
 
 export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
-    Exponential, ConstantKernel, isstationary, ZeroKernel
+    Exponential, ConstantKernel, isstationary, ZeroKernel, pairwise
 
 
 
@@ -35,7 +35,7 @@ Convert `k` into an `AbstractMatrix`, if such a representation exists.
 """
 function AbstractMatrix(k::Kernel)
     @assert isfinite(size(k, 1))
-    return pairwise(k, eachindex(k, 1))
+    return pairwise(k, :)
 end
 
 """
@@ -46,7 +46,7 @@ Convert `k` into an `AbstractMatrix`, if such a representation exists.
 function AbstractMatrix(k::CrossKernel)
     @assert isfinite(size(k, 1))
     @assert isfinite(size(k, 2))
-    return pairwise(k, eachindex(k, 1), eachindex(k, 2))
+    return pairwise(k, :, :)
 end
 
 """
@@ -74,7 +74,7 @@ Compute the `length(x) × length(x′)` matrix whose `(p, q)`th element is `k(x[
 `_pairwise` is called and `materialize`d, meaning that operations can be fused using Julia's
 broadcasting machinery if required.
 """
-pairwise(k::CrossKernel, x::AV) = materialize(_pairwise(k, x))
+pairwise(k::CrossKernel, x::Union{AV, Colon}) = materialize(_pairwise(k, x))
 
 """
     pairwise(f, x::AV, x′::AV)
@@ -108,11 +108,33 @@ toep_pw(k::Kernel, x::StepRangeLen) = SymmetricToeplitz(map(k, x, Fill(x[1], len
 
 function toep_map(k::Kernel, x::StepRangeLen, x′::StepRangeLen)
     if x.step == x′.step
-        return Fill(x[1] - x′[1], broadcast_shape(size(x), size(x′)))
+        return Fill(k(x[1], x′[1]), broadcast_shape(size(x), size(x′)))
     else
         return invoke(_map, Tuple{typeof(k), AV, AV}, k, x, x′)
     end
 end
+
+
+
+################################ Util. for BlockData #######################################
+
+# Binary map with BlockData.
+function block_map(k::CrossKernel, x::BlockData, x′::BlockData)
+    return BlockVector([map(k, x_, x′_) for (x_, x′_) in zip(blocks(x), blocks(x′))])
+end
+block_map(k::CrossKernel, x::AV, x′::BlockData) = block_map(k, BlockData([x]), x′)
+block_map(k::CrossKernel, x::BlockData, x′::AV) = block_map(k, x, BlockData([x′]))
+
+# Binary pairwise with BlockData.
+function block_pw(k::CrossKernel, x::BlockData, x′::BlockData)
+    return BlockMatrix([pairwise(k, x_, x′_) for x_ in blocks(x), x′_ in blocks(x′)])
+end
+block_pw(k::CrossKernel, x::AV, x′::BlockData) = block_pw(k, BlockData([x]), x′)
+block_pw(k::CrossKernel, x::BlockData, x′::AV) = block_pw(k, x, BlockData([x′]))
+
+# Unary map and pairwise with BlockData.
+block_map(k::Kernel, x::BlockData) = BlockVector([map(k, x_) for x_ in blocks(x)])
+block_pw(k::Kernel, x::BlockData) = block_pw(k, x, x)
 
 
 
@@ -181,22 +203,63 @@ isstationary(::Type{<:EQ}) = true
 
 # Binary methods.
 (::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-function _map(k::EQ, X::ColsAreObs, X′::ColsAreObs)
+function _map(::EQ, X::ColsAreObs, X′::ColsAreObs)
     return broadcasted(x->exp(-0.5 * x), colwise(SqEuclidean(), X.X, X′.X))
 end
 function _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs)
     return broadcasted(x->exp(-0.5 * x), pairwise(SqEuclidean(), X.X, X′.X))
 end
+
 _map(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
 _pairwise(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
+_map(k::EQ, x::BlockData, x′::BlockData) = block_map(k, x, x′)
+_map(k::EQ, x::AV, x′::BlockData) = block_map(k, x, x′)
+_map(k::EQ, x::BlockData, x′::AV) = block_map(k, x, x′)
+_pairwise(k::EQ, x::BlockData, x′::BlockData) = block_pw(k, x, x′)
+_pairwise(k::EQ, x::AV, x′::BlockData) = block_pw(k, x, x′)
+_pairwise(k::EQ, x::BlockData, x′::AV) = block_pw(k, x, x′)
+
 # Unary methods.
 (::EQ)(x) = 1
-_map(k::EQ, x::AV) = Fill(1, length(x))
-function _pairwise(k::EQ, X::ColsAreObs)
+_map(::EQ, x::AV) = Fill(1.0, length(x))
+function _pairwise(::EQ, X::ColsAreObs)
     return broadcasted(x->exp(-0.5 * x), pairwise(SqEuclidean(), X.X))
 end
 _pairwise(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+
+_map(k::EQ, x::BlockData) = block_map(k, x)
+_pairwise(k::EQ, x::BlockData) = block_pw(k, x)
+
+# Optimised adjoints. These really do count.
+@adjoint function(::EQ)(x::Real, x′::Real)
+    s = EQ()(x, x′)
+    return s, function(Δ)
+        x̄′ = Δ * (x - x′) * s
+        return -x̄′, x̄′
+    end
+end
+@adjoint function _map(::EQ, x::AV{<:Real}, x′::AV{<:Real})
+    s = materialize(_map(EQ(), x, x′))
+    return s, function(Δ)
+        x̄′ = (x .- x′) .* Δ .* s
+        return nothing, -x̄′, x̄′
+    end
+end
+@adjoint function _pairwise(::EQ, x::AV{<:Real}, x′::AV{<:Real})
+    s = materialize(_pairwise(EQ(), x, x′))
+    return s, function(Δ)
+        x̄′ = Δ .* (x .- x′') .* s
+        return nothing, -reshape(sum(x̄′; dims=2), :), reshape(sum(x̄′; dims=1), :)
+    end
+end
+@adjoint function _pairwise(::EQ, x::AV{<:Real})
+    s = materialize(_pairwise(EQ(), x))
+    return s, function(Δ)
+        x̄_tmp = Δ .* (x .- x') .* s
+        return nothing, reshape(sum(x̄_tmp; dims=1), :) - reshape(sum(x̄_tmp; dims=2), :)
+    end
+end
 
 
 """
@@ -211,6 +274,7 @@ isstationary(::Type{<:PerEQ}) = true
 (k::PerEQ)(x::Real, x′::Real) = exp(-2 * sin(π * abs(x - x′) / k.p)^2)
 (k::PerEQ)(x::Real) = one(typeof(x))
 
+
 """
     Exponential <: Kernel
 
@@ -220,6 +284,7 @@ struct Exponential <: Kernel end
 isstationary(::Type{<:Exponential}) = true
 (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
 (::Exponential)(x) = one(Float64)
+
 
 """
     Linear{T<:Real} <: Kernel
@@ -243,6 +308,7 @@ function _pairwise(k::Linear, D::ColsAreObs)
 end
 _pairwise(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
 
+
 """
     Noise{T<:Real} <: Kernel
 
@@ -265,6 +331,7 @@ function _pairwise(k::Noise, X::AV, X′::AV)
     end
 end
 
+
 # """
 #     RQ{T<:Real} <: Kernel
 
@@ -279,6 +346,7 @@ end
 # isstationary(::Type{<:RQ}) = true
 # show(io::IO, k::RQ) = show(io, "RQ($(k.α))")
 
+
 # """
 #     Poly{Tσ<:Real} <: Kernel
 
@@ -291,6 +359,7 @@ end
 # @inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
 # show(io::IO, k::Poly) = show(io, "Poly($(k.p))")
 
+
 # """
 #     Wiener <: Kernel
 
@@ -301,6 +370,7 @@ end
 # cov(::Wiener, X::AM, X′::AM) =
 # show(io::IO, ::Wiener) = show(io, "Wiener")
 
+
 # """
 #     WienerVelocity <: Kernel
 
@@ -310,7 +380,6 @@ end
 # @inline (::WienerVelocity)(x::Real, x′::Real) =
 #     min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
 # show(io::IO, ::WienerVelocity) = show(io, "WienerVelocity")
-
 
 
 """
@@ -426,11 +495,6 @@ end
 # _pairwise(k::CrossKernel, X::AV) = _pairwise(k, X, X)
 
 # pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise(k, X, X′)
-# function pairwise(k::CrossKernel, X::BlockData, X′::BlockData)
-#     return BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X′)])
-# end
-# pairwise(k::CrossKernel, X::BlockData, X′::AV) = pairwise(k, X, BlockData([X′]))
-# pairwise(k::CrossKernel, X::AV, X′::BlockData) = pairwise(k, BlockData([X]), X′)
 
 
 # # Sugar for `eachindex` things.
