@@ -14,3 +14,17 @@ zero(k::Kernel) = length(k) < Inf ? FiniteZeroKernel(eachindex(k)) : ZK()
 # ConstantKernel-specific optimisations.
 +(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c + k′.c)
 *(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c * k′.c)
+
+function zero(k::CrossKernel)
+    if size(k, 1) < Inf && size(k, 2) < Inf
+        return FiniteZeroCrossKernel(eachindex(k, 1), eachindex(k, 2))
+    elseif size(k, 1) < Inf
+        return LhsFiniteZeroCrossKernel(eachindex(k, 1))
+    elseif size(k, 2) < Inf
+        return RhsFiniteZeroCrossKernel(eachindex(k, 2))
+    else
+        return ZeroKernel{Float64}()
+    end
+end
+
++(x::FiniteZeroMean, x′::FiniteZeroMean) = zero(x)

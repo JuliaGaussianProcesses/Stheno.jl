@@ -20,8 +20,7 @@ eachindex(μ::FiniteMean) = eachindex(μ.X)
 length(μ::FiniteMean) = length(μ.X)
 
 (μ::FiniteMean)(n) = μ.μ(getindex(μ.X, n))
-# _map(μ::FiniteMean, q::IntVec) = _map(μ.μ, view(μ.X, q))
-_map(μ::FiniteMean, ::Colon) = _map(μ.μ, μ.X)
+map(μ::FiniteMean, ::Colon) = map(μ.μ, μ.X)
 
 
 """
@@ -39,22 +38,12 @@ eachindex(k::FiniteKernel) = eachindex(k.X)
 length(k::FiniteKernel) = length(k.X)
 
 (k::FiniteKernel)(n, n′) = k.k(getindex(k.X, n), getindex(k.X, n′))
-# function _map(k::FiniteKernel, q::IntVec, q′::IntVec)
-#     return _map(k.k, view(k.X, q), view(k.X, q′))
-# end
-# function _pairwise(k::FiniteKernel, q::IntVec, q′::IntVec)
-#     return _pairwise(k.k, view(k.X, q), view(k.X, q′))
-# end
-_map(k::FiniteKernel, ::Colon, ::Colon) = _map(k.k, k.X, k.X)
-_pairwise(k::FiniteKernel, ::Colon, ::Colon) = _pairwise(k.k, k.X, k.X)
-# _pairwise(k::FiniteKernel, ::Colon, q′::IntVec) = _pairwise(k.k, k.X, view(k.X, q′))
-# _pairwise(k::FiniteKernel, q::IntVec, ::Colon) = _pairwise(k.k, view(k.X, q), k.X)
+map(k::FiniteKernel, ::Colon, ::Colon) = map(k.k, k.X, k.X)
+pairwise(k::FiniteKernel, ::Colon, ::Colon) = pairwise(k.k, k.X, k.X)
 
 (k::FiniteKernel)(n) = k.k(k.X[n], k.X[n])
-# _map(k::FiniteKernel, q::IntVec) = _map(k.k, view(k.X, q))
-# _pairwise(k::FiniteKernel, q::IntVec) = _pairwise(k.k, view(k.X, q))
-_map(k::FiniteKernel, ::Colon) = _map(k.k, k.X)
-_pairwise(k::FiniteKernel, ::Colon) = _pairwise(k.k, k.X)
+map(k::FiniteKernel, ::Colon) = map(k.k, k.X)
+pairwise(k::FiniteKernel, ::Colon) = pairwise(k.k, k.X)
 
 
 """
@@ -73,10 +62,8 @@ size(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? length(k.X) : size(k.k, N)
 eachindex(k::LhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex(k.k, 2)
 
 (k::LhsFiniteCrossKernel)(n, x) = k.k(k.X[n], x)
-_map(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = _map(k.k, view(k.X, q), X′)
-_pairwise(k::LhsFiniteCrossKernel, q::IntVec, X′::AV) = _pairwise(k.k, view(k.X, q), X′)
-_map(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = _map(k.k, k.X, X′)
-_pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = _pairwise(k.k, k.X, X′)
+map(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = map(k.k, k.X, X′)
+pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = pairwise(k.k, k.X, X′)
 
 
 """
@@ -95,10 +82,8 @@ size(k::RhsFiniteCrossKernel, N::Int) = N == 2 ? length(k.X′) : size(k.k, N)
 eachindex(k::RhsFiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.k, 1) : eachindex(k.X′)
 
 (k::RhsFiniteCrossKernel)(x, n′) = k.k(x, k.X′[n′])
-_map(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = _map(k.k, X, view(k.X′, q′))
-_pairwise(k::RhsFiniteCrossKernel, X::AV, q′::IntVec) = _pairwise(k.k, X, view(k.X′, q′))
-_map(k::RhsFiniteCrossKernel, X::AV, ::Colon) = _map(k, X, k.X′)
-_pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = _pairwise(k, X, k.X′)
+map(k::RhsFiniteCrossKernel, X::AV, ::Colon) = map(k.k, X, k.X′)
+pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = pairwise(k.k, X, k.X′)
 
 
 """
@@ -117,26 +102,8 @@ size(k::FiniteCrossKernel, N::Int) = N == 1 ? length(k.X) : (N == 2 ? length(k.X
 eachindex(k::FiniteCrossKernel, N::Int) = N == 1 ? eachindex(k.X) : eachindex(k.X′)
 
 (k::FiniteCrossKernel)(n::Integer, n′::Integer) = k.k(k.X[n], k.X′[n′])
-_map(k::FiniteCrossKernel, q::IntVec, q′::IntVec) = _map(k.k, k.X[q], k.X′[q′])
-_pairwise(k::FiniteCrossKernel, q::IntVec, q′::IntVec) = _pairwise(k.k, k.X[q], k.X′[q′])
-_map(k::FiniteCrossKernel, ::Colon, ::Colon) = _map(k.k, k.X, k.X′)
-_map(k::FiniteCrossKernel, q::IntVec, ::Colon) = _map(k.k, view(k.X, q), k.X′)
-_map(k::FiniteCrossKernel, ::Colon, q′::IntVec) = _map(k.k, k.X, view(k.X′, q′))
-_pairwise(k::FiniteCrossKernel, ::Colon, ::Colon) = _map(k.k, k.X, k.X′)
-_pairwise(k::FiniteCrossKernel, q::IntVec, ::Colon) = _map(k.k, view(k.X, q), k.X′)
-_pairwise(k::FiniteCrossKernel, ::Colon, q′::IntVec) = _map(k.k, k.X, view(k.X′, q′))
-
-function zero(k::CrossKernel)
-    if size(k, 1) < Inf && size(k, 2) < Inf
-        return FiniteZeroCrossKernel(eachindex(k, 1), eachindex(k, 2))
-    elseif size(k, 1) < Inf
-        return LhsFiniteZeroCrossKernel(eachindex(k, 1))
-    elseif size(k, 2) < Inf
-        return RhsFiniteZeroCrossKernel(eachindex(k, 2))
-    else
-        return ZeroKernel{Float64}()
-    end
-end
+map(k::FiniteCrossKernel, ::Colon, ::Colon) = map(k.k, k.X, k.X′)
+pairwise(k::FiniteCrossKernel, ::Colon, ::Colon) = pairwise(k.k, k.X, k.X′)
 
 
 
@@ -145,69 +112,44 @@ end
 struct FiniteZeroMean{TX} <: MeanFunction
     X::TX
 end
-length(μ::FiniteZeroMean) = length(μ.X)
-==(μ::FiniteZeroMean, μ′::FiniteZeroMean) = length(μ) == length(μ′)
-eachindex(μ::FiniteZeroMean) = eachindex(μ.X)
-
-_map(μ::FiniteZeroMean, q::AV) = Zeros(length(q))
-_map(μ::FiniteZeroMean, ::Colon) = Zeros(length(μ.X))
+map(μ::FiniteZeroMean, ::Colon) = Zeros(length(μ.X))
 
 struct FiniteZeroKernel{TX} <: Kernel
     X::TX
 end
-length(k::FiniteZeroKernel) = length(k.X)
-==(k::FiniteZeroKernel, k′::FiniteZeroKernel) = length(k) == length(k′)
-eachindex(k::FiniteZeroKernel) = eachindex(k.X)
-print(io::IO, k::FiniteZeroKernel) = print(io, "FiniteZeroKernel $(size(k))")
-_map(k::FiniteZeroKernel, q::AV) = Zeros(length(q))
-_map(k::FiniteZeroKernel, q::AV, q′::AV) = Zeros(length(q))
-_pairwise(k::FiniteZeroKernel, q::AV) = Zeros(length(q), length(q))
-_pairwise(k::FiniteZeroKernel, q::AV, q′::AV) = Zeros(length(q), length(q′))
-
-+(x::FiniteZeroMean, x′::FiniteZeroMean) = zero(x)
+map(k::FiniteZeroKernel, ::Colon, ::Colon) = Zeros(length(k.X))
+pairwise(k::FiniteZeroKernel, ::Colon, ::Colon) = Zeros(length(k.X), length(k.X))
+map(k::FiniteZeroKernel, ::Colon) = map(k, :, :)
+pairwise(k::FiniteZeroKernel, ::Colon) = pairwise(k, :, :)
 
 struct FiniteZeroCrossKernel{TX, TX′} <: CrossKernel
     X::TX
     X′::TX′
 end
-size(k::FiniteZeroCrossKernel, dim::Int) = dim == 1 ? length(k.X) : length(k.X′)
-==(k::FiniteZeroCrossKernel, k′::FiniteZeroCrossKernel) = size(k) == size(k′)
-eachindex(k::FiniteZeroCrossKernel, dim::Int) = dim == 1 ? eachindex(k.X) : eachindex(k.X′)
-print(io::IO, k::FiniteZeroCrossKernel) = print(io, "FiniteZeroCrossKernel $(size(k))")
-_map(k::FiniteZeroCrossKernel, q::AV) = Zeros(length(q))
-_map(k::FiniteZeroCrossKernel, q::AV, q′::AV) = Zeros(length(q))
-_pairwise(k::FiniteZeroCrossKernel, q::AV) = Zeros(length(q), length(q))
-_pairwise(k::FiniteZeroCrossKernel, q::AV, q′::AV) = Zeros(length(q), length(q′))
+pairwise(k::FiniteZeroCrossKernel, ::Colon, ::Colon) = Zeros(length(k.X), length(k.X′))
 
 struct LhsFiniteZeroCrossKernel{TX} <: CrossKernel
     X::TX
 end
-size(k::LhsFiniteZeroCrossKernel, dim::Int) = dim == 1 ? length(k.X) : Inf
-==(k::LhsFiniteZeroCrossKernel, k′::LhsFiniteZeroCrossKernel) = size(k) == size(k′)
-function eachindex(k::LhsFiniteZeroCrossKernel, dim::Int)
-    return dim == 1 ? eachindex(k.X) : eachindex(ZeroKernel{Float64}(), 2)
+function map(k::LhsFiniteZeroCrossKernel, ::Colon, X′::AV)
+    @assert length(k.X) == length(X′)
+    return Zeros(length(k.X))
 end
-function print(io::IO, k::LhsFiniteZeroCrossKernel)
-    print(io, "LhsFiniteZeroCrossKernel $(size(k))")
-end
-_map(k::LhsFiniteZeroCrossKernel, q::AV, X′::AV) = Zeros(length(q))
-_pairwise(k::LhsFiniteZeroCrossKernel, q::AV, X′::AV) = Zeros(length(q), length(X′))
+pairwise(k::LhsFiniteZeroCrossKernel, ::Colon, X′::AV) = Zeros(length(k.X), length(X′))
 
 struct RhsFiniteZeroCrossKernel{TX′} <: CrossKernel
     X′::TX′
 end
-size(k::RhsFiniteZeroCrossKernel, dim::Int) = dim == 1 ? Inf : length(k.X′)
-==(k::RhsFiniteZeroCrossKernel, k′::RhsFiniteZeroCrossKernel) = size(k) == size(k′)
-function eachindex(k::RhsFiniteZeroCrossKernel, dim::Int)
-    return dim == 1 ? eachindex(ZeroKernel{Float64}(), 1) : eachindex(k.X′)
+function map(k::RhsFiniteZeroCrossKernel, X::AV, ::Colon)
+    @assert length(X) == length(k.X′)
+    return Zeros(length(X))
 end
-function print(io::IO, k::RhsFiniteZeroCrossKernel)
-    print(io, "RhsFiniteZeroCrossKernel $(size(k))")
-end
-_map(k::RhsFiniteZeroCrossKernel, X::AV, q′::AV) = Zeros(length(X))
-_pairwise(k::RhsFiniteZeroCrossKernel, X::AV, q′::AV) = Zeros(length(X), length(q′))
+pairwise(k::RhsFiniteZeroCrossKernel, X::AV, ::Colon) = Zeros(length(X), length(k.X′))
 
-# More sugar.
+
+
+######################################## Sugar #############################################
+
 finite(μ::MeanFunction, X::AbstractVector) = FiniteMean(μ, X)
 finite(μ::ZeroMean, X::AbstractVector) = FiniteZeroMean(X)
 finite(μ::FiniteZeroMean, q::AbstractVector) = FiniteZeroMean(q)

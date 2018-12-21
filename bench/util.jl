@@ -1,5 +1,5 @@
-# Ns() = [10, 100, 1_000,]
-Ns() = [25,]
+Ns() = [1_000,]
+# Ns() = [25,]
 Ds() = [3,]
 
 generate_x̄s(x, x̄s::Nothing) = [fill(x, N) for N in Ns()]
@@ -37,8 +37,10 @@ function create_benchmarks(k::CrossKernel; x=5.0, x′=4.0, x̄s=nothing, x̄′
 
     for (x̄, x̄′) in zip(generate_x̄s(x, x̄s), generate_x̄s(x′, x̄′s))
         N = length(x̄)
-        create_benchmarks("map k(x̄, x̄′) $N", grads, (x̄, x̄′)->map(k, x̄, x̄′), x̄, x̄′)
-        create_benchmarks("pairwise k(x̄, x̄′) $N", grads, (x̄, x̄′)->pairwise(k, x̄, x̄′), x̄, x̄′)
+        @benchset "$N" begin
+            create_benchmarks("map k(x̄, x̄′) $N", grads, (x̄, x̄′)->map(k, x̄, x̄′), x̄, x̄′)
+            create_benchmarks("pw k(x̄, x̄′) $N", grads, (x̄, x̄′)->pairwise(k, x̄, x̄′), x̄, x̄′)
+        end
     end
 end
 
@@ -49,10 +51,12 @@ function create_benchmarks(k::Kernel; x=5.0, x′=4.0, x̄s=nothing, x̄′s=not
 
     for (x̄, x̄′) in zip(generate_x̄s(x, x̄s), generate_x̄s(x′, x̄′s))
         N = length(x̄)
-        create_benchmarks("map k(x̄) $N", grads, x̄->map(k, x̄), x̄)
-        create_benchmarks("map k(x̄, x̄′) $N", grads, (x̄, x̄′)->map(k, x̄, x̄′), x̄, x̄′)
-        create_benchmarks("pairwise k(x̄) $N", grads, x̄->pairwise(k, x̄), x̄)
-        create_benchmarks("pairwise k(x̄, x̄′) $N", grads, (x̄, x̄′)->pairwise(k, x̄, x̄′), x̄, x̄′)
+        @benchset "$N" begin
+            create_benchmarks("map k(x̄) $N", grads, x̄->map(k, x̄), x̄)
+            create_benchmarks("map k(x̄, x̄′) $N", grads, (x̄, x̄′)->map(k, x̄, x̄′), x̄, x̄′)
+            create_benchmarks("pw k(x̄) $N", grads, x̄->pairwise(k, x̄), x̄)
+            create_benchmarks("pw k(x̄, x̄′) $N", grads, (x̄, x̄′)->pairwise(k, x̄, x̄′), x̄, x̄′)
+        end
     end
 end
 

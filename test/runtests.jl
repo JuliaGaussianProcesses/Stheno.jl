@@ -1,20 +1,20 @@
-using Stheno, Test
+using Stheno, Test, Random, FillArrays
 
 @testset "Stheno" begin
 
-    @testset "util" begin
-        include("util/covariance_matrices.jl")
-        include("util/woodbury.jl")
-        include("util/block_arrays.jl")
-        include("util/abstract_data_set.jl")
-    end
+    # @testset "util" begin
+    #     include("util/covariance_matrices.jl")
+    #     include("util/woodbury.jl")
+    #     include("util/block_arrays.jl")
+    #     include("util/abstract_data_set.jl")
+    # end
 
     @testset "mean_and_kernel" begin
         include("test_util.jl")
-        include("mean_and_kernel/mean.jl")
+        # include("mean_and_kernel/mean.jl")
         include("mean_and_kernel/kernel.jl")
         # include("mean_and_kernel/compose.jl")
-        include("mean_and_kernel/finite.jl")
+        # include("mean_and_kernel/finite.jl")
         # include("mean_and_kernel/conditional.jl")
         # include("mean_and_kernel/block.jl")
         # # include("mean_and_kernel/transform.jl")
@@ -40,9 +40,9 @@ using Stheno, Test
     #     include("linops/conditioning.jl")
     # end
 
-    @testset "integration" begin
-        # include("util/toeplitz_integration.jl")
-        # include("util/flux_rules.jl")
-        include("util/zygote_rules.jl")
-    end
+    # @testset "integration" begin
+    #     # include("util/toeplitz_integration.jl")
+    #     # include("util/flux_rules.jl")
+    #     include("util/zygote_rules.jl")
+    # end
 end

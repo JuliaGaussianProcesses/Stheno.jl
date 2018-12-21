@@ -1,4 +1,3 @@
-using Random
 using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
 
 @testset "mean" begin
@@ -19,13 +18,11 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
 
         mean_function_tests(f, x)
         mean_function_tests(f, X)
-        mean_function_tests(f, BlockData([x, X]))
 
         @test isinf(length(f))
 
         # Check that shorthand for block-wise application of mean function works.
         @test map(f, BlockData([x, X])) isa BlockVector
-        @test map(f, BlockData([x, X])) == map(f, BlockData([x, X]))
     end
 
     # Test ZeroMean.
@@ -39,7 +36,6 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
 
         mean_function_tests(f, x)
         mean_function_tests(f, X)
-        mean_function_tests(f, BlockData([x, X]))
 
         @test isinf(length(f))
     end
@@ -57,7 +53,6 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
 
         mean_function_tests(f, x)
         mean_function_tests(f, X)
-        mean_function_tests(f, BlockData([x, X]))
 
         @test isinf(length(f))
     end
@@ -73,11 +68,7 @@ using Stheno: CustomMean, ZeroMean, ConstantMean, EmpiricalMean
         @test eachindex(μ) == eachindex(m)
         @test μ == μ
 
-        mean_function_tests(μ, x)
-        mean_function_tests(μ, BlockData([x, x]))
-
-        @test map(μ, :) == map(μ, eachindex(μ))
         @test map(μ, :) == m
-
+        @test AbstractVector(μ) == m
     end
 end

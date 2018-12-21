@@ -1,22 +1,28 @@
 @benchset "kernel" begin
 
-    @benchset "ZeroKernel{Float64}()" begin
-        create_benchmarks(ZeroKernel{Float64}(); grads=false)
-    end
-    @benchset "ConstantKernel(5.0)" begin
-        create_benchmarks(ConstantKernel(5.0); grads=false)
-    end
+    # @benchset "ZeroKernel{Float64}()" begin
+    #     create_benchmarks(ZeroKernel{Float64}(); grads=false)
+    # end
+    # @benchset "ConstantKernel(5.0)" begin
+    #     create_benchmarks(ConstantKernel(5.0); grads=false)
+    # end
     @benchset "EQ" begin
-        @benchset "EQ Real" create_benchmarks(EQ())
+        @benchset "Real CPU" create_benchmarks(EQ())
+        @benchset "Real GPU" create_benchmarks(
+            EQ();
+            x=randn(Float32), x′=randn(Float32),
+            x̄s=[CuArray{Float32}(randn(N)) for N in Ns()],
+            x̄′s=[CuArray{Float32}(randn(N)) for N in Ns()],
+        )
 
-        for D in Ds()
-            @benchset "EQ ColsAreObs (D=$D)" create_benchmarks(
-                EQ();
-                x=randn(D), x′=randn(D),
-                x̄s=[ColsAreObs(randn(D, N)) for N in Ns()],
-                x̄′s=[ColsAreObs(randn(D, N)) for N in Ns()],
-            )
-        end
+        # for D in Ds()
+        #     @benchset "ColsAreObs (D=$D) CPU" create_benchmarks(
+        #         EQ();
+        #         x=randn(D), x′=randn(D),
+        #         x̄s=[ColsAreObs(randn(D, N)) for N in Ns()],
+        #         x̄′s=[ColsAreObs(randn(D, N)) for N in Ns()],
+        #     )
+        # end
 
         # See https://github.com/FluxML/Zygote.jl/issues/44
         # @benchset "EQ Almost-Toeplitz" create_benchmarks(
