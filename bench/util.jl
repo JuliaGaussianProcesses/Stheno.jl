@@ -1,6 +1,6 @@
 Ns() = [1_000,]
-# Ns() = [25,]
-Ds() = [3,]
+# Ns() = [10,]
+Ds() = [1,]
 
 generate_x̄s(x, x̄s::Nothing) = [fill(x, N) for N in Ns()]
 generate_x̄s(x, x̄s) = x̄s

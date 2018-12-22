@@ -24,21 +24,17 @@ using Stheno: CrossKernel, ZeroKernel, ConstantKernel, pairwise, EmpiricalKernel
         end
 
         # Tests for EQ.
+        @test map(EQ(), x0) isa Ones
         kernel_tests(EQ(), x0, x1, x2)
         kernel_tests(EQ(), X0, X1, X2)
 
         # Tests for PerEQ.
-        let
-            @test map(PerEQ(1), x0) isa Ones
-            kernel_tests(PerEQ(1), x0, x1, x2)
-            kernel_tests(PerEQ(1f0), x0, x1, x2)
-        end
+        @test map(PerEQ(), x0) isa Ones
+        kernel_tests(PerEQ(), x0, x1, x2)
 
-        # # Tests for Exponential.
-        # @test isstationary(EQ())
-        # @test size(Exponential(), 1) == Inf && size(Exponential(), 2) == Inf
-        # @test size(Exponential()) == (Inf, Inf)
-        # kernel_tests(Exponential(), x0, x1, x2)
+        # Tests for Exponential.
+        @test map(Exponential(), x0) isa Ones
+        kernel_tests(Exponential(), x0, x1, x2)
 
         # # Tests for Linear.
         # @test !isstationary(Linear)

@@ -150,6 +150,7 @@ _pairwise(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(
 (::EQ)(x::Real) = one(x)
 (::EQ)(x::AV{<:Real}) = one(eltype(x))
 _map(::EQ, x::AV) = Ones{eltype(x)}(length(x))
+_map(::EQ, X::ColsAreObs) = Ones{eltype(X.X)}(length(X))
 _pairwise(::EQ, x::AV{<:Real}) = _pairwise(EQ(), x, x)
 _pairwise(::EQ, X::ColsAreObs) = bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X))
 _pairwise(::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
@@ -183,30 +184,38 @@ end
         return nothing, reshape(sum(x̄_tmp; dims=1), :) - reshape(sum(x̄_tmp; dims=2), :)
     end
 end
+@adjoint (::EQ)(x::Real) = (EQ()(x), _->(zero(x),))
+@adjoint _map(::EQ, x::AV) = (_map(EQ(), x), _->(nothing, Zeros{eltype(x)}(length(x)),))
 
 
 """
-    PerEQ{Tp<:Real}
+    PerEQ
 
-The usual periodic kernel derived by mapping the input domain onto a circle.
+The usual periodic kernel derived by mapping the input domain onto the unit circle.
 """
-struct PerEQ{Tp<:Real} <: Kernel
-    p::Tp
-end
+struct PerEQ <: Kernel end
 
 # Binary methods.
-(k::PerEQ)(x::Real, x′::Real) = exp(-2 * sin(π * abs(x - x′) / k.p)^2)
+(::PerEQ)(x::Real, x′::Real) = exp(-2 * sin(π * abs(x - x′))^2)
 function _map(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′) / k.p, x, x′))))
+    return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′), x, x′))))
 end
 function _pairwise(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′) / k.p, x, x′'))))
+    return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′), x, x′'))))
 end
+_map(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+_pairwise(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
 (::PerEQ)(x::Real) = one(typeof(x))
 _map(::PerEQ, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
 _pairwise(k::PerEQ, x::AV{<:Real}) = _pairwise(k, x, x)
+_pairwise(::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+
+@adjoint (k::PerEQ)(x::Real) = (k(x), _->(zero(typeof(x)),))
+@adjoint function _map(k::PerEQ, x::AV{<:Real})
+    return _map(k, x), _->(nothing, Zeros{eltype(x)}(length(x),))
+end
 
 
 """
@@ -215,30 +224,41 @@ _pairwise(k::PerEQ, x::AV{<:Real}) = _pairwise(k, x, x)
 The standardised Exponential kernel.
 """
 struct Exponential <: Kernel end
+
+# Binary methods
 (::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
-(::Exponential)(x) = one(Float64)
+function _map(k::Exponential, x::AV{<:Real}, x′::AV{<:Real})
+    return bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′))
+end
+function _pairwise(k::Exponential, x::AV{<:Real}, x′::AV{<:Real})
+    return bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′'))
+end
+
+# Unary methods
+(::Exponential)(x::Real) = one(x)
+_map(k::Exponential, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
+_pairwise(k::Exponential, x::AV{<:Real}) = _pairwise(k, x, x)
 
 
 """
     Linear{T<:Real} <: Kernel
 
-Standardised linear kernel. `Linear(c)` creates a `Linear` `Kernel{NonStationary}` whose
-intercept is `c`.
+Standardised linear kernel / dot-product kernel.
 """
-struct Linear{T<:Union{Real, Vector{<:Real}}} <: Kernel
-    c::T
-end
+struct Linear <: Kernel end
+
+# Binary methods
 (k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
-(k::Linear)(x) = sum(abs2, x .- k.c)
-
-_pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(x'))
 _pairwise(k::Linear, x::AV, x′::AV) = _pairwise(k, ColsAreObs(x'), ColsAreObs(x′'))
+_pairwise(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
 
+# Unary methods
+(k::Linear)(x) = sum(abs2, x .- k.c)
+_pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(x'))
 function _pairwise(k::Linear, D::ColsAreObs)
     Δ = D.X .- k.c
     return Δ' * Δ
 end
-_pairwise(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
 
 
 """
