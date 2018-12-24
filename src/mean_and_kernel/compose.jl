@@ -110,7 +110,6 @@ struct OuterCross{Tf, Tk<:CrossKernel} <: CrossKernel
     k::Tk
 end
 (k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
-(k::OuterCross{<:Real})(x, x′) = k.f^2 * k.k(x, x′)
 _map(k::OuterCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′), map(k.f, x′))
 _pw(k::OuterCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′), map(k.f, x′)')
 
@@ -128,9 +127,12 @@ end
 # Binary methods.
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 _map(k::OuterKernel, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′), map(k.f, x′)')
-_pw(k::OuterKernel, X::AV, X′::AV) = bcd(*, map(k.f, X), _pw(k.k, X, X′), map(k.f, X′)')
+_pw(k::OuterKernel, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′), map(k.f, x′)')
 
 # Unary methods.
 (k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
-_map(...) = ...
-_pw(k::OuterKernel, X::AV) = Xt_A_X(_pw(k.k, X), Diagonal(map(k.f, X)))
+_map(k::OuterKernel, x::AV) = bcd(*, bcd(x->k.f(x)^2, x), _map(k.k, x))
+function _pw(k::OuterKernel, x::AV)
+    fx = map(k.f, x)
+    return bcd(*, fx, _pw(k.k, x), fx')
+end
