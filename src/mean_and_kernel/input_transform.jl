@@ -74,8 +74,8 @@ size(k::ITCross, n::Int) = size(k.k, n)
 
 _map(k::ITKernel, X::AV) = map(k.k, map(k.f, X))
 _map(k::ITKernel, X::AV, X′::AV) = map(k.k, map(k.f, X), map(k.f, X′))
-_pairwise(k::ITKernel, X::AV) = pairwise(k.k, map(k.f, X))
-_pairwise(k::ITKernel, X::AV, X′::AV) = pairwise(k.k, map(k.f, X), map(k.f, X′))
+_pw(k::ITKernel, X::AV) = pairwise(k.k, map(k.f, X))
+_pw(k::ITKernel, X::AV, X′::AV) = pairwise(k.k, map(k.f, X), map(k.f, X′))
 
 """
     transform(f::Union{MeanFunction, Kernel}, ϕ)

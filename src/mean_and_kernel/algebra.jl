@@ -28,3 +28,69 @@ function zero(k::CrossKernel)
 end
 
 +(x::FiniteZeroMean, x′::FiniteZeroMean) = zero(x)
+
+
+function +(μ::MeanFunction, μ′::MeanFunction)
+    @assert size(μ) == size(μ′)
+    if iszero(μ)
+        return μ′
+    elseif iszero(μ′)
+        return μ
+    else
+        return CompositeMean(+, μ, μ′)
+    end
+end
+function *(μ::MeanFunction, μ′::MeanFunction)
+    @assert size(μ) == size(μ′)
+    return iszero(μ) || iszero(μ′) ? zero(μ) : CompositeMean(*, μ, μ′)
+end
+
+
+############################## Convenience functionality ##############################
+
+import Base: +, *, promote_rule, convert
+
+function *(f, μ::MeanFunction)
+    return iszero(μ) ? μ : CompositeMean(f, μ)
+end
+
+function *(f, k::CrossKernel)
+    return iszero(k) ? k : LhsCross(f, k)
+end
+function *(k::CrossKernel, f)
+    return iszero(k) ? k : RhsCross(k, f)
+end
+function *(f, k::RhsCross)
+    if k.k isa Kernel && f == k.f
+        return OuterKernel(f, k.k)
+    else
+        return LhsCross(f, k)
+    end
+end
+function *(k::LhsCross, f)
+    if k.k isa Kernel && f == k.f
+        return OuterKernel(f, k.k)
+    else
+        return RhsCross(k, f)
+    end
+end
+
+promote_rule(::Type{<:MeanFunction}, ::Type{<:Real}) = MeanFunction
+convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
+
+promote_rule(::Type{<:Kernel}, ::Type{<:Real}) = Kernel
+convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
+
+# Composing mean functions with Reals.
++(μ::MeanFunction, μ′::Real) = +(promote(μ, μ′)...)
++(μ::Real, μ′::MeanFunction) = +(promote(μ, μ′)...)
+
+*(μ::MeanFunction, μ′::Real) = *(promote(μ, μ′)...)
+*(μ::Real, μ′::MeanFunction) = *(promote(μ, μ′)...)
+
+# Composing kernels with Reals.
++(k::CrossKernel, k′::Real) = +(promote(k, k′)...)
++(k::Real, k′::CrossKernel) = +(promote(k, k′)...)
+
+*(k::CrossKernel, k′::Real) = *(promote(k, k′)...)
+*(k::Real, k′::CrossKernel) = *(promote(k, k′)...)

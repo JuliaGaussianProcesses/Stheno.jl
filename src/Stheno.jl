@@ -1,14 +1,13 @@
 module Stheno
 
     using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random, Zygote
-    using Base.Broadcast: DefaultArrayStyle, broadcast_shape
     using Zygote: @adjoint
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
 
-    const DAS{T} = DefaultArrayStyle{T}
+    const bcd = broadcasted
 
     # Various bits of utility that aren't inherently GP-related.
     include("util/covariance_matrices.jl")
@@ -33,7 +32,7 @@ module Stheno
     # include("mean_and_kernel/zero.jl")
     # include("mean_and_kernel/printing.jl")
 
-    # # Basic Gaussian process definitions.
+    # Basic Gaussian process definitions.
     include("gp/abstract_gp.jl")
     include("gp/gp.jl")
     include("gp/block_gp.jl")

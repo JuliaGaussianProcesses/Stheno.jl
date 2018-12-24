@@ -5,9 +5,7 @@ using GPUArrays: GPUVector
 import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
 import Base: +, *, ==, size, eachindex, print
 import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
-import Base.Broadcast: broadcasted, materialize
-
-const bcd = broadcasted
+import Base.Broadcast: broadcasted, materialize, broadcast_shape
 
 export CrossKernel, Kernel, cov, xcov, EQ, PerEQ, RQ, Linear, Poly, Noise, Wiener,
     WienerVelocity, Exponential, ConstantKernel, isstationary, ZeroKernel, pairwise
@@ -39,19 +37,19 @@ map(k::CrossKernel, x::GPUVector, x′::GPUVector) = materialize(_map(k, x, x′
     pairwise(f, x::AV)
 
 Compute the `length(x) × length(x′)` matrix whose `(p, q)`th element is `k(x[p], x[q])`.
-`_pairwise` is called and `materialize`d, meaning that operations can be fused using Julia's
+`_pw` is called and `materialize`d, meaning that operations can be fused using Julia's
 broadcasting machinery if required.
 """
-pairwise(k::CrossKernel, x::AV) = materialize(_pairwise(k, x))
+pairwise(k::CrossKernel, x::AV) = materialize(_pw(k, x))
 
 """
     pairwise(f, x::AV, x′::AV)
 
 Compute the `length(x) × length(x′)` matrix whose `(p, q)`th element is `k(x[p], x′[q])`.
-`_pairwise` is called and `materialize`d, meaning that operations can be fused using Julia's
+`_pw` is called and `materialize`d, meaning that operations can be fused using Julia's
 broadcasting machinery if required.
 """
-pairwise(k::CrossKernel, x::AV, x′::AV) = materialize(_pairwise(k, x, x′))
+pairwise(k::CrossKernel, x::AV, x′::AV) = materialize(_pw(k, x, x′))
 
 
 
@@ -64,7 +62,7 @@ function toep_pw(k::CrossKernel, x::StepRangeLen, x′::StepRangeLen)
             map(k, Fill(x[1], length(x′)), x′),
         )
     else
-        return invoke(_pairwise, Tuple{typeof(k), AV, AV}, k, x, x′)
+        return invoke(_pw, Tuple{typeof(k), AV, AV}, k, x, x′)
     end
 end
 
@@ -93,12 +91,12 @@ struct ZeroKernel{T<:Real} <: Kernel end
 # Binary methods.
 (::ZeroKernel{T})(x, x′) where T = zero(T)
 _map(::ZeroKernel{T}, x::AV, x′::AV) where T = Zeros{T}(broadcast_shape(size(x), size(x′)))
-_pairwise(k::ZeroKernel{T}, x::AV, x′::AV) where T = Zeros{T}(length(x), length(x′))
+_pw(k::ZeroKernel{T}, x::AV, x′::AV) where T = Zeros{T}(length(x), length(x′))
 
 # Unary methods.
 (::ZeroKernel{T})(x) where T = zero(T)
 _map(::ZeroKernel{T}, x::AV) where T = Zeros{T}(length(x))
-_pairwise(k::ZeroKernel{T}, x::AV) where T = Zeros{T}(length(x), length(x))
+_pw(k::ZeroKernel{T}, x::AV) where T = Zeros{T}(length(x), length(x))
 
 
 """
@@ -114,12 +112,12 @@ end
 # Binary methods.
 (k::ConstantKernel)(x, x′) = k(x)
 _map(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, broadcast_shape(size(x), size(x′)))
-_pairwise(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′))
+_pw(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′))
 
 # Unary methods.
 (k::ConstantKernel)(x) = k.c
 _map(k::ConstantKernel, x::AV) = Fill(k.c, length(x))
-_pairwise(k::ConstantKernel, x::AV) = Fill(k.c, length(x), length(x))
+_pw(k::ConstantKernel, x::AV) = Fill(k.c, length(x), length(x))
 
 
 """
@@ -134,26 +132,26 @@ struct EQ <: Kernel end
 function _map(::EQ, x::AV{<:Real}, x′::AV{<:Real})
     return bcd(exp, bcd((x, x′)->-sqeuclidean(x, x′) / 2, x, x′))
 end
-function _pairwise(::EQ, x::AV{<:Real}, x′::AV{<:Real})
+function _pw(::EQ, x::AV{<:Real}, x′::AV{<:Real})
     return bcd(exp, bcd((x, x′)->-sqeuclidean(x, x′) / 2, x, x′'))
 end
 function _map(::EQ, X::ColsAreObs, X′::ColsAreObs)
     return bcd(x->exp(-x / 2), colwise(SqEuclidean(), X.X, X′.X))
 end
-function _pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs)
+function _pw(::EQ, X::ColsAreObs, X′::ColsAreObs)
     return bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X, X′.X))
 end
 _map(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
-_pairwise(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+_pw(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
 (::EQ)(x::Real) = one(x)
 (::EQ)(x::AV{<:Real}) = one(eltype(x))
 _map(::EQ, x::AV) = Ones{eltype(x)}(length(x))
 _map(::EQ, X::ColsAreObs) = Ones{eltype(X.X)}(length(X))
-_pairwise(::EQ, x::AV{<:Real}) = _pairwise(EQ(), x, x)
-_pairwise(::EQ, X::ColsAreObs) = bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X))
-_pairwise(::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+_pw(::EQ, x::AV{<:Real}) = _pw(EQ(), x, x)
+_pw(::EQ, X::ColsAreObs) = bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X))
+_pw(::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 # Optimised adjoints. These really do count in terms of performance.
 @adjoint function(::EQ)(x::Real, x′::Real)
@@ -170,15 +168,15 @@ end
         return nothing, -x̄′, x̄′
     end
 end
-@adjoint function _pairwise(::EQ, x::AV{<:Real}, x′::AV{<:Real})
-    s = materialize(_pairwise(EQ(), x, x′))
+@adjoint function _pw(::EQ, x::AV{<:Real}, x′::AV{<:Real})
+    s = materialize(_pw(EQ(), x, x′))
     return s, function(Δ)
         x̄′ = Δ .* (x .- x′') .* s
         return nothing, -reshape(sum(x̄′; dims=2), :), reshape(sum(x̄′; dims=1), :)
     end
 end
-@adjoint function _pairwise(::EQ, x::AV{<:Real})
-    s = materialize(_pairwise(EQ(), x))
+@adjoint function _pw(::EQ, x::AV{<:Real})
+    s = materialize(_pw(EQ(), x))
     return s, function(Δ)
         x̄_tmp = Δ .* (x .- x') .* s
         return nothing, reshape(sum(x̄_tmp; dims=1), :) - reshape(sum(x̄_tmp; dims=2), :)
@@ -200,17 +198,17 @@ struct PerEQ <: Kernel end
 function _map(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real})
     return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′), x, x′))))
 end
-function _pairwise(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real})
+function _pw(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real})
     return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′), x, x′'))))
 end
 _map(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
-_pairwise(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+_pw(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
 (::PerEQ)(x::Real) = one(typeof(x))
 _map(::PerEQ, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
-_pairwise(k::PerEQ, x::AV{<:Real}) = _pairwise(k, x, x)
-_pairwise(::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+_pw(k::PerEQ, x::AV{<:Real}) = _pw(k, x, x)
+_pw(::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 @adjoint (k::PerEQ)(x::Real) = (k(x), _->(zero(typeof(x)),))
 @adjoint function _map(k::PerEQ, x::AV{<:Real})
@@ -230,14 +228,14 @@ struct Exponential <: Kernel end
 function _map(k::Exponential, x::AV{<:Real}, x′::AV{<:Real})
     return bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′))
 end
-function _pairwise(k::Exponential, x::AV{<:Real}, x′::AV{<:Real})
+function _pw(k::Exponential, x::AV{<:Real}, x′::AV{<:Real})
     return bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′'))
 end
 
 # Unary methods
 (::Exponential)(x::Real) = one(x)
 _map(k::Exponential, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
-_pairwise(k::Exponential, x::AV{<:Real}) = _pairwise(k, x, x)
+_pw(k::Exponential, x::AV{<:Real}) = _pw(k, x, x)
 
 
 """
@@ -249,13 +247,13 @@ struct Linear <: Kernel end
 
 # Binary methods
 (k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
-_pairwise(k::Linear, x::AV, x′::AV) = _pairwise(k, ColsAreObs(x'), ColsAreObs(x′'))
-_pairwise(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
+_pw(k::Linear, x::AV, x′::AV) = _pw(k, ColsAreObs(x'), ColsAreObs(x′'))
+_pw(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
 
 # Unary methods
 (k::Linear)(x) = sum(abs2, x .- k.c)
-_pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(x'))
-function _pairwise(k::Linear, D::ColsAreObs)
+_pw(k::Linear, x::AV) = _pw(k, ColsAreObs(x'))
+function _pw(k::Linear, D::ColsAreObs)
     Δ = D.X .- k.c
     return Δ' * Δ
 end
@@ -271,10 +269,10 @@ struct Noise{T<:Real} <: Kernel
 end
 (k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
 (k::Noise)(x) = k.σ²
-_pairwise(k::Noise, X::AV) = Diagonal(Fill(k.σ², length(X)))
-function _pairwise(k::Noise, X::AV, X′::AV)
+_pw(k::Noise, X::AV) = Diagonal(Fill(k.σ², length(X)))
+function _pw(k::Noise, X::AV, X′::AV)
     if X === X′
-        return _pairwise(k, X)
+        return _pw(k, X)
     else
         return [view(X, p) == view(X′, q) ? k.σ² : 0
             for p in eachindex(X), q in eachindex(X′)]
@@ -337,9 +335,9 @@ end
 @inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]
 @inline (k::EmpiricalKernel)(q::Int) = k.Σ[q, q]
 
-_pairwise(k::EmpiricalKernel, X::AV) = X == eachindex(k) ? k.Σ : k.Σ[X, X]
+_pw(k::EmpiricalKernel, X::AV) = X == eachindex(k) ? k.Σ : k.Σ[X, X]
 
-function _pairwise(k::EmpiricalKernel, X::AV, X′::AV)
+function _pw(k::EmpiricalKernel, X::AV, X′::AV)
     return X == eachindex(k) && X′ == eachindex(k) ? k.Σ : k.Σ[X, X′]
 end
 AbstractMatrix(k::EmpiricalKernel) = k.Σ

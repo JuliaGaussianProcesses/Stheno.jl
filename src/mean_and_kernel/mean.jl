@@ -70,23 +70,6 @@ map(μ::EmpiricalMean, ::Colon) = μ.μ
 AbstractVector(μ::EmpiricalMean) = μ.μ
 
 
-struct UnaryMean{Top, Tμ} <: MeanFunction
-    op::Top
-    μ::Tμ
-end
-(μ::UnaryMean)(x) = μ.op(μ.μ(x))
-_map(μ::UnaryMean, x::AV) = broadcasted(μ.op, _map(μ.μ, x))
-
-
-struct BinaryMean{Top, Tμ₁, Tμ₂} <: MeanFunction
-    op::Top
-    μ₁::Tμ₁
-    μ₂::Tμ₂
-end
-(μ::BinaryMean)(x) = μ.op(μ.μ₁(x), μ.μ₂(x))
-_map(μ::BinaryMean, x::AV) = broadcasted(μ.op, _map(μ.μ₁, x), _map(μ.μ₂, x))
-
-
 
 ############################### Operations on mean functions ###############################
 

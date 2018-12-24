@@ -1,191 +1,136 @@
-# Create CompositeMean, CompositeKernel and CompositeCrossKernel.
-for (composite_type, parent_type) in [(:CompositeMean, :MeanFunction),
-                                      (:CompositeKernel, :Kernel),
-                                      (:CompositeCrossKernel, :CrossKernel),]
-@eval struct $composite_type{Tf, N} <: $parent_type
-    f::Tf
-    x::Tuple{Vararg{Any, N}}
-    $composite_type(f::Tf, x::Vararg{Any, N}) where {Tf, N} = new{Tf, N}(f, x)
+"""
+    UnaryMean{Top, Tμ} <: MeanFunction
+
+The mean function given by `op(μ(x))`.
+"""
+struct UnaryMean{Top, Tμ} <: MeanFunction
+    op::Top
+    μ::Tμ
 end
+(μ::UnaryMean)(x) = μ.op(μ.μ(x))
+_map(μ::UnaryMean, x::AV) = bcd(μ.op, _map(μ.μ, x))
+
+
+"""
+    BinaryMeanOp{Top, Tμ₁, Tμ₂} <: MeanFunction
+
+The mean function given by `op(μ₁(x), μ₂(x))`.
+"""
+struct BinaryMean{Top, Tμ₁, Tμ₂} <: MeanFunction
+    op::Top
+    μ₁::Tμ₁
+    μ₂::Tμ₂
 end
+(μ::BinaryMean)(x) = μ.op(μ.μ₁(x), μ.μ₂(x))
+_map(μ::BinaryMean, x::AV) = bcd(μ.op, _map(μ.μ₁, x), _map(μ.μ₂, x))
 
-# CompositeMean definitions.
-eachindex(c::CompositeMean) = eachindex(c.x[1])
-length(c::CompositeMean) = length(c.x[1])
-(μ::CompositeMean)(x) = map(μ.f, map(f->f(x), μ.x)...)
-_map(f::CompositeMean, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
-map(f::CompositeMean, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
 
-function +(μ::MeanFunction, μ′::MeanFunction)
-    @assert size(μ) == size(μ′)
-    if iszero(μ)
-        return μ′
-    elseif iszero(μ′)
-        return μ
-    else
-        return CompositeMean(+, μ, μ′)
-    end
-end
-function *(μ::MeanFunction, μ′::MeanFunction)
-    @assert size(μ) == size(μ′)
-    return iszero(μ) || iszero(μ′) ? zero(μ) : CompositeMean(*, μ, μ′)
-end
+"""
+    BinaryKernel{Top, Tk₁, Tk₂} <: Kernel
 
-# CompositeKernel definitions.
-(k::CompositeKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
-(k::CompositeKernel)(x) = map(k.f, map(f->f(x), k.x)...)
-length(k::CompositeKernel) = size(k.x[1], 1)
-isstationary(k::CompositeKernel) = all(map(isstationary, k.x))
-@noinline eachindex(k::CompositeKernel) = eachindex(k.x[1], 1)
-
-_map(f::CompositeKernel, X::AV) = map(f.f, map(f->map(f, X), f.x)...)
-_pairwise(f::CompositeKernel, X::AV) = LazyPDMat(map(f.f, map(f->pairwise(f, X), f.x)...))
-_map(f::CompositeKernel, X::AV, X′::AV) = map(f.f, map(f->map(f, X, X′), f.x)...)
-_pairwise(f::CompositeKernel, X::AV, X′::AV) = map(f.f, map(f->pairwise(f, X, X′), f.x)...)
-
-map(f::CompositeKernel, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
-pairwise(f::ConstantKernel, ::Colon) = LazyPDMat(map(f.f, map(f->pairwise(f, :), f.x)...))
-
-# CompositeCrossKernel definitions.
-(k::CompositeCrossKernel)(x, x′) = map(k.f, map(f->f(x, x′), k.x)...)
-size(k::CompositeCrossKernel, N::Int) = size(k.x[1], N)
-isstationary(k::CompositeCrossKernel) = all(map(isstationary, k.x))
-eachindex(k::CompositeCrossKernel, dim::Int) = eachindex(k.x[1], dim)
-
-_map(f::CompositeCrossKernel, X::AV, X′::AV) = map(f.f, map(f->map(f, X, X′), f.x)...)
-function _pairwise(f::CompositeCrossKernel, X::AV, X′::AV)
-    return map(f.f, map(f->pairwise(f, X, X′), f.x)...)
+The kernel given by `op(k₁(x, x′), k₂(x, x′))`.
+"""
+struct BinaryKernel{Top, Tk₁<:Kernel, Tk₂<:Kernel} <: Kernel
+    op::Top
+    k₁::Tk₁
+    k₂::Tk₂
 end
 
-map(f::CompositeCrossKernel, ::Colon) = map(f.f, map(f->map(f, :), f.x)...)
-pairwise(f::CompositeCrossKernel, ::Colon) = map(f.f, map(f->pairwise(f, :), f.x)...)
+# Binary operations.
+(k::BinaryKernel)(x, x′) = k.op(k.k₁(x, x′), k.k₂(x, x′))
+_map(k::BinaryKernel, x::AV, x′::AV) = bcd(k.op, _map(k.k₁, x, x′), _map(k.k₂, x, x′))
+_pw(k::BinaryKernel, x::AV, x′::AV) = bcd(k.op, _pw(k.k₁, x, x′), _pw(k.k₂, x, x′))
+
+# Unary operations.
+(k::BinaryKernel)(x) = k.op(k.k₁(x), k.k₂(x))
+_map(k::BinaryKernel)(x::AV) = bcd(k.op, _map(k.k₁, x), _map(k.k₂, x))
+_pw(k::BinaryKernel)(x::AV) = bcd(k.op, _pw(k.k₁, x), _pw(k.k₂, x))
+
+
+"""
+    BinaryCrossKernel{Top, Tk₁, Tk₂} <: CrossKernel
+
+The cross kernel given by `op(k₁(x, x′), k₂(x, x′))`.
+"""
+struct BinaryCrossKernel{Top, Tk₁<:CrossKernel, Tk₂<:CrossKernel} <: CrossKernel
+    op::Top
+    k₁::Tk₁
+    k₂::Tk₂
+end
+
+# Binary operations.
+(k::BinaryCrossKernel)(x, x′) = k.op(k.k₁(x, x′), k.k₂(x, x′))
+_map(k::BinaryCrossKernel, x::AV, x′::AV) = bcd(k.op, _map(k.k₁, x, x′), _map(k.k₂, x, x′))
+_pw(k::BinaryCrossKernel, x::AV, x′::AV) = bcd(k.op, _pw(k.k₁, x, x′), _pw(k.k₂, x, x′))
+
+# Unary operations.
+(k::BinaryCrossKernel)(x) = k.op(k.k₁(x), k.k₂(x))
+_map(k::BinaryCrossKernel)(x::AV) = bcd(k.op, _map(k.k₁, x), _map(k.k₂, x))
+_pw(k::BinaryCrossKernel)(x::AV) = bcd(k.op, _pw(k.k₁, x), _pw(k.k₂, x))
 
 
 
 ############################## Multiply-by-Function Kernels ################################
 
 """
-    LhsCross <: CrossKernel
+    LhsCross <: CrossKernel{Tf, Tk<:CrossKernel}
 
-A cross-kernel given by `k(x, x′) = f(x) * k(x, x′)`.
+A cross-kernel given by `f(x) * k(x, x′)`.
 """
-struct LhsCross <: CrossKernel
-    f::Any
-    k::CrossKernel
+struct LhsCross{Tf, Tk<:CrossKernel} <: CrossKernel
+    f::Tf
+    k::Tk
 end
 (k::LhsCross)(x, x′) = k.f(x) * k.k(x, x′)
-size(k::LhsCross, N::Int) = size(k.k, N)
-_pairwise(k::LhsCross, X::AV, X′::AV) = map(k.f, X) .* pairwise(k.k, X, X′)
-eachindex(k::LhsCross, dim::Int) = eachindex(k.k, dim)
+_map(k::LhsCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′))
+_pw(k::LhsCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′))
 
-# map(k::LhsCross, ::Colon) = map(k.f, :) .* map(k.k, :)
-# pairwise(k::LhsCross, ::Colon) = map(k.f, :) .* pairwise(k.k, :)
-
+    
 """
-    RhsCross <: CrossKernel
+    RhsCross <: CrossKernel{Tk<:CrossKernel, Tf}
 
-A cross-kernel given by `k(x, x′) = k(x, x′) * f(x′)`.
+A cross-kernel given by `k(x, x′) * f(x′)`.
 """
-struct RhsCross <: CrossKernel
-    k::CrossKernel
-    f
+struct RhsCross{Tk<:CrossKernel, Tf} <: CrossKernel
+    k::Tk
+    f::Tf
 end
 (k::RhsCross)(x, x′) = k.k(x, x′) * k.f(x′)
-size(k::RhsCross, N::Int) = size(k.k, N)
-_pairwise(k::RhsCross, X::AV, X′::AV) = pairwise(k.k, X, X′) .* map(k.f, X′)'
-eachindex(k::RhsCross, dim::Int) = eachindex(k.k, dim)
+_map(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), map(k.f, x′))
+_pw(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), map(k.f, x′)')
 
-# map(k::RhsCross, ::Colon) = map(k.k, :) .* map(k.f, :)
-# pairwise(k::RhsCross, ::Colon) = pairwise(k.k, :) .* map(k.f, :)'
 
 """
-    OuterCross <: CrossKernel
+    OuterCross <: CrossKernel{Tf, Tk<:CrossKernel}
 
-A kernel given by `k(x, x′) = f(x) * k(x, x′) * f(x′)`.
+A kernel given by `f(x) * k(x, x′) * f(x′)`.
 """
-struct OuterCross{T} <: CrossKernel
-    f::T
-    k::CrossKernel
+struct OuterCross{Tf, Tk<:CrossKernel} <: CrossKernel
+    f::Tf
+    k::Tk
 end
 (k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
 (k::OuterCross{<:Real})(x, x′) = k.f^2 * k.k(x, x′)
-size(k::OuterCross, N::Int) = size(k.k, N)
-function _pairwise(k::OuterCross, X::AV, X′::AV)
-    return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
-end
-_pairwise(k::OuterCross{<:Real}, X::AV, X′::AV) = k.f^2 .* pairwise(k.k, X, X′)
-eachindex(k::OuterCross, dim::Int) = eachindex(k.k, dim)
+_map(k::OuterCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′), map(k.f, x′))
+_pw(k::OuterCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′), map(k.f, x′)')
 
-# map(k::OuterCross, ::Colon) = map(k.f, :) .* pairwise(k.k, :) .* map(k.f, :)'
 
 """
     OuterKernel <: Kernel
 
-A kernel given by `k(x, x′) = f(x) * k(x, x′) * f(x′)`.
+A kernel given by `f(x) * k(x, x′) * f(x′)`.
 """
-struct OuterKernel{T} <: Kernel
-    f::T
-    k::Kernel
+struct OuterKernel{Tf, Tk<:Kernel} <: Kernel
+    f::Tf
+    k::Tk
 end
+
+# Binary methods.
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
-(k::OuterKernel{<:Real})(x, x′) = k.f^2 * k.k(x, x′)
+_map(k::OuterKernel, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′), map(k.f, x′)')
+_pw(k::OuterKernel, X::AV, X′::AV) = bcd(*, map(k.f, X), _pw(k.k, X, X′), map(k.f, X′)')
+
+# Unary methods.
 (k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
-(k::OuterKernel{<:Real})(x) = k.f^2 * k.k(x)
-length(k::OuterKernel) = length(k.k)
-_pairwise(k::OuterKernel, X::AV) = Xt_A_X(pairwise(k.k, X), Diagonal(map(k.f, X)))
-_pairwise(k::OuterKernel{<:Real}, X::AV) = k.f^2 .* pairwise(k.k, X)
-function _pairwise(k::OuterKernel, X::AV, X′::AV)
-    return map(k.f, X) .* pairwise(k.k, X, X′) .* map(k.f, X′)'
-end
-_pairwise(k::OuterKernel{<:Real}, X::AV, X′::AV) = k.f^2 .* pairwise(k.k, X, X′)
-eachindex(k::OuterKernel) = eachindex(k.k)
-
-
-############################## Convenience functionality ##############################
-
-import Base: +, *, promote_rule, convert
-
-function *(f, μ::MeanFunction)
-    return iszero(μ) ? μ : CompositeMean(f, μ)
-end
-
-function *(f, k::CrossKernel)
-    return iszero(k) ? k : LhsCross(f, k)
-end
-function *(k::CrossKernel, f)
-    return iszero(k) ? k : RhsCross(k, f)
-end
-function *(f, k::RhsCross)
-    if k.k isa Kernel && f == k.f
-        return OuterKernel(f, k.k)
-    else
-        return LhsCross(f, k)
-    end
-end
-function *(k::LhsCross, f)
-    if k.k isa Kernel && f == k.f
-        return OuterKernel(f, k.k)
-    else
-        return RhsCross(k, f)
-    end
-end
-
-promote_rule(::Type{<:MeanFunction}, ::Type{<:Real}) = MeanFunction
-convert(::Type{MeanFunction}, x::Real) = ConstantMean(x)
-
-promote_rule(::Type{<:Kernel}, ::Type{<:Real}) = Kernel
-convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
-
-# Composing mean functions with Reals.
-+(μ::MeanFunction, μ′::Real) = +(promote(μ, μ′)...)
-+(μ::Real, μ′::MeanFunction) = +(promote(μ, μ′)...)
-
-*(μ::MeanFunction, μ′::Real) = *(promote(μ, μ′)...)
-*(μ::Real, μ′::MeanFunction) = *(promote(μ, μ′)...)
-
-# Composing kernels with Reals.
-+(k::CrossKernel, k′::Real) = +(promote(k, k′)...)
-+(k::Real, k′::CrossKernel) = +(promote(k, k′)...)
-
-*(k::CrossKernel, k′::Real) = *(promote(k, k′)...)
-*(k::Real, k′::CrossKernel) = *(promote(k, k′)...)
+_map(...) = ...
+_pw(k::OuterKernel, X::AV) = Xt_A_X(_pw(k.k, X), Diagonal(map(k.f, X)))

@@ -400,20 +400,20 @@ println("Zygote")
 
 rng = MersenneTwister(123456);
 D = pairwise(SqEuclidean(), randn(rng, 2, 100));
-obj_pairwise(D) = sum(-0.5 .* D)
+obj_pw(D) = sum(-0.5 .* D)
 
 for N in Ns
     println(N)
     D = pairwise(SqEuclidean(), randn(rng, 2, N));
 
     println("Forward")
-    display(@benchmark obj_pairwise($D))
+    display(@benchmark obj_pw($D))
 
     println("Flux")
-    display(@benchmark Flux.gradient(obj_pairwise, $D))
+    display(@benchmark Flux.gradient(obj_pw, $D))
 
     println("Zygote")
-    display(@benchmark Zygote.gradient(obj_pairwise, $D))
+    display(@benchmark Zygote.gradient(obj_pw, $D))
 end
 
 
@@ -422,8 +422,8 @@ end
 
 println("EQ covariance")
 rng = MersenneTwister(123456);
-# obj_eq(x) = sum(Stheno._pairwise(EQ(), ColsAreObs(x)))
-obj_eq(x) = sum(Stheno._pairwise(EQ(), x))
+# obj_eq(x) = sum(Stheno._pw(EQ(), ColsAreObs(x)))
+obj_eq(x) = sum(Stheno._pw(EQ(), x))
 
 for N in Ns
     println(N)

@@ -41,10 +41,10 @@ _map(k::DeltaSumKernel, X::AV) = diag_Xᵀ_A_X(pairwise(k.k, :), pairwise(k.ϕ, 
 function _map(k::DeltaSumKernel, X::AV, X′::AV)
     return diag_Xᵀ_A_Y(pairwise(k.ϕ, :, X), pairwise(k.k, :), pairwise(k.ϕ, :, X′))
 end
-@noinline function _pairwise(k::DeltaSumKernel, X::AV)
+@noinline function _pw(k::DeltaSumKernel, X::AV)
     return Xt_A_X(pairwise(k.k, :), pairwise(k.ϕ, :, X))
 end
-function _pairwise(k::DeltaSumKernel, X::AV, X′::AV)
+function _pw(k::DeltaSumKernel, X::AV, X′::AV)
     return Xt_A_Y(pairwise(k.ϕ, :, X), pairwise(k.k, :), pairwise(k.ϕ, :, X′))
 end
 
@@ -69,7 +69,7 @@ end
 function _map(k::LhsDeltaSumCrossKernel, X::AV, X′::AV)
     return diag_AᵀB(pairwise(k.ϕ, :, X), pairwise(k.k, :, X′))
 end
-function _pairwise(k::LhsDeltaSumCrossKernel, X::AV, X′::AV)
+function _pw(k::LhsDeltaSumCrossKernel, X::AV, X′::AV)
     return pairwise(k.ϕ, :, X)' * pairwise(k.k, :, X′)
 end
 
@@ -94,6 +94,6 @@ end
 function _map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
     return diag_AᵀB(pairwise(k.k, :, X), pairwise(k.ϕ, :, X′))
 end
-function _pairwise(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
+function _pw(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
     return pairwise(k.k, :, X)' * pairwise(k.ϕ, :, X′)
 end

@@ -65,13 +65,13 @@ function _map(k::ConditionalKernel, X::AV, X′::AV)
     return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
 end
 
-function _pairwise(k::ConditionalKernel, X::AV)
+function _pw(k::ConditionalKernel, X::AV)
     Σgg = AbstractMatrix(pairwise(k.kgg, X))
     Σfg_X = pairwise(k.kfg, :, X)
     Σ′gg = AbstractMatrix(Xt_invA_X(k.c.Σff, Σfg_X))
     return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
 end
-function _pairwise(k::ConditionalKernel, X::AV, X′::AV)
+function _pw(k::ConditionalKernel, X::AV, X′::AV)
     Σgg = pairwise(k.kgg, X, X′)
     Σfg_X = pairwise(k.kfg, :, X)
     Σfg_X′ = pairwise(k.kfg, :, X′)
@@ -104,7 +104,7 @@ function _map(k::ConditionalCrossKernel, X::AV, X′::AV)
     return (σgh .- σ′gh) .* .!(σgh .≈ σ′gh)
 end
 
-function _pairwise(k::ConditionalCrossKernel, Xg::AV, Xh::AV)
+function _pw(k::ConditionalCrossKernel, Xg::AV, Xh::AV)
     Σgh = pairwise(k.kgh, Xg, Xh)
     Σfg_Xg = pairwise(k.kfg, :, Xg)
     Σfh_Xh = pairwise(k.kfh, :, Xh)
