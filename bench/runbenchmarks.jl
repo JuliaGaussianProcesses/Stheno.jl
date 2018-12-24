@@ -1,5 +1,5 @@
 using Revise
-using Stheno, BenchmarkTools, Bench, Flux, Zygote, CuArrays
+using Stheno, BenchmarkTools, Bench, Flux, Zygote
 using Zygote: gradient
 using BenchmarkTools: median
 
@@ -12,7 +12,8 @@ benchmarks = @benchset "Stheno" begin
 
     # @benchset "mean_and_kernel" begin
     #     include("mean_and_kernel/mean.jl")
-        include("mean_and_kernel/kernel.jl")
+        # include("mean_and_kernel/kernel.jl")
+        include("mean_and_kernel/compose.jl")
     #     include("mean_and_kernel/finite.jl")
     # end
 

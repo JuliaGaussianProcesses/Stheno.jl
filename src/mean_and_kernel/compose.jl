@@ -43,8 +43,8 @@ _pw(k::BinaryKernel, x::AV, x′::AV) = bcd(k.op, _pw(k.k₁, x, x′), _pw(k.k�
 
 # Unary operations.
 (k::BinaryKernel)(x) = k.op(k.k₁(x), k.k₂(x))
-_map(k::BinaryKernel)(x::AV) = bcd(k.op, _map(k.k₁, x), _map(k.k₂, x))
-_pw(k::BinaryKernel)(x::AV) = bcd(k.op, _pw(k.k₁, x), _pw(k.k₂, x))
+_map(k::BinaryKernel, x::AV) = bcd(k.op, _map(k.k₁, x), _map(k.k₂, x))
+_pw(k::BinaryKernel, x::AV) = bcd(k.op, _pw(k.k₁, x), _pw(k.k₂, x))
 
 
 """
@@ -65,8 +65,8 @@ _pw(k::BinaryCrossKernel, x::AV, x′::AV) = bcd(k.op, _pw(k.k₁, x, x′), _pw
 
 # Unary operations.
 (k::BinaryCrossKernel)(x) = k.op(k.k₁(x), k.k₂(x))
-_map(k::BinaryCrossKernel)(x::AV) = bcd(k.op, _map(k.k₁, x), _map(k.k₂, x))
-_pw(k::BinaryCrossKernel)(x::AV) = bcd(k.op, _pw(k.k₁, x), _pw(k.k₂, x))
+_map(k::BinaryCrossKernel, x::AV) = bcd(k.op, _map(k.k₁, x), _map(k.k₂, x))
+_pw(k::BinaryCrossKernel, x::AV) = bcd(k.op, _pw(k.k₁, x), _pw(k.k₂, x))
 
 
 

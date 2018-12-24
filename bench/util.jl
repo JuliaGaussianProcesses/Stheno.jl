@@ -27,7 +27,7 @@ function create_benchmarks(μ::MeanFunction; grads=true, x=5.0, x̄s=nothing)
 
     for x̄ in generate_x̄s(x, x̄s)
         N = length(x̄)
-        create_benchmarks("map ($(length(x̄)))", grads, x->map(μ, x), x)
+        create_benchmarks("map ($(length(x̄)))", grads, x->map(μ, x), x̄)
     end
 end
 
