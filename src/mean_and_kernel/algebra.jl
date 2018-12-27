@@ -94,3 +94,42 @@ convert(::Type{<:CrossKernel}, x::Real) = ConstantKernel(x)
 
 *(k::CrossKernel, k′::Real) = *(promote(k, k′)...)
 *(k::Real, k′::CrossKernel) = *(promote(k, k′)...)
+
+
+import Base: zero, +, *
+
+const ZM = ZeroMean{Float64}
+zero(::Type{<:MeanFunction}, N::Int) = FiniteZeroMean(1:N)
+zero(::Type{<:MeanFunction}) = ZeroMean{Float64}()
+zero(μ::MeanFunction) = length(μ) < Inf ? FiniteZeroMean(eachindex(μ)) : ZM()
+
+# Addition of mean functions.
+function +(μ::MeanFunction, μ′::MeanFunction)
+    if iszero(μ)
+        return μ′
+    elseif iszero(μ′)
+        return μ
+    else
+        return BinaryMean(+, μ, μ′)
+    end
+end
++(μ::ConstantMean, μ′::ConstantMean) = ConstantMean(μ.c + μ′.c)
++(a::Real, μ::MeanFunction) = UnaryMean(m->a + m, μ)
++(μ::MeanFunction, a::Real) = UnaryMean(m->m + a, μ)
+
+# Product of mean functions.
+function *(μ::MeanFunction, μ′::MeanFunction)
+    if iszero(μ)
+        return μ
+    elseif iszero(μ′)
+        return μ′
+    else
+        return BinaryMean(*, μ, μ′)
+    end
+end
+*(μ::ConstantMean, μ′::ConstantMean) = ConstantMean(μ.c * μ′.c)
+# *(a::Real, μ::MeanFunction) = UnaryMean(m->a * m, μ)
+# *(μ::MeanFunction, a::Real) = UnaryMean(m->m * a, μ)
+
+@inline *(a::Real, μ::MeanFunction) = BinaryMean(*, a, μ)
+@inline *(μ::MeanFunction, a::Real) = BinaryMean(*, μ, a)

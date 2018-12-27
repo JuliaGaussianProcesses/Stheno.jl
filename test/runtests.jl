@@ -13,16 +13,16 @@ using Stheno, Test, Random, FillArrays
         include("test_util.jl")
         # include("mean_and_kernel/mean.jl")
         # include("mean_and_kernel/kernel.jl")
-        include("mean_and_kernel/compose.jl")
+        # include("mean_and_kernel/compose.jl")
         # include("mean_and_kernel/finite.jl")
-        # include("mean_and_kernel/conditional.jl")
-        # include("mean_and_kernel/block.jl")
+        include("mean_and_kernel/block.jl")
         # # include("mean_and_kernel/transform.jl")
         # include("mean_and_kernel/input_transform.jl")
         # include("mean_and_kernel/zero.jl")
         # include("mean_and_kernel/degenerate.jl")
         # include("mean_and_kernel/derivative.jl")
         # include("mean_and_kernel/conversion.jl")
+        # include("mean_and_kernel/conditional.jl")
     end
 
     # @testset "gp" begin
@@ -40,9 +40,9 @@ using Stheno, Test, Random, FillArrays
     #     include("linops/conditioning.jl")
     # end
 
-    # @testset "integration" begin
-    #     # include("util/toeplitz_integration.jl")
-    #     # include("util/flux_rules.jl")
-    #     include("util/zygote_rules.jl")
-    # end
+    @testset "integration" begin
+        # include("util/toeplitz_integration.jl")
+        # include("util/flux_rules.jl")
+        # include("util/zygote_rules.jl")
+    end
 end

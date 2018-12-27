@@ -82,8 +82,8 @@ struct LhsCross{Tf, Tk<:CrossKernel} <: CrossKernel
     k::Tk
 end
 (k::LhsCross)(x, x′) = k.f(x) * k.k(x, x′)
-_map(k::LhsCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′))
-_pw(k::LhsCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′))
+_map(k::LhsCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _map(k.k, x, x′))
+_pw(k::LhsCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _pw(k.k, x, x′))
 
     
 """
@@ -96,8 +96,8 @@ struct RhsCross{Tk<:CrossKernel, Tf} <: CrossKernel
     f::Tf
 end
 (k::RhsCross)(x, x′) = k.k(x, x′) * k.f(x′)
-_map(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), map(k.f, x′))
-_pw(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), map(k.f, x′)')
+_map(k::RhsCross, x::AV, x′::AV) = bcd(*, _map(k.k, x, x′), bcd(k.f, x′))
+_pw(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), bcd(k.f, x′'))
 
 
 """
@@ -110,8 +110,8 @@ struct OuterCross{Tf, Tk<:CrossKernel} <: CrossKernel
     k::Tk
 end
 (k::OuterCross)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
-_map(k::OuterCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′), map(k.f, x′))
-_pw(k::OuterCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′), map(k.f, x′)')
+_map(k::OuterCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _map(k.k, x, x′), bcd(k.f, x′))
+_pw(k::OuterCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _pw(k.k, x, x′), bcd(k.f, x′'))
 
 
 """
@@ -126,13 +126,13 @@ end
 
 # Binary methods.
 (k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
-_map(k::OuterKernel, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′), map(k.f, x′)')
-_pw(k::OuterKernel, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′), map(k.f, x′)')
+_map(k::OuterKernel, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _map(k.k, x, x′), bcd(k.f, x′))
+_pw(k::OuterKernel, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _pw(k.k, x, x′), bcd(k.f, x′'))
 
 # Unary methods.
 (k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
 _map(k::OuterKernel, x::AV) = bcd(*, bcd(x->k.f(x)^2, x), _map(k.k, x))
 function _pw(k::OuterKernel, x::AV)
-    fx = map(k.f, x)
-    return bcd(*, fx, _pw(k.k, x), fx')
+    fx = bcd(k.f, x)
+    return bcd(*, fx, _pw(k.k, x), materialize(fx)')
 end

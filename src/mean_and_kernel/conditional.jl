@@ -10,9 +10,7 @@ Avoids recomputing the covariance `Σff` and the Kriging vector `α`.
 struct CondCache
     Σff::LazyPDMat
     α::AV{<:Real}
-    function CondCache(mf::AV{<:Real}, Σff::AM, f::AV{<:Real})
-        return new(Σff, Σff \ (f - mf))
-    end
+    CondCache(mf::AV{<:Real}, Σff::AM, f::AV{<:Real}) = new(Σff, Σff \ (f - mf))
 end
 function CondCache(kff::Kernel, μf::MeanFunction, X::AV, f::AV{<:Real})
     return CondCache(map(μf, X), pairwise(kff, X), f)
@@ -29,11 +27,8 @@ struct ConditionalMean <: MeanFunction
     μg::MeanFunction
     kfg::CrossKernel
 end
-length(μ::ConditionalMean) = length(μ.μg)
-eachindex(μ::ConditionalMean) = eachindex(μ.μg)
-(μ::ConditionalMean)(x::Number) = map(μ, [x])[1]
-(μ::ConditionalMean)(x::AbstractVector) = map(μ, ColsAreObs(reshape(x, length(x), 1)))[1]
-_map(μ::ConditionalMean, Xg::AV) = map(μ.μg, Xg) + pairwise(μ.kfg, :, Xg)' * μ.c.α
+(μ::ConditionalMean)(x) = μ.μg(x) + dot(reshape(pairwise(μ.kfg, :, Xg), :), μ.c.α)
+_map(μ::ConditionalMean, Xg::AV) = bcd(+, _map(μ.μg, Xg), pairwise(μ.kfg, :, Xg)' * μ.c.α)
 
 """
     ConditionalKernel <: Kernel
@@ -48,8 +43,6 @@ end
 (k::ConditionalKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 (k::ConditionalKernel)(x::AV, x′::AV) =
     map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
-length(k::ConditionalKernel) = length(k.kgg)
-eachindex(k::ConditionalKernel) = eachindex(k.kgg)
 
 function _map(k::ConditionalKernel, X::AV)
     σgg = map(k.kgg, X)
@@ -93,8 +86,6 @@ end
 (k::ConditionalCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 (k::ConditionalCrossKernel)(x::AV, x′::AV) =
     map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
-size(k::ConditionalCrossKernel, N::Int) = size(k.kgh, N)
-eachindex(k::ConditionalCrossKernel, N::Int) = eachindex(k.kgh, N)
 
 function _map(k::ConditionalCrossKernel, X::AV, X′::AV)
     σgh = map(k.kgh, X, X′)

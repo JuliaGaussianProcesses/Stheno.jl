@@ -1,18 +1,31 @@
 using Zygote, IRTools
-using Zygote: @adjoint
+using Zygote: @adjoint, _forward
 
 import Distances: pairwise, colwise
 import LinearAlgebra: \, /
-import FillArrays: Fill
+import FillArrays: Fill, AbstractFill, getindex_value
 
-@adjoint function Fill(x, sz::Tuple{Vararg})
-    return Fill(x, sz), function(Δ)
-        return (sum(Δ), nothing)
-    end
+# Hack at Zygote to make Fills work properly.
+@adjoint Fill(x, sz::Tuple{Vararg}) = Fill(x, sz), Δ->(sum(Δ), nothing)
+@adjoint Fill(x, sz::Int) = Fill(x, sz), Δ->(sum(Δ), nothing)
+
+
+const AbstractFillVec{T} = AbstractFill{T, 1}
+const AbstractFillMat{T} = AbstractFill{T, 2}
+
+@adjoint function broadcasted(op, r::AbstractFill{<:Real})
+    y, _back = Zygote.forward(op, getindex_value(r))
+    back(Δ::AbstractFill) = (nothing, Fill(_back(getindex_value(Δ))[1], size(r)))
+    back(Δ::AbstractArray) = (nothing, getindex.(_back.(Δ), 1))
+    return Fill(y, size(r)), back
 end
-@adjoint function Fill(x, sz::Int)
-    return Fill(x, sz), function(Δ)
-        return (sum(Δ), nothing)
+
+for array_type in [:AbstractFillVec, :AbstractFillMat]
+    @eval @adjoint function broadcasted(::typeof(+), a::$array_type, b::$array_type)
+        return broadcasted(+, a, b), Δ->(nothing, Δ, Δ)
+    end
+    @eval @adjoint function broadcasted(::typeof(*), a::$array_type, b::$array_type)
+        return broadcasted(*, a, b), Δ->(nothing, Δ .* b, Δ .* a)
     end
 end
 

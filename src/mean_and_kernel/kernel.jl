@@ -3,12 +3,12 @@ using Base.Broadcast: DefaultArrayStyle
 using GPUArrays: GPUVector
 
 import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
-import Base: +, *, ==, size, eachindex, print
+import Base: +, *, ==, size, eachindex, print, eltype
 import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
 import Base.Broadcast: broadcasted, materialize, broadcast_shape
 
 export CrossKernel, Kernel, cov, xcov, EQ, PerEQ, RQ, Linear, Poly, Noise, Wiener,
-    WienerVelocity, Exponential, ConstantKernel, isstationary, ZeroKernel, pairwise
+    WienerVelocity, Exp, ConstantKernel, isstationary, ZeroKernel, OneKernel, pairwise
 
 
 
@@ -87,37 +87,59 @@ end
 A rank 0 `Kernel` that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
+ZeroKernel() = ZeroKernel{Int}()
+eltype(::ZeroKernel{T}) where {T} = T
 
 # Binary methods.
-(::ZeroKernel{T})(x, x′) where T = zero(T)
-_map(::ZeroKernel{T}, x::AV, x′::AV) where T = Zeros{T}(broadcast_shape(size(x), size(x′)))
-_pw(k::ZeroKernel{T}, x::AV, x′::AV) where T = Zeros{T}(length(x), length(x′))
+(k::ZeroKernel)(x, x′) = zero(eltype(k))
+_map(k::ZeroKernel, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′)))
+_pw(k::ZeroKernel, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
+@adjoint (k::ZeroKernel)(x, x′) = k(x, x′), Δ->(zero(x), zero(x′))
+@adjoint function _map(k::ZeroKernel, x::AV, x′::AV)
+    return _map(k, x, x′), Δ->(nothing, Zeros{Int}(size(x)), Zeros{Int}(size(x′)))
+end
+@adjoint function _pw(k::ZeroKernel, x::AV, x′::AV)
+    return _pw(k, x, x′), Δ->(nothing, Zeros{Int}(size(x)), Zeros{Int}(size(x′)))
+end
 
 # Unary methods.
-(::ZeroKernel{T})(x) where T = zero(T)
-_map(::ZeroKernel{T}, x::AV) where T = Zeros{T}(length(x))
-_pw(k::ZeroKernel{T}, x::AV) where T = Zeros{T}(length(x), length(x))
+(k::ZeroKernel)(x) = zero(eltype(k))
+_map(k::ZeroKernel, x::AV) = Zeros{eltype(k)}(length(x))
+_pw(k::ZeroKernel, x::AV) = Zeros{eltype(k)}(length(x), length(x))
+@adjoint (k::ZeroKernel)(x) = k(x), Δ->(zero(x),)
+@adjoint _map(k::ZeroKernel, x::AV) = _map(k, x), Δ->(nothing, Zeros{Int}(size(x)))
+@adjoint _pw(k::ZeroKernel, x::AV) = _pw(k, x), Δ->(nothing, Zeros{Int}(size(x)))
 
 
 """
-    ConstantKernel{T<:Real} <: Kernel
+    OneKernel{T<:Real} <: Kernel
 
 A rank 1 constant `Kernel`. Useful for consistency when creating composite Kernels,
 but (almost certainly) shouldn't be used as a base `Kernel`.
 """
-struct ConstantKernel{T<:Real} <: Kernel
-    c::T
-end
+struct OneKernel{T<:Real} <: Kernel end
+OneKernel() = OneKernel{Int}()
+eltype(k::OneKernel{T}) where {T} = T
 
 # Binary methods.
-(k::ConstantKernel)(x, x′) = k(x)
-_map(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, broadcast_shape(size(x), size(x′)))
-_pw(k::ConstantKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′))
+(k::OneKernel)(x, x′) = one(eltype(k))
+_map(k::OneKernel, x::AV, x′::AV) = Ones{eltype(k)}(broadcast_shape(size(x), size(x′)))
+_pw(k::OneKernel, x::AV, x′::AV) = Ones{eltype(k)}(length(x), length(x′))
+@adjoint (k::OneKernel)(x, x′) = k(x, x′), Δ->(zero(x), zero(x′))
+@adjoint function _map(k::OneKernel, x::AV, x′::AV)
+    return _map(k, x, x′), Δ->(nothing, Zeros{Int}(size(x)), Zeros{Int}(size(x′)))
+end
+@adjoint function _pw(k::OneKernel, x::AV, x′::AV)
+    return _pw(k, x, x′), Δ->(nothing, Zeros{Int}(size(x)), Zeros{Int}(size(x′)))
+end
 
 # Unary methods.
-(k::ConstantKernel)(x) = k.c
-_map(k::ConstantKernel, x::AV) = Fill(k.c, length(x))
-_pw(k::ConstantKernel, x::AV) = Fill(k.c, length(x), length(x))
+(k::OneKernel)(x) = one(eltype(k))
+_map(k::OneKernel, x::AV) = Ones{eltype(k)}(length(x))
+_pw(k::OneKernel, x::AV) = Ones{eltype(k)}(length(x), length(x))
+@adjoint (k::OneKernel)(x) = k(x), Δ->(zero(x),)
+@adjoint _map(k::OneKernel, x::AV) = _map(k, x), Δ->(nothing, Zeros{Int}(size(x)))
+@adjoint _pw(k::OneKernel, x::AV) = _pw(k, x), Δ->(nothing, Zeros{Int}(size(x)))
 
 
 """
@@ -217,25 +239,23 @@ end
 
 
 """
-    Exponential <: Kernel
+    Exp <: Kernel
 
 The standardised Exponential kernel.
 """
-struct Exponential <: Kernel end
+struct Exp <: Kernel end
 
 # Binary methods
-(::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
-function _map(k::Exponential, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′))
-end
-function _pw(k::Exponential, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′'))
-end
+(::Exp)(x::Real, x′::Real) = exp(-abs(x - x′))
+_map(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′))
+_pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′'))
 
 # Unary methods
-(::Exponential)(x::Real) = one(x)
-_map(k::Exponential, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
-_pw(k::Exponential, x::AV{<:Real}) = _pw(k, x, x)
+(::Exp)(x) = 1
+_map(::Exp, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
+_pw(k::Exp, x::AV{<:Real}) = _pw(k, x, x)
+
+@adjoint _map(k::Exp, x::AV{<:Real}) = _map(k, x), Δ->(nothing, Zeros{eltype(x)}(length(x)))
 
 
 """
@@ -246,39 +266,48 @@ Standardised linear kernel / dot-product kernel.
 struct Linear <: Kernel end
 
 # Binary methods
-(k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
-_pw(k::Linear, x::AV, x′::AV) = _pw(k, ColsAreObs(x'), ColsAreObs(x′'))
-_pw(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
+(k::Linear)(x, x′) = dot(x, x′)
+_map(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′
+_pw(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′'
+_map(k::Linear, x::ColsAreObs, x′::ColsAreObs) = reshape(sum(x.X .* x′.X; dims=1), :)
+_pw(k::Linear, x::ColsAreObs, x′::ColsAreObs) = x.X' * x′.X
 
 # Unary methods
-(k::Linear)(x) = sum(abs2, x .- k.c)
-_pw(k::Linear, x::AV) = _pw(k, ColsAreObs(x'))
-function _pw(k::Linear, D::ColsAreObs)
-    Δ = D.X .- k.c
-    return Δ' * Δ
-end
+(k::Linear)(x) = dot(x, x)
+_map(k::Linear, x::AV{<:Real}) = x.^2
+_pw(k::Linear, x::AV{<:Real}) = x .* x'
+_map(k::Linear, x::ColsAreObs) = reshape(sum(abs2, x.X; dims=1), :)
+_pw(k::Linear, x::ColsAreObs) = x.X' * x.X
 
 
 """
     Noise{T<:Real} <: Kernel
 
-A white-noise kernel with a single scalar parameter.
+Standardised aleatoric white-noise kernel.
 """
-struct Noise{T<:Real} <: Kernel
-    σ²::T
+struct Noise{T<:Real} <: Kernel end
+Noise() = Noise{Int}()
+eltype(k::Noise{T}) where {T} = T
+
+# Binary methods.
+(k::Noise)(x, x′) = zero(eltype(k))
+_map(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′)))
+_pw(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
+
+@adjoint function _map(k::Noise{T}, x::AV, x′::AV) where {T}
+    return _map(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
 end
-(k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
-(k::Noise)(x) = k.σ²
-_pw(k::Noise, X::AV) = Diagonal(Fill(k.σ², length(X)))
-function _pw(k::Noise, X::AV, X′::AV)
-    if X === X′
-        return _pw(k, X)
-    else
-        return [view(X, p) == view(X′, q) ? k.σ² : 0
-            for p in eachindex(X), q in eachindex(X′)]
-    end
+@adjoint function _pw(k::Noise{T}, x::AV, x′::AV) where {T}
+    return _pw(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
 end
 
+# Unary methods.
+(k::Noise)(x) = one(eltype(k))
+_map(k::Noise, x::AV) = Ones{eltype(k)}(length(x))
+_pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
+
+@adjoint _map(k::Noise, x::AV) = _map(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
+@adjoint _pw(k::Noise, x::AV) = _pw(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
 
 # """
 #     RQ{T<:Real} <: Kernel

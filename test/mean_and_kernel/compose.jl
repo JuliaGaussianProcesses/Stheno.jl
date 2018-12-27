@@ -1,4 +1,4 @@
-using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, ConstantMean,
+using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
     LhsCross, RhsCross, OuterCross, OuterKernel, map, pairwise
 
 @testset "compose" begin
@@ -10,6 +10,10 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, ConstantMe
         ν = UnaryMean(f, μ)
         @test ν(x[1]) == exp(μ(x[1]))
         mean_function_tests(ν, x)
+
+        # Ensure FillArray functionality works as intended, particularly with Zygote.
+        mean_function_tests(UnaryMean(exp, ZeroMean()), x)
+        mean_function_tests(UnaryMean(exp, OneMean()), x)
     end
 
     # Test BinaryMean.
@@ -23,163 +27,109 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, ConstantMe
 
         mean_function_tests(ν1, x)
         mean_function_tests(ν2, x)
+
+        # Ensure FillArray functionality works as intended, particularly with Zygote.
+        mean_function_tests(BinaryMean(+, ZeroMean(), OneMean()), x)
+        mean_function_tests(BinaryMean(+, μ1, OneMean()), x)
+        mean_function_tests(BinaryMean(*, ZeroMean(), μ2), x)
     end
 
-    # # Test CompositeKernel and CompositeCrossKernel.
-    # let
-    #     rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-    #     x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-    #     X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+    # Test BinaryKernel
+    let
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-    #     # Define base kernels and do composition.
-    #     k1, k2 = EQ(), Linear(randn(rng))
-    #     ν1, ν2 = CompositeKernel(+, k1, k2), CompositeCrossKernel(*, k1, k2)
-    #     @test ν1(X0[1], X1[2]) == k1(X0[1], X1[2]) + k2(X0[1], X1[2])
-    #     @test ν2(X0[1], X1[2]) == k1(X0[1], X1[2]) .* k2(X0[1], X1[2])
-    #     @test size(ν1, 1) == Inf && size(ν1, 2) == Inf
-    #     @test size(ν2, 1) == Inf && size(ν2, 2) == Inf
-    #     @test !isstationary(ν1) && !isstationary(ν2)
-    #     @test isstationary(CompositeKernel(+, k1, k1)) == true
+        k = EQ()
+        ν = BinaryKernel(+, k, k)
 
-    #     xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-    #     XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
+        # Self-consistency testing.
+        kernel_tests(ν, x0, x1, x2)
 
-    #     cross_kernel_tests(ν2, x0, x1, x2)
-    #     cross_kernel_tests(ν2, X0, X1, X2)
-    #     cross_kernel_tests(ν2, xb0, xb1, xb2)
-    #     cross_kernel_tests(ν2, XB0, XB1, XB2)
+        # Absolute correctness testing.
+        @test ν(x0[1], x1[2]) == k(x0[1], x1[2]) + k(x0[1], x1[2])
+        @test map(ν, x0, x1) == map(k, x0, x1) .+ map(k, x0, x1)
+        @test pairwise(ν, x0, x2) == pairwise(k, x0, x2) .+ pairwise(k, x0, x2)
 
-    #     kernel_tests(ν1, x0, x1, x2)
-    #     kernel_tests(ν1, X0, X1, X2)
-    #     kernel_tests(ν1, xb0, xb1, xb2)
-    #     kernel_tests(ν1, XB0, XB1, XB2)
-    # end
+        @test ν(x0[1]) == k(x0[1]) + k(x0[1])
+        @test map(ν, x0) == map(k, x0) .+ map(k, x0)
+        @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
 
-    # # Test LhsCross functionality.
-    # let
-    #     rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-    #     x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-    #     X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        # Self-consistency testing with FillArrays
+        kernel_tests(BinaryKernel(+, ZeroKernel(), OneKernel()), x0, x1, x2)
+        kernel_tests(BinaryKernel(*, ZeroKernel(), EQ()), x0, x1, x2)
+        kernel_tests(BinaryKernel(+, EQ(), OneKernel()), x0, x1, x2)
+    end
 
-    #     f, k = x->sum(abs2, x), EQ()
-    #     ν = LhsCross(f, k)
+    let
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-    #     @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2])
-    #     @test size(ν, 1) == Inf && size(ν, 2) == Inf
+        k = EQ()
+        ν = BinaryCrossKernel(+, k, k)
 
-    #     xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-    #     XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
-    #     cross_kernel_tests(ν, x0, x1, x2)
-    #     cross_kernel_tests(ν, X0, X1, X2)
-    #     cross_kernel_tests(ν, xb0, xb1, xb2)
-    #     cross_kernel_tests(ν, XB0, XB1, XB2)
-    # end
+        # Self-consistency testing.
+        cross_kernel_tests(ν, x0, x1, x2)
 
-    # # Test RhsCross functionality.
-    # let
-    #     rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-    #     x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-    #     X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        # Absolute correctness testing.
+        @test ν(x0[1], x1[2]) == k(x0[1], x1[2]) + k(x0[1], x1[2])
+        @test map(ν, x0, x1) == map(k, x0, x1) .+ map(k, x0, x1)
+        @test pairwise(ν, x0, x2) == pairwise(k, x0, x2) .+ pairwise(k, x0, x2)
 
-    #     f, k = x->sum(abs2, x), EQ()
-    #     ν = RhsCross(k, f)
+        @test ν(x0[1]) == k(x0[1]) + k(x0[1])
+        @test map(ν, x0) == map(k, x0) .+ map(k, x0)
+        @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
 
-    #     @test ν(X0[1], X0[2]) == k(X0[1], X0[2]) * f(X0[2])
-    #     @test size(ν, 1) == Inf && size(ν, 2) == Inf
+        # Self-consistency testing with FillArrays
+        cross_kernel_tests(BinaryCrossKernel(+, ZeroKernel(), OneKernel()), x0, x1, x2)
+        cross_kernel_tests(BinaryCrossKernel(*, ZeroKernel(), EQ()), x0, x1, x2)
+        cross_kernel_tests(BinaryCrossKernel(+, EQ(), OneKernel()), x0, x1, x2)
+    end
 
-    #     xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-    #     XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
-    #     cross_kernel_tests(ν, x0, x1, x2)
-    #     cross_kernel_tests(ν, X0, X1, X2)
-    #     cross_kernel_tests(ν, xb0, xb1, xb2)
-    #     cross_kernel_tests(ν, XB0, XB1, XB2)
-    # end
+    # Test LhsCross.
+    let
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-    # # Test OuterCross.
-    # let
-    #     rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-    #     x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-    #     X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        f, k = abs2, EQ()
+        ν = LhsCross(f, k)
 
-    #     f, k = x->sum(abs2, x), EQ()
-    #     ν = OuterCross(f, k)
+        @test ν(x0[1], x1[1]) == f(x0[1]) * k(x0[1], x1[1])
+        cross_kernel_tests(ν, x0, x1, x2)
+    end
 
-    #     @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2]) * f(X0[2])
-    #     @test size(ν, 1) == Inf && size(ν, 2) == Inf
+    # Test RhsCross.
+    let
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-    #     xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-    #     XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
-    #     cross_kernel_tests(ν, x0, x1, x2)
-    #     cross_kernel_tests(ν, X0, X1, X2)
-    #     cross_kernel_tests(ν, xb0, xb1, xb2)
-    #     cross_kernel_tests(ν, XB0, XB1, XB2)
-    # end
+        k, f = EQ(), abs2
+        ν = RhsCross(k, f)
 
-    # # Test OuterKernel.
-    # let
-    #     rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-    #     x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-    #     X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        @test ν(x0[1], x1[1]) == k(x0[1], x1[1]) * f(x1[1])
+        cross_kernel_tests(ν, x0, x1, x2)
+    end
 
-    #     f, k = x->sum(abs2, x), EQ()
-    #     ν = OuterKernel(f, k)
+    # Test OuterCross.
+    let
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-    #     @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2]) * f(X0[2])
-    #     @test size(ν, 1) == Inf && size(ν, 2) == Inf
+        k, f = EQ(), abs2
+        ν = OuterCross(f, k)
 
-    #     xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-    #     XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
-    #     kernel_tests(ν, x0, x1, x2)
-    #     kernel_tests(ν, X0, X1, X2)
-    #     cross_kernel_tests(ν, xb0, xb1, xb2)
-    #     cross_kernel_tests(ν, XB0, XB1, XB2)
-    # end
+        @test ν(x0[1], x1[1]) == f(x0[1]) * k(x0[1], x1[1]) * f(x1[1])
+        cross_kernel_tests(ν, x0, x1, x2)
+    end
 
-    # # Test mean function composition.
-    # let
-    #     rng, N, D = MersenneTwister(123456), 5, 2
-    #     X, s = ColsAreObs(randn(rng, D, N)), randn(rng)
-    #     μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->sum(s .* x))
+    # Test OuterKernel.
+    let
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-    #     # Test conversion and promotion.
-    #     c = randn(rng)
-    #     @test convert(MeanFunction, c) == ConstantMean(c)
-    #     @test promote_rule(ConstantMean, Real) == MeanFunction
-    #     @test promote(ConstantMean(c), c) == (ConstantMean(c), ConstantMean(c))
+        k, f = EQ(), abs2
+        ν = OuterKernel(f, k)
 
-    #     # Test addition.
-    #     @test μ + μ′ == CompositeMean(+, μ, μ′)
-    #     @test map(μ + μ′, X) == map(μ, X) + map(μ′, X)
-    #     @test map(μ + 5, X) == map(μ, X) .+ 5
-    #     @test 2.34 + μ′ == CompositeMean(+, ConstantMean(2.34), μ′)
-
-    #     # Test multiplication.
-    #     @test μ * μ′ == CompositeMean(*, μ, μ′)
-    #     @test map(μ * μ′, X) == map(μ, X) .* map(μ′, X)
-    #     @test map(μ * 4.32, X) == 4.32 .* map(μ, X)
-    #     @test 4.23 * μ′ == CompositeMean(*, ConstantMean(4.23), μ′)
-    # end
-
-    # # Test kernel composition.
-    # let
-    #     rng, N, D = MersenneTwister(123456), 5, 2
-    #     X, s = ColsAreObs(randn(rng, N, D)), randn(rng)
-    #     k, k′ = EQ(), Linear(1)
-
-    #     # Test conversion and promotion.
-    #     @test convert(Kernel, s) == ConstantKernel(s)
-    #     @test promote_rule(typeof(k), typeof(s)) == Kernel
-    #     @test promote(k, s) == (k, ConstantKernel(s))
-    #     @test promote(s, k) == (ConstantKernel(s), k)
-
-    #     # Test addition.
-    #     @test k + k′ == CompositeKernel(+, k, k′)
-    #     @test k + s == CompositeKernel(+, k, ConstantKernel(s))
-    #     @test s + k′ == CompositeKernel(+, ConstantKernel(s), k′)
-
-    #     # Test multiplication.
-    #     @test k * k′ == CompositeKernel(*, k, k′)
-    #     @test k′ * s == CompositeKernel(*, k′, ConstantKernel(s))
-    #     @test s * k == CompositeKernel(*, ConstantKernel(s), k)
-    # end
+        @test ν(x0[1], x1[1]) == f(x0[1]) * k(x0[1], x1[1]) * f(x1[1])
+        kernel_tests(ν, x0, x1, x2)
+    end
 end

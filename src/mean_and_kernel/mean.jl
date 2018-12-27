@@ -1,15 +1,13 @@
-import Base: ==, map, AbstractVector, +, *, length, size, zero, iszero
+import Base: ==, map, AbstractVector, +, *, zero, iszero
 import Statistics: mean
 
 import Base.Broadcast: broadcasted, materialize
-export MeanFunction, CustomMean, ZeroMean, ConstantMean, mean
+export MeanFunction, CustomMean, ZeroMean, OneMean, mean
 
 abstract type MeanFunction end
 
-
-# Mapping now allows for fused operations.
+# Allow `map` to be fused.
 map(μ::MeanFunction, x::Union{AV, Colon}) = materialize(_map(μ, x))
-map(μ::MeanFunction, x::BlockData) = BlockVector([map(μ, x) for x in blocks(x)])
 
 
 """
@@ -29,20 +27,30 @@ end
 Returns `zero(T)` everywhere.
 """
 struct ZeroMean{T<:Real} <: MeanFunction end
-(::ZeroMean{T})(x) where T = zero(T)
+ZeroMean() = ZeroMean{Int}()
+(::ZeroMean{T})(x) where {T} = zero(T)
 _map(::ZeroMean{T}, x::AV) where T = Zeros{T}(length(x))
 
-
-"""
-    ConstantMean{T} <: MeanFunction
-
-Returns `c` (of the appropriate type) everywhere.
-"""
-struct ConstantMean{T<:Real} <: MeanFunction
-    c::T
+@adjoint (m::ZeroMean{T})(x) where {T} = m(x), Δ->(zero(x),)
+@adjoint function _map(m::ZeroMean{T}, x::AV) where {T}
+    return _map(m, x), Δ->(nothing, Zeros{T}(length(x)))
 end
-(μ::ConstantMean)(x) = μ.c
-_map(μ::ConstantMean, D::AV) = Fill(μ.c, length(D))
+
+
+"""
+    OneMean{T} <: MeanFunction
+
+Return `one(T)` everywhere.
+"""
+struct OneMean{T<:Real} <: MeanFunction end
+OneMean() = OneMean{Int}()
+(::OneMean{T})(x) where {T} = one(T)
+_map(::OneMean{T}, x::AV) where T = Fill(one(T), length(x))
+
+@adjoint (m::OneMean{T})(x) where {T} = m(x), Δ->(zero(x),)
+@adjoint function _map(μ::OneMean{T}, x::AV) where {T}
+    return _map(μ, x), Δ->(nothing, Zeros{eltype(T)}(length(x)))
+end
 
 
 """
@@ -68,45 +76,3 @@ end
 (μ::EmpiricalMean)(n) = μ.μ[n]
 map(μ::EmpiricalMean, ::Colon) = μ.μ
 AbstractVector(μ::EmpiricalMean) = μ.μ
-
-
-
-############################### Operations on mean functions ###############################
-
-import Base: zero, +, *
-
-const ZM = ZeroMean{Float64}
-zero(::Type{<:MeanFunction}, N::Int) = FiniteZeroMean(1:N)
-zero(::Type{<:MeanFunction}) = ZeroMean{Float64}()
-zero(μ::MeanFunction) = length(μ) < Inf ? FiniteZeroMean(eachindex(μ)) : ZM()
-
-# Addition of mean functions.
-function +(μ::MeanFunction, μ′::MeanFunction)
-    if iszero(μ)
-        return μ′
-    elseif iszero(μ′)
-        return μ
-    else
-        return BinaryMean(+, μ, μ′)
-    end
-end
-+(μ::ConstantMean, μ′::ConstantMean) = ConstantMean(μ.c + μ′.c)
-+(a::Real, μ::MeanFunction) = UnaryMean(m->a + m, μ)
-+(μ::MeanFunction, a::Real) = UnaryMean(m->m + a, μ)
-
-# Product of mean functions.
-function *(μ::MeanFunction, μ′::MeanFunction)
-    if iszero(μ)
-        return μ
-    elseif iszero(μ′)
-        return μ′
-    else
-        return BinaryMean(*, μ, μ′)
-    end
-end
-*(μ::ConstantMean, μ′::ConstantMean) = ConstantMean(μ.c * μ′.c)
-# *(a::Real, μ::MeanFunction) = UnaryMean(m->a * m, μ)
-# *(μ::MeanFunction, a::Real) = UnaryMean(m->m * a, μ)
-
-@inline *(a::Real, μ::MeanFunction) = BinaryMean(*, a, μ)
-@inline *(μ::MeanFunction, a::Real) = BinaryMean(*, μ, a)

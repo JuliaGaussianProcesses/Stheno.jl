@@ -1,19 +1,18 @@
-using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
+using Stheno: FiniteMean, OneMean, AM, AV, pairwise
 
 @testset "finite" begin
 
     # Tests for FiniteMean.
     let
         rng, N, D = MersenneTwister(123456), 5, 2
-        μ, X, x = ConstantMean(1.5), ColsAreObs(randn(rng, D, N)), randn(rng, N)
+        μ, X, x = OneMean(), ColsAreObs(randn(rng, D, N)), randn(rng, N)
         μX, μx = FiniteMean(μ, X), FiniteMean(μ, x)
 
         # Recusion depth 1.
         for (μ′, X′) in zip([μX, μx], [X, x])
-            @test length(μ′) == N
-            @test eachindex(μ′) == 1:N
-            @test AbstractVector(μ′) == map(μ′, :)
-            @test AbstractVector(μ′) == map(μ, X′)
+            # @test length(μ′) == N
+            # @test eachindex(μ′) == 1:N
+            @test map(μ′, :) == map(μ, X′)
         end
     end
 
@@ -26,14 +25,12 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
         for (k′, X′) in zip((kX, kx), (X, x))
 
             # Check for correctness relative to base kernel.
-            @test size(k′) == (N, N)
-            @test size(k′, 1) == N
-            @test size(k′, 2) == N
-            @test isstationary(k′) == false
-            @test eachindex(k′) == 1:N
-            @test AM(k′) == pairwise(k′, :)
-            @test AM(k′) == pairwise(k, X′)
-            @test AM(k′) ≈ pairwise(k′, :, :)
+            # @test size(k′) == (N, N)
+            # @test size(k′, 1) == N
+            # @test size(k′, 2) == N
+            # @test eachindex(k′) == 1:N
+            @test pairwise(k′, :) == pairwise(k, X′)
+            @test pairwise(k′, :) ≈ pairwise(k′, :, :)
         end
     end
 
@@ -44,11 +41,10 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
         x, x′ = randn(rng, N), randn(rng, N′)
         k′, kx = LhsFiniteCrossKernel(k, X), LhsFiniteCrossKernel(k, x)
 
-        @test size(k′) == (N, Inf)
-        @test size(k′, 1) == N
-        @test size(k′, 2) == Inf
-        @test isstationary(k′) == false
-        @test eachindex(k′, 1) == 1:N
+        # @test size(k′) == (N, Inf)
+        # @test size(k′, 1) == N
+        # @test size(k′, 2) == Inf
+        # @test eachindex(k′, 1) == 1:N
         @test pairwise(k′, :, X′) ≈ pairwise(k, X, X′)
     end
 
@@ -60,11 +56,10 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
         k = EQ()
         k′, kx = RhsFiniteCrossKernel(k, X′), RhsFiniteCrossKernel(k, x′)
 
-        @test size(k′) == (Inf, N′)
-        @test size(k′, 1) == Inf
-        @test size(k′, 2) == N′
-        @test isstationary(k′) == false
-        @test eachindex(k′, 2) == 1:N′
+        # @test size(k′) == (Inf, N′)
+        # @test size(k′, 1) == Inf
+        # @test size(k′, 2) == N′
+        # @test eachindex(k′, 2) == 1:N′
         @test pairwise(k′, X, :) ≈ pairwise(k, X, X′)
     end
 
@@ -75,12 +70,11 @@ using Stheno: FiniteMean, ConstantMean, AM, AV, pairwise
         k, X, X′ = EQ(), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         k′, kx = FiniteCrossKernel(k, X, X′), FiniteCrossKernel(k, x, x′)
 
-        @test size(k′) == (N, N′)
-        @test size(k′, 1) == N
-        @test size(k′, 2) == N′
-        @test isstationary(k′) == false
-        @test eachindex(k′, 1) == 1:N
-        @test eachindex(k′, 2) == 1:N′
-        @test AM(k′) == pairwise(k, X, X′)
+        # @test size(k′) == (N, N′)
+        # @test size(k′, 1) == N
+        # @test size(k′, 2) == N′
+        # @test eachindex(k′, 1) == 1:N
+        # @test eachindex(k′, 2) == 1:N′
+        @test pairwise(k′, :, :) == pairwise(k, X, X′)
     end
 end

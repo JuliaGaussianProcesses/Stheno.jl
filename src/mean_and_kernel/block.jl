@@ -1,6 +1,5 @@
-import Base: map, AbstractVector, AbstractMatrix
-import Distances: pairwise
 export BlockMean, BlockKernel, BlockCrossKernel
+
 
 """
     BlockMean <: MeanFunction
@@ -11,13 +10,9 @@ struct BlockMean <: MeanFunction
     μ::Vector
 end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
-length(μ::BlockMean) = sum(length.(μ.μ))
-==(μ::BlockMean, μ′::BlockMean) = μ.μ == μ′.μ
-@noinline eachindex(μ::BlockMean) = BlockData(eachindex.(μ.μ))
-map(μ::BlockMean, X::BlockData) = BlockVector(map.(μ.μ, blocks(X)))
+# _map(μ::BlockMean, X::BlockData) = BlockVector(map.(μ.μ, blocks(X)))
+_map(m::BlockMean, X::BlockData) = BlockVector([map(m, x) for (m, x) in zip(m.μ, blocks(X))])
 
-# Define the zero element.
-zero(μ::BlockMean) = BlockMean(zero.(μ.μ))
 
 """
     BlockCrossKernel <: CrossKernel
@@ -31,27 +26,18 @@ BlockCrossKernel(ks::AbstractVector) = BlockCrossKernel(reshape(ks, length(ks), 
 function BlockCrossKernel(ks::Adjoint{T, AbstractVector{T}} where T)
     return BlockCrossKernel(reshape(ks, 1, length(ks)))
 end
-size(k::BlockCrossKernel, N::Int) = N == 1 ?
-    sum(size.(k.ks[:, 1], Ref(1))) :
-    N == 2 ? sum(size.(k.ks[1, :], Ref(2))) : 1
-==(k::BlockCrossKernel, k′::BlockCrossKernel) = k.ks == k′.ks
-function eachindex(k::BlockCrossKernel, N::Int)
-    if N == 1
-        return BlockData(eachindex.(k.ks[:, 1], 1))
-    elseif N == 2
-        return BlockData(eachindex.(k.ks[1, :], 2))
-    else
-        throw(error("N ∉ {1, 2}"))
-    end
-end
-map(k::BlockCrossKernel, X::BlockData) = BlockVector(map.(diag(k.ks), blocks(X)))
-function map(k::BlockCrossKernel, X::BlockData, X′::BlockData)
+
+# Binary methods.
+function _map(k::BlockCrossKernel, X::BlockData, X′::BlockData)
     return BlockVector(map.(diag(k.ks), blocks(X), blocks(X′)))
 end
-function pairwise(k::BlockCrossKernel, X::BlockData, X′::BlockData)
+function _pw(k::BlockCrossKernel, X::BlockData, X′::BlockData)
     return BlockMatrix(broadcast(pairwise, k.ks, blocks(X), reshape(blocks(X′), 1, :)))
 end
-zero(k::BlockCrossKernel) = BlockCrossKernel(zero.(k.ks))
+
+# IS IT EVEN REASONABLE TO DEFINE THIS?
+# _map(k::BlockCrossKernel, X::BlockData) = BlockVector(map.(diag(k.ks), blocks(X)))
+
 
 """
     BlockKernel <: Kernel
@@ -71,30 +57,12 @@ struct BlockKernel <: Kernel
     ks_diag::Vector{<:Kernel}
     ks_off::Matrix{<:CrossKernel}
 end
-length(k::BlockKernel) = sum(size.(k.ks_diag, 1))
-eachindex(k::BlockKernel) = BlockData(eachindex.(k.ks_diag))
-==(k::BlockKernel, k′::BlockKernel) = k.ks_diag == k′.ks_diag && k.ks_off == k′.ks_off
 
-map(k::BlockKernel, X::BlockData) = BlockVector(map.(k.ks_diag, blocks(X)))
-function map(k::BlockKernel, X::BlockData, X′::BlockData)
+# Binary methods.
+function _map(k::BlockKernel, X::BlockData, X′::BlockData)
     return BlockVector(map.(k.ks_diag, blocks(X), blocks(X′)))
 end
-
-Base.adjoint(z::Zeros{T}) where {T} = Zeros{T}(reverse(size(z)))
-
-function pairwise(k::BlockKernel, X::BlockData)
-    bX = blocks(X)
-    Σ = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX))
-    for q in eachindex(k.ks_diag)
-        setblock!(Σ, unbox(pairwise(k.ks_diag[q], bX[q])), q, q)
-        for p in 1:q-1
-            setblock!(Σ, pairwise(k.ks_off[p, q], bX[p], bX[q]), p, q)
-            setblock!(Σ, getblock(Σ, p, q)', q, p)
-        end
-    end
-    return LazyPDMat(Symmetric(Σ))
-end
-function pairwise(k::BlockKernel, X::BlockData, X′::BlockData)
+function _pw(k::BlockKernel, X::BlockData, X′::BlockData)
     bX, bX′ = blocks(X), blocks(X′)
     Ω = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX′))
     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
@@ -108,4 +76,19 @@ function pairwise(k::BlockKernel, X::BlockData, X′::BlockData)
     end
     return Ω
 end
-@noinline zero(k::BlockKernel) = BlockKernel(zero.(k.ks_diag), zero.(k.ks_off))
+
+# Unary methods.
+Base.adjoint(z::Zeros{T}) where {T} = Zeros{T}(reverse(size(z)))
+_map(k::BlockKernel, X::BlockData) = BlockVector(map.(k.ks_diag, blocks(X)))
+function _pw(k::BlockKernel, X::BlockData)
+    bX = blocks(X)
+    Σ = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX))
+    for q in eachindex(k.ks_diag)
+        setblock!(Σ, unbox(pairwise(k.ks_diag[q], bX[q])), q, q)
+        for p in 1:q-1
+            setblock!(Σ, pairwise(k.ks_off[p, q], bX[p], bX[q]), p, q)
+            setblock!(Σ, getblock(Σ, p, q)', q, p)
+        end
+    end
+    return LazyPDMat(Symmetric(Σ))
+end

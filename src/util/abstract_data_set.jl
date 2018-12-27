@@ -16,9 +16,12 @@ struct ColsAreObs{T, TX<:AbstractMatrix{T}} <: AbstractVector{Vector{T}}
     ColsAreObs(X::TX) where {T, TX<:AbstractMatrix{T}} = new{T, TX}(X)
 end
 
+@adjoint ColsAreObs(X::AbstractMatrix) = ColsAreObs(X), Δ->(Δ.X,)
+
 ==(D1::ColsAreObs, D2::ColsAreObs) = D1.X == D2.X
 size(D::ColsAreObs) = (size(D.X, 2),)
 getindex(D::ColsAreObs, n::Int) = D.X[:, n]
+getindex(D::ColsAreObs, n::CartesianIndex{1}) = getindex(D, n[1])
 getindex(D::ColsAreObs, n) = ColsAreObs(D.X[:, n])
 view(D::ColsAreObs, n::Int) = view(D.X, :, n)
 view(D::ColsAreObs, n) = ColsAreObs(view(D.X, :, n))

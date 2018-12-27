@@ -1,5 +1,19 @@
-using BlockArrays, LinearAlgebra
+using BlockArrays, LinearAlgebra, FDM, Zygote
 using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise, LazyPDMat
+
+function grad_test(f, x::AbstractVector)
+    grad_ad = Zygote.gradient(f, x)[1]
+    grad_fd = FDM.grad(central_fdm(5, 1), f, x)
+    @test maximum(abs.(grad_ad .- grad_fd)) < 1e-8
+end
+function grad_test(f, x::ColsAreObs)
+    @show x
+    @show x.X
+    grad_ad = Zygote.gradient(X->f(ColsAreObs(X)), x.X)[1]
+    grad_fd = FDM.grad(central_fdm(5, 1), X->f(ColsAreObs(X)), x.X)
+    @show grad_ad, grad_fd
+    @test maximum(abs.(grad_ad .- grad_fd)) < 1e-8
+end
 
 """
     unary_map_tests(f, X::AbstractVector)
@@ -10,12 +24,13 @@ function unary_map_tests(f, X::AbstractVector)
     @test map(f, X) isa AbstractVector
     @test length(f.(X)) == length(X)
     @test map(f, X) ≈ [f(x) for x in X]
+    grad_test(x->sum(map(f, x)), X)
 end
-function unary_map_tests(f, X::BlockData)
-    @test map(f, X) isa AbstractBlockVector
-    @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ BlockVector([map(f, x) for x in blocks(X)])
-end
+# function unary_map_tests(f, X::BlockData)
+#     @test map(f, X) isa AbstractBlockVector
+#     @test length(map(f, X)) == length(X)
+#     @test map(f, X) ≈ BlockVector([map(f, x) for x in blocks(X)])
+# end
 
 """
     binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
@@ -26,13 +41,15 @@ function binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
     @test map(f, X, X′) isa AbstractVector
     @test length(map(f, X, X′)) == length(X)
     @test map(f, X, X′) ≈ [f(x, x′) for (x, x′) in zip(X, X′)]
+    grad_test(x->sum(map(f, x, X′)), X)
+    grad_test(x′->sum(map(f, X, x′)), X′)
 end
-function binary_map_tests(f, XB::BlockData, XB′::BlockData)
-    @test map(f, XB, XB′) isa AbstractBlockVector
-    @test length(map(f, XB, XB′)) == length(XB)
-    @test map(f, XB, XB′) ≈
-        BlockVector([map(f, X, X′) for (X, X′) in zip(blocks(XB), blocks(XB′))])
-end
+# function binary_map_tests(f, XB::BlockData, XB′::BlockData)
+#     @test map(f, XB, XB′) isa AbstractBlockVector
+#     @test length(map(f, XB, XB′)) == length(XB)
+#     @test map(f, XB, XB′) ≈
+#         BlockVector([map(f, X, X′) for (X, X′) in zip(blocks(XB), blocks(XB′))])
+# end
 
 """
     binary_map_tests(f, X::AbstractVector)
@@ -43,15 +60,16 @@ function binary_map_tests(f, X::AbstractVector)
     @test map(f, X) isa AbstractVector
     @test length(map(f, X)) == length(X)
     @test map(f, X) ≈ map(f, X, X)
+    grad_test(x->sum(map(f, x)), X)
 end
-function binary_map_tests(f, X::BlockData)
-    @test map(f, X) isa AbstractBlockVector
-    @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ map(f, X, X)
-end
+# function binary_map_tests(f, X::BlockData)
+#     @test map(f, X) isa AbstractBlockVector
+#     @test length(map(f, X)) == length(X)
+#     @test map(f, X) ≈ map(f, X, X)
+# end
 
 """
-    pairwise_tests(f, X::ADS, X′::ADS)
+    pairwise_tests(f, X::AV, X′::AV)
 
 Consistency tests intended for use with `CrossKernel`s.
 """
@@ -60,17 +78,19 @@ function pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
     @test pairwise(f, X, X′) isa AbstractMatrix
     @test size(pairwise(f, X, X′)) == (N, N′)
     @test pairwise(f, X, X′) ≈ reshape([f(x, x′) for (x, x′) in Iterators.product(X, X′)], N, N′)
+    grad_test(x->sum(pairwise(f, x, X′)), X)
+    grad_test(x′->sum(pairwise(f, X, x′)), X′)
 end
-function pairwise_tests(f, X::BlockData, X′::BlockData)
-    N, N′ = length(X), length(X′)
-    @test pairwise(f, X, X′) isa AbstractBlockMatrix
-    @test size(pairwise(f, X, X′)) == (N, N′)
-    @test pairwise(f, X, X′) ==
-        BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X′)])
-end
+# function pairwise_tests(f, X::BlockData, X′::BlockData)
+#     N, N′ = length(X), length(X′)
+#     @test pairwise(f, X, X′) isa AbstractBlockMatrix
+#     @test size(pairwise(f, X, X′)) == (N, N′)
+#     @test pairwise(f, X, X′) ==
+#         BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X′)])
+# end
 
 """
-    pairwise_tests(f, X::ADS)
+    pairwise_tests(f, X::AV)
 
 Consistency tests intended for use with `Kernel`s.
 """
@@ -79,11 +99,11 @@ function pairwise_tests(f, X::AbstractVector; rtol=eps())
     @test size(pairwise(f, X)) == (length(X), length(X))
     @test isapprox(pairwise(f, X), pairwise(f, X, X); rtol=rtol)
 end
-function pairwise_tests(f, X::BlockData; rtol=eps())
-    @test size(pairwise(f, X)) == (length(X), length(X))
-    @test pairwise(f, X) ==
-        BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X)])
-end
+# function pairwise_tests(f, X::BlockData; rtol=eps())
+#     @test size(pairwise(f, X)) == (length(X), length(X))
+#     @test pairwise(f, X) ==
+#         BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X)])
+# end
 
 """
     mean_function_tests(μ::MeanFunction, X::AbstractVector)

@@ -1,11 +1,11 @@
-using Stheno: CrossKernel, ZeroKernel, ConstantKernel, pairwise, EmpiricalKernel
+using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
 
 @testset "kernel" begin
 
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        # X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
         # Tests for ZeroKernel.
         let
@@ -13,42 +13,36 @@ using Stheno: CrossKernel, ZeroKernel, ConstantKernel, pairwise, EmpiricalKernel
             @test k(0, 0) === zero(Float64)
             @test map(k, x0) isa Zeros
             kernel_tests(k, x0, x1, x2)
-            kernel_tests(k, X0, X1, X2)
+            # kernel_tests(k, X0, X1, X2)
         end
 
-        # Tests for ConstantKernel.
+        # Tests for OneKernel.
         let
-            k = ConstantKernel(randn(rng))
+            k = OneKernel()
             kernel_tests(k, x0, x1, x2)
-            kernel_tests(k, X0, X1, X2)
+            # kernel_tests(k, X0, X1, X2)
         end
 
         # Tests for EQ.
         @test map(EQ(), x0) isa Ones
         kernel_tests(EQ(), x0, x1, x2)
-        kernel_tests(EQ(), X0, X1, X2)
+        # kernel_tests(EQ(), X0, X1, X2)
 
         # Tests for PerEQ.
         @test map(PerEQ(), x0) isa Ones
         kernel_tests(PerEQ(), x0, x1, x2)
 
         # Tests for Exponential.
-        @test map(Exponential(), x0) isa Ones
-        kernel_tests(Exponential(), x0, x1, x2)
+        @test map(Exp(), x0) isa Ones
+        kernel_tests(Exp(), x0 .+ 1, x1, x2)
 
-        # # Tests for Linear.
-        # @test !isstationary(Linear)
-        # a, b = Linear(randn(rng)), Linear(randn(rng))
-        # @test a == a && a ≠ b
-        # kernel_tests(a, x0, x1, x2)
+        # Tests for Linear.
+        kernel_tests(Linear(), x0, x1, x2)
         # kernel_tests(a, X0, X1, X2)
 
-        # # Tests for Noise
-        # @test isstationary(Noise(randn(rng)))
-        # @test Noise(5.0) == Noise(5)
-        # kernel_tests(Noise(5.0), x0, x1, x2)
-        # kernel_tests(Noise(5.0), X0, X1, X2)
-        # # kernel_tests(Noise(5.0), XB0, XB1, XB2)
+        # Tests for Noise. It doesn't follow the usual kernel consistency criteria.
+        @test pairwise(Noise(), x0, x0) == zeros(length(x0), length(x0))
+        @test pairwise(Noise(), x0) == Diagonal(ones(length(x0)))
 
         # # Tests for EmpiricalKernel.
         # A_ = randn(rng, N, N)

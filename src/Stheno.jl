@@ -1,6 +1,7 @@
 module Stheno
 
     using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random, Zygote
+    import Base: length
     using Base.Broadcast: broadcasted
     using Zygote: @adjoint
 
@@ -24,13 +25,13 @@ module Stheno
     include("mean_and_kernel/kernel.jl")
     include("mean_and_kernel/compose.jl")
     include("mean_and_kernel/finite.jl")
-    # include("mean_and_kernel/conditional.jl")
-    # include("mean_and_kernel/block.jl")
+    include("mean_and_kernel/block.jl")
     # # include("mean_and_kernel/transform.jl")
     # include("mean_and_kernel/input_transform.jl")
     # include("mean_and_kernel/degenerate.jl")
     # include("mean_and_kernel/derivative.jl")
     # include("mean_and_kernel/zero.jl")
+    # include("mean_and_kernel/conditional.jl")
     # include("mean_and_kernel/printing.jl")
 
     # Basic Gaussian process definitions.

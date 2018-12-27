@@ -9,3 +9,8 @@ for T in [
 ]
     @eval +(x::$T, x′::$T) = zero(x)
 end
+
+# Define zeros for block stuff.
+zero(μ::BlockMean) = BlockMean(zero.(μ.μ))
+zero(k::BlockCrossKernel) = BlockCrossKernel(zero.(k.ks))
+zero(k::BlockKernel) = BlockKernel(zero.(k.ks_diag), zero.(k.ks_off))

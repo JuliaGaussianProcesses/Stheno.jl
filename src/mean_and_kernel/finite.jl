@@ -1,4 +1,4 @@
-import Base: eachindex, AbstractVector, AbstractMatrix, map, ==
+import Base: eachindex, map, ==
 export FiniteMean, FiniteKernel, LhsFiniteCrossKernel, RhsFiniteCrossKernel,
     FiniteCrossKernel
 

@@ -38,11 +38,14 @@ import BlockArrays: BlockVector, BlockMatrix, blocksizes, cumulsizes
 export BlockVector, BlockMatrix, blocksizes, blocklengths
 
 """
-    BlockVector(xs::AbstractVector{<:AbstractVector{T}} where T)
+    BlockVector(xs::AbstractVector{<:AbstractVector})
 
 Construct a `BlockVector` from a collection of `AbstractVector`s.
 """
-BlockVector(xs::AbstractVector{<:AbstractVector{T}} where T) = _BlockArray(xs, length.(xs))
+BlockVector(xs::AV{<:AV}) = _BlockArray(xs, convert(Vector{Int}, length.(xs)))
+@adjoint function BlockVector(xs::AV{<:AV})
+    return BlockVector(xs), Δ->()
+end
 
 """
     BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
