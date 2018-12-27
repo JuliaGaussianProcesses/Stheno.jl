@@ -10,8 +10,11 @@ struct BlockMean <: MeanFunction
     μ::Vector
 end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
-# _map(μ::BlockMean, X::BlockData) = BlockVector(map.(μ.μ, blocks(X)))
-_map(m::BlockMean, X::BlockData) = BlockVector([map(m, x) for (m, x) in zip(m.μ, blocks(X))])
+_map(μ::BlockMean, X::BlockData) = BlockVector(map((m, xb)->map(m, xb), μ.μ, blocks(X)))
+# function _map(m::BlockMean, X::BlockData)
+#     xs = [map(m, x) for (m, x) in zip(m.μ, blocks(X))]
+#     return BlockVector(xs)
+# end
 
 
 """

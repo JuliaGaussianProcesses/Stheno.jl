@@ -1,6 +1,7 @@
 using Zygote, IRTools
 using Zygote: @adjoint, _forward
 
+import Base: map
 import Distances: pairwise, colwise
 import LinearAlgebra: \, /
 import FillArrays: Fill, AbstractFill, getindex_value
@@ -110,3 +111,13 @@ end
 end
 
 @adjoint +(A::AbstractMatrix, S::UniformScaling) = (A + S, Δ->(ones(size(A)), nothing))
+
+@adjoint function map(f, x...)
+    @show f, x
+    y_pairs = map((x...)->Zygote.forward(f, x...), x...)
+    y = [y_pair[1] for y_pair in y_pairs]
+    return y, function(Δ)
+        out_back = map((δ, (y, back))->back(δ), Δ, y_pairs)
+        xs = (nothing, map(n->[p[n] for p in out_back], 1:length(x))...)
+    end
+end

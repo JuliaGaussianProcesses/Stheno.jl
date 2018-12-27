@@ -44,7 +44,17 @@ Construct a `BlockVector` from a collection of `AbstractVector`s.
 """
 BlockVector(xs::AV{<:AV}) = _BlockArray(xs, convert(Vector{Int}, length.(xs)))
 @adjoint function BlockVector(xs::AV{<:AV})
-    return BlockVector(xs), Δ->()
+    x = BlockVector(xs)
+    function back(Δ::BlockVector)
+        @assert cumulsizes(xs) == cumulsizes(Δ)
+        return (Δ.blocks,)
+    end
+    function back(Δ::AbstractVector)
+        sz = cumulsizes(x)[1]
+        backs = [Δ[sz[n]:sz[n+1]-1] for n in 1:length(sz)-1]
+        return (backs,)
+    end
+    return x, back
 end
 
 """
