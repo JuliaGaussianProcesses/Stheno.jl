@@ -112,12 +112,44 @@ end
 
 @adjoint +(A::AbstractMatrix, S::UniformScaling) = (A + S, Δ->(ones(size(A)), nothing))
 
-@adjoint function map(f, x...)
-    @show f, x
-    y_pairs = map((x...)->Zygote.forward(f, x...), x...)
-    y = [y_pair[1] for y_pair in y_pairs]
+# @adjoint function map(f, x...)
+#     @show f, x
+#     y_pairs = map((x...)->Zygote.forward(f, x...), x...)
+#     y = [y_pair[1] for y_pair in y_pairs]
+#     return y, function(Δ)
+#         out_back = map((δ, (y, back))->back(δ), Δ, y_pairs)
+#         xs = (nothing, map(n->[p[n] for p in out_back], 1:length(x))...)
+#     end
+# end
+
+# Get rid of fusion when we're broadcasting because it's a bit of a pain and not
+# _completely_ essential at this stage.
+@adjoint function broadcasted(f, x...)
+    y_pairs = materialize(broadcasted((x...)->Zygote.forward(f, x...), x...))
+    y = [y_pair[1] for y_pair in y_pairs] 
     return y, function(Δ)
-        out_back = map((δ, (y, back))->back(δ), Δ, y_pairs)
-        xs = (nothing, map(n->[p[n] for p in out_back], 1:length(x))...)
+        out_back = broadcast((δ, (y, back))->back(δ), Δ, y_pairs)
+        xs = (nothing, map(n->unbroadcast(x[n], [p[n] for p in out_back]), 1:length(x))...)
     end
 end
+
+# Shamelessly stolen from Zygote.
+trim(x, Δ) = reshape(Δ, ntuple(i -> size(Δ, i), Val(ndims(x))))
+
+# Shamelessly stolen from Zygote.
+function unbroadcast(x::AbstractArray, Δ)
+    return size(x) == size(Δ) ? Δ :
+        length(x) == length(Δ) ? trim(x, Δ) :
+            trim(x, sum(
+                Δ,
+                dims=ntuple(i -> size(x, i) == 1 ? i : ndims(Δ)+1, Val(ndims(Δ))),
+            )
+        )
+end
+
+unbroadcast(x::AbstractArray, Δ::AbstractArray{Nothing}) = trim(x, Δ)
+
+# Shamelessly stolen from Zygote.
+unbroadcast(x::Union{Number, Ref}, Δ) = sum(Δ)
+
+unbroadcast(x, Δ::AbstractArray{Nothing}) = nothing

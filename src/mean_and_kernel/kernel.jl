@@ -227,7 +227,7 @@ _map(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k
 _pw(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
-(::PerEQ)(x::Real) = one(typeof(x))
+(::PerEQ)(x::Real) = one(x)
 _map(::PerEQ, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
 _pw(k::PerEQ, x::AV{<:Real}) = _pw(k, x, x)
 _pw(::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
@@ -251,12 +251,13 @@ _map(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x -
 _pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′'))
 
 # Unary methods
-(::Exp)(x) = 1
+(::Exp)(x) = one(x)
 _map(::Exp, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
 _pw(k::Exp, x::AV{<:Real}) = _pw(k, x, x)
 
-@adjoint _map(k::Exp, x::AV{<:Real}) = _map(k, x), Δ->(nothing, Zeros{eltype(x)}(length(x)))
-
+@adjoint function _map(k::Exp, x::AV{<:Real})
+    return _map(k, x), _->(nothing, Zeros{eltype(x)}(length(x)))
+end
 
 """
     Linear{T<:Real} <: Kernel
