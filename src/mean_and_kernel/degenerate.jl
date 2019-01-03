@@ -1,32 +1,30 @@
 import Distances: pairwise
 
 """
-    DeltaSumMean{Tϕ, Tg, TZ} <: MeanFunction
+    DeltaSumMean{Tϕ, Tμ<:MeanFunction, Tg} <: MeanFunction
 
-
+This is an attrociously-named type, apologies. `ϕ` is a callable whereby `pairwise(ϕ, :, x)`
+does something sensible, `μ` is a finite-dimensional mean function, and `g` is just some
+unary function.
 """
-struct DeltaSumMean{Tϕ, Tg} <: MeanFunction
+struct DeltaSumMean{Tϕ, Tμ<:MeanFunction, Tg} <: MeanFunction
     ϕ::Tϕ
-    μ::MeanFunction
+    μ::Tμ
     g::Tg
 end
 (μ::DeltaSumMean)(x::Number) = _map(μ, [x])[1]
 (μ::DeltaSumMean)(X::AV) = _map(μ, ColsAreObs(reshape(X, :, 1)))[1]
-function _map(μ::DeltaSumMean, X::AV)
-    return pairwise(μ.ϕ, :, X)' * map(μ.μ, :) + map(μ.g, X)
-end
-length(μ::DeltaSumMean) = length(μ.g)
-eachindex(μ::DeltaSumMean) = eachindex(μ.g)
+_map(μ::DeltaSumMean, x::AV) = bcd(+, pw(μ.ϕ, :, x)' * map(μ.μ, :), _map(μ.g, x))
 
 
 """
-    DeltaSumKernel{Tϕ} <: Kernel
+    DeltaSumKernel{Tϕ, Tk<:Kernel} <: Kernel
 
-
+`ϕ(:, x)' * pairwise(k, :) * ϕ(:, x′)`
 """
-struct DeltaSumKernel{Tϕ} <: Kernel
+struct DeltaSumKernel{Tϕ, Tk<:Kernel} <: Kernel
     ϕ::Tϕ
-    k::Kernel
+    k::Tk
 end
 (k::DeltaSumKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 (k::DeltaSumKernel)(x::Number) = map(k, [x])[1]
@@ -34,66 +32,42 @@ function (k::DeltaSumKernel)(x::AV, x′::AV)
     return map(k, ColsAreObs(reshape(x, :, 1)), ColsAreObs(reshape(x′, :, 1)))[1]
 end
 (k::DeltaSumKernel)(x::AV) = map(k, ColsAreObs(reshape(x, :, 1)))[1]
-length(k::DeltaSumKernel) = size(k.ϕ, 2)
-eachindex(k::DeltaSumKernel) = eachindex(k.ϕ, 2)
 
-_map(k::DeltaSumKernel, X::AV) = diag_Xᵀ_A_X(pairwise(k.k, :), pairwise(k.ϕ, :, X))
-function _map(k::DeltaSumKernel, X::AV, X′::AV)
-    return diag_Xᵀ_A_Y(pairwise(k.ϕ, :, X), pairwise(k.k, :), pairwise(k.ϕ, :, X′))
+_map(k::DeltaSumKernel, x::AV) = diag_Xᵀ_A_X(pw(k.k, :), pw(k.ϕ, :, x))
+function _map(k::DeltaSumKernel, x::AV, x′::AV)
+    return diag_AᵀB(pw(k.k, :) * pw(k.ϕ, :, x), pw(k.ϕ, :, x′))
 end
-@noinline function _pw(k::DeltaSumKernel, X::AV)
-    return Xt_A_X(pairwise(k.k, :), pairwise(k.ϕ, :, X))
-end
-function _pw(k::DeltaSumKernel, X::AV, X′::AV)
-    return Xt_A_Y(pairwise(k.ϕ, :, X), pairwise(k.k, :), pairwise(k.ϕ, :, X′))
-end
-
-"""
-    LhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
+_pw(k::DeltaSumKernel, x::AV) = Xt_A_X(pw(k.k, :), pw(k.ϕ, :, x))
+_pw(k::DeltaSumKernel, x::AV, x′::AV) = Xt_A_Y(pw(k.ϕ, :, x), pw(k.k, :), pw(k.ϕ, :, x′))
 
 
 """
-struct LhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
+    LhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel} <: CrossKernel
+"""
+struct LhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel} <: CrossKernel
     ϕ::Tϕ
-    k::CrossKernel
+    k::Tk
 end
 (k::LhsDeltaSumCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 function (k::LhsDeltaSumCrossKernel)(x::AV, x′::AV)
     return map(k, ColsAreObs(reshape(x, : ,1)), ColsAreObs(reshape(x′, :, 1)))[1]
 end
-size(k::LhsDeltaSumCrossKernel, N::Int) = N == 1 ? size(k.ϕ, 2) : size(k.k, 2)
-function eachindex(k::LhsDeltaSumCrossKernel, dim::Int)
-    return dim == 1 ? eachindex(k.ϕ, 2) : eachindex(k.k, 2)
-end
 
-function _map(k::LhsDeltaSumCrossKernel, X::AV, X′::AV)
-    return diag_AᵀB(pairwise(k.ϕ, :, X), pairwise(k.k, :, X′))
-end
-function _pw(k::LhsDeltaSumCrossKernel, X::AV, X′::AV)
-    return pairwise(k.ϕ, :, X)' * pairwise(k.k, :, X′)
-end
+_map(k::LhsDeltaSumCrossKernel, X::AV, X′::AV) = diag_AᵀB(pw(k.ϕ, :, X), pw(k.k, :, X′))
+_pw(k::LhsDeltaSumCrossKernel, X::AV, X′::AV) = pw(k.ϕ, :, X)' * pw(k.k, :, X′)
+
 
 """
     RhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
-
-
 """
-struct RhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
-    k::CrossKernel
+struct RhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel} <: CrossKernel
+    k::Tk
     ϕ::Tϕ
 end
 (k::RhsDeltaSumCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
 function (k::RhsDeltaSumCrossKernel)(x::AV, x′::AV)
     return map(k, ColsAreObs(reshape(x, :, 1)), ColsAreObs(reshape(x′, :, 1)))[1]
 end
-size(k::RhsDeltaSumCrossKernel, N::Int) = N == 1 ? size(k.k, 2) : size(k.ϕ, 2)
-function eachindex(k::RhsDeltaSumCrossKernel, dim::Int)
-    return dim == 1 ? eachindex(k.k, 2) : eachindex(k.ϕ, 2)
-end
 
-function _map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
-    return diag_AᵀB(pairwise(k.k, :, X), pairwise(k.ϕ, :, X′))
-end
-function _pw(k::RhsDeltaSumCrossKernel, X::AV, X′::AV)
-    return pairwise(k.k, :, X)' * pairwise(k.ϕ, :, X′)
-end
+_map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV) = diag_AᵀB(pw(k.k, :, X), pw(k.ϕ, :, X′))
+_pw(k::RhsDeltaSumCrossKernel, X::AV, X′::AV) = pw(k.k, :, X)' * pw(k.ϕ, :, X′)

@@ -249,9 +249,9 @@ end
 *(A::AdjTransTriABM{T}, B::AM{T}) where T = A * BlockMatrix([B])
 *(A::AM{T}, B::AdjTransTriABM{T}) where T = BlockMatrix([A]) * B
 
-function *(A::LazyPDMat{T, <:Symmetric{T, <:ABM{T}}}, B::AdjTransTriABM{T}) where T
-    return unbox(unbox(A)) * B
-end
+# function *(A::LazyPDMat{T, <:Symmetric{T, <:ABM{T}}}, B::AdjTransTriABM{T}) where T
+#     return unbox(unbox(A)) * B
+# end
 
 const UpperOrAdjLower{T} = Union{
     UpperTriangular{T, <:ABM{T}},

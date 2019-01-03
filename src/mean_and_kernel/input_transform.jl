@@ -2,6 +2,7 @@ import Base: map, eachindex
 import Distances: pairwise
 export transform, pick_dims, periodic, scale, Indexer
 
+
 """
     ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
 
@@ -13,10 +14,8 @@ struct ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
     f::Tf
 end
 (μ::ITMean)(x) = μ.μ(μ.f(x))
-ITMean(μ::MeanFunction, ::typeof(identity)) = μ
-length(μ::ITMean) = length(μ.μ)
-eachindex(μ::ITMean) = eachindex(μ.μ)
-_map(μ::ITMean, X::AV) = map(μ.μ, map(μ.f, X))
+_map(μ::ITMean, X::AV) = _map(μ.μ, μ.f.(X))
+
 
 """
     ITKernel{Tk<:Kernel, Tf} <: Kernel
@@ -28,12 +27,17 @@ struct ITKernel{Tk<:Kernel, Tf} <: Kernel
     k::Tk
     f::Tf
 end
-(k::ITKernel)(x) = k.k(k.f(x))
+
+# Binary methods.
 (k::ITKernel)(x, x′) = k.k(k.f(x), k.f(x′))
-ITKernel(k::Kernel, ::typeof(identity)) = k
-length(k::ITKernel) = length(k.k)
-isstationary(k::ITKernel) = isstationary(k.k)
-eachindex(k::ITKernel) = eachindex(k.k)
+_map(k::ITKernel, x::AV, x′::AV) = _map(k.k, k.f.(x), k.f.(x′))
+_pw(k::ITKernel, x::AV, x′::AV) = _pw(k.k, k.f.(x), k.f.(x′))
+
+# Unary methods.
+(k::ITKernel)(x) = k.k(k.f(x))
+_map(k::ITKernel, x::AV) = _map(k.k, k.f.(x))
+_pw(k::ITKernel, x::AV) = _pw(k.k, k.f.(x))
+
 
 """
     LhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
@@ -45,7 +49,9 @@ struct LhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
     f::Tf
 end
 (k::LhsITCross)(x, x′) = k.k(k.f(x), x′)
-size(k::LhsITCross, n::Int) = size(k.k, n)
+_map(k::LhsITCross, x::AV, x′::AV) = _map(k.k, k.f.(x), x′)
+_pw(k::LhsITCross, x::AV, x′::AV) = _pw(k.k, k.f.(x), x′)
+
 
 """
     RhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
@@ -57,7 +63,9 @@ struct RhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
     f::Tf
 end
 (k::RhsITCross)(x, x′) = k.k(x, k.f(x′))
-size(k::RhsITCross, n::Int) = size(k.k, n)
+_map(k::RhsITCross, x::AV, x′::AV) = _map(k.k, x, k.f.(x′))
+_pw(k::RhsITCross, x::AV, x′::AV) = _pw(k.k, x, k.f.(x′))
+
 
 """
     ITCross{Tk<:Kernel, Tf, Tf′} <: CrossKernel
@@ -70,12 +78,9 @@ struct ITCross{Tk<:Kernel, Tf, Tf′} <: CrossKernel
     f′::Tf′
 end
 (k::ITCross)(x, x′) = k.k(k.f(x), k.f′(x′))
-size(k::ITCross, n::Int) = size(k.k, n)
+_map(k::ITCross, x::AV, x′::AV) = _map(k.k, k.f.(x), k.f′.(x′))
+_pw(k::ITCross, x::AV, x′::AV) = _pw(k.k, k.f.(x), k.f′.(x′))
 
-_map(k::ITKernel, X::AV) = map(k.k, map(k.f, X))
-_map(k::ITKernel, X::AV, X′::AV) = map(k.k, map(k.f, X), map(k.f, X′))
-_pw(k::ITKernel, X::AV) = pairwise(k.k, map(k.f, X))
-_pw(k::ITKernel, X::AV, X′::AV) = pairwise(k.k, map(k.f, X), map(k.f, X′))
 
 """
     transform(f::Union{MeanFunction, Kernel}, ϕ)

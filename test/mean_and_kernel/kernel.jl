@@ -5,6 +5,9 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        x0_r, x1_r = range(-5.0, step=1, length=N), range(-4.0, step=1, length=N)
+        x2_r, x3_r = range(-5.0, step=2, length=N), range(-3.0, step=1, length=N′)
+        x4_r = range(-2.0, step=2, length=N′)
         # X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
         # Tests for ZeroKernel.
@@ -17,24 +20,24 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
         end
 
         # Tests for OneKernel.
-        let
-            k = OneKernel()
-            kernel_tests(k, x0, x1, x2)
-            # kernel_tests(k, X0, X1, X2)
-        end
+        kernel_tests(OneKernel(), x0, x1, x2)
+        # kernel_tests(k, X0, X1, X2)
 
         # Tests for EQ.
         @test map(EQ(), x0) isa Ones
         kernel_tests(EQ(), x0, x1, x2)
+        stationary_kernel_tests(EQ(), x0_r, x1_r, x2_r, x3_r, x4_r)
         # kernel_tests(EQ(), X0, X1, X2)
 
         # Tests for PerEQ.
         @test map(PerEQ(), x0) isa Ones
         kernel_tests(PerEQ(), x0, x1, x2)
+        stationary_kernel_tests(PerEQ(), x0_r, x1_r, x2_r, x3_r, x4_r)
 
         # Tests for Exponential.
         @test map(Exp(), x0) isa Ones
         kernel_tests(Exp(), x0 .+ 1, x1, x2)
+        stationary_kernel_tests(Exp(), x0_r, x1_r, x2_r, x3_r, x4_r)
 
         # Tests for Linear.
         kernel_tests(Linear(), x0, x1, x2)
@@ -87,13 +90,6 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
     # @test Poly(5, 0.0) == Poly(5, 0.0)
     # @test Poly(2, 1.0) != Poly(5, 1.0)
 
-    # # Tests for Noise kernel.
-    # @test isstationary(Noise)
-    # @test Noise()(1.0, 1.0) == 1.0
-    # @test Noise()(0.0, 1e-9) == 0.0
-    # @test Noise() == Noise()
-    # @test Noise() != RQ(1.0)
-
     # # Tests for Wiener kernel.
     # @test !isstationary(Wiener)
     # @test Wiener()(1.0, 1.0) == 1.0
@@ -108,11 +104,4 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
     # @test WienerVelocity() == WienerVelocity()
     # @test WienerVelocity() != Wiener()
     # @test WienerVelocity() != Noise()
-
-    # # Tests for Exponential.
-    # @test isstationary(Exponential)
-    # @test Exponential() == Exponential()
-    # @test Exponential()(5.0, 5.0) == 1.0
-    # @test Exponential() != EQ()
-    # @test Exponential() != Noise()
 end

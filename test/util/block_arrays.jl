@@ -1,5 +1,5 @@
 using Random, LinearAlgebra, BlockArrays, FillArrays
-using Stheno: BlockSymmetric, unbox, are_conformal, chol, ABM, LazyPDMat, Xt_invA_X,
+using Stheno: BlockSymmetric, unbox, are_conformal, ABM, Xt_invA_X,
     Xt_invA_Y
 using BlockArrays: cumulsizes
 
@@ -258,56 +258,56 @@ using BlockArrays: cumulsizes
         end
     end
 
-    # Test `chol`, `logdet`, and backsolving.
-    let
-        rng, P1, P2, P3 = MersenneTwister(123456), 3, 4, 5
-        tmp = randn(rng, P1 + P2 + P3, P1 + P2 + P3)
-        A_ = tmp * tmp' + 1e-9I
-        A = BlockArray(A_, [P1, P2, P3], [P1, P2, P3])
-        @assert A_ == A
+    # # Test `chol`, `logdet`, and backsolving.
+    # let
+    #     rng, P1, P2, P3 = MersenneTwister(123456), 3, 4, 5
+    #     tmp = randn(rng, P1 + P2 + P3, P1 + P2 + P3)
+    #     A_ = tmp * tmp' + 1e-9I
+    #     A = BlockArray(A_, [P1, P2, P3], [P1, P2, P3])
+    #     @assert A_ == A
 
-        # Compute chols and compare.
-        U_, U = chol(Symmetric(A_)), chol(Symmetric(A))
-        @test U isa UpperTriangular{<:Real, <:ABM}
-        @test U_ ≈ U
-        @test U_ ≈ Matrix(U)
+    #     # Compute chols and compare.
+    #     U_, U = chol(Symmetric(A_)), chol(Symmetric(A))
+    #     @test U isa UpperTriangular{<:Real, <:ABM}
+    #     @test U_ ≈ U
+    #     @test U_ ≈ Matrix(U)
 
-        # Test `logdet`.
-        @test logdet(U) ≈ logdet(U_)
+    #     # Test `logdet`.
+    #     @test logdet(U) ≈ logdet(U_)
 
-        # Test backsolving for block vector.
-        x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)
-        x = BlockVector([x1, x2, x3])
+    #     # Test backsolving for block vector.
+    #     x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)
+    #     x = BlockVector([x1, x2, x3])
 
-        @test U \ x isa AbstractBlockVector
-        @test size(U \ x) == size(U_ \ Vector(x))
-        @test U \ x ≈ U_ \ Vector(x)
+    #     @test U \ x isa AbstractBlockVector
+    #     @test size(U \ x) == size(U_ \ Vector(x))
+    #     @test U \ x ≈ U_ \ Vector(x)
 
-        @test U' \ x isa AbstractBlockVector
-        @test typeof(U') <: Adjoint{<:Real, <:UpperTriangular{<:Real, <:ABM}}
-        @test size(U' \ x) == size(U_' \ Vector(x))
-        @test U' \ x ≈ U_' \ Vector(x)
+    #     @test U' \ x isa AbstractBlockVector
+    #     @test typeof(U') <: Adjoint{<:Real, <:UpperTriangular{<:Real, <:ABM}}
+    #     @test size(U' \ x) == size(U_' \ Vector(x))
+    #     @test U' \ x ≈ U_' \ Vector(x)
 
-        @test transpose(U) \ x isa AbstractBlockVector
-        @test typeof(transpose(U)) <: Transpose{<:Real, <:UpperTriangular{<:Real, <:ABM}}
-        @test size(transpose(U) \ x) == size(U_' \ Vector(x))
-        @test transpose(U) \ x ≈ U_' \ Vector(x)
+    #     @test transpose(U) \ x isa AbstractBlockVector
+    #     @test typeof(transpose(U)) <: Transpose{<:Real, <:UpperTriangular{<:Real, <:ABM}}
+    #     @test size(transpose(U) \ x) == size(U_' \ Vector(x))
+    #     @test transpose(U) \ x ≈ U_' \ Vector(x)
 
-        # Test backsolving for block matrix
-        Q1, Q2 = 7, 6
-        X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
-        X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
-        X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
-        X = BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2)
+    #     # Test backsolving for block matrix
+    #     Q1, Q2 = 7, 6
+    #     X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
+    #     X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
+    #     X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
+    #     X = BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2)
 
-        @test U \ X isa AbstractBlockMatrix
-        @test size(U \ X) == size(U_ \ Matrix(X))
-        @test U \ X ≈ U_ \ Matrix(X)
+    #     @test U \ X isa AbstractBlockMatrix
+    #     @test size(U \ X) == size(U_ \ Matrix(X))
+    #     @test U \ X ≈ U_ \ Matrix(X)
 
-        @test U' \ X isa AbstractBlockMatrix
-        @test size(U' \ X) == size(U_' \ Matrix(X))
-        @test U' \ X ≈ U_' \ Matrix(X)
-    end
+    #     @test U' \ X isa AbstractBlockMatrix
+    #     @test size(U' \ X) == size(U_' \ Matrix(X))
+    #     @test U' \ X ≈ U_' \ Matrix(X)
+    # end
 
     # Test UniformScaling interaction.
     let
@@ -325,49 +325,49 @@ using BlockArrays: cumulsizes
         @test Matrix(I + Xs) == I + Matrix(Xs)
     end
 
-    # Run covariance matrix tests with a BlockMatrix.
-    let
-        rng, P1, P2, Q1, Q2, R1, R2 = MersenneTwister(123456), 2, 3, 4, 5, 6, 7
-        P, Q, R = P1 + P2, Q1 + Q2, R1 + R2
-        B = randn(rng, P, P)
-        A_ = BlockArray(B' * B + UniformScaling(1e-6), [P1, P2], [P1, P2])
-        A = LazyPDMat(Symmetric(A_), 1e-12)
-        x = BlockArray(randn(rng, P), [P1, P2])
-        X = BlockArray(randn(rng, P, Q), [P1, P2], [Q1, Q2])
-        X′ = BlockArray(randn(rng, P, R), [P1, P2], [R1, R2])
+    # # Run covariance matrix tests with a BlockMatrix.
+    # let
+    #     rng, P1, P2, Q1, Q2, R1, R2 = MersenneTwister(123456), 2, 3, 4, 5, 6, 7
+    #     P, Q, R = P1 + P2, Q1 + Q2, R1 + R2
+    #     B = randn(rng, P, P)
+    #     A_ = BlockArray(B' * B + UniformScaling(1e-6), [P1, P2], [P1, P2])
+    #     A = LazyPDMat(Symmetric(A_), 1e-12)
+    #     x = BlockArray(randn(rng, P), [P1, P2])
+    #     X = BlockArray(randn(rng, P, Q), [P1, P2], [Q1, Q2])
+    #     X′ = BlockArray(randn(rng, P, R), [P1, P2], [R1, R2])
 
-        # Check utility functionality.
-        @test size(A) == size(A_)
-        @test size(A, 1) == size(A_, 1)
-        @test size(A, 2) == size(A_, 2)
+    #     # Check utility functionality.
+    #     @test size(A) == size(A_)
+    #     @test size(A, 1) == size(A_, 1)
+    #     @test size(A, 2) == size(A_, 2)
 
-        @test Matrix(A) == A_
-        @test A == A
+    #     @test Matrix(A) == A_
+    #     @test A == A
 
-        # Test unary operations.
-        @test logdet(A) ≈ logdet(Matrix(A_))
-        @test chol(A) isa UpperTriangular{T, <:AbstractBlockMatrix{T}} where T
-        @test chol(A) ≈ cholesky(Matrix(A_) + A.ϵ * I).U
+    #     # Test unary operations.
+    #     @test logdet(A) ≈ logdet(Matrix(A_))
+    #     @test chol(A) isa UpperTriangular{T, <:AbstractBlockMatrix{T}} where T
+    #     @test chol(A) ≈ cholesky(Matrix(A_) + A.ϵ * I).U
  
-        # Test binary operations.
-        @test x + x isa AbstractBlockVector
-        @test Vector(x + x) == Vector(x) + Vector(x)
-        @test x - x isa AbstractBlockVector
-        @test Vector(x - x) == Vector(x) - Vector(x)
+    #     # Test binary operations.
+    #     @test x + x isa AbstractBlockVector
+    #     @test Vector(x + x) == Vector(x) + Vector(x)
+    #     @test x - x isa AbstractBlockVector
+    #     @test Vector(x - x) == Vector(x) - Vector(x)
 
-        @test A_ + A_ isa AbstractBlockMatrix
-        @test Matrix(A + A) == A_ + A_
-        @test A_ - A_ isa AbstractBlockMatrix
-        @test Matrix(A - A) == A_ - A_
+    #     @test A_ + A_ isa AbstractBlockMatrix
+    #     @test Matrix(A + A) == A_ + A_
+    #     @test A_ - A_ isa AbstractBlockMatrix
+    #     @test Matrix(A - A) == A_ - A_
 
-        @test chol(A).data isa AbstractBlockMatrix
-        @test x' * (Matrix(A_) \ x) ≈ Xt_invA_X(A, x)
-        @test Xt_invA_X(A, X) isa LazyPDMat
-        @test chol(Xt_invA_X(A, X)).data isa AbstractBlockMatrix
-        @test maximum(abs.(Matrix(X') * (Matrix(A_) \ Matrix(X)) - Matrix(Xt_invA_X(A, X)))) < 1e-6
-        @test Xt_invA_Y(X′, A, X) isa AbstractBlockMatrix
-        @test maximum(abs.(Matrix(X′)' * (Matrix(A_) \ Matrix(X)) - Xt_invA_Y(X′, A, X))) < 1e-6
-        @test A \ X isa AbstractBlockMatrix
-        @test maximum(abs.(Matrix(A_) \ X - A \ X)) < 1e-6
-    end
+    #     @test chol(A).data isa AbstractBlockMatrix
+    #     @test x' * (Matrix(A_) \ x) ≈ Xt_invA_X(A, x)
+    #     @test Xt_invA_X(A, X) isa LazyPDMat
+    #     @test chol(Xt_invA_X(A, X)).data isa AbstractBlockMatrix
+    #     @test maximum(abs.(Matrix(X') * (Matrix(A_) \ Matrix(X)) - Matrix(Xt_invA_X(A, X)))) < 1e-6
+    #     @test Xt_invA_Y(X′, A, X) isa AbstractBlockMatrix
+    #     @test maximum(abs.(Matrix(X′)' * (Matrix(A_) \ Matrix(X)) - Xt_invA_Y(X′, A, X))) < 1e-6
+    #     @test A \ X isa AbstractBlockMatrix
+    #     @test maximum(abs.(Matrix(A_) \ X - A \ X)) < 1e-6
+    # end
 end

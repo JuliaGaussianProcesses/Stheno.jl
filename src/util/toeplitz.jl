@@ -2,7 +2,8 @@ using ToeplitzMatrices
 import LinearAlgebra: Symmetric, *, mul!
 
 import Base: transpose, adjoint, copy
-import ToeplitzMatrices: Toeplitz
+import Base.Broadcast: broadcasted, materialize
+import ToeplitzMatrices: Toeplitz, AbstractToeplitz
 
 function copy(T::Toeplitz)
     return Toeplitz(copy(T.vc), copy(T.vr), copy(T.vcvr_dft), copy(T.tmp), T.dft)
@@ -54,6 +55,16 @@ adjoint(T::SymmetricToeplitz) = T
 @inline LinearAlgebra.Symmetric(T::SymmetricToeplitz) = T
 
 Toeplitz(vc::AbstractVector, vr::AbstractVector) = Toeplitz(Vector(vc), Vector(vr))
+
+# Some hacky broadcasted implementations as I don't have time to solve it properly. Just
+# opts out of the fusion mechanism and stores intermediate state.
+broadcasted(op, A::Toeplitz) = Toeplitz(op.(A.vc), op.(A.vr))
+broadcasted(op, A::Toeplitz, B::Toeplitz) = Toeplitz(op.(A.vc, B.vc), op.(A.vr, B.vr))
+
+broadcasted(op, S::SymmetricToeplitz) = SymmetricToeplitz(op.(S.vc))
+function broadcasted(op, S::SymmetricToeplitz, S′::SymmetricToeplitz)
+    return SymmetricToeplitz(op.(S.vc, S′.vc))
+end
 
 # """
 #     mul!(C::Matrix, A::AbstractToeplitz, B::AbstractToeplitz)

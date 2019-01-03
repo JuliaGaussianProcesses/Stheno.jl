@@ -1,5 +1,6 @@
-using BlockArrays, LinearAlgebra, FDM, Zygote
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise, LazyPDMat
+using BlockArrays, LinearAlgebra, FDM, Zygote, ToeplitzMatrices
+using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise
+using FillArrays: AbstractFill
 
 function grad_test(f, x::AbstractVector)
     grad_ad = Zygote.gradient(f, x)[1]
@@ -7,11 +8,8 @@ function grad_test(f, x::AbstractVector)
     @test maximum(abs.(grad_ad .- grad_fd)) < 1e-8
 end
 function grad_test(f, x::ColsAreObs)
-    @show x
-    @show x.X
     grad_ad = Zygote.gradient(X->f(ColsAreObs(X)), x.X)[1]
     grad_fd = FDM.grad(central_fdm(5, 1), X->f(ColsAreObs(X)), x.X)
-    @show grad_ad, grad_fd
     @test maximum(abs.(grad_ad .- grad_fd)) < 1e-8
 end
 
@@ -179,4 +177,50 @@ function __kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
 
     # Should be (approximately) positive definite.
     @test all(eigvals(Matrix(pairwise(k, X0))) .> -1e-9)
+end
+
+"""
+    stationary_kernel_tests(k::Kernel, x0::StepRangeLen, x1::StepRangeLen, x2::StepRangeLen)
+
+Additional tests for stationary kernels. Should be run in addition to `kernel_tests`.
+"""
+function stationary_kernel_tests(
+    k::Kernel,
+    x0::StepRangeLen,
+    x1::StepRangeLen,
+    x2::StepRangeLen,
+    x3::StepRangeLen,
+    x4::StepRangeLen,
+)
+    # Check that useful inputs have been provided.
+    @assert length(x0) == length(x1)
+    @assert length(x0) == length(x2)
+    @assert step(x0) == step(x1)
+    @assert step(x0) ≠ step(x2)
+
+    @assert length(x3) ≠ length(x0)
+    @assert step(x0) == step(x3)
+
+    @assert length(x4) ≠ length(x0)
+    @assert step(x4) ≠ length(x0)
+
+    # Unary map.
+    @test map(k, x0) isa AbstractFill
+    @test map(k, x0) == map(k, collect(x0))
+
+    # Binary map.
+    @test map(k, x0, x1) isa AbstractFill
+    @test map(k, x0, x1) == map(k, collect(x0), collect(x1))
+    @test !isa(map(k, x0, x2), AbstractFill)
+    @test map(k, x0, x2) == map(k, collect(x0), collect(x2))
+
+    # Unary pairwise.
+    @test pairwise(k, x0) isa SymmetricToeplitz
+    @test pairwise(k, x0) == pairwise(k, collect(x0))
+
+    # Binary pairwise.
+    @test pairwise(k, x0, x3) isa Toeplitz
+    @test pairwise(k, x0, x3) == pairwise(k, collect(x0), collect(x3))
+    @test !isa(pairwise(k, x0, x4), Toeplitz)
+    @test pairwise(k, x0, x4) == pairwise(k, collect(x0), collect(x4))
 end

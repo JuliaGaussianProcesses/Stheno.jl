@@ -55,24 +55,26 @@ pairwise(k::CrossKernel, x::AV, x′::AV) = materialize(_pw(k, x, x′))
 
 ################################ Util. for Toeplitz matrices ###############################
 
-function toep_pw(k::CrossKernel, x::StepRangeLen, x′::StepRangeLen)
+function toep_pw(k::CrossKernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
     if x.step == x′.step
         return Toeplitz(
             map(k, x, Fill(x′[1], length(x))),
             map(k, Fill(x[1], length(x′)), x′),
         )
     else
-        return invoke(_pw, Tuple{typeof(k), AV, AV}, k, x, x′)
+        signature = Tuple{typeof(k), Vector{T}, Vector{V}}
+        return invoke(_pw, signature, k, collect(x), collect(x′))
     end
 end
 
 toep_pw(k::Kernel, x::StepRangeLen) = SymmetricToeplitz(map(k, x, Fill(x[1], length(x))))
 
-function toep_map(k::Kernel, x::StepRangeLen, x′::StepRangeLen)
+function toep_map(k::Kernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
     if x.step == x′.step
         return Fill(k(x[1], x′[1]), broadcast_shape(size(x), size(x′)))
     else
-        return invoke(_map, Tuple{typeof(k), AV, AV}, k, x, x′)
+        signature = Tuple{typeof(k), Vector{T}, Vector{V}}
+        return invoke(_map, signature, k, collect(x), collect(x′))
     end
 end
 
@@ -173,7 +175,7 @@ _map(::EQ, x::AV) = Ones{eltype(x)}(length(x))
 _map(::EQ, X::ColsAreObs) = Ones{eltype(X.X)}(length(X))
 _pw(::EQ, x::AV{<:Real}) = _pw(EQ(), x, x)
 _pw(::EQ, X::ColsAreObs) = bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X))
-_pw(::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+_pw(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 # Optimised adjoints. These really do count in terms of performance.
 @adjoint function(::EQ)(x::Real, x′::Real)
@@ -230,7 +232,7 @@ _pw(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, 
 (::PerEQ)(x::Real) = one(x)
 _map(::PerEQ, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
 _pw(k::PerEQ, x::AV{<:Real}) = _pw(k, x, x)
-_pw(::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+_pw(k::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 @adjoint (k::PerEQ)(x::Real) = (k(x), _->(zero(typeof(x)),))
 @adjoint function _map(k::PerEQ, x::AV{<:Real})
@@ -249,11 +251,14 @@ struct Exp <: Kernel end
 (::Exp)(x::Real, x′::Real) = exp(-abs(x - x′))
 _map(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′))
 _pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′'))
+_map(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+_pw(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods
 (::Exp)(x) = one(x)
 _map(::Exp, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
 _pw(k::Exp, x::AV{<:Real}) = _pw(k, x, x)
+_pw(k::Exp, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 @adjoint function _map(k::Exp, x::AV{<:Real})
     return _map(k, x), _->(nothing, Zeros{eltype(x)}(length(x)))
@@ -359,7 +364,7 @@ _pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
 
 A finite-dimensional kernel defined in terms of a PSD matrix `Σ`.
 """
-struct EmpiricalKernel{T<:LazyPDMat} <: Kernel
+struct EmpiricalKernel{T<:AbstractMatrix} <: Kernel
     Σ::T
 end
 @inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]

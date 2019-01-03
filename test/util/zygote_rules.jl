@@ -165,6 +165,24 @@ end
 #     @test all(Zygote.gradient(f, Σ)[1] .- FDM.grad(fdm, f, Σ) .< 1e-8)
 # end
 
+# Verify Cholesky factorisation correctness.
+let
+    rng, N = MersenneTwister(123456), 5
+    A = randn(rng, N, N)
+    S = A' * A + 1e-6I
+    fdm = central_fdm(5, 1)
+
+    # Check factorisation basics.
+    let
+        f = A->logdet(cholesky(Symmetric(A' * A + 1e-3I)))
+        @test all(abs.(Zygote.gradient(f, A)[1] - FDM.grad(fdm, f, A)) .< 1e-8)
+    end
+    let
+        f = A->sum(cholesky(Symmetric(A' * A + 1e-3I)).U)
+        @test all(Zygote.gradient(f, A)[1] - FDM.grad(fdm, f, A) .< 1e-8)
+    end
+end
+
 # # Check that addition of matrices and uniform scalings works as hoped.
 # let
 #     fdm = central_fdm(5, 1)

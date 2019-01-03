@@ -1,9 +1,9 @@
 using Zygote, IRTools
-using Zygote: @adjoint, _forward
+using Zygote: @adjoint, _forward, literal_getproperty
 
-import Base: map
+import Base: map, getfield, getproperty
 import Distances: pairwise, colwise
-import LinearAlgebra: \, /
+import LinearAlgebra: \, /, cholesky
 import FillArrays: Fill, AbstractFill, getindex_value
 
 # Hack at Zygote to make Fills work properly.
@@ -88,11 +88,31 @@ end
     end
 end
 
-@adjoint Symmetric(A::AbstractMatrix) = Symmetric(A), Δ->(symmetric_back(Δ),)
+@adjoint function Symmetric(A::AbstractMatrix)
+    back(Δ::AbstractMatrix) = (symmetric_back(Δ),)
+    back(Δ::NamedTuple{(:data, :uplo)}) = (symmetric_back(Δ.data),)
+    return Symmetric(A), back
+end
 
-@adjoint function chol(Σ::Symmetric)
-    U = chol(Σ)
-    return U, function(Ū)
+# @adjoint function chol(Σ::Symmetric)
+#     U = chol(Σ)
+#     return U, function(Ū)
+#         Σ̄ = Ū * U'
+#         Σ̄ = copytri!(Σ̄, 'U')
+#         Σ̄ = ldiv!(U, Σ̄)
+#         BLAS.trsm!('R', 'U', 'T', 'N', one(eltype(Σ)), U.data, Σ̄)
+#         @inbounds for n in diagind(Σ̄)
+#             Σ̄[n] *= 0.5
+#         end
+#         return (UpperTriangular(Σ̄),)
+#     end
+# end
+
+@adjoint function cholesky(Σ::Symmetric)
+    C = cholesky(Σ)
+    U = C.U
+    return C, function(Δ)
+        Ū = Δ.factors
         Σ̄ = Ū * U'
         Σ̄ = copytri!(Σ̄, 'U')
         Σ̄ = ldiv!(U, Σ̄)
@@ -104,13 +124,36 @@ end
     end
 end
 
-@adjoint diag(A::AbstractMatrix) = diag(A), Δ->(Diagonal(Δ),)
-
 @adjoint function logdet(U::StridedTriangular)
     return logdet(U), Δ->(UpperTriangular(Matrix(Diagonal(Δ ./ diag(U)))),)
 end
 
-@adjoint +(A::AbstractMatrix, S::UniformScaling) = (A + S, Δ->(ones(size(A)), nothing))
+@adjoint function getproperty(C::Cholesky, d::Symbol)
+    @assert C.uplo == 'U'
+    return getproperty(C, d), function(Δ)
+        return ((uplo=nothing, info=nothing, factors=Δ), nothing)
+    end
+end
+
+@adjoint function literal_getproperty(C::Cholesky, ::Val{d}) where d
+    @assert C.uplo == 'U'
+    return literal_getproperty(C, Val(d)), function(Δ)
+        return ((uplo=nothing, info=nothing, factors=Δ), nothing)
+    end
+end
+
+@adjoint diag(A::AbstractMatrix) = diag(A), Δ->(Diagonal(Δ),)
+
+@adjoint function logdet(C::Cholesky)
+    return logdet(C), function(Δ)
+        factors = UpperTriangular(Matrix(Diagonal(2 .* Δ ./ diag(C.U))))
+        return ((info=nothing, uplo=nothing, factors=factors),)
+    end
+end
+
+@adjoint function +(A::AbstractMatrix, S::UniformScaling)
+    return A + S, Δ->(Δ, (λ=sum(view(Δ, diagind(Δ))),))
+end
 
 # @adjoint function map(f, x...)
 #     @show f, x

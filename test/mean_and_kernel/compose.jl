@@ -58,6 +58,16 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         kernel_tests(BinaryKernel(+, ZeroKernel(), OneKernel()), x0, x1, x2)
         kernel_tests(BinaryKernel(*, ZeroKernel(), EQ()), x0, x1, x2)
         kernel_tests(BinaryKernel(+, EQ(), OneKernel()), x0, x1, x2)
+
+        # Some compositions of stationary kernels are stationary.
+        stationary_kernel_tests(
+            ν,
+            range(-5.0, step=1, length=N),
+            range(-4.0, step=1, length=N),
+            range(-5.0, step=2, length=N),
+            range(-3.0, step=1, length=N′),
+            range(-2.0, step=2, length=N′),
+        )
     end
 
     let

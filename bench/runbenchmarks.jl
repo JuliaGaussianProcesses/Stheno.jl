@@ -12,9 +12,9 @@ benchmarks = @benchset "Stheno" begin
 
     # @benchset "mean_and_kernel" begin
     #     include("mean_and_kernel/mean.jl")
-        # include("mean_and_kernel/kernel.jl")
-        include("mean_and_kernel/compose.jl")
-    #     include("mean_and_kernel/finite.jl")
+        include("mean_and_kernel/kernel.jl")
+        # include("mean_and_kernel/compose.jl")
+        # include("mean_and_kernel/finite.jl")
     # end
 
     # @benchset "gp" begin
