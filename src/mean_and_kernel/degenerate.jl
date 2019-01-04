@@ -1,11 +1,9 @@
-import Distances: pairwise
-
 """
     DeltaSumMean{Tϕ, Tμ<:MeanFunction, Tg} <: MeanFunction
 
-This is an attrociously-named type, apologies. `ϕ` is a callable whereby `pairwise(ϕ, :, x)`
-does something sensible, `μ` is a finite-dimensional mean function, and `g` is just some
-unary function.
+This is an attrociously-named type, apologies. `ϕ` is a callable for which
+`pairwise(ϕ, :, x)` does something sensible, `μ` is a finite-dimensional mean function, and
+`g` is just some unary function.
 """
 struct DeltaSumMean{Tϕ, Tμ<:MeanFunction, Tg} <: MeanFunction
     ϕ::Tϕ
@@ -33,12 +31,14 @@ function (k::DeltaSumKernel)(x::AV, x′::AV)
 end
 (k::DeltaSumKernel)(x::AV) = map(k, ColsAreObs(reshape(x, :, 1)))[1]
 
-_map(k::DeltaSumKernel, x::AV) = diag_Xᵀ_A_X(pw(k.k, :), pw(k.ϕ, :, x))
+_map(k::DeltaSumKernel, x::AV) = diag_Xt_A_X(cholesky(pw(k.k, :)), pw(k.ϕ, :, x))
 function _map(k::DeltaSumKernel, x::AV, x′::AV)
-    return diag_AᵀB(pw(k.k, :) * pw(k.ϕ, :, x), pw(k.ϕ, :, x′))
+    return diag_Xt_A_Y(pw(k.ϕ, :, x), cholesky(pw(k.k, :)), pw(k.ϕ, :, x′))
 end
-_pw(k::DeltaSumKernel, x::AV) = Xt_A_X(pw(k.k, :), pw(k.ϕ, :, x))
-_pw(k::DeltaSumKernel, x::AV, x′::AV) = Xt_A_Y(pw(k.ϕ, :, x), pw(k.k, :), pw(k.ϕ, :, x′))
+_pw(k::DeltaSumKernel, x::AV) = Xt_A_X(cholesky(pw(k.k, :)), pw(k.ϕ, :, x))
+function _pw(k::DeltaSumKernel, x::AV, x′::AV)
+    return Xt_A_Y(pw(k.ϕ, :, x), cholesky(pw(k.k, :)), pw(k.ϕ, :, x′))
+end
 
 
 """
@@ -53,7 +53,7 @@ function (k::LhsDeltaSumCrossKernel)(x::AV, x′::AV)
     return map(k, ColsAreObs(reshape(x, : ,1)), ColsAreObs(reshape(x′, :, 1)))[1]
 end
 
-_map(k::LhsDeltaSumCrossKernel, X::AV, X′::AV) = diag_AᵀB(pw(k.ϕ, :, X), pw(k.k, :, X′))
+_map(k::LhsDeltaSumCrossKernel, X::AV, X′::AV) = diag_At_B(pw(k.ϕ, :, X), pw(k.k, :, X′))
 _pw(k::LhsDeltaSumCrossKernel, X::AV, X′::AV) = pw(k.ϕ, :, X)' * pw(k.k, :, X′)
 
 
@@ -69,5 +69,5 @@ function (k::RhsDeltaSumCrossKernel)(x::AV, x′::AV)
     return map(k, ColsAreObs(reshape(x, :, 1)), ColsAreObs(reshape(x′, :, 1)))[1]
 end
 
-_map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV) = diag_AᵀB(pw(k.k, :, X), pw(k.ϕ, :, X′))
+_map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV) = diag_At_B(pw(k.k, :, X), pw(k.ϕ, :, X′))
 _pw(k::RhsDeltaSumCrossKernel, X::AV, X′::AV) = pw(k.k, :, X)' * pw(k.ϕ, :, X′)

@@ -1,104 +1,106 @@
-import Distances: pairwise
-import Base: eachindex
-
 """
     CondCache
 
 Cache for use by `ConditionalMean`s, `ConditionalKernel`s and `ConditionalCrossKernel`s.
 Avoids recomputing the covariance `Σff` and the Kriging vector `α`.
 """
-struct CondCache
-    Σff::LazyPDMat
-    α::AV{<:Real}
-    CondCache(mf::AV{<:Real}, Σff::AM, f::AV{<:Real}) = new(Σff, Σff \ (f - mf))
+struct CondCache{TC<:Cholesky, Tα<:AV{<:Real}}
+    C::TC
+    α::Tα
 end
-function CondCache(kff::Kernel, μf::MeanFunction, X::AV, f::AV{<:Real})
-    return CondCache(map(μf, X), pairwise(kff, X), f)
+function CondCache(kff::Kernel, μf::MeanFunction, x::AV, f::AV{<:Real})
+    C = cholesky(pw(kff, x))
+    return CondCache(C, C \ (f - map(μf, x)))
 end
-show(io::IO, ::CondCache) = show(io, "CondCache")
 
 """
     ConditionalMean <: MeanFunction
 
 Computes the mean of a GP `g` conditioned on observations of another GP `f`.
 """
-struct ConditionalMean <: MeanFunction
-    c::CondCache
-    μg::MeanFunction
-    kfg::CrossKernel
+struct ConditionalMean{Tc<:CondCache, Tμg<:MeanFunction, Tkfg<:CrossKernel} <: MeanFunction
+    c::Tc
+    μg::Tμg
+    kfg::Tkfg
 end
-(μ::ConditionalMean)(x) = μ.μg(x) + dot(reshape(pairwise(μ.kfg, :, Xg), :), μ.c.α)
-_map(μ::ConditionalMean, Xg::AV) = bcd(+, _map(μ.μg, Xg), pairwise(μ.kfg, :, Xg)' * μ.c.α)
+(μ::ConditionalMean)(x::Real) = μ.μg(x) + dot(reshape(pw(μ.kfg, :, [x]), :), μ.c.α)
+_map(μ::ConditionalMean, xg::AV) = bcd(+, _map(μ.μg, xg), pw(μ.kfg, :, xg)' * μ.c.α)
+
 
 """
     ConditionalKernel <: Kernel
 
 Computes the (co)variance of a GP `g` conditioned on observations of another GP `f`.
 """
-struct ConditionalKernel <: Kernel
-    c::CondCache
-    kfg::CrossKernel
-    kgg::Kernel
+struct ConditionalKernel{Tc<:CondCache, Tkfg<:CrossKernel, Tkgg<:Kernel} <: Kernel
+    c::Tc
+    kfg::Tkfg
+    kgg::Tkgg
 end
+
+# Binary methods.
 (k::ConditionalKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
-(k::ConditionalKernel)(x::AV, x′::AV) =
+function (k::ConditionalKernel)(x::AV, x′::AV)
     map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
-
-function _map(k::ConditionalKernel, X::AV)
-    σgg = map(k.kgg, X)
-    Σfg_X = pairwise(k.kfg, :, X)
-    σ′gg = diag_Xᵀ_invA_X(k.c.Σff, Σfg_X)
-    return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
 end
-function _map(k::ConditionalKernel, X::AV, X′::AV)
-    σgg = map(k.kgg, X, X′)
-    Σfg_X = pairwise(k.kfg, :, X)
-    Σfg_X′ = pairwise(k.kfg, :, X′)
-    σ′gg = diag_Xᵀ_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
-    return (σgg .- σ′gg) .* .!(σgg .≈ σ′gg)
+function _map(k::ConditionalKernel, x::AV, x′::AV)
+    σgg = map(k.kgg, x, x′)
+    σ′gg = diag_Xt_invA_Y(pw(k.kfg, :, x), k.c.C, pw(k.kfg, :, x′))
+    return (σgg .- σ′gg)# .* .!(σgg .≈ σ′gg)
+end
+function _pw(k::ConditionalKernel, x::AV, x′::AV)
+    Σgg = pw(k.kgg, x, x′)
+    Σ′gg = Xt_invA_Y(pw(k.kfg, :, x), k.c.C, pw(k.kfg, :, x′))
+    return (Σgg .- Σ′gg)# .* .!(Σgg .≈ Σ′gg)
 end
 
-function _pw(k::ConditionalKernel, X::AV)
-    Σgg = AbstractMatrix(pairwise(k.kgg, X))
-    Σfg_X = pairwise(k.kfg, :, X)
-    Σ′gg = AbstractMatrix(Xt_invA_X(k.c.Σff, Σfg_X))
-    return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
+# Unary methods.
+(k::ConditionalKernel)(x::Number) = map(k, [x])[1]
+(k::ConditionalKernel)(x::AV) = map(k, ColsAreObs(reshape(x, length(x), 1)))[1]
+function _map(k::ConditionalKernel, x::AV)
+    σgg = map(k.kgg, x)
+    σ′gg = diag_Xt_invA_X(k.c.C, pw(k.kfg, :, x))
+    return (σgg .- σ′gg)# .* .!(σgg .≈ σ′gg)
 end
-function _pw(k::ConditionalKernel, X::AV, X′::AV)
-    Σgg = pairwise(k.kgg, X, X′)
-    Σfg_X = pairwise(k.kfg, :, X)
-    Σfg_X′ = pairwise(k.kfg, :, X′)
-    Σ′gg = Xt_invA_Y(Σfg_X, k.c.Σff, Σfg_X′)
-    return (Σgg .- Σ′gg) .* .!(Σgg .≈ Σ′gg)
+function _pw(k::ConditionalKernel, x::AV)
+    Σgg = pw(k.kgg, x)
+    Σ′gg = Xt_invA_X(k.c.C, pw(k.kfg, :, x))
+    return (Σgg .- Σ′gg)# .* .!(Σgg .≈ Σ′gg)
 end
+
 
 """
     ConditionalCrossKernel <: CrossKernel
 
 Computes the covariance between `g` and `h` conditioned on observations of a process `f`.
 """
-struct ConditionalCrossKernel <: CrossKernel
-    c::CondCache
-    kfg::CrossKernel
-    kfh::CrossKernel
-    kgh::CrossKernel
+struct ConditionalCrossKernel{
+    Tc<:CondCache,
+    Tkfg<:CrossKernel,
+    Tkfh<:CrossKernel,
+    Tkgh<:CrossKernel,
+} <: CrossKernel
+    c::Tc
+    kfg::Tkfg
+    kfh::Tkfh
+    kgh::Tkgh
 end
+
 (k::ConditionalCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
-(k::ConditionalCrossKernel)(x::AV, x′::AV) =
-    map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
-
-function _map(k::ConditionalCrossKernel, X::AV, X′::AV)
-    σgh = map(k.kgh, X, X′)
-    Σfg_X = pairwise(k.kfg, :, X)
-    Σfh_X′ = pairwise(k.kfh, :, X′)
-    σ′gh = diag_Xᵀ_invA_Y(Σfg_X, k.c.Σff, Σfh_X′)
-    return (σgh .- σ′gh) .* .!(σgh .≈ σ′gh)
+function (k::ConditionalCrossKernel)(x::AV, x′::AV)
+    return map(
+        k,
+        ColsAreObs(reshape(x, length(x), 1)),
+        ColsAreObs(reshape(x′, length(x′), 1)),
+    )[1]
 end
-
-function _pw(k::ConditionalCrossKernel, Xg::AV, Xh::AV)
-    Σgh = pairwise(k.kgh, Xg, Xh)
-    Σfg_Xg = pairwise(k.kfg, :, Xg)
-    Σfh_Xh = pairwise(k.kfh, :, Xh)
-    Σ′gh = Xt_invA_Y(Σfg_Xg, k.c.Σff, Σfh_Xh)
-    return (Σgh .- Σ′gh) .* .!(Σgh .≈ Σ′gh)
+function _map(k::ConditionalCrossKernel, x::AV, x′::AV)
+    σgh = map(k.kgh, x, x′)
+    σ′gh = diag_Xt_invA_Y(pw(k.kfg, :, x), k.c.C, pw(k.kfh, :, x′))
+    return (σgh .- σ′gh)# .* .!(σgh .≈ σ′gh)
+end
+function _pw(k::ConditionalCrossKernel, xg::AV, xh::AV)
+    Σgh = pw(k.kgh, xg, xh)
+    Σ′gh = Xt_invA_Y(pw(k.kfg, :, xg), k.c.C, pw(k.kfh, :, xh))
+    return (Σgh .- Σ′gh)# .* .!(Σgh .≈ Σ′gh)
 end

@@ -5,12 +5,12 @@ using FillArrays: AbstractFill
 function grad_test(f, x::AbstractVector)
     grad_ad = Zygote.gradient(f, x)[1]
     grad_fd = FDM.grad(central_fdm(5, 1), f, x)
-    @test maximum(abs.(grad_ad .- grad_fd)) < 1e-8
+    @test maximum(abs.(grad_ad .- grad_fd)) < 1e-6
 end
 function grad_test(f, x::ColsAreObs)
     grad_ad = Zygote.gradient(X->f(ColsAreObs(X)), x.X)[1]
     grad_fd = FDM.grad(central_fdm(5, 1), X->f(ColsAreObs(X)), x.X)
-    @test maximum(abs.(grad_ad .- grad_fd)) < 1e-8
+    @test maximum(abs.(grad_ad .- grad_fd)) < 1e-6
 end
 
 """
@@ -75,7 +75,10 @@ function pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
     N, N′ = length(X), length(X′)
     @test pairwise(f, X, X′) isa AbstractMatrix
     @test size(pairwise(f, X, X′)) == (N, N′)
-    @test pairwise(f, X, X′) ≈ reshape([f(x, x′) for (x, x′) in Iterators.product(X, X′)], N, N′)
+
+    pw_out = pairwise(f, X, X′)
+    loop_out = reshape([f(x, x′) for (x, x′) in Iterators.product(X, X′)], N, N′)
+    @test all(abs.(pw_out .- loop_out) .< 1e-8)
     grad_test(x->sum(pairwise(f, x, X′)), X)
     grad_test(x′->sum(pairwise(f, X, x′)), X′)
 end
@@ -95,7 +98,7 @@ Consistency tests intended for use with `Kernel`s.
 function pairwise_tests(f, X::AbstractVector; rtol=eps())
     @test pairwise(f, X) isa AbstractMatrix
     @test size(pairwise(f, X)) == (length(X), length(X))
-    @test isapprox(pairwise(f, X), pairwise(f, X, X); rtol=rtol)
+    @test isapprox(pairwise(f, X), pairwise(f, X, X); atol=rtol)
 end
 # function pairwise_tests(f, X::BlockData; rtol=eps())
 #     @test size(pairwise(f, X)) == (length(X), length(X))
@@ -173,7 +176,7 @@ function __kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
 
     # k(x, x′) == k(x′, x)
     @test map(k, X0, X1) ≈ map(k, X1, X0)
-    @test pairwise(k, X0, X2) ≈ pairwise(k, X2, X0)'
+    @test maximum(abs.(pairwise(k, X0, X2) .- pairwise(k, X2, X0)') .< 1e-8)
 
     # Should be (approximately) positive definite.
     @test all(eigvals(Matrix(pairwise(k, X0))) .> -1e-9)

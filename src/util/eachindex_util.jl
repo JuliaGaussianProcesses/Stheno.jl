@@ -12,4 +12,3 @@ function eachindex(X::AbstractBlockMatrix, dim::Int)
 end
 eachindex(X::BlockSymmetric, dim::Int) = eachindex(X.data, dim)
 eachindex(X::BlockTri, dim::Int) = eachindex(X.data, dim)
-# eachindex(X::LazyPDMat, dim::Int) = eachindex(X.Σ, dim)

@@ -425,10 +425,10 @@ end
 # be resolved at some point.
 
 # Very specific `broadcast` method for particular use case. Needs to be generalised.
-function broadcast(f, A::AbstractBlockVector, b::Real)
+function broadcasted(f, A::AbstractBlockVector, b::Real)
     return BlockVector([broadcast(f, getblock(A, p), b) for p in 1:nblocks(A, 1)])
 end
-function broadcast(f, A::AbstractBlockMatrix, b::Real)
+function broadcasted(f, A::AbstractBlockMatrix, b::Real)
     return BlockMatrix([broadcast(f, getblock(A, p, q), b)
         for p in 1:nblocks(A, 1), q in 1:nblocks(A, 2)])
 end

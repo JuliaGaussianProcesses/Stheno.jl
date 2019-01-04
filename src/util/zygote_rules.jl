@@ -1,10 +1,11 @@
 using Zygote, IRTools
 using Zygote: @adjoint, _forward, literal_getproperty
 
-import Base: map, getfield, getproperty
+import Base: map, getfield, getproperty, sum
 import Distances: pairwise, colwise
 import LinearAlgebra: \, /, cholesky
 import FillArrays: Fill, AbstractFill, getindex_value
+import Base.Broadcast: broadcasted, materialize
 
 # Hack at Zygote to make Fills work properly.
 @adjoint Fill(x, sz::Tuple{Vararg}) = Fill(x, sz), Δ->(sum(Δ), nothing)
@@ -94,21 +95,7 @@ end
     return Symmetric(A), back
 end
 
-# @adjoint function chol(Σ::Symmetric)
-#     U = chol(Σ)
-#     return U, function(Ū)
-#         Σ̄ = Ū * U'
-#         Σ̄ = copytri!(Σ̄, 'U')
-#         Σ̄ = ldiv!(U, Σ̄)
-#         BLAS.trsm!('R', 'U', 'T', 'N', one(eltype(Σ)), U.data, Σ̄)
-#         @inbounds for n in diagind(Σ̄)
-#             Σ̄[n] *= 0.5
-#         end
-#         return (UpperTriangular(Σ̄),)
-#     end
-# end
-
-@adjoint function cholesky(Σ::Symmetric)
+@adjoint function cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}})
     C = cholesky(Σ)
     U = C.U
     return C, function(Δ)
@@ -118,7 +105,7 @@ end
         Σ̄ = ldiv!(U, Σ̄)
         BLAS.trsm!('R', 'U', 'T', 'N', one(eltype(Σ)), U.data, Σ̄)
         @inbounds for n in diagind(Σ̄)
-            Σ̄[n] *= 0.5
+            Σ̄[n] /= 2
         end
         return (UpperTriangular(Σ̄),)
     end

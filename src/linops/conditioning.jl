@@ -89,7 +89,7 @@ end
 
 function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)
     μᵤ, Σᵤᵤ = mean_vec(u), cov(u)
-    U = chol(Σᵤᵤ)
+    U = cholesky(Σᵤᵤ)
     Γ = broadcast(/, U' \ xcov(u, f), σ)
     Ω, δ = LazyPDMat(Symmetric(Γ * Γ' + I), 0), y - mean_vec(f)
     Σ′ᵤᵤ = Xt_invA_X(Ω, U)

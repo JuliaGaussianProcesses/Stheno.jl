@@ -11,17 +11,6 @@ map(μ::MeanFunction, x::Union{AV, Colon}) = materialize(_map(μ, x))
 
 
 """
-    AbstractVector(μ::MeanFunction)
-
-Convert `μ` into an `AbstractVector` if such a representation exists.
-"""
-function AbstractVector(μ::MeanFunction)
-    @assert isfinite(length(μ))
-    return map(μ, :)
-end
-
-
-"""
     ZeroMean{T<:Real} <: MeanFunction
 
 Returns `zero(T)` everywhere.
