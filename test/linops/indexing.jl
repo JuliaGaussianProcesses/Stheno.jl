@@ -67,14 +67,14 @@ let
 
     @test fjXX′ isa BlockGP
 
-    Σ11, Σ12, Σ22 = xcov(f3, f3), xcov(f3, f4), xcov(f4, f4)
+    Σ11, Σ12, Σ22 = cov(f3, f3), cov(f3, f4), cov(f4, f4)
     Σ_manual = BlockMatrix(reshape([Σ11, Σ12', Σ12, Σ22], 2, 2))
 
     # Test that indexing a BlockGP is consistent with separate indexing.
     @test mean_vec(fjXX′) == vcat(mean_vec(f3), mean_vec(f4))
     @test cov(fjXX′) == Σ_manual
-    @test xcov(fjXX′, fjXX′) == cov(fjXX′)
-    @test xcov(fjXX′, f3) == BlockMatrix(reshape([xcov(f3, f3), xcov(f4, f3)], 2, 1))
+    @test cov(fjXX′, fjXX′) == cov(fjXX′)
+    @test cov(fjXX′, f3) == BlockMatrix(reshape([cov(f3, f3), cov(f4, f3)], 2, 1))
 
     # Check that broadcasting functionality works appropriately.
     @test cov(BlockGP([f1, f2])(X)) == cov(BlockGP([f1(X), f2(X)]))

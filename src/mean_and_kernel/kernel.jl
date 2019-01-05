@@ -7,7 +7,7 @@ import Base: +, *, ==, size, eachindex, print, eltype
 import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
 import Base.Broadcast: broadcasted, materialize, broadcast_shape
 
-export CrossKernel, Kernel, cov, xcov, EQ, PerEQ, RQ, Linear, Poly, Noise, Wiener,
+export CrossKernel, Kernel, cov, EQ, PerEQ, RQ, Linear, Poly, Noise, Wiener,
     WienerVelocity, Exp, ConstantKernel, isstationary, ZeroKernel, OneKernel, pairwise
 
 
@@ -202,6 +202,7 @@ end
 @adjoint function _pw(::EQ, x::AV{<:Real})
     s = materialize(_pw(EQ(), x))
     return s, function(Δ)
+        @show Δ
         x̄_tmp = Δ .* (x .- x') .* s
         return nothing, reshape(sum(x̄_tmp; dims=1), :) - reshape(sum(x̄_tmp; dims=2), :)
     end
@@ -296,24 +297,35 @@ Noise() = Noise{Int}()
 eltype(k::Noise{T}) where {T} = T
 
 # Binary methods.
-(k::Noise)(x, x′) = zero(eltype(k))
-_map(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′)))
-_pw(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
-
-@adjoint function _map(k::Noise{T}, x::AV, x′::AV) where {T}
-    return _map(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
-end
-@adjoint function _pw(k::Noise{T}, x::AV, x′::AV) where {T}
-    return _pw(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
-end
+(k::Noise)(x, x′) = x == x′ ? 1 : 0
+_map(k::Noise, x::AV{<:Real}, x′::AV{<:Real}) = bcd(k, x, x′)
+_pw(k::Noise, x::AV{<:Real}, x′::AV{<:Real}) = bcd(k, x, x′')
 
 # Unary methods.
-(k::Noise)(x) = one(eltype(k))
-_map(k::Noise, x::AV) = Ones{eltype(k)}(length(x))
-_pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
+(k::Noise)(x) = 1
+_map(k::Noise, x::AV{<:Real}) = Ones{eltype(k)}(length(x))
+_pw(k::Noise, x::AV{<:Real}) = _pw(k, x, x)
 
-@adjoint _map(k::Noise, x::AV) = _map(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
-@adjoint _pw(k::Noise, x::AV) = _pw(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
+
+# # Binary methods.
+# (k::Noise)(x, x′) = zero(eltype(k))
+# _map(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′)))
+# _pw(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
+
+# @adjoint function _map(k::Noise{T}, x::AV, x′::AV) where {T}
+#     return _map(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
+# end
+# @adjoint function _pw(k::Noise{T}, x::AV, x′::AV) where {T}
+#     return _pw(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
+# end
+
+# # Unary methods.
+# (k::Noise)(x) = one(eltype(k))
+# _map(k::Noise, x::AV) = Ones{eltype(k)}(length(x))
+# _pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
+
+# @adjoint _map(k::Noise, x::AV) = _map(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
+# @adjoint _pw(k::Noise, x::AV) = _pw(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
 
 # """
 #     RQ{T<:Real} <: Kernel

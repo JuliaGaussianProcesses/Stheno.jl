@@ -80,7 +80,7 @@ using FillArrays
     #     row2 = hcat(Zeros{Float64}(N2, N1), pairwise(k22, X0′))
     #     @test pairwise(k, BlockData([X0, X0′])) == vcat(row1, row2)
 
-    #     # Compute xcov for BlockKernel with infinite kernels.
+    #     # Compute cov for BlockKernel with infinite kernels.
     #     manual = vcat(hcat(pairwise(k11, X1, X1′), pairwise(k12, X1, X2′)),
     #                   hcat(pairwise(k12, X2, X1′), pairwise(k22, X2, X2′)),)
     #     @test pairwise(k, BlockData([X1, X2]), BlockData([X1′, X2′])) == manual

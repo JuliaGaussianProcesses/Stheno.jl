@@ -87,20 +87,35 @@ using Stheno: OuterKernel, BinaryKernel
         @test mean(abs.(Σ′ - cov(f))) < 1e-2
     end
 
+    # Test `rand` gradients.
+    let
+        rng, N, S = MersenneTwister(123456), 10, 3
+        x = collect(range(-3.0, stop=3.0, length=N))
+
+        # Check that the gradient w.r.t. the samples is correct.
+        grad_test(
+            function(x)
+                f = GP(FiniteMean(CustomMean(sin), x), FiniteKernel(EQ(), x), GPC())
+                return sum(rand(MersenneTwister(123456), f, S))
+            end,
+            x,
+        )
+    end
+
     # Test logpdf + elbo do something vaguely sensible + that elbo converges to logpdf.
     using Distributions: MvNormal, PDMat
     let
-        rng, N, σ, gpc = MersenneTwister(123456), 5, 1e-1, GPC()
-        X = randn(rng, N)
-        μ = FiniteMean(OneMean(), X)
-        kf = FiniteKernel(EQ(), X)
-        ky = FiniteKernel(BinaryKernel(+, EQ(), OuterKernel(x->σ * x, Noise())), X)
+        rng, N, σ, gpc = MersenneTwister(123456), 10, 1e-1, GPC()
+        x = collect(range(-3.0, stop=3.0, length=N))
+        μ = FiniteMean(OneMean(), x)
+        kf = FiniteKernel(EQ(), x)
+        ky = FiniteKernel(BinaryKernel(+, EQ(), OuterKernel(x->σ, Noise())), x)
         f = GP(μ, kf, gpc)
         y = GP(μ, ky, gpc)
         ŷ = rand(rng, y)
 
         # Check that logpdf returns the correct type and roughly agrees with Distributions.
-        Σ = Stheno.unbox(pairwise(ky, :) + 1e-6I)
+        Σ = pairwise(ky, :)
         @test logpdf(y, ŷ) isa Real
         @test logpdf(y, ŷ) ≈ logpdf(MvNormal(Vector(mean_vec(f)), Σ), ŷ)
 

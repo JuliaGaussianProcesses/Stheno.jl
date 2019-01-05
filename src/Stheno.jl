@@ -5,7 +5,7 @@ module Stheno
     import Base: length
     import Base.Broadcast: broadcasted
     using LinearAlgebra: AbstractTriangular
-    using Zygote: @adjoint
+    using Zygote: @adjoint, @nograd
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}

@@ -13,8 +13,8 @@ let
 
     @test mean_vec(f_pr(X)) == pairwise(EQ(), X, Z) * mean_vec(f(Z)) + sin.(X)
     @test cov(f_pr(X)) ≈ pairwise(EQ(), X, Z) * cov(f(Z)) * pairwise(EQ(), X, Z)'
-    @test maximum(abs.(xcov(f_pr(X), f(X′)) - pairwise(EQ(), X, Z) * xcov(f(Z), f(X′)))) < eps()
-    @test maximum(abs.(xcov(f(X), f_pr(X′)) - xcov(f(X), f(Z)) * pairwise(EQ(), Z, X′))) < eps()
+    @test maximum(abs.(cov(f_pr(X), f(X′)) - pairwise(EQ(), X, Z) * cov(f(Z), f(X′)))) < eps()
+    @test maximum(abs.(cov(f(X), f_pr(X′)) - cov(f(X), f(Z)) * pairwise(EQ(), Z, X′))) < eps()
 
     # Construct projection with BlockGP as the thing over which we're projecting.
     Zb = BlockData([Z, Z′])
@@ -24,9 +24,9 @@ let
     @test mean_vec(f_pr_b(X)) == pairwise(EQ(), Zb, X)' * mean_vec(f(Zb)) .+ cos.(X)
     ϕZX, ϕZX′, ϕZ = pairwise(EQ(), Zb, X), pairwise(EQ(), Zb, X′), cov(f(Zb))
     @test cov(f_pr_b(X)) == Xt_A_X(ϕZ, ϕZX)
-    @test xcov(f_pr_b(X), f_pr_b(X′)) == Xt_A_Y(ϕZX, ϕZ, ϕZX′)
-    @test xcov(f_pr_b(X), f(X′)) == ϕZX' * xcov(f(Zb), f(X′))
-    @test xcov(f(X), f_pr_b(X′)) == xcov(f(X), f(Zb)) * ϕZX′
+    @test cov(f_pr_b(X), f_pr_b(X′)) == Xt_A_Y(ϕZX, ϕZ, ϕZX′)
+    @test cov(f_pr_b(X), f(X′)) == ϕZX' * cov(f(Zb), f(X′))
+    @test cov(f(X), f_pr_b(X′)) == cov(f(X), f(Zb)) * ϕZX′
 
     # Check that Blocked version is project is consistent with dense.
     Zb2 = BlockData([Z[1:3], Z[4:5]])
@@ -35,9 +35,9 @@ let
 
     @test mean_vec(f_pr_b2(X)) ≈ mean_vec(f_pr(X))
     @test cov(f_pr_b2(X)) ≈ cov(f_pr(X))
-    @test xcov(f_pr_b2(X), f_pr_b2(X′)) ≈ xcov(f_pr(X), f_pr(X′))
-    @test xcov(f_pr_b2(X), f(X′)) ≈ xcov(f_pr(X), f(X′))
-    @test xcov(f(X), f_pr_b2(X′)) ≈ xcov(f(X), f_pr(X′))
+    @test cov(f_pr_b2(X), f_pr_b2(X′)) ≈ cov(f_pr(X), f_pr(X′))
+    @test cov(f_pr_b2(X), f(X′)) ≈ cov(f_pr(X), f(X′))
+    @test cov(f(X), f_pr_b2(X′)) ≈ cov(f(X), f_pr(X′))
 end
 
 end

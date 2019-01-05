@@ -2,7 +2,7 @@ import Base: eachindex, rand
 import Statistics: mean, cov
 import Distributions: logpdf, ContinuousMultivariateDistribution
 export AbstractGP, kernel, rand, logpdf, elbo, marginal_cov, marginal_std, marginals,
-    mean_vec, xcov, GPC
+    mean_vec, GPC
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
 mutable struct GPC
@@ -33,11 +33,11 @@ The covariance matrix of `f`, if `f` is finite-dimensional.
 cov(f::AbstractGP) = pairwise(kernel(f), :)
 
 """
-    xcov(f::AbstractGP, g::AbstractGP)
+    cov(f::AbstractGP, g::AbstractGP)
 
-The cross-covariance matrix between `f` and `g`, if both are finite-dimensional.
+The covariance matrix between `f` and `g`, if both are finite-dimensional.
 """
-xcov(f::AbstractGP, g::AbstractGP) = pairwise(kernel(f, g), :, :)
+cov(f::AbstractGP, g::AbstractGP) = pairwise(kernel(f, g), :, :)
 
 """
     marginals(f::AbstractGP)
@@ -65,9 +65,8 @@ rand(f::AbstractGP) = vec(rand(f, 1))
 The log probability density of `y` under `f`.
 """
 function logpdf(f::AbstractGP, y::AbstractVector{<:Real})
-    μ, Σ = mean_vec(f), cov(f)
-    C = cholesky(Σ + 1e-6I)
-    return -0.5 * (length(y) * log(2π) + logdet(C) + sum(abs2.(C.U' \ (y - μ))))
+    μ, C = mean_vec(f), cholesky(cov(f))
+    return -(length(y) * log(2π) + logdet(C) + Xt_invA_X(C, y - μ)) / 2
 end
 
 """
@@ -76,8 +75,8 @@ end
 The saturated Titsias-ELBO. Requires a reasonable degree of care.
 """
 function elbo(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)
-    Γ = (cholesky(cov(u)).U' \ xcov(u, f)) ./ σ
+    Γ = (cholesky(cov(u)).U' \ cov(u, f)) ./ σ
     Ω, δ = cholesky(Γ * Γ' + I), y - mean_vec(f)
-    return -(length(y) * log(2π * σ^2) + logdet(Ω) / 2 - sum(abs2, Γ) +
+    return -(length(y) * log(2π * σ^2) + logdet(Ω) - sum(abs2, Γ) +
         (sum(abs2, δ) - sum(abs2, Ω.U' \ (Γ * δ)) + sum(var, marginals(f))) / σ^2) / 2
 end

@@ -19,7 +19,7 @@ x = range(-5.0, stop=5.0, length=10000);
 # are either Toeplitz or SymmetricToeplitz. This structure is exploited to accelerate
 # all computations. These covariance matrices are constucted in O(N)-time.
 Σff = cov(f(x));
-Σfy = xcov(f(x), y(x));
+Σfy = cov(f(x), y(x));
 Σyy = cov(y(x));
 
 # These operations are also quite a lot faster. They occur in O(N^2)-time.
@@ -90,7 +90,7 @@ display(typeof.(unbox(unbox(Σ12)).blocks));
 x′ = randn(rng, 100);
 
 # Notice that Σ_x_x′ comprised three dense blocks, and one Toeplitz. This is because
-# cov(f(x′)) is dense, xcov(f(x), f(x′)) / xcov(f(x′), f(x)) is dense, whilst cov(f(x))
+# cov(f(x′)) is dense, cov(f(x), f(x′)) / cov(f(x′), f(x)) is dense, whilst cov(f(x))
 # is Toeplitz.
 f_x_x′ = BlockGP([f(x), f(x′)]);
 Σ_x_x′ = cov(f_x_x′);

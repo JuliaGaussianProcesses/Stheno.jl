@@ -24,18 +24,18 @@ using Distributions: MvNormal, PDMat
         @test kernel(f_single).ks_diag == [kernel(f)]
         @test getblock(Stheno.unbox(cov(f_single)), 1, 1) == cov(f)
 
-        @test xcov(f_single, f) isa BlockMatrix
-        @test xcov(f_single, g) isa BlockMatrix
-        @test xcov(f, f_single) isa BlockMatrix
-        @test xcov(g, f_single) isa BlockMatrix
-        @test size(xcov(f_single, f)) == (N, N)
-        @test size(xcov(f_single, g)) == (N, N′)
-        @test size(xcov(f, f_single)) == (N, N)
-        @test size(xcov(g, f_single)) == (N′, N)
-        @test xcov(f_single, f) == BlockMatrix([xcov(f, f)])
-        @test xcov(f_single, g) == BlockMatrix([xcov(f, g)])
-        @test xcov(f, f_single) == BlockMatrix([xcov(f, f)])
-        @test xcov(g, f_single) == BlockMatrix([xcov(g, f)])
+        @test cov(f_single, f) isa BlockMatrix
+        @test cov(f_single, g) isa BlockMatrix
+        @test cov(f, f_single) isa BlockMatrix
+        @test cov(g, f_single) isa BlockMatrix
+        @test size(cov(f_single, f)) == (N, N)
+        @test size(cov(f_single, g)) == (N, N′)
+        @test size(cov(f, f_single)) == (N, N)
+        @test size(cov(g, f_single)) == (N′, N)
+        @test cov(f_single, f) == BlockMatrix([cov(f, f)])
+        @test cov(f_single, g) == BlockMatrix([cov(f, g)])
+        @test cov(f, f_single) == BlockMatrix([cov(f, f)])
+        @test cov(g, f_single) == BlockMatrix([cov(g, f)])
 
         @test length(rand(rng, f_single)) == length(f_single)
         @test size(rand(rng, f_single, 3)) == (length(f_single), 3)
@@ -51,22 +51,22 @@ using Distributions: MvNormal, PDMat
 
         @test getblock(Stheno.unbox(cov(fs)), 1, 1) == cov(f)
         @test getblock(Stheno.unbox(cov(fs)), 2, 2) == cov(g)
-        @test getblock(Stheno.unbox(cov(fs)), 1, 2) == xcov(f, g)
-        @test getblock(Stheno.unbox(cov(fs)), 2, 1) == xcov(g, f)
+        @test getblock(Stheno.unbox(cov(fs)), 1, 2) == cov(f, g)
+        @test getblock(Stheno.unbox(cov(fs)), 2, 1) == cov(g, f)
 
         # k = Stheno.BlockCrossKernel(kernel.(f, permutedims(fs.fs)))
         # @show size(k.ks[1]), size(k.ks[2])
         # @show eachindex(k, 1), eachindex(k, 2)
 
-        @test xcov(fs, f) isa BlockMatrix
-        @test xcov(fs, g) isa BlockMatrix
-        @test xcov(f, fs) isa BlockMatrix
-        @test xcov(g, fs) isa BlockMatrix
-        @test size(xcov(fs, f)) == (N + N′, N)
-        @test size(xcov(fs, g)) == (N + N′, N′)
-        @test size(xcov(f, fs)) == (N, N + N′)
-        @test size(xcov(g, fs)) == (N′, N + N′)
-        @test xcov(fs, f) == BlockMatrix(reshape([xcov(f, f), xcov(g, f)], 2, 1))
+        @test cov(fs, f) isa BlockMatrix
+        @test cov(fs, g) isa BlockMatrix
+        @test cov(f, fs) isa BlockMatrix
+        @test cov(g, fs) isa BlockMatrix
+        @test size(cov(fs, f)) == (N + N′, N)
+        @test size(cov(fs, g)) == (N + N′, N′)
+        @test size(cov(f, fs)) == (N, N + N′)
+        @test size(cov(g, fs)) == (N′, N + N′)
+        @test cov(fs, f) == BlockMatrix(reshape([cov(f, f), cov(g, f)], 2, 1))
 
         @test length(rand(rng, fs)) == length(fs)
         @test size(rand(rng, fs, 3)) == (length(fs), 3)

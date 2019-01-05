@@ -23,21 +23,21 @@
         @test cov(g3′(X)) ≈ c′^2 .* cov(g2′(X))
         @test cov(g4′(X)) ≈ c′^2 .* cov(g3′(X))
 
-        @test xcov(g2(X), g1(X′)) ≈ c .* xcov(g1(X), g1(X′))
-        @test xcov(g3(X), g1(X′)) ≈ c^2 .* xcov(g1(X), g1(X′))
-        @test xcov(g4(X), g1(X′)) ≈ c^3 .* xcov(g1(X), g1(X′))
-        @test xcov(g2′(X), g1(X′)) ≈ c′ .* xcov(g1(X), g1(X′))
-        @test xcov(g3′(X), g1(X′)) ≈ c′^2 .* xcov(g1(X), g1(X′))
-        @test xcov(g4′(X), g1(X′)) ≈ c′^3 .* xcov(g1(X), g1(X′))
+        @test cov(g2(X), g1(X′)) ≈ c .* cov(g1(X), g1(X′))
+        @test cov(g3(X), g1(X′)) ≈ c^2 .* cov(g1(X), g1(X′))
+        @test cov(g4(X), g1(X′)) ≈ c^3 .* cov(g1(X), g1(X′))
+        @test cov(g2′(X), g1(X′)) ≈ c′ .* cov(g1(X), g1(X′))
+        @test cov(g3′(X), g1(X′)) ≈ c′^2 .* cov(g1(X), g1(X′))
+        @test cov(g4′(X), g1(X′)) ≈ c′^3 .* cov(g1(X), g1(X′))
 
-        @test xcov(g2(X), g2′(X′)) ≈ (c * c′) .* xcov(g1(X), g1(X′))
-        @test xcov(g3(X), g3′(X′)) ≈ (c * c′)^2 .* xcov(g1(X), g1(X′))
-        @test xcov(g4(X), g4′(X′)) ≈ (c * c′)^3 .* xcov(g1(X), g1(X′))
+        @test cov(g2(X), g2′(X′)) ≈ (c * c′) .* cov(g1(X), g1(X′))
+        @test cov(g3(X), g3′(X′)) ≈ (c * c′)^2 .* cov(g1(X), g1(X′))
+        @test cov(g4(X), g4′(X′)) ≈ (c * c′)^3 .* cov(g1(X), g1(X′))
 
-        @test xcov(g2(X), g3′(X′)) ≈ (c * c′^2) .* xcov(g1(X), g1(X′))
-        @test xcov(g3(X), g2′(X′)) ≈ (c^2 * c′) .* xcov(g1(X), g1(X′))
-        @test xcov(g2(X), g4′(X′)) ≈ (c * c′^3) .* xcov(g1(X), g1(X′))
-        @test xcov(g4(X), g2′(X′)) ≈ (c^3 * c′) .* xcov(g1(X), g1(X′))
+        @test cov(g2(X), g3′(X′)) ≈ (c * c′^2) .* cov(g1(X), g1(X′))
+        @test cov(g3(X), g2′(X′)) ≈ (c^2 * c′) .* cov(g1(X), g1(X′))
+        @test cov(g2(X), g4′(X′)) ≈ (c * c′^3) .* cov(g1(X), g1(X′))
+        @test cov(g4(X), g2′(X′)) ≈ (c^3 * c′) .* cov(g1(X), g1(X′))
     end
 
     # Test the multiplication of a GP by a known function.
@@ -65,24 +65,24 @@
         @test cov(g4′(X)) ≈ f′X .* cov(g3′(X)) .* f′X'
 
         fX′, f′X′ = map(f, X′), map(f′, X′)
-        @test xcov(g2(X), g1(X′)) ≈ fX .* xcov(g1(X), g1(X′))
-        @test xcov(g3(X), g1(X′)) ≈ fX.^2 .* xcov(g1(X), g1(X′))
-        @test xcov(g4(X), g1(X′)) ≈ fX.^3 .* xcov(g1(X), g1(X′))
-        @test xcov(g2′(X), g1(X′)) ≈ f′X .* xcov(g1(X), g1(X′))
-        @test xcov(g3′(X), g1(X′)) ≈ (f′X.^2) .* xcov(g1(X), g1(X′))
-        @test xcov(g4′(X), g1(X′)) ≈ (f′X.^3) .* xcov(g1(X), g1(X′))
+        @test cov(g2(X), g1(X′)) ≈ fX .* cov(g1(X), g1(X′))
+        @test cov(g3(X), g1(X′)) ≈ fX.^2 .* cov(g1(X), g1(X′))
+        @test cov(g4(X), g1(X′)) ≈ fX.^3 .* cov(g1(X), g1(X′))
+        @test cov(g2′(X), g1(X′)) ≈ f′X .* cov(g1(X), g1(X′))
+        @test cov(g3′(X), g1(X′)) ≈ (f′X.^2) .* cov(g1(X), g1(X′))
+        @test cov(g4′(X), g1(X′)) ≈ (f′X.^3) .* cov(g1(X), g1(X′))
 
-        @test xcov(g1(X′), g2(X)) == xcov(g2(X), g1(X′))'
-        @test xcov(g1(X′), g3(X)) == xcov(g3(X), g1(X′))'
-        @test xcov(g1(X′), g4(X)) == xcov(g4(X), g1(X′))'
+        @test cov(g1(X′), g2(X)) == cov(g2(X), g1(X′))'
+        @test cov(g1(X′), g3(X)) == cov(g3(X), g1(X′))'
+        @test cov(g1(X′), g4(X)) == cov(g4(X), g1(X′))'
 
-        @test xcov(g2(X), g2′(X′)) ≈ fX .* xcov(g1(X), g1(X′)) .* f′X′'
-        @test xcov(g3(X), g3′(X′)) ≈ fX.^2 .* xcov(g1(X), g1(X′)) .* (f′X′.^2)'
-        @test xcov(g4(X), g4′(X′)) ≈ fX.^3 .* xcov(g1(X), g1(X′)) .* (f′X′.^3)'
+        @test cov(g2(X), g2′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* f′X′'
+        @test cov(g3(X), g3′(X′)) ≈ fX.^2 .* cov(g1(X), g1(X′)) .* (f′X′.^2)'
+        @test cov(g4(X), g4′(X′)) ≈ fX.^3 .* cov(g1(X), g1(X′)) .* (f′X′.^3)'
 
-        @test xcov(g2(X), g3′(X′)) ≈ fX .* xcov(g1(X), g1(X′)) .* (f′X′').^2
-        @test xcov(g3(X), g2′(X′)) ≈ fX.^2 .* xcov(g1(X), g1(X′)) .* (f′X′')
-        @test xcov(g2(X), g4′(X′)) ≈ fX .* xcov(g1(X), g1(X′)) .* (f′X′').^3
-        @test xcov(g4(X), g2′(X′)) ≈ fX.^3 .* xcov(g1(X), g1(X′)) .* (f′X′')
+        @test cov(g2(X), g3′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* (f′X′').^2
+        @test cov(g3(X), g2′(X′)) ≈ fX.^2 .* cov(g1(X), g1(X′)) .* (f′X′')
+        @test cov(g2(X), g4′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* (f′X′').^3
+        @test cov(g4(X), g2′(X′)) ≈ fX.^3 .* cov(g1(X), g1(X′)) .* (f′X′')
     end
 end

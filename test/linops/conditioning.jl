@@ -56,8 +56,8 @@ let
     @test Σ′XX′ ≈ cov(f′(XX′))
     @test Σ′XX′[1:N, 1:N] ≈ cov(f′X)[1:N, 1:N]
     @test Σ′XX′[N+1:N+N′, N+1:N+N′] ≈ cov(f′X′)[1:N′, 1:N′]
-    # @test maximum(abs.(Σ′XX′[1:N, N+1:N+N′] - xcov(f′X, f′X′, 1:N, 1:N′))) < 1e-12
-    # @test maximum(abs.(Σ′XX′[N+1:N+N′, 1:N] - xcov(f′X′, f′X, 1:N′, 1:N))) < 1e-12
+    # @test maximum(abs.(Σ′XX′[1:N, N+1:N+N′] - cov(f′X, f′X′, 1:N, 1:N′))) < 1e-12
+    # @test maximum(abs.(Σ′XX′[N+1:N+N′, 1:N] - cov(f′X′, f′X, 1:N′, 1:N))) < 1e-12
 
     # Test that conditioning works for BlockGPs.
     fb, Xb = BlockGP([f, f]), BlockData([X, X′])

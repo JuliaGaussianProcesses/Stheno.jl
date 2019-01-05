@@ -7,7 +7,7 @@ using Stheno, Test, Random, FillArrays
         # include("util/block_arrays.jl")
         # include("util/abstract_data_set.jl")
         # include("util/flux_rules.jl")
-        # include("util/zygote_rules.jl")
+        include("util/zygote_rules.jl")
     end
 
     @testset "mean_and_kernel" begin
@@ -25,7 +25,7 @@ using Stheno, Test, Random, FillArrays
 
     @testset "gp" begin
         # include("gp/abstract_gp.jl")
-        include("gp/gp.jl")
+        # include("gp/gp.jl")
     #     include("gp/block_gp.jl")
     end
 

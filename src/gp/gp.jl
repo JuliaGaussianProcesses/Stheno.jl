@@ -19,7 +19,7 @@ struct GP{Tμ<:MeanFunction, Tk<:Kernel} <: AbstractGaussianProcess
         gpc.n += 1
         return gp
     end
-    GP{Tμ, Tk}(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk} = GP{Tμ, Tk}(nothing, μ, k, gpc)
+    GP{Tμ, Tk}(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk} = GP{Tμ, Tk}((), μ, k, gpc)
 end
 GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ<:MeanFunction, Tk<:Kernel} = GP{Tμ, Tk}(μ, k, gpc)
 
@@ -63,7 +63,7 @@ function kernel(fa::GP, fb::GP)
     @assert fa.gpc === fb.gpc
     if fa === fb
         return kernel(fa)
-    elseif fa.args == nothing && fa.n > fb.n || fb.args == nothing && fb.n > fa.n
+    elseif fa.args == () && fa.n > fb.n || fb.args == () && fb.n > fa.n
         return ZeroKernel()
     elseif fa.n > fb.n
         return k_p′p(fa.args..., fb)

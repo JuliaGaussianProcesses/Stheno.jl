@@ -70,7 +70,7 @@ pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = pairwise(k.k, X, k.X′)
 """
     FiniteCrossKernel <: CrossKernel
 
-A cross kernel valued on a finite index set. Has a method of `xcov` which requires no
+A cross kernel valued on a finite index set. Has a method of `cov` which requires no
 additional data.
 """
 struct FiniteCrossKernel{Tk<:CrossKernel, TX<:AV, TX′<:AV} <: CrossKernel
