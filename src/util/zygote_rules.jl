@@ -7,7 +7,7 @@ import LinearAlgebra: \, /, cholesky
 import FillArrays: Fill, AbstractFill, getindex_value
 import Base.Broadcast: broadcasted, materialize
 
-@nograd MersenneTwister
+@nograd MersenneTwister, propertynames
 
 # Hack at Zygote to make Fills work properly.
 @adjoint Fill(x, sz::Tuple{Vararg}) = Fill(x, sz), Δ->(sum(Δ), nothing)
@@ -97,16 +97,6 @@ end
     return Symmetric(A), back
 end
 
-# @adjoint function Cholesky(
-#     A::AbstractArray,
-#     uplo::Union{Symbol, AbstractChar},
-#     info::Integer,
-# )
-
-# end
-
-@nograd propertynames
-
 @adjoint function cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}})
     C = cholesky(Σ)
     U = C.U
@@ -125,88 +115,63 @@ end
 
 @adjoint SymmetricToeplitz(v) = SymmetricToeplitz(v), Δ::NamedTuple->(Δ.vc,)
 
-function _cholesky(T::SymmetricToeplitz)
-
-    # Forwards-pass.
-    v, N = T.vc, size(T, 1)
-    V, L = Matrix{eltype(T)}(undef, N, N), Matrix{eltype(T)}(undef, N, N)
-    a, b = Vector{eltype(T)}(undef, N), Vector{eltype(T)}(undef, N)
-
-    V, L = zeros(N, N), zeros(N, N)
-    a, b = zeros(N), zeros(N)
-
-    L[:, 1] .= v ./ sqrt(v[1]) # 1
-    V[:, 1] .= L[:, 1] # 2
-
-    for n in 1:N-1
-        a[n] = V[n+1, n] / L[n, n] # 3
-        b[n] = sqrt(1 - a[n]^2) # 4
-
-        for n′ in (n+1):N
-            V[n′, n+1] = (V[n′, n] - a[n] * L[n′-1, n]) / b[n] # 5
-            L[n′, n+1] = -a[n] * V[n′, n+1] + b[n] * L[n′-1, n] # 6
-        end
-    end
-
-    return Cholesky(L, 'L', 0)
-end
-
-# Lines of reverse-pass are labeled according to the corresponding forwards-pass lines.
 @adjoint function cholesky(T::SymmetricToeplitz)
 
-    # Forwards-pass.
+    # Allocate memory for output L and temporaries V, a, and b.
     v, N = T.vc, size(T, 1)
-    V, L = Matrix{eltype(T)}(undef, N, N), Matrix{eltype(T)}(undef, N, N)
-    a, b = Vector{eltype(T)}(undef, N), Vector{eltype(T)}(undef, N)
+    L = Matrix{eltype(T)}(undef, N, N)
+    a = Vector{eltype(T)}(undef, N)
 
-    V, L = zeros(N, N), zeros(N, N)
-    a, b = zeros(N), zeros(N)
-
+    # Initialise L and V.
     L[:, 1] .= v ./ sqrt(v[1]) # 1
-    V[:, 1] .= L[:, 1] # 2
+    v_ = L[:, 1] # 2
 
-    for n in 1:N-1
-        a[n] = V[n+1, n] / L[n, n] # 3
-        b[n] = sqrt(1 - a[n]^2) # 4
+    # Iterate over the columns of L.
+    @inbounds for n in 1:N-1
+        a[n] = v_[n+1] / L[n, n] # 3
+        b = sqrt(1 - a[n]^2) # 4
 
         for n′ in (n+1):N
-            V[n′, n+1] = (V[n′, n] - a[n] * L[n′-1, n]) / b[n] # 5
-            L[n′, n+1] = -a[n] * V[n′, n+1] + b[n] * L[n′-1, n] # 6
+            v_[n′] = (v_[n′] - a[n] * L[n′-1, n]) / b # 5
+            L[n′, n+1] = -a[n] * v_[n′] + b * L[n′-1, n] # 6
         end
     end
 
     back(C̄::NamedTuple{(:uplo, :info, :factors)}) = back(C̄.factors)
     function back(L̄_in::AbstractMatrix)
-        V̄, ā, b̄ = zero(V), zero(a), zero(b)
+        v̄_ = zero(v_)
 
         # Allocate memory for L̄ to avoid modifying the sensitivity provided.
         L̄ = Matrix{eltype(L)}(undef, N, N)
         copyto!(L̄, L̄_in)
 
-        for n in reverse(1:N-1)
-            for n′ in reverse((n+1):N)
-                ā[n] -= L̄[n′, n+1] * V[n′, n+1] # 6
-                V̄[n′, n+1] -= L[n′, n+1] * a[n] # 6
-                b̄[n] += L̄[n′, n+1] * L[n′-1, n] # 6
-                L̄[n′-1, n] += L̄[n′, n+1] * b[n] # 6
+        @inbounds for n in reverse(1:N-1)
+            b, b̄, ā = sqrt(1 - a[n]^2), zero(eltype(a)), zero(eltype(a))
 
-                V̄[n′, n] += V̄[n′, n+1] / b[n] # 5
-                b̄[n] -= V̄[n′, n] * V̄[n, n+1] / b[n]^2 # 5
-                ā[n] -= V̄[n′, n+1] * L[n′-1, n] / b[n] # 5
-                L̄[n′-1, n] -= V̄[n′, n+1] * a[n] / b[n] # 5
-                b̄[n] += V̄[n′, n+1] * a[n] * L[n′-1, n] / b[n] # 5
+            for n′ in reverse((n+1):N)
+                ā -= L̄[n′, n+1] * v_[n′] # 6
+                v̄_[n′] -= L̄[n′, n+1] * a[n] # 6
+                b̄ += L̄[n′, n+1] * L[n′-1, n] # 6
+                L̄[n′-1, n] += L̄[n′, n+1] * b # 6
+
+                v_[n′] = b * v_[n′] + a[n] * L[n′-1, n] # invert 5
+
+                ā -= v̄_[n′] * L[n′-1, n] / b # 5
+                L̄[n′-1, n] -= v̄_[n′] * a[n] / b # 5
+                b̄ += v̄_[n′] * (a[n] * L[n′-1, n] - v_[n′]) / b^2 # 5
+                v̄_[n′] = v̄_[n′] / b # 5
             end
 
-            ā[n] -= b̄[n] * a[n] / b[n] # 4
+            ā -= b̄ * a[n] / b # 4
 
-            V̄[n+1, n] += ā[n] / L[n, n] # 3
-            L̄[n, n] -= ā[n] * V[n+1, n] / L[n, n]^2 # 3
+            v̄_[n+1] += ā / L[n, n] # 3
+            L̄[n, n] -= ā * v_[n+1] / L[n, n]^2 # 3
         end
 
-        L̄[:, 1] .+= V̄[:, 1] # 2
+        L̄[:, 1] .+= v̄_ # 2
 
         v̄ = L̄[:, 1] ./ sqrt(v[1]) # 1
-        v̄[1] -= sum(L̄[:, 1] .* v) / (2 * sqrt(v[1])^3) # 1
+        v̄[1] -= sum(n->L̄[n, 1] * v[n], 1:N) / (2 * sqrt(v[1])^3) # 1
         return ((vc=v̄, tmp=nothing, dft=nothing, vcvr_dft=nothing),)
     end
     return Cholesky(L, 'L', 0), back
@@ -218,13 +183,6 @@ end
         return ((uplo=nothing, info=nothing, factors=Δ), nothing)
     end
 end
-
-# @adjoint function literal_getproperty(C::Cholesky, ::Val{d}) where d
-#     @assert C.uplo == 'U'
-#     return literal_getproperty(C, Val(d)), function(Δ)
-#         return ((uplo=nothing, info=nothing, factors=Δ), nothing)
-#     end
-# end
 
 # Various sensitivities for `literal_getproperty`, depending on the 2nd argument.
 @adjoint function literal_getproperty(C::Cholesky, ::Val{:uplo})

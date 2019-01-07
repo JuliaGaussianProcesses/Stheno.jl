@@ -235,37 +235,29 @@ let
 
     # Check that forwards-passes agree.
     T = SymmetricToeplitz(x)
-    @test Zygote.forward(cholesky, T)[1].L ≈ Stheno._cholesky(T).L
+    @test Zygote.forward(cholesky, T)[1].L ≈ cholesky(T).L
 
-    # Slightly iffy unit testing for cholesky.
+    # A slightly iffy unit test for cholesky adjoint.
     let
         x = pairwise(EQ(), range(-3.0, stop=3.0, length=10))[:, 1]
         x[1] += 0.1
         f = x->sum(cholesky(SymmetricToeplitz(x)).U)
 
         x̄_ad = Zygote.gradient(f, x)[1]
-        println("ad")
-        display(x̄_ad)
-        println()
-        x̄_fd = FDM.grad(fdm, x->sum(Stheno._cholesky(SymmetricToeplitz(x)).U), x)
-        println("fd")
-        display(x̄_fd)
-        println()
-        @test all(abs.(x̄_ad .- x̄_fd) .< 1e-8)
+        x̄_fd = FDM.grad(fdm, x->sum(cholesky(SymmetricToeplitz(x)).U), x)
+        @test all(abs.(x̄_ad .- x̄_fd) .< 1e-6)
     end
 
-    # # An integration test for adjoint.
-    # let
-    #     f = function(A)
-    #         S = A' * A + 1e-6I
-    #         return sum(cholesky(SymmetricToeplitz(S[:, 1])).U)
-    #     end
-    #     x̄_ad = Zygote.gradient(f, A)[1]
-    #     @show x̄_ad
-    #     x̄_fd = FDM.grad(fdm, f, A)
-    #     @show x̄_fd
-    #     @test all(abs.(x̄_ad .- x̄_fd) .< 1e-8)
-    # end
+    # An integration test for cholesky adjoint.
+    let
+        f = function(A)
+            S = A' * A + 1e-6I
+            return sum(cholesky(SymmetricToeplitz(S[:, 1])).U)
+        end
+        x̄_ad = Zygote.gradient(f, A)[1]
+        x̄_fd = FDM.grad(fdm, f, A)
+        @test all(abs.(x̄_ad .- x̄_fd) .< 1e-8)
+    end
 end
 
 # # Check that addition of matrices and uniform scalings works as hoped.
