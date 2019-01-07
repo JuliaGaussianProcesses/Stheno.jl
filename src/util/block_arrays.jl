@@ -220,7 +220,6 @@ function *(A::AdjTransTriABM{T}, b::AV{T}) where {T}
     return A * BlockVector([b])
 end
 function *(A::AdjTransTriABM{T}, b::FillArrays.Zeros{T,1}) where T
-    @show size(A), size(b)
     return invoke(*, Tuple{AbstractMatrix, typeof(b)}, A, b)
 end
 

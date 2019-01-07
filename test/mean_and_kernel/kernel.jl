@@ -23,6 +23,10 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
         kernel_tests(OneKernel(), x0, x1, x2)
         # kernel_tests(k, X0, X1, X2)
 
+        # Tests for ConstKernel.
+        @test ConstKernel(5.0)(randn(rng), randn(rng)) == 5.0
+        kernel_tests(ConstKernel(5.0), x0, x1, x2)
+
         # Tests for EQ.
         @test map(EQ(), x0) isa Ones
         kernel_tests(EQ(), x0, x1, x2)

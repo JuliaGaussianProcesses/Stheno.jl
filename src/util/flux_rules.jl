@@ -3,7 +3,7 @@ using Flux.Tracker: track, @grad, TrackedVecOrMat, data, tracker, Call
 
 import Distances: pairwise
 import Base: +
-using LinearAlgebra: RealHermSymComplexHerm, copytri!
+using LinearAlgebra: copytri!
 import LinearAlgebra: UpperTriangular, logdet, \, /, UpperTriangular, Symmetric, diag
 
 # Binary pairwise (AbstractMatrix)
@@ -90,22 +90,6 @@ Symmetric(A::TrackedMatrix) = track(Symmetric, A)
 end
 symmetric_back(Δ) = UpperTriangular(Δ) + LowerTriangular(Δ)' - Diagonal(Δ)
 symmetric_back(Δ::UpperTriangular) = Δ
-
-# # Just get the upper triangular bit of the cholesky decomposition.
-# chol(Σ::TrackedMatrix) = track(chol, Σ)
-# @grad function chol(Σ::AbstractMatrix{T}) where T
-#     U = chol(data(Σ))
-#     return U, function(Ū)
-#         Σ̄ = Ū * U'
-#         Σ̄ = copytri!(Σ̄, 'U')
-#         Σ̄ = ldiv!(U, Σ̄)
-#         BLAS.trsm!('R', 'U', 'T', 'N', one(T), U.data, Σ̄)
-#         @inbounds for n in diagind(Σ̄)
-#             Σ̄[n] *= 0.5
-#         end
-#         return (UpperTriangular(Σ̄),)
-#     end
-# end
 
 diag(A::TrackedMatrix) = track(diag, A)
 @grad function diag(A::TrackedMatrix)

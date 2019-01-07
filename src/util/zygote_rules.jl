@@ -1,18 +1,17 @@
-using Zygote, IRTools, Random
+using Zygote, IRTools, Random, Base.Threads
 using Zygote: @adjoint, _forward, literal_getproperty
 
 import Base: map, getfield, getproperty, sum
 import Distances: pairwise, colwise
-import LinearAlgebra: \, /, cholesky
+import LinearAlgebra: \, /, cholesky, copytri!
 import FillArrays: Fill, AbstractFill, getindex_value
 import Base.Broadcast: broadcasted, materialize
 
 @nograd MersenneTwister, propertynames
 
-# Hack at Zygote to make Fills work properly.
-@adjoint Fill(x, sz::Tuple{Vararg}) = Fill(x, sz), Δ->(sum(Δ), nothing)
-@adjoint Fill(x, sz::Int) = Fill(x, sz), Δ->(sum(Δ), nothing)
-
+@adjoint Fill(x, sz::Integer...) = Fill(x, sz...), Δ->(sum(Δ), map(_->nothing, sz)...)
+# @adjoint Fill(x, sz::Int) = Fill(x, sz), Δ->(sum(Δ), nothing)
+# @adjoint Fill(x, p::Int, q::Int) = Fill(x, p, q), Δ->(sum(Δ), nothing, nothing)
 
 const AbstractFillVec{T} = AbstractFill{T, 1}
 const AbstractFillMat{T} = AbstractFill{T, 2}
@@ -61,20 +60,6 @@ end
     return D, Δ->(nothing, 4 * (X * (Diagonal(reshape(sum(Δ; dims=1), :)) - Δ)))
 end
 
-@adjoint function pairwise(s::SqEuclidean, x::AbstractVector, y::AbstractVector)
-    return pairwise(s, x, y), function(Δ)
-        x̄ = 2 .* (reshape(sum(Δ; dims=2), :) .* x .- Δ * y)
-        ȳ = 2 .* (reshape(sum(Δ; dims=1), :)  .* y .- Δ' * x)
-        return nothing, x̄, ȳ
-    end
-end
-
-@adjoint function pairwise(s::SqEuclidean, x::AbstractVector)
-    return pairwise(s, x), function(Δ)
-        return nothing, 4 .* (reshape(sum(Δ; dims=1), :) .* x .- Δ * x)
-    end
-end
-
 @adjoint function \(A::AbstractMatrix, B::AbstractVecOrMat)
     Y = A \ B
     return Y, function(Ȳ)
@@ -91,9 +76,11 @@ end
     end
 end
 
+symmetric_back(Δ) = UpperTriangular(Δ) + LowerTriangular(Δ)' - Diagonal(Δ)
+symmetric_back(Δ::UpperTriangular) = Δ
 @adjoint function Symmetric(A::AbstractMatrix)
     back(Δ::AbstractMatrix) = (symmetric_back(Δ),)
-    back(Δ::NamedTuple{(:data, :uplo)}) = (symmetric_back(Δ.data),)
+    back(Δ::NamedTuple) = (symmetric_back(Δ.data),)
     return Symmetric(A), back
 end
 
@@ -177,13 +164,6 @@ end
     return Cholesky(L, 'L', 0), back
 end
 
-@adjoint function getproperty(C::Cholesky, d::Symbol)
-    @assert C.uplo == 'U'
-    return getproperty(C, d), function(Δ)
-        return ((uplo=nothing, info=nothing, factors=Δ), nothing)
-    end
-end
-
 # Various sensitivities for `literal_getproperty`, depending on the 2nd argument.
 @adjoint function literal_getproperty(C::Cholesky, ::Val{:uplo})
     return literal_getproperty(C, Val(:uplo)), function(Δ)
@@ -228,7 +208,6 @@ end
 end
 
 # @adjoint function map(f, x...)
-#     @show f, x
 #     y_pairs = map((x...)->Zygote.forward(f, x...), x...)
 #     y = [y_pair[1] for y_pair in y_pairs]
 #     return y, function(Δ)

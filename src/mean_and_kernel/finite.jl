@@ -81,29 +81,3 @@ end
 (k::FiniteCrossKernel)(n::Integer, n′::Integer) = k.k(k.X[n], k.X′[n′])
 map(k::FiniteCrossKernel, ::Colon, ::Colon) = map(k.k, k.X, k.X′)
 pairwise(k::FiniteCrossKernel, ::Colon, ::Colon) = pairwise(k.k, k.X, k.X′)
-
-
-
-######################################## Sugar #############################################
-
-finite(μ::MeanFunction, X::AbstractVector) = FiniteMean(μ, X)
-finite(μ::ZeroMean, X::AbstractVector) = FiniteZeroMean(X)
-
-finite(k::Kernel, X::AbstractVector) = FiniteKernel(k, X)
-finite(k::ZeroKernel, X::AbstractVector) = FiniteZeroKernel(X)
-
-finite(k::CrossKernel, X::AV, X′::AV) = FiniteCrossKernel(k, X, X′)
-function finite(k::ZeroKernel, X::AV, X′::AV)
-    return length(X) == length(X′) ? FiniteZeroKernel(X) : FiniteZeroCrossKernel(X, X′)
-end
-
-const LhsFinite = Union{LhsFiniteCrossKernel}
-const RhsFinite = Union{RhsFiniteCrossKernel}
-
-lhsfinite(k::CrossKernel, X::AbstractVector) = LhsFiniteCrossKernel(k, X)
-lhsfinite(k::ZeroKernel, X::AbstractVector) = LhsFiniteZeroCrossKernel(X)
-lhsfinite(k::RhsFiniteCrossKernel, X::AbstractVector) = finite(k.k, X, k.X′)
-
-rhsfinite(k::CrossKernel, X′::AbstractVector) = RhsFiniteCrossKernel(k, X′)
-rhsfinite(k::ZeroKernel, X′::AbstractVector) = RhsFiniteZeroCrossKernel(X′)
-rhsfinite(k::LhsFiniteCrossKernel, X′::AbstractVector) = finite(k.k, k.X, X′)

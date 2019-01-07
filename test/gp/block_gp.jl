@@ -54,10 +54,6 @@ using Distributions: MvNormal, PDMat
         @test getblock(Stheno.unbox(cov(fs)), 1, 2) == cov(f, g)
         @test getblock(Stheno.unbox(cov(fs)), 2, 1) == cov(g, f)
 
-        # k = Stheno.BlockCrossKernel(kernel.(f, permutedims(fs.fs)))
-        # @show size(k.ks[1]), size(k.ks[2])
-        # @show eachindex(k, 1), eachindex(k, 2)
-
         @test cov(fs, f) isa BlockMatrix
         @test cov(fs, g) isa BlockMatrix
         @test cov(f, fs) isa BlockMatrix

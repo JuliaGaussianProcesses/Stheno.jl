@@ -8,7 +8,7 @@ import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
 import Base.Broadcast: broadcasted, materialize, broadcast_shape
 
 export CrossKernel, Kernel, cov, EQ, PerEQ, RQ, Linear, Poly, Noise, Wiener,
-    WienerVelocity, Exp, ConstantKernel, isstationary, ZeroKernel, OneKernel, pairwise
+    WienerVelocity, Exp, ConstKernel, isstationary, ZeroKernel, OneKernel, pairwise
 
 
 
@@ -145,6 +145,27 @@ _pw(k::OneKernel, x::AV) = Ones{eltype(k)}(length(x), length(x))
 
 
 """
+    ConstKernel
+
+A rank 1 kernel that returns the same value everywhere.
+"""
+struct ConstKernel{T} <: Kernel
+    c::T
+end
+
+# Binary methods.
+(k::ConstKernel)(x, x′) = k.c
+_map(k::ConstKernel, x::AV, x′::AV) = Fill(k.c, broadcast_shape(size(x), size(x′))...)
+_pw(k::ConstKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′))
+# Re-design to avoid parametrised-caller. ######## DO THIS!!!!!! SOMETHING WEIRD IS HAPPENING.
+
+# Unary methods.
+(k::ConstKernel)(x) = k.c
+_map(k::ConstKernel, x::AV) = Fill(k.c, length(x))
+_pw(k::ConstKernel, x::AV) = _pw(k, x, x)
+
+
+"""
     EQ <: Kernel
 
 The standardised Exponentiated Quadratic kernel (no free parameters).
@@ -202,7 +223,6 @@ end
 @adjoint function _pw(::EQ, x::AV{<:Real})
     s = materialize(_pw(EQ(), x))
     return s, function(Δ)
-        @show Δ
         x̄_tmp = Δ .* (x .- x') .* s
         return nothing, reshape(sum(x̄_tmp; dims=1), :) - reshape(sum(x̄_tmp; dims=2), :)
     end
@@ -290,42 +310,31 @@ _pw(k::Linear, x::ColsAreObs) = x.X' * x.X
 """
     Noise{T<:Real} <: Kernel
 
-Standardised aleatoric white-noise kernel.
+Standardised aleatoric white-noise kernel. Isn't really a kernel, but never mind...
 """
 struct Noise{T<:Real} <: Kernel end
 Noise() = Noise{Int}()
 eltype(k::Noise{T}) where {T} = T
 
 # Binary methods.
-(k::Noise)(x, x′) = x == x′ ? 1 : 0
-_map(k::Noise, x::AV{<:Real}, x′::AV{<:Real}) = bcd(k, x, x′)
-_pw(k::Noise, x::AV{<:Real}, x′::AV{<:Real}) = bcd(k, x, x′')
+(k::Noise)(x, x′) = zero(eltype(k))
+_map(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′)))
+_pw(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
+
+@adjoint function _map(k::Noise{T}, x::AV, x′::AV) where {T}
+    return _map(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
+end
+@adjoint function _pw(k::Noise{T}, x::AV, x′::AV) where {T}
+    return _pw(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
+end
 
 # Unary methods.
-(k::Noise)(x) = 1
-_map(k::Noise, x::AV{<:Real}) = Ones{eltype(k)}(length(x))
-_pw(k::Noise, x::AV{<:Real}) = _pw(k, x, x)
+(k::Noise)(x) = one(eltype(k))
+_map(k::Noise, x::AV) = Ones{eltype(k)}(length(x))
+_pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
 
-
-# # Binary methods.
-# (k::Noise)(x, x′) = zero(eltype(k))
-# _map(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′)))
-# _pw(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
-
-# @adjoint function _map(k::Noise{T}, x::AV, x′::AV) where {T}
-#     return _map(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
-# end
-# @adjoint function _pw(k::Noise{T}, x::AV, x′::AV) where {T}
-#     return _pw(k, x, x′), Δ->(nothing, Zeros{T}(length(x)), Zeros{T}(length(x′)))
-# end
-
-# # Unary methods.
-# (k::Noise)(x) = one(eltype(k))
-# _map(k::Noise, x::AV) = Ones{eltype(k)}(length(x))
-# _pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
-
-# @adjoint _map(k::Noise, x::AV) = _map(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
-# @adjoint _pw(k::Noise, x::AV) = _pw(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
+@adjoint _map(k::Noise, x::AV) = _map(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
+@adjoint _pw(k::Noise, x::AV) = _pw(k, x), Δ->(nothing, Zeros{eltype(k)}(length(x)))
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -387,34 +396,3 @@ _pw(k::EmpiricalKernel, X::AV) = X == eachindex(k) ? k.Σ : k.Σ[X, X]
 function _pw(k::EmpiricalKernel, X::AV, X′::AV)
     return X == eachindex(k) && X′ == eachindex(k) ? k.Σ : k.Σ[X, X′]
 end
-AbstractMatrix(k::EmpiricalKernel) = k.Σ
-
-# +(x::ZeroKernel, x′::ZeroKernel) = zero(x)
-# function +(k::CrossKernel, k′::CrossKernel)
-#     @assert size(k) == size(k′)
-#     if iszero(k)
-#         return k′
-#     elseif iszero(k′)
-#         return k
-#     else
-#         return CompositeCrossKernel(+, k, k′)
-#     end
-# end
-# function +(k::Kernel, k′::Kernel)
-#     @assert size(k) == size(k′)
-#     if iszero(k)
-#         return k′
-#     elseif iszero(k′)
-#         return k
-#     else
-#         return CompositeKernel(+, k, k′)
-#     end
-# end
-# function *(k::Kernel, k′::Kernel)
-#     @assert size(k) == size(k′)
-#     return iszero(k) || iszero(k′) ? zero(k) : CompositeKernel(*, k, k′)
-# end
-# function *(k::CrossKernel, k′::CrossKernel)
-#     @assert size(k) == size(k′)
-#     return iszero(k) || iszero(k′) ? zero(k) : CompositeCrossKernel(*, k, k′)
-# end
