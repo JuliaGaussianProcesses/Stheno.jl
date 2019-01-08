@@ -5,7 +5,7 @@ using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrice
 # Check FillArrays work as expected.
 let
     @test Zygote.gradient(x->sum(Fill(x, 10)), randn())[1] == 10
-    @test Zygote.gradient(x->sum(Fill(x, (10, 3, 4))), randn())[1] == 10 * 3 * 4
+    @test Zygote.gradient(x->sum(Fill(x, 10, 3, 4)), randn())[1] == 10 * 3 * 4
 
     # Test unary broadcasting gradients.
     x = randn()

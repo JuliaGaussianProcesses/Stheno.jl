@@ -39,8 +39,8 @@ module Stheno
     include("gp/gp.jl")
     # include("gp/block_gp.jl")
 
-    # # Affine transformations of GPs.
-    # include("linops/indexing.jl")
+    # Affine transformations of GPs.
+    include("linops/indexing.jl")
     # include("linops/addition.jl")
     # include("linops/product.jl")
     # include("linops/compose.jl")

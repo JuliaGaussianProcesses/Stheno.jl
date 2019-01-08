@@ -2,16 +2,49 @@ using BlockArrays, LinearAlgebra, FDM, Zygote, ToeplitzMatrices
 using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise
 using FillArrays: AbstractFill
 
-function grad_test(f, x::AbstractVector)
-    grad_ad = Zygote.gradient(f, x)[1]
-    grad_fd = FDM.grad(central_fdm(5, 1), f, x)
-    @test maximum(abs.(grad_ad .- grad_fd)) < 1e-6
+# Compare FDM estimate of the adjoint with Zygotes. Also ensure that forwards passes match.
+function adjoint_test(f, ȳ::AbstractVector{<:Real}, x::AbstractVector{<:Real})
+
+    # Compute Zygote forward-pass and ensure that it matches regular evaulation of `f`.
+    y, back = Zygote.forward(f, x)
+    @test y == f(x)
+
+    # Compare gradients.
+    adjoint_ad = back(ȳ)[1]
+    adjoint_fd = FDM.adjoint(central_fdm(5, 1), f, ȳ, x)
+    @test (adjoint_ad isa Nothing &&
+        isapprox(adjoint_fd, zero(adjoint_fd); rtol=1e-5, atol=1e5)) ||
+        isapprox(adjoint_ad, adjoint_fd; rtol=1e-5, atol=1e-5)
 end
-function grad_test(f, x::ColsAreObs)
-    grad_ad = Zygote.gradient(X->f(ColsAreObs(X)), x.X)[1]
-    grad_fd = FDM.grad(central_fdm(5, 1), X->f(ColsAreObs(X)), x.X)
-    @test maximum(abs.(grad_ad .- grad_fd)) < 1e-6
-end
+adjoint_test(f, ȳ::Real, x::AbstractVector{<:Real}) = adjoint_test(x->[f(x)], [ȳ], x)
+adjoint_test(f, ȳ::AbstractVector{<:Real}, x::Real) = adjoint_test(x->f(x[1]), ȳ, [x])
+adjoint_test(f, ȳ::Real, x::Real) = adjoint_test(x->[f(x[1])], [ȳ], [x])
+
+# function grad_test(f, x::AbstractVector)
+#     grad_ad = Zygote.gradient(f, x)[1]
+#     grad_fd = FDM.grad(central_fdm(5, 1), f, x)
+#     @test (grad_ad isa Nothing && all(abs.(grad_fd) .< 1e-8)) ||
+#         maximum(abs.(grad_ad .- grad_fd)) < 1e-6
+# end
+# function grad_test(f, x::ColsAreObs)
+#     grad_ad = Zygote.gradient(X->f(ColsAreObs(X)), x.X)[1]
+#     grad_fd = FDM.grad(central_fdm(5, 1), X->f(ColsAreObs(X)), x.X)
+#     println("ad")
+#     display(grad_ad)
+#     println()
+#     println("fd")
+#     display(grad_fd)
+#     println()
+
+#     if !(grad_ad isa Nothing)
+#         println("diff")
+#         display(grad_ad .- grad_fd)
+#         println()
+#     end
+
+#     @test (grad_ad isa Nothing && all(abs.(grad_fd) .< 1e-8)) ||
+#         maximum(abs.(grad_ad .- grad_fd)) < 1e-6
+# end
 
 """
     unary_map_tests(f, X::AbstractVector)
@@ -22,13 +55,7 @@ function unary_map_tests(f, X::AbstractVector)
     @test map(f, X) isa AbstractVector
     @test length(f.(X)) == length(X)
     @test map(f, X) ≈ [f(x) for x in X]
-    grad_test(x->sum(map(f, x)), X)
 end
-# function unary_map_tests(f, X::BlockData)
-#     @test map(f, X) isa AbstractBlockVector
-#     @test length(map(f, X)) == length(X)
-#     @test map(f, X) ≈ BlockVector([map(f, x) for x in blocks(X)])
-# end
 
 """
     binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
@@ -39,15 +66,7 @@ function binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
     @test map(f, X, X′) isa AbstractVector
     @test length(map(f, X, X′)) == length(X)
     @test map(f, X, X′) ≈ [f(x, x′) for (x, x′) in zip(X, X′)]
-    grad_test(x->sum(map(f, x, X′)), X)
-    grad_test(x′->sum(map(f, X, x′)), X′)
 end
-# function binary_map_tests(f, XB::BlockData, XB′::BlockData)
-#     @test map(f, XB, XB′) isa AbstractBlockVector
-#     @test length(map(f, XB, XB′)) == length(XB)
-#     @test map(f, XB, XB′) ≈
-#         BlockVector([map(f, X, X′) for (X, X′) in zip(blocks(XB), blocks(XB′))])
-# end
 
 """
     binary_map_tests(f, X::AbstractVector)
@@ -58,16 +77,10 @@ function binary_map_tests(f, X::AbstractVector)
     @test map(f, X) isa AbstractVector
     @test length(map(f, X)) == length(X)
     @test map(f, X) ≈ map(f, X, X)
-    grad_test(x->sum(map(f, x)), X)
 end
-# function binary_map_tests(f, X::BlockData)
-#     @test map(f, X) isa AbstractBlockVector
-#     @test length(map(f, X)) == length(X)
-#     @test map(f, X) ≈ map(f, X, X)
-# end
 
 """
-    pairwise_tests(f, X::AV, X′::AV)
+    pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
 
 Consistency tests intended for use with `CrossKernel`s.
 """
@@ -79,19 +92,10 @@ function pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
     pw_out = pairwise(f, X, X′)
     loop_out = reshape([f(x, x′) for (x, x′) in Iterators.product(X, X′)], N, N′)
     @test all(abs.(pw_out .- loop_out) .< 1e-8)
-    grad_test(x->sum(pairwise(f, x, X′)), X)
-    grad_test(x′->sum(pairwise(f, X, x′)), X′)
 end
-# function pairwise_tests(f, X::BlockData, X′::BlockData)
-#     N, N′ = length(X), length(X′)
-#     @test pairwise(f, X, X′) isa AbstractBlockMatrix
-#     @test size(pairwise(f, X, X′)) == (N, N′)
-#     @test pairwise(f, X, X′) ==
-#         BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X′)])
-# end
 
 """
-    pairwise_tests(f, X::AV)
+    pairwise_tests(f, X::AbstractVector)
 
 Consistency tests intended for use with `Kernel`s.
 """
@@ -100,11 +104,6 @@ function pairwise_tests(f, X::AbstractVector; rtol=eps())
     @test size(pairwise(f, X)) == (length(X), length(X))
     @test isapprox(pairwise(f, X), pairwise(f, X, X); atol=rtol)
 end
-# function pairwise_tests(f, X::BlockData; rtol=eps())
-#     @test size(pairwise(f, X)) == (length(X), length(X))
-#     @test pairwise(f, X) ==
-#         BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X)])
-# end
 
 """
     mean_function_tests(μ::MeanFunction, X::AbstractVector)
@@ -156,7 +155,6 @@ and `length(X0) ≠ length(X2)`.
 """
 function kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
     __kernel_tests(k, X0, X1, X2, rtol)
-    # kernel_tests(k, BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2]), rtol)
 end
 function kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
     __kernel_tests(k, X0, X1, X2, rtol)
@@ -226,4 +224,144 @@ function stationary_kernel_tests(
     @test pairwise(k, x0, x3) == pairwise(k, collect(x0), collect(x3))
     @test !isa(pairwise(k, x0, x4), Toeplitz)
     @test pairwise(k, x0, x4) == pairwise(k, collect(x0), collect(x4))
+end
+
+"""
+    differentiable_crosskernel_tests(
+        k::CrossKernel,
+        ȳ::AbstractVector{<:Real},
+        Ȳ::AbstractMatrix{<:Real},
+        x0::AbstractVector,
+        x1::AbstractVector,
+        x2::AbstractVector,
+    )
+
+Ensure that the adjoint w.r.t. the inputs of a `CrossKernel` which is supposed to be
+differentiable are approximately correct.
+"""
+function differentiable_crosskernel_tests(
+    k::CrossKernel,
+    ȳ::AbstractVector{<:Real},
+    Ȳ::AbstractMatrix{<:Real},
+    x0::AbstractVector{<:Real},
+    x1::AbstractVector{<:Real},
+    x2::AbstractVector{<:Real},
+)
+    # Ensure that the inputs are as required.
+    @assert length(ȳ) == length(x0)
+    @assert length(ȳ) == length(x1)
+    @assert size(Ȳ) == (length(x0), length(x2))
+
+    # Binary map.
+    adjoint_test(x->map(k, x, x1), ȳ, x0)
+    adjoint_test(x′->map(k, x0, x′), ȳ, x1)
+
+    # Binary pairwise.
+    adjoint_test(x->reshape(pairwise(k, x, x2), :), reshape(Ȳ, :), x0)
+    adjoint_test(x′->reshape(pairwise(k, x0, x′), :), reshape(Ȳ, :), x2)
+end
+function differentiable_crosskernel_tests(
+    k::CrossKernel,
+    ȳ::AbstractVector{<:Real},
+    Ȳ::AbstractMatrix{<:Real},
+    x0::ColsAreObs{<:Real},
+    x1::ColsAreObs{<:Real},
+    x2::ColsAreObs{<:Real},
+)
+    # Ensure that the inputs are as required.
+    @assert length(ȳ) == length(x0)
+    @assert length(ȳ) == length(x1)
+    @assert size(Ȳ) == (length(x0), length(x2))
+
+    # Check that dimensionalities are consistent.
+    D, N, N′ = size(x0.X, 1), length(x0), length(x2)
+    @assert size(x1.X, 1) == D
+    @assert size(x2.X, 1) == D
+
+    # Binary map.
+    adjoint_test(x->map(k, ColsAreObs(reshape(x, D, N)), x1), ȳ, reshape(x0.X, :))
+    adjoint_test(x′->map(k, x0, ColsAreObs(reshape(x′, D, N))), ȳ, reshape(x1.X, :))
+
+    # Binary pairwise.
+    adjoint_test(
+        x->reshape(pairwise(k, ColsAreObs(reshape(x, D, N)), x2), :),
+        reshape(Ȳ, :),
+        reshape(x0.X, :),
+    )
+    adjoint_test(
+        x′->reshape(pairwise(k, x0, ColsAreObs(reshape(x′, D, N′))), :),
+        reshape(Ȳ, :),
+        reshape(x2.X, :),
+    )
+end
+
+"""
+    differentiable_kernel_tests(
+        k::CrossKernel,
+        ȳ::AbstractVector{<:Real},
+        Ȳ::AbstractMatrix{<:Real},
+        Ȳ_sq::AbstractMatrix{<:Real},
+        x0::AbstractVector,
+        x1::AbstractVector,
+        x2::AbstractVector,
+    )
+
+A superset of the tests provided by `differentiable_crosskernel_tests` designed to test
+kernels (which provide unary, in addition to binary, methods for `map` and `pairwise`.)
+"""
+function differentiable_kernel_tests(
+    k::CrossKernel,
+    ȳ::AbstractVector{<:Real},
+    Ȳ::AbstractMatrix{<:Real},
+    Ȳ_sq::AbstractMatrix{<:Real},
+    x0::AbstractVector{<:Real},
+    x1::AbstractVector{<:Real},
+    x2::AbstractVector{<:Real},
+)
+    # Ensure that the inputs are as required.
+    @assert length(ȳ) == length(x0)
+    @assert length(ȳ) == length(x1)
+    @assert size(Ȳ) == (length(x0), length(x2))
+    @assert size(Ȳ_sq, 1) == size(Ȳ_sq, 2)
+    @assert size(Ȳ_sq, 1) == length(x0)
+
+    # Run the CrossKernel tests.
+    differentiable_crosskernel_tests(k, ȳ, Ȳ, x0, x1, x2)
+
+    # Unary map tests.
+    adjoint_test(x->map(k, x), ȳ, x0)
+
+    # Unary pairwise test.
+    adjoint_test(x->reshape(pairwise(k, x), :), reshape(Ȳ_sq, :), x0)
+end
+function differentiable_kernel_tests(
+    k::CrossKernel,
+    ȳ::AbstractVector{<:Real},
+    Ȳ::AbstractMatrix{<:Real},
+    Ȳ_sq::AbstractMatrix{<:Real},
+    x0::ColsAreObs{<:Real},
+    x1::ColsAreObs{<:Real},
+    x2::ColsAreObs{<:Real},
+)
+    # Ensure that the inputs are as required.
+    @assert length(ȳ) == length(x0)
+    @assert length(ȳ) == length(x1)
+    @assert size(Ȳ) == (length(x0), length(x2))
+    @assert size(Ȳ_sq, 1) == size(Ȳ_sq, 2)
+    @assert size(Ȳ_sq, 1) == length(x0)
+
+    D, N = size(x0.X)
+
+    # Run the CrossKernel tests.
+    differentiable_crosskernel_tests(k, ȳ, Ȳ, x0, x1, x2)
+
+    # Unary map tests.
+    adjoint_test(x->map(k, ColsAreObs(reshape(x, D, N))), ȳ, reshape(x0.X, :))
+
+    # Unary pairwise test.
+    adjoint_test(
+        x->reshape(pairwise(k, ColsAreObs(reshape(x, D, N))), :),
+        reshape(Ȳ_sq, :),
+        reshape(x0.X, :),
+    )
 end

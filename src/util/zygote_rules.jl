@@ -1,17 +1,18 @@
-using Zygote, IRTools, Random, Base.Threads
+using Zygote, IRTools, Random
 using Zygote: @adjoint, _forward, literal_getproperty
 
 import Base: map, getfield, getproperty, sum
 import Distances: pairwise, colwise
 import LinearAlgebra: \, /, cholesky, copytri!
-import FillArrays: Fill, AbstractFill, getindex_value
+import FillArrays: Fill, AbstractFill, getindex_value, Zeros, Ones
 import Base.Broadcast: broadcasted, materialize
 
 @nograd MersenneTwister, propertynames
 
+# Adjoints for FillArrays.jl. concrete types.
 @adjoint Fill(x, sz::Integer...) = Fill(x, sz...), Δ->(sum(Δ), map(_->nothing, sz)...)
-# @adjoint Fill(x, sz::Int) = Fill(x, sz), Δ->(sum(Δ), nothing)
-# @adjoint Fill(x, p::Int, q::Int) = Fill(x, p, q), Δ->(sum(Δ), nothing, nothing)
+@adjoint Zeros{T}(sz::Integer...) where {T} = Zeros{T}(sz...), Δ->(map(_->nothing, sz)...,)
+@adjoint Ones{T}(sz::Integer...) where {T} = Ones{T}(sz...), Δ->(map(_->nothing, sz)...,)
 
 const AbstractFillVec{T} = AbstractFill{T, 1}
 const AbstractFillMat{T} = AbstractFill{T, 2}

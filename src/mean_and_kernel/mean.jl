@@ -6,7 +6,7 @@ export MeanFunction, CustomMean, ZeroMean, OneMean, mean
 
 abstract type MeanFunction end
 
-# Allow `map` to be fused.
+# Allow `map` to be manually fused.
 map(μ::MeanFunction, x::Union{AV, Colon}) = materialize(_map(μ, x))
 
 
@@ -20,11 +20,6 @@ ZeroMean() = ZeroMean{Int}()
 (::ZeroMean{T})(x) where {T} = zero(T)
 _map(::ZeroMean{T}, x::AV) where T = Zeros{T}(length(x))
 
-@adjoint (m::ZeroMean{T})(x) where {T} = m(x), Δ->(zero(x),)
-@adjoint function _map(m::ZeroMean{T}, x::AV) where {T}
-    return _map(m, x), Δ->(nothing, Zeros{T}(length(x)))
-end
-
 
 """
     OneMean{T} <: MeanFunction
@@ -35,11 +30,6 @@ struct OneMean{T<:Real} <: MeanFunction end
 OneMean() = OneMean{Int}()
 (::OneMean{T})(x) where {T} = one(T)
 _map(::OneMean{T}, x::AV) where T = Fill(one(T), length(x))
-
-@adjoint (m::OneMean{T})(x) where {T} = m(x), Δ->(zero(x),)
-@adjoint function _map(μ::OneMean{T}, x::AV) where {T}
-    return _map(μ, x), Δ->(nothing, Zeros{eltype(T)}(length(x)))
-end
 
 
 """

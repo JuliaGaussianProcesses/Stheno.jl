@@ -4,14 +4,14 @@ using Stheno, Test, Random, FillArrays
 
     @testset "util" begin
         # include("util/covariance_matrices.jl")
-        # include("util/block_arrays.jl")
+        # # include("util/block_arrays.jl")
         # include("util/abstract_data_set.jl")
         # include("util/zygote_rules.jl")
     end
 
     @testset "mean_and_kernel" begin
         include("test_util.jl")
-        # include("mean_and_kernel/mean.jl")
+        include("mean_and_kernel/mean.jl")
         include("mean_and_kernel/kernel.jl")
         # include("mean_and_kernel/finite.jl")
         # include("mean_and_kernel/compose.jl")

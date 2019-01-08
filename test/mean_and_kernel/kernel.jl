@@ -8,7 +8,12 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
         x0_r, x1_r = range(-5.0, step=1, length=N), range(-4.0, step=1, length=N)
         x2_r, x3_r = range(-5.0, step=2, length=N), range(-3.0, step=1, length=N′)
         x4_r = range(-2.0, step=2, length=N′)
-        # X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+
+        X0 = ColsAreObs(randn(rng, D, N))
+        X1 = ColsAreObs(randn(rng, D, N))
+        X2 = ColsAreObs(randn(rng, D, N′))
+
+        ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
 
         # Tests for ZeroKernel.
         let
@@ -16,22 +21,25 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
             @test k(0, 0) === zero(Float64)
             @test map(k, x0) isa Zeros
             kernel_tests(k, x0, x1, x2)
-            # kernel_tests(k, X0, X1, X2)
+            kernel_tests(k, X0, X1, X2)
+            differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
         # Tests for OneKernel.
         kernel_tests(OneKernel(), x0, x1, x2)
-        # kernel_tests(k, X0, X1, X2)
+        kernel_tests(OneKernel(), X0, X1, X2)
 
         # Tests for ConstKernel.
         @test ConstKernel(5.0)(randn(rng), randn(rng)) == 5.0
         kernel_tests(ConstKernel(5.0), x0, x1, x2)
+        kernel_tests(ConstKernel(5.0), X0, X1, X2)
 
         # Tests for EQ.
         @test map(EQ(), x0) isa Ones
         kernel_tests(EQ(), x0, x1, x2)
         stationary_kernel_tests(EQ(), x0_r, x1_r, x2_r, x3_r, x4_r)
-        # kernel_tests(EQ(), X0, X1, X2)
+        kernel_tests(EQ(), X0, X1, X2)
 
         # Tests for PerEQ.
         @test map(PerEQ(), x0) isa Ones

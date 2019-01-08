@@ -48,6 +48,11 @@ using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, LhsFiniteCrossKernel,
         @test (EQ() * α)(x, x′) == EQ()(x, x′) * α
         @test (EQ() * Linear())(x, x′) == EQ()(x, x′) * Linear()(x, x′)
 
+        # Sum of `ConstKernel`s isa ConstKernel
+        @test ConstKernel(5) + ConstKernel(4) isa ConstKernel
+        @test (ConstKernel(5) + ConstKernel(4))(x, x′) ==
+            ConstKernel(5)(x, x′) + ConstKernel(4)(x, x′)
+
         # Multiplying kernels by zero.
         @test ZeroKernel() * ZeroKernel() === ZeroKernel()
         @test ZeroKernel() * EQ() === ZeroKernel()
@@ -57,8 +62,12 @@ using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, LhsFiniteCrossKernel,
         @test OneKernel() * OneKernel() === OneKernel()
         @test OneKernel() * EQ() === EQ()
         @test EQ() * OneKernel() === EQ()
-    end
 
+        # Product of `ConstKernel`s isa ConstKernel
+        @test ConstKernel(5) * ConstKernel(4) isa ConstKernel
+        @test (ConstKernel(5) * ConstKernel(4))(x, x′) ==
+            ConstKernel(5)(x, x′) * ConstKernel(4)(x, x′)
+    end
 end
 
 # using Stheno: FiniteZeroMean, FiniteZeroKernel, LhsFiniteZeroCrossKernel,

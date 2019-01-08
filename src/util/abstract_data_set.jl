@@ -30,6 +30,7 @@ zero(D::ColsAreObs) = ColsAreObs(zero(D.X))
 
 const AdjColsAreObs{T, TX} = ColsAreObs{T, TX}
 
+
 ################################ Fancy block data set type #################################
 
 """
