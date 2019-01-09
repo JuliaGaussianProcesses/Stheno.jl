@@ -275,7 +275,7 @@ _pw(k::Linear, x::ColsAreObs, x′::ColsAreObs) = x.X' * x′.X
 (k::Linear)(x) = dot(x, x)
 _map(k::Linear, x::AV{<:Real}) = x.^2
 _pw(k::Linear, x::AV{<:Real}) = x .* x'
-_map(k::Linear, x::ColsAreObs) = reshape(sum(abs2, x.X; dims=1), :)
+_map(k::Linear, x::ColsAreObs) = reshape(sum(abs2.(x.X); dims=1), :)
 _pw(k::Linear, x::ColsAreObs) = x.X' * x.X
 
 

@@ -93,17 +93,6 @@ let
     @test all(Flux.gradient(f, A)[1] .- FDM.grad(fdm, f, A) .< 1e-8)
 end
 
-# # Check that cholesky works as expected.
-# let
-#     fdm = central_fdm(5, 1)
-#     rng, P = MersenneTwister(123456), 7
-#     A = randn(rng, P, P)
-#     Σ = A'A + 1e-6I
-
-#     f = Σ->sum(chol(Symmetric(Σ)))
-#     @test all(Flux.gradient(f, Σ)[1] .- FDM.grad(fdm, f, Σ) .< 1e-8)
-# end
-
 # Check that `diag` behaves sensibly.
 let
     fdm = central_fdm(5, 1)
@@ -112,17 +101,6 @@ let
 
     f = A->sum(diag(A))
     @test all(Flux.gradient(f, A)[1] .- FDM.grad(fdm, f, A) .< 1e-8)
-end
-
-# Check that `logdet` works as expected for UpperTriangular matrices.
-let
-    fdm = central_fdm(5, 1)
-    rng, P = MersenneTwister(123456), 10
-    A = randn(rng, P, P)
-    Σ = A'A + 1e-6I
-
-    f = Σ->logdet(chol(Symmetric(Σ)))
-    @test all(Flux.gradient(f, Σ)[1] .- FDM.grad(fdm, f, Σ) .< 1e-8)
 end
 
 # Check that addition of matrices and uniform scalings works as hoped.

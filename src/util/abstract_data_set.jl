@@ -16,7 +16,19 @@ struct ColsAreObs{T, TX<:AbstractMatrix{T}} <: AbstractVector{Vector{T}}
     ColsAreObs(X::TX) where {T, TX<:AbstractMatrix{T}} = new{T, TX}(X)
 end
 
-@adjoint ColsAreObs(X::AbstractMatrix) = ColsAreObs(X), Δ->(Δ.X,)
+@adjoint function ColsAreObs(X::AbstractMatrix)
+    back(Δ::NamedTuple) = (Δ.X,)
+    back(Δ::AbstractMatrix) = (Δ,)
+    function back(Δ::AbstractVector{<:AbstractVector{<:Real}})
+        println("argh in slow method!")
+        X̄ = zero(X)
+        for n in eachindex(Δ)
+            X̄[:, n] .+= Δ[n]
+        end
+        return (X̄,)
+    end
+    return ColsAreObs(X), back
+end
 
 ==(D1::ColsAreObs, D2::ColsAreObs) = D1.X == D2.X
 size(D::ColsAreObs) = (size(D.X, 2),)

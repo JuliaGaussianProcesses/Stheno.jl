@@ -1,4 +1,4 @@
-using Zygote, IRTools, Random
+using Zygote, IRTools, Random, ToeplitzMatrices
 using Zygote: @adjoint, _forward, literal_getproperty
 
 import Base: map, getfield, getproperty, sum
@@ -50,15 +50,18 @@ end
 
 @adjoint function pairwise(s::SqEuclidean, x::AbstractMatrix, y::AbstractMatrix)
     return pairwise(s, x, y), function(Δ)
-        x̄ = 2 .* (x * Diagonal(sum(Δ; dims=2)) .- y * Δ')
-        ȳ = 2 .* (y * Diagonal(sum(Δ; dims=1)) .- x * Δ)
+        x̄ = 2 .* (x * Diagonal(vec(sum(Δ; dims=2))) .- y * Δ')
+        ȳ = 2 .* (y * Diagonal(vec(sum(Δ; dims=1))) .- x * Δ)
         return nothing, x̄, ȳ
     end
 end
 
 @adjoint function pairwise(s::SqEuclidean, X::AbstractMatrix)
     D = pairwise(s, X)
-    return D, Δ->(nothing, 4 * (X * (Diagonal(reshape(sum(Δ; dims=1), :)) - Δ)))
+    return D, function(Δ)
+        d1, d2 = Diagonal(vec(sum(Δ; dims=1))), Diagonal(vec(sum(Δ; dims=2)))
+        return (nothing, X * (2 .* (d1 .+ d2 .- Δ .- Δ')))
+    end
 end
 
 @adjoint function \(A::AbstractMatrix, B::AbstractVecOrMat)

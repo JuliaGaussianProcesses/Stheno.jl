@@ -35,22 +35,6 @@ fb_xl = BlockGP([f(xl), y(xl)])
 fb_x = BlockGP([f(x), y(x)])
 
 
-using Stheno: unbox, chol
-Σl = unbox(cov(fb_xl)) + 1e-6I;
-U = chol(Σl);
-
-# cov(fb_xl)
-
-# using BenchmarkTools
-# @benchmark cov($fb_x)
-# @benchmark cov($fb_xl)
-
-# @benchmark rand($f($xl))
-# @benchmark rand($f($x))
-
-# @benchmark logpdf($f($xl), $y)
-# @benchmark logpdf($f($x), $y)
-
 
 
 

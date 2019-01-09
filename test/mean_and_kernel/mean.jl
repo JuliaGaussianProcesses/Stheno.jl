@@ -12,7 +12,10 @@ using Stheno: CustomMean, ZeroMean, OneMean, EmpiricalMean
         @test f(X[1]) == foo_mean(X[1])
 
         mean_function_tests(f, x)
-        # mean_function_tests(f, X)
+        differentiable_mean_function_tests(f, randn(rng, N), x)
+
+        mean_function_tests(f, X)
+        differentiable_mean_function_tests(f, randn(rng, N), X)
     end
 
     # Test ZeroMean.
@@ -24,7 +27,10 @@ using Stheno: CustomMean, ZeroMean, OneMean, EmpiricalMean
         @test f(randn(rng)) === zero(Float64)
 
         mean_function_tests(f, x)
-        # mean_function_tests(f, X)
+        differentiable_mean_function_tests(f, randn(rng, P), x)
+
+        mean_function_tests(f, X)
+        differentiable_mean_function_tests(f, randn(rng, P), X)
     end
 
     # Test OneMean.
@@ -37,7 +43,10 @@ using Stheno: CustomMean, ZeroMean, OneMean, EmpiricalMean
         @test f(randn(rng)) == 1
 
         mean_function_tests(f, x)
-        # mean_function_tests(f, X)
+        differentiable_mean_function_tests(f, randn(rng, P), x)
+
+        mean_function_tests(f, X)
+        differentiable_mean_function_tests(f, randn(rng, P), X)
     end
 
     # Test EmpiricalMean.

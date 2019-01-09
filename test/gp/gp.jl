@@ -93,11 +93,12 @@ using Stheno: OuterKernel, BinaryKernel
         x = collect(range(-3.0, stop=3.0, length=N))
 
         # Check that the gradient w.r.t. the samples is correct.
-        grad_test(
-            function(x)
+        adjoint_test(
+            x->begin
                 f = GP(FiniteMean(CustomMean(sin), x), FiniteKernel(EQ(), x), GPC())
-                return sum(rand(MersenneTwister(123456), f, S))
+                return rand(MersenneTwister(123456), f, S)
             end,
+            randn(rng, N, S),
             x,
         )
     end
