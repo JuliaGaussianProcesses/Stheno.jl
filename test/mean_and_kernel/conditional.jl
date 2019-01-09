@@ -6,13 +6,25 @@ using LinearAlgebra: cholesky
 
     # Tests for conditioning with independent processes.
     let
-        rng, N, N′, D = MersenneTwister(123456), 10, 13, 2
-        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        rng, N, N′, D = MersenneTwister(123456), 10, 13, 8
+
+        # The numerical stability of the result depends _strongly_ on how the data are
+        # spaced out - if you sample them randomly and happen to wind up with a couple of
+        # points really close to one another, then you get an ill-conditioned covariance
+        # matrix and loss of precision.
+        x0 = collect(range(-3.0, stop=3.0, length=N))
+        x1 = collect(range(-3.5, stop=2.5, length=N))
+        x2 = collect(range(-2.5, stop=3.5, length=N′))
         μf, μg, μh = OneMean(), ZeroMean(), OneMean()
         kff = EQ()
         kgg = BinaryKernel(+, EQ(), EQ())
-        khh = OuterKernel(x->1e-1x, EQ())
+        khh = OuterKernel(x->1e-1 * sum(x), EQ())
         kfg, kfh, kgh = EQ(), ZeroKernel(), ZeroKernel()
+
+        # Points in high dimensions probably won't be very close together.
+        X0 = ColsAreObs(randn(rng, D, N))
+        X1 = ColsAreObs(randn(rng, D, N))
+        X2 = ColsAreObs(randn(rng, D, N′))
 
         # Run all tests for both scalar and vector input domains.
         for (X0, X1, X2) in [(x0, x1, x2)]
@@ -35,19 +47,14 @@ using LinearAlgebra: cholesky
 
             # Run standard consistency tests on all of the above.
             for (n, μ′) in enumerate([μ′f, μ′g, μ′h])
-                mean_function_tests(μ′, X0)
-                mean_function_tests(μ′, X2)
-                # mean_function_tests(μ′, BlockData([X0, X2]))
+                differentiable_mean_function_tests(rng, μ′, X0)
+                differentiable_mean_function_tests(rng, μ′, X2)
             end
             for (n, k′) in enumerate([k′ff, k′gg, k′hh])
-                kernel_tests(k′, X0, X1, X2, 1e-6)
-                # kernel_tests(k′, BlockData([X0]), BlockData([X1]), BlockData([X2]), 1e-6)
-                # kernel_tests(k′, BlockData([X0]), BlockData([X1]), BlockData([X2, X1]), 1e-6)
+                differentiable_kernel_tests(rng, k′, X0, X1, X2)
             end
             for k′ in [k′fg, k′fh, k′gh]
-                cross_kernel_tests(k′, X0, X1, X2)
-            #     cross_kernel_tests(k′, BlockData([X0]), BlockData([X1]), BlockData([X2]))
-            #     cross_kernel_tests(k′, BlockData([X0]), BlockData([X1]), BlockData([X2, X1]))
+                differentiable_cross_kernel_tests(rng, k′, X0, X1, X2)
             end
 
             # Test that observing the mean function shrinks the posterior covariance

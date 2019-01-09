@@ -1,5 +1,6 @@
-import Base: size, eachindex, getindex, view, ==, eltype, convert, zero
+import Base: size, eachindex, getindex, view, ==, eltype, convert, zero, getproperty
 import Distances: pairwise
+import Zygote: literal_getproperty, accum
 export ColsAreObs, BlockData
 
 
@@ -40,8 +41,6 @@ view(D::ColsAreObs, n) = ColsAreObs(view(D.X, :, n))
 eltype(D::ColsAreObs{T}) where T = Vector{T}
 zero(D::ColsAreObs) = ColsAreObs(zero(D.X))
 
-const AdjColsAreObs{T, TX} = ColsAreObs{T, TX}
-
 
 ################################ Fancy block data set type #################################
 
@@ -75,9 +74,7 @@ view(D::BlockData, b::Int, n) = view(D.X[b], n)
 eltype(D::BlockData{T}) where T = T
 function eachindex(D::BlockData)
     lengths = map(length, blocks(D))
-    # return 1:sum(length, blocks(D))
     return BlockArray(1:sum(lengths), lengths)
-    # return BlockData(lengths)
 end
 
 convert(::Type{BlockData}, x::BlockData) = x

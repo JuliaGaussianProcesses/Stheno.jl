@@ -72,6 +72,7 @@ _pw(k::BinaryCrossKernel, x::AV) = bcd(k.op, _pw(k.k₁, x), _pw(k.k₂, x))
 
 ############################## Multiply-by-Function Kernels ################################
 
+
 """
     LhsCross <: CrossKernel{Tf, Tk<:CrossKernel}
 
@@ -125,14 +126,18 @@ struct OuterKernel{Tf, Tk<:Kernel} <: Kernel
 end
 
 # Binary methods.
-(k::OuterKernel)(x, x′) = k.f(x) * k.k(x, x′) * k.f(x′)
-_map(k::OuterKernel, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _map(k.k, x, x′), bcd(k.f, x′))
-_pw(k::OuterKernel, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _pw(k.k, x, x′), bcd(k.f, x′'))
+(k::OuterKernel)(x::Real, x′::Real) = k.f(x) * k.k(x, x′) * k.f(x′)
+function _map(k::OuterKernel, x::AV{<:Real}, x′::AV{<:Real})
+    return bcd(*, bcd(k.f, x), _map(k.k, x, x′), bcd(k.f, x′))
+end
+function _pw(k::OuterKernel, x::AV{<:Real}, x′::AV{<:Real})
+    return bcd(*, bcd(k.f, x), _pw(k.k, x, x′), bcd(k.f, x′'))
+end
 
 # Unary methods.
-(k::OuterKernel)(x) = k.f(x)^2 * k.k(x)
-_map(k::OuterKernel, x::AV) = bcd(*, bcd(x->k.f(x)^2, x), _map(k.k, x))
-function _pw(k::OuterKernel, x::AV)
+(k::OuterKernel)(x::Real) = k.f(x)^2 * k.k(x)
+_map(k::OuterKernel, x::AV{<:Real}) = bcd(*, bcd(x->k.f(x)^2, x), _map(k.k, x))
+function _pw(k::OuterKernel, x::AV{<:Real})
     fx = bcd(k.f, x)
     return bcd(*, fx, _pw(k.k, x), materialize(fx)')
 end

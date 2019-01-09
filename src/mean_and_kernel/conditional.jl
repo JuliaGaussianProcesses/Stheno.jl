@@ -23,7 +23,10 @@ struct ConditionalMean{Tc<:CondCache, Tμg<:MeanFunction, Tkfg<:CrossKernel} <: 
     μg::Tμg
     kfg::Tkfg
 end
-(μ::ConditionalMean)(x::Real) = μ.μg(x) + dot(reshape(pw(μ.kfg, :, [x]), :), μ.c.α)
+(μ::ConditionalMean)(x::Real) = μ.μg(x) + dot(vec(pw(μ.kfg, :, [x])), μ.c.α)
+function (μ::ConditionalMean)(x::AV{<:Real})
+    return μ.μg(x) + dot(vec(pw(μ.kfg, :, ColsAreObs(reshape(x, :, 1)))), μ.c.α)
+end
 _map(μ::ConditionalMean, xg::AV) = bcd(+, _map(μ.μg, xg), pw(μ.kfg, :, xg)' * μ.c.α)
 
 
@@ -39,33 +42,33 @@ struct ConditionalKernel{Tc<:CondCache, Tkfg<:CrossKernel, Tkgg<:Kernel} <: Kern
 end
 
 # Binary methods.
-(k::ConditionalKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
-function (k::ConditionalKernel)(x::AV, x′::AV)
-    map(k, ColsAreObs(reshape(x, length(x), 1)), ColsAreObs(reshape(x′, length(x′), 1)))[1]
+(k::ConditionalKernel)(x::Real, x′::Real) = map(k, [x], [x′])[1]
+function (k::ConditionalKernel)(x::AV{<:Real}, x′::AV{<:Real})
+    return map(k, ColsAreObs(reshape(x, :, 1)), ColsAreObs(reshape(x′, :, 1)))[1]
 end
 function _map(k::ConditionalKernel, x::AV, x′::AV)
     σgg = map(k.kgg, x, x′)
     σ′gg = diag_Xt_invA_Y(pw(k.kfg, :, x), k.c.C, pw(k.kfg, :, x′))
-    return (σgg .- σ′gg)# .* .!(σgg .≈ σ′gg)
+    return (σgg .- σ′gg)
 end
 function _pw(k::ConditionalKernel, x::AV, x′::AV)
     Σgg = pw(k.kgg, x, x′)
     Σ′gg = Xt_invA_Y(pw(k.kfg, :, x), k.c.C, pw(k.kfg, :, x′))
-    return (Σgg .- Σ′gg)# .* .!(Σgg .≈ Σ′gg)
+    return (Σgg .- Σ′gg)
 end
 
 # Unary methods.
-(k::ConditionalKernel)(x::Number) = map(k, [x])[1]
-(k::ConditionalKernel)(x::AV) = map(k, ColsAreObs(reshape(x, length(x), 1)))[1]
+(k::ConditionalKernel)(x::Real) = map(k, [x])[1]
+(k::ConditionalKernel)(x::AV{<:Real}) = map(k, ColsAreObs(reshape(x, :, 1)))[1]
 function _map(k::ConditionalKernel, x::AV)
     σgg = map(k.kgg, x)
     σ′gg = diag_Xt_invA_X(k.c.C, pw(k.kfg, :, x))
-    return (σgg .- σ′gg)# .* .!(σgg .≈ σ′gg)
+    return (σgg .- σ′gg)
 end
 function _pw(k::ConditionalKernel, x::AV)
     Σgg = pw(k.kgg, x)
     Σ′gg = Xt_invA_X(k.c.C, pw(k.kfg, :, x))
-    return (Σgg .- Σ′gg)# .* .!(Σgg .≈ Σ′gg)
+    return (Σgg .- Σ′gg)
 end
 
 
@@ -86,21 +89,17 @@ struct ConditionalCrossKernel{
     kgh::Tkgh
 end
 
-(k::ConditionalCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
-function (k::ConditionalCrossKernel)(x::AV, x′::AV)
-    return map(
-        k,
-        ColsAreObs(reshape(x, length(x), 1)),
-        ColsAreObs(reshape(x′, length(x′), 1)),
-    )[1]
+(k::ConditionalCrossKernel)(x::Real, x′::Real) = map(k, [x], [x′])[1]
+function (k::ConditionalCrossKernel)(x::AV{<:Real}, x′::AV{<:Real})
+    return map(k, ColsAreObs(reshape(x, :, 1)), ColsAreObs(reshape(x′, :, 1)))[1]
 end
 function _map(k::ConditionalCrossKernel, x::AV, x′::AV)
     σgh = map(k.kgh, x, x′)
     σ′gh = diag_Xt_invA_Y(pw(k.kfg, :, x), k.c.C, pw(k.kfh, :, x′))
-    return (σgh .- σ′gh)# .* .!(σgh .≈ σ′gh)
+    return (σgh .- σ′gh)
 end
 function _pw(k::ConditionalCrossKernel, xg::AV, xh::AV)
     Σgh = pw(k.kgh, xg, xh)
     Σ′gh = Xt_invA_Y(pw(k.kfg, :, xg), k.c.C, pw(k.kfh, :, xh))
-    return (Σgh .- Σ′gh)# .* .!(Σgh .≈ Σ′gh)
+    return (Σgh .- Σ′gh)
 end

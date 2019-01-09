@@ -10,10 +10,12 @@ using Stheno: FiniteMean, OneMean, AM, AV, pairwise
 
         # Recusion depth 1.
         for (μ′, X′) in zip([μX, μx], [X, x])
-            # @test length(μ′) == N
-            # @test eachindex(μ′) == 1:N
             @test map(μ′, :) == map(μ, X′)
         end
+
+        # Ensure that inputs remain differentiable.
+        adjoint_test(x->map(FiniteMean(OneMean(), x), :), randn(rng, N), x)
+        adjoint_test(X->map(FiniteMean(OneMean(), ColsAreObs(X)), :), randn(rng, N), X.X)
     end
 
     # Tests for FiniteKernel.
@@ -21,17 +23,20 @@ using Stheno: FiniteMean, OneMean, AM, AV, pairwise
         rng, N, D = MersenneTwister(123456), 5, 2
         k, X, x = EQ(), ColsAreObs(randn(rng, D, N)), randn(rng, N)
         kX, kx = FiniteKernel(k, X), FiniteKernel(k, x)
+        ȳ = randn(rng, N, N)
 
         for (k′, X′) in zip((kX, kx), (X, x))
 
             # Check for correctness relative to base kernel.
-            # @test size(k′) == (N, N)
-            # @test size(k′, 1) == N
-            # @test size(k′, 2) == N
-            # @test eachindex(k′) == 1:N
             @test pairwise(k′, :) == pairwise(k, X′)
             @test pairwise(k′, :) ≈ pairwise(k′, :, :)
         end
+
+        # Ensure that inputs remain differentiable.
+        adjoint_test(x->pw(FiniteKernel(EQ(), x), :), ȳ, x)
+        adjoint_test(x->pw(FiniteKernel(EQ(), x), :, :), ȳ, x)
+        adjoint_test(X->pw(FiniteKernel(EQ(), X), :), ȳ, X)
+        adjoint_test(X->pw(FiniteKernel(EQ(), X), :, :), ȳ, X)
     end
 
     # Tests for LhsFiniteCrossKernel.
@@ -40,27 +45,34 @@ using Stheno: FiniteMean, OneMean, AM, AV, pairwise
         k, X, X′ = EQ(), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         x, x′ = randn(rng, N), randn(rng, N′)
         k′, kx = LhsFiniteCrossKernel(k, X), LhsFiniteCrossKernel(k, x)
+        ȳ = randn(rng, N, N′)
 
-        # @test size(k′) == (N, Inf)
-        # @test size(k′, 1) == N
-        # @test size(k′, 2) == Inf
-        # @test eachindex(k′, 1) == 1:N
-        @test pairwise(k′, :, X′) ≈ pairwise(k, X, X′)
+        @test pairwise(kx, :, x′) == pairwise(k, x, x′)
+        adjoint_test(x->pw(LhsFiniteCrossKernel(EQ(), x), :, x′), ȳ, x)
+        adjoint_test(x′->pw(LhsFiniteCrossKernel(EQ(), x), :, x′), ȳ, x′)
+
+        @test pairwise(k′, :, X′) == pairwise(k, X, X′)
+        adjoint_test(X->pw(LhsFiniteCrossKernel(EQ(), X), :, X′), ȳ, X)
+        adjoint_test(X′->pw(LhsFiniteCrossKernel(EQ(), X), :, X′), ȳ, X′)
     end
 
     # Tests for RhsFiniteCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
-        X, Y, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        x, y, x′ = randn(rng, N), randn(rng, N), randn(rng, N′)
+        X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        x, x′ = randn(rng, N), randn(rng, N′)
+        ȳ = randn(rng, N, N′)
         k = EQ()
         k′, kx = RhsFiniteCrossKernel(k, X′), RhsFiniteCrossKernel(k, x′)
 
-        # @test size(k′) == (Inf, N′)
-        # @test size(k′, 1) == Inf
-        # @test size(k′, 2) == N′
-        # @test eachindex(k′, 2) == 1:N′
-        @test pairwise(k′, X, :) ≈ pairwise(k, X, X′)
+        @test pairwise(kx, x, :) == pairwise(k, x, x′)
+        adjoint_test(x->pw(RhsFiniteCrossKernel(k, x′), x, :), ȳ, x)
+        adjoint_test(x′->pw(RhsFiniteCrossKernel(k, x′), x, :), ȳ, x′)
+
+
+        @test pairwise(k′, X, :) == pairwise(k, X, X′)
+        adjoint_test(X->pw(RhsFiniteCrossKernel(k, X′), X, :), ȳ, X)
+        adjoint_test(X′->pw(RhsFiniteCrossKernel(k, X′), X, :), ȳ, X′)
     end
 
     # Tests for FiniteCrossKernel.
@@ -69,12 +81,14 @@ using Stheno: FiniteMean, OneMean, AM, AV, pairwise
         x, x′ = randn(rng, N), randn(rng, N′)
         k, X, X′ = EQ(), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         k′, kx = FiniteCrossKernel(k, X, X′), FiniteCrossKernel(k, x, x′)
+        ȳ = randn(rng, N, N′)
 
-        # @test size(k′) == (N, N′)
-        # @test size(k′, 1) == N
-        # @test size(k′, 2) == N′
-        # @test eachindex(k′, 1) == 1:N
-        # @test eachindex(k′, 2) == 1:N′
+        @test pairwise(kx, :, :) == pairwise(k, x, x′)
+        adjoint_test(x->pw(FiniteCrossKernel(EQ(), x, x′), :, :), ȳ, x)
+        adjoint_test(x′->pw(FiniteCrossKernel(EQ(), x, x′), :, :), ȳ, x′)
+
         @test pairwise(k′, :, :) == pairwise(k, X, X′)
+        adjoint_test(X->pw(FiniteCrossKernel(EQ(), X, X′), :, :), ȳ, X)
+        adjoint_test(X′->pw(FiniteCrossKernel(EQ(), X, X′), :, :), ȳ, X′)
     end
 end

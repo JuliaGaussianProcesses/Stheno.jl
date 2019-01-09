@@ -7,7 +7,7 @@ const _atol = 1e-10
 
 function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
     println()
-    println("rtol is $rtol, atol is $atol.")
+    println("atol is $atol, rtol is $rtol")
     println("ad, fd, abs, rel")
     abs_err = abs.(adjoint_ad .- adjoint_fd)
     rel_err = abs_err ./ adjoint_ad
@@ -25,9 +25,9 @@ function adjoint_test(f, ȳ::AV{<:Real}, x::AV{<:Real}; rtol=_rtol, atol=_atol)
     # Compare gradients.
     adjoint_ad = back(ȳ)[1]
     adjoint_fd = FDM.adjoint(central_fdm(5, 1), f, ȳ, x)
-    if !(adjoint_ad isa Nothing) 
-        print_adjoints(adjoint_ad, adjoint_fd, rtol, atol) # util for debugging.
-    end
+    # if !(adjoint_ad isa Nothing) 
+    #     print_adjoints(adjoint_ad, adjoint_fd, rtol, atol) # util for debugging.
+    # end
     @test (adjoint_ad isa Nothing &&
         isapprox(adjoint_fd, zero(adjoint_fd); rtol=rtol, atol=atol)) ||
         isapprox(adjoint_ad, adjoint_fd; rtol=rtol, atol=atol)
@@ -65,6 +65,16 @@ function adjoint_test(f, ȳ::AbstractArray{<:Real}, x::Real; rtol=_rtol, atol=_
 end
 function adjoint_test(f, ȳ::Real, x::AbstractArray{<:Real}; rtol=_rtol, atol=_atol)
     return adjoint_test(x->[f(x)], [ȳ], x; rtol=rtol, atol=atol)
+end
+
+function adjoint_test(
+    f,
+    ȳ::Union{Real, AbstractArray{<:Real}},
+    x::ColsAreObs{<:Real};
+    rtol=_rtol,
+    atol=_atol,
+)
+    return adjoint_test(X->f(ColsAreObs(X)), ȳ, x.X; rtol=rtol, atol=atol)
 end
 
 """
@@ -259,6 +269,10 @@ function differentiable_mean_function_tests(
     rtol=_rtol,
     atol=_atol,
 )
+    # Run forward tests.
+    mean_function_tests(m, x)
+
+    # Check adjoint.
     @assert length(ȳ) == length(x)
     adjoint_test(x->map(m, x), ȳ, x; rtol=rtol, atol=atol)
 end
@@ -269,12 +283,30 @@ function differentiable_mean_function_tests(
     rtol=_rtol,
     atol=_atol,
 )
+    # Run forward tests.
+    mean_function_tests(m, x)
+
     @assert length(ȳ) == length(x)
     adjoint_test(X->map(m, ColsAreObs(X)), ȳ, x.X; rtol=rtol, atol=atol)  
 end
+function differentiable_mean_function_tests(
+    rng::AbstractRNG,
+    m::MeanFunction,
+    x::AV;
+    rtol=_rtol,
+    atol=_atol,
+)
+    return differentiable_mean_function_tests(
+        m,
+        randn(rng, length(x)),
+        x;
+        rtol=rtol,
+        atol=atol,
+    )
+end
 
 """
-    differentiable_crosskernel_tests(
+    differentiable_cross_kernel_tests(
         k::CrossKernel,
         ȳ::AbstractVector{<:Real},
         Ȳ::AbstractMatrix{<:Real},
@@ -286,7 +318,7 @@ end
 Ensure that the adjoint w.r.t. the inputs of a `CrossKernel` which is supposed to be
 differentiable are approximately correct.
 """
-function differentiable_crosskernel_tests(
+function differentiable_cross_kernel_tests(
     k::CrossKernel,
     ȳ::AbstractVector{<:Real},
     Ȳ::AbstractMatrix{<:Real},
@@ -324,7 +356,7 @@ function differentiable_crosskernel_tests(
         atol=atol,
     )
 end
-function differentiable_crosskernel_tests(
+function differentiable_cross_kernel_tests(
     k::CrossKernel,
     ȳ::AbstractVector{<:Real},
     Ȳ::AbstractMatrix{<:Real},
@@ -379,7 +411,7 @@ function differentiable_crosskernel_tests(
         atol=atol,
     )
 end
-function differentiable_crosskernel_tests(
+function differentiable_cross_kernel_tests(
     rng::AbstractRNG,
     k::CrossKernel,
     x0::AV,
@@ -388,8 +420,8 @@ function differentiable_crosskernel_tests(
     rtol=_rtol,
     atol=_atol,
 )
-    ȳ, Ȳ = randn(rng, length(x0)), randn(rng, length(x0), length(x1))
-    return differentiable_crosskernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
+    ȳ, Ȳ = randn(rng, length(x0)), randn(rng, length(x0), length(x2))
+    return differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
 end
 
 """
@@ -403,7 +435,7 @@ end
         x2::AbstractVector,
     )
 
-A superset of the tests provided by `differentiable_crosskernel_tests` designed to test
+A superset of the tests provided by `differentiable_cross_kernel_tests` designed to test
 kernels (which provide unary, in addition to binary, methods for `map` and `pairwise`.)
 """
 function differentiable_kernel_tests(
@@ -428,7 +460,7 @@ function differentiable_kernel_tests(
     @assert size(Ȳ_sq, 1) == length(x0)
 
     # Run the CrossKernel tests.
-    differentiable_crosskernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
+    differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
 
     # Unary map tests.
     adjoint_test(x->map(k, x), ȳ, x0; rtol=rtol, atol=atol)
@@ -460,7 +492,7 @@ function differentiable_kernel_tests(
     D, N = size(x0.X)
 
     # Run the CrossKernel tests.
-    differentiable_crosskernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
+    differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
 
     # Unary map tests.
     adjoint_test(
@@ -489,7 +521,7 @@ function differentiable_kernel_tests(
     rtol=_rtol,
     atol=_atol,
 )
-    N, N′ = length(x0), length(x1)
+    N, N′ = length(x0), length(x2)
     ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
     return differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, x0, x1, x2; rtol=rtol, atol=atol)
 end

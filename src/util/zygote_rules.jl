@@ -1,5 +1,6 @@
 using Zygote, IRTools, Random, ToeplitzMatrices
 using Zygote: @adjoint, _forward, literal_getproperty
+import Zygote: accum
 
 import Base: map, getfield, getproperty, sum
 import Distances: pairwise, colwise
@@ -224,7 +225,7 @@ end
 # _completely_ essential at this stage.
 @adjoint function broadcasted(f, x...)
     y_pairs = materialize(broadcasted((x...)->Zygote.forward(f, x...), x...))
-    y = [y_pair[1] for y_pair in y_pairs] 
+    y = [y_pair[1] for y_pair in y_pairs]
     return y, function(Δ)
         out_back = broadcast((δ, (y, back))->back(δ), Δ, y_pairs)
         xs = (nothing, map(n->unbroadcast(x[n], [p[n] for p in out_back]), 1:length(x))...)

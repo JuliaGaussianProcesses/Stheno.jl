@@ -20,8 +20,7 @@ module Stheno
     include("util/block_arrays.jl")
     include("util/abstract_data_set.jl")
     include("util/toeplitz.jl")
-    include("util/eachindex_util.jl")
-
+    # include("util/eachindex_util.jl")
 
     # All mean function and kernel related functionality.
     include("mean_and_kernel/mean.jl")
@@ -41,7 +40,7 @@ module Stheno
     # include("gp/block_gp.jl")
 
     # Affine transformations of GPs.
-    include("linops/indexing.jl")
+    # include("linops/indexing.jl")
     # include("linops/addition.jl")
     # include("linops/product.jl")
     # include("linops/compose.jl")

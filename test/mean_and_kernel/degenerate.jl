@@ -11,25 +11,22 @@ using Stheno: DeltaSumMean, DeltaSumKernel, LhsDeltaSumCrossKernel, RhsDeltaSumC
         ϕX, μX = LhsFiniteCrossKernel(EQ(), X0), FiniteMean(OneMean(), X0)
         g  = OneMean()
         μ_dsx, μ_dsX = DeltaSumMean(ϕx, μx, g), DeltaSumMean(ϕX, μX, g)
-        mean_function_tests(μ_dsx, x0)
-        # mean_function_tests(μ_dsX, X0)
-
-        # ϕ, k, g = EQ(), EQ(), ConstantMean(5.0)
-        # k_dsx, k_dsX = DeltaSumKernel(ϕ, k, x0), DeltaSumKernel(ϕ, k, X0)
+        differentiable_mean_function_tests(rng, μ_dsx, x0)
+        differentiable_mean_function_tests(rng, μ_dsX, X0)
 
         kx, kX = FiniteKernel(EQ(), x0), FiniteKernel(EQ(), X0)
         k_dsx, k_dsX = DeltaSumKernel(ϕx, kx), DeltaSumKernel(ϕX, kX)
-        kernel_tests(k_dsx, x0, x1, x2, 1e-6)
-        # kernel_tests(k_dsX, X0, X1, X2, 1e-6)
+        differentiable_kernel_tests(rng, k_dsx, x0, x1, x2)
+        differentiable_kernel_tests(rng, k_dsX, X0, X1, X2)
 
         kx, kX = LhsFiniteCrossKernel(EQ(), x0), LhsFiniteCrossKernel(EQ(), X0)
         k_dsx, k_dsX = LhsDeltaSumCrossKernel(ϕx, kx), LhsDeltaSumCrossKernel(ϕX, kX)
-        cross_kernel_tests(k_dsx, x0, x1, x2)
-        # cross_kernel_tests(k_dsX, X0, X1, X2)
+        differentiable_cross_kernel_tests(rng, k_dsx, x0, x1, x2)
+        differentiable_cross_kernel_tests(rng, k_dsX, X0, X1, X2)
 
         kx, kX = LhsFiniteCrossKernel(EQ(), x0), LhsFiniteCrossKernel(EQ(), X0)
         k_dsx, k_dsX = RhsDeltaSumCrossKernel(kx, ϕx), RhsDeltaSumCrossKernel(kX, ϕX)
-        cross_kernel_tests(k_dsx, x0, x1, x2)
-        # cross_kernel_tests(k_dsX, X0, X1, X2)
+        differentiable_cross_kernel_tests(rng, k_dsx, x0, x1, x2)
+        differentiable_cross_kernel_tests(rng, k_dsX, X0, X1, X2)
     end
 end
