@@ -129,7 +129,7 @@ end
         end
     end
 
-    back(C̄::NamedTuple{(:uplo, :info, :factors)}) = back(C̄.factors)
+    back(C̄::NamedTuple) = back(C̄.factors)
     function back(L̄_in::AbstractMatrix)
         v̄_ = zero(v_)
 

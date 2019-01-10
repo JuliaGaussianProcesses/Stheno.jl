@@ -23,6 +23,11 @@ using Stheno: are_conformal, ABM
     #         x,
     #     )
     #     adjoint_test(x->BlockVector([x, x′]), randn(rng, N + N′), x)
+
+    #     # zero of a BlockVector should be a BlockVector
+    #     @test zero(x̂) isa BlockVector
+    #     @test cumulsizes(x̂) == cumulsizes(zero(x̂))
+    #     @test zero(x̂) == zero(Vector(x̂))
     # end
 
     # # Test construction of `BlockMatrix` from matrix of matrices. Also test copying.
@@ -72,6 +77,11 @@ using Stheno: are_conformal, ABM
     #     adjoint_test(X11->BlockMatrix([X11, X21]), randn(rng, P1 + P2, Q1), X11)
     #     adjoint_test(X11->BlockMatrix([X11, X21]), BlockMatrix([X11, X21]), X11)
     #     adjoint_test(X11->BlockMatrix([X11, X12], 1, 2), BlockMatrix([X11, X12], 1, 2), X11)
+    
+    #     # zero of a BlockMatrix should be a BlockMatrix.
+    #     @test zero(X) isa BlockMatrix
+    #     @test cumulsizes(X) == cumulsizes(zero(X))
+    #     @test zero(X) == zero(Matrix(X))
     # end
 
     # # Test Symmetric block matrix construction and util.
@@ -297,8 +307,12 @@ using Stheno: are_conformal, ABM
         @test C_.U ≈ Matrix(C.U)
         @test C.U isa UpperTriangular{T, <:ABM{T}} where T
 
+        # HOW THE HELL DO I TEST THIS?
+        # adjoint_test(A->)
+
         # Test `logdet`.
         @test logdet(C) ≈ logdet(C_)
+        # adjoint_test()
 
         # # Test backsolving for block vector.
         # x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)

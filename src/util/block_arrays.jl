@@ -6,7 +6,7 @@ using FillArrays: Fill
 
 using BlockArrays: cumulsizes, blocksizes, _BlockArray
 
-import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty
+import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
 import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
     adjoint, AdjOrTrans, AdjOrTransAbsMat
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
@@ -107,6 +107,11 @@ Get a vector containing the block sizes over the `d`th dimension of `X`.
 blocksizes(X::AbstractArray, d::Int) = diff(cumulsizes(X, d))
 @nograd blocksizes
 
+zero(x::AbstractBlockVector) = BlockVector([zero(getblock(x, n)) for n in 1:nblocks(x, 1)])
+function zero(X::AbstractBlockMatrix)
+    blocks = [zero(getblock(X, p, q)) for p in 1:nblocks(X, 1), q in 1:nblocks(X, 2)]
+    return BlockMatrix(blocks)
+end
 
 
 ################################# Symmetric BlockMatrices ##############################
@@ -343,7 +348,7 @@ function \(L::LowerOrAdjUpper{T}, X::Adjoint{T, <:UpperTriangular{T, <:ABM{T}}})
 end
 
 """
-    chol(A::Symmetric{T, <:BlockMatrix{T}}) where T<:Real
+    cholesky(A::Symmetric{T, <:BlockMatrix{T}}) where T<:Real
 
 Get the Cholesky decomposition of `A` in the form of a `BlockMatrix`.
 
@@ -353,7 +358,7 @@ upper triangular version.
 
 const BlockMaybeSymmetric{T, V} = Union{BlockMatrix{T, V}, BlockSymmetric{T, V}}
 
-function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AbstractMatrix{T}}
+function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
     U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
 
     # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
@@ -385,24 +390,32 @@ function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AbstractMatri
     return Cholesky(U, :U, 0)
 end
 
+@adjoint function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
+    return cholesky(A), function(Δ)
+        
+    end
+end
+
 # A slightly strange util function that shouldn't ever be used outside of `logdet`.
 reduce_diag(f, A::Matrix{T}) where {T<:Real} = sum(f, view(A, diagind(A)))
 function reduce_diag(f, A::BlockMatrix{T}) where T<:Real
     return sum([reduce_diag(f, getblock(A, n, n)) for n in 1:nblocks(A, 1)])
 end
+
 logdet(C::Cholesky{<:Real, <:AbstractBlockMatrix}) = 2 * reduce_diag(log, C.factors)
 @adjoint function logdet(C::Cholesky{<:Real, <:AbstractBlockMatrix})
-    return logdet(C), function(Δ)
-        A = C.factors
-        B = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
-
-        # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
-        for q in 1:nblocks(B, 2), p in 1:nblocks(B, 1)
-            setblock!(B, Zeros{T}(blocksize(A, (p, q))...), p, q)
+    return logdet(C), function(Δ::Real)
+        function update_diag!(X::Matrix, A::Matrix)
+            X[diagind(X)] .= Δ ./ A[diagind(A)]
+            return X
         end
-
-        # Do some stuff with the diagonal.
-
+        function update_diag!(X::BlockMatrix, A::BlockMatrix)
+            for n in 1:nblocks(A)
+                update_diag!(getblock(X, n, n), getblock(A, n, n))
+            end
+            return X
+        end
+        return update_diag!(zero(C.factors), C.factors)
     end
 end
 
