@@ -111,7 +111,7 @@ blocksizes(X::AbstractArray, d::Int) = diff(cumulsizes(X, d))
 
 ################################# Symmetric BlockMatrices ##############################
 
-const BlockSymmetric{T} = Symmetric{T, <:AbstractBlockMatrix{T}}
+const BlockSymmetric{T, V} = Symmetric{T, <:BlockMatrix{T, V}}
 
 blocksizes(S::BlockSymmetric) = blocksizes(unbox(S))
 function getblock(X::BlockSymmetric, p::Int, q::Int)
@@ -350,16 +350,18 @@ Get the Cholesky decomposition of `A` in the form of a `BlockMatrix`.
 Only works for `A` where `is_block_symmetric(A) == true`. Assumes that we want the
 upper triangular version.
 """
-function chol(A::Symmetric{T, <:BlockMatrix{T, V}}) where {T<:Real, V<:AbstractMatrix{T}}
 
+const BlockMaybeSymmetric{T, V} = Union{BlockMatrix{T, V}, BlockSymmetric{T, V}}
+
+function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AbstractMatrix{T}}
     U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
 
-    # Do an initial pass to fill each of the blocks with Zeros. This is cheap
+    # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
     for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
         setblock!(U, Zeros{T}(blocksize(A, (p, q))...), p, q)
     end
 
-    # Fill out the upper triangle with the Cholesky
+    # Fill out the upper triangle with the Cholesky.
     for j in 1:nblocks(A, 2)
 
         # Update off-diagonals.
@@ -378,18 +380,30 @@ function chol(A::Symmetric{T, <:BlockMatrix{T, V}}) where {T<:Real, V<:AbstractM
             Ukk, Ukj = getblock(U, k, k), getblock(U, k, j)
             setblock!(U, getblock(U, j, j) - Ukj' * Ukj, j, j)
         end
-        setblock!(U, chol(Symmetric(getblock(U, j, j))), j, j)
+        setblock!(U, cholesky(getblock(U, j, j)).U, j, j)
     end
-    return UpperTriangular(U)
+    return Cholesky(U, :U, 0)
 end
 
-logdet(A::Cholesky{T, <:AbstractBlockMatrix{T}}) where T = 2 * logdet(A.U)
-function logdet(U::UpperTriangular{T, <:AbstractBlockMatrix{T}}) where T
-    val = zero(T)
-    for n in 1:nblocks(U, 1)
-        val += logdet(UpperTriangular(getblock(unbox(U), n, n)))
+# A slightly strange util function that shouldn't ever be used outside of `logdet`.
+reduce_diag(f, A::Matrix{T}) where {T<:Real} = sum(f, view(A, diagind(A)))
+function reduce_diag(f, A::BlockMatrix{T}) where T<:Real
+    return sum([reduce_diag(f, getblock(A, n, n)) for n in 1:nblocks(A, 1)])
+end
+logdet(C::Cholesky{<:Real, <:AbstractBlockMatrix}) = 2 * reduce_diag(log, C.factors)
+@adjoint function logdet(C::Cholesky{<:Real, <:AbstractBlockMatrix})
+    return logdet(C), function(Δ)
+        A = C.factors
+        B = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
+
+        # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
+        for q in 1:nblocks(B, 2), p in 1:nblocks(B, 1)
+            setblock!(B, Zeros{T}(blocksize(A, (p, q))...), p, q)
+        end
+
+        # Do some stuff with the diagonal.
+
     end
-    return val
 end
 
 function +(u::UniformScaling, X::AbstractBlockMatrix)
