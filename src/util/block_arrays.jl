@@ -392,7 +392,11 @@ end
 
 @adjoint function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
     return cholesky(A), function(Δ)
-        
+        Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
+        Ū = Δ.factors
+        for j in reverse(1:nblocks(A, 2))
+            
+        end
     end
 end
 
@@ -406,16 +410,17 @@ logdet(C::Cholesky{<:Real, <:AbstractBlockMatrix}) = 2 * reduce_diag(log, C.fact
 @adjoint function logdet(C::Cholesky{<:Real, <:AbstractBlockMatrix})
     return logdet(C), function(Δ::Real)
         function update_diag!(X::Matrix, A::Matrix)
-            X[diagind(X)] .= Δ ./ A[diagind(A)]
+            X[diagind(X)] .= (2 * Δ) ./ A[diagind(A)]
             return X
         end
         function update_diag!(X::BlockMatrix, A::BlockMatrix)
-            for n in 1:nblocks(A)
+            for n in 1:nblocks(A)[1]
                 update_diag!(getblock(X, n, n), getblock(A, n, n))
             end
             return X
         end
-        return update_diag!(zero(C.factors), C.factors)
+        factors = update_diag!(zero(C.factors), C.factors)
+        return ((factors=factors, uplo=nothing, info=nothing),)
     end
 end
 

@@ -79,16 +79,6 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
     # @test RQ(1.0) != RQ(5.0)
     # @test RQ(1000.0) != EQ()
 
-    # # Tests for Linear kernel.
-    # @test !isstationary(Linear)
-    # @test Linear(0.0)(1.0, 1.0) == 1
-    # @test Linear(1.0)(1.0, 1.0) == 0
-    # @test Linear(0.0)(0.0, 0.0) == 0
-    # @test Linear(0.0)(5.0, 4.0) ≈ 20
-    # @test Linear(2.0)(5.0, 4.0) ≈ 6
-    # @test Linear(2.0) == Linear(2.0)
-    # @test Linear(1.0) != Linear(2.0)
-
     # # Tests for Polynomial kernel.
     # @test !isstationary(Poly)
     # @test Poly(2, -1.0)(1.0, 1.0) == 0.0

@@ -20,69 +20,6 @@ let
     adjoint_test(x->exp.(x), randn(rng, N), Fill(x, N))
 end
 
-# Check squared-euclidean distance implementation (AbstractMatrix)
-let
-    rng, P, Q, D = MersenneTwister(123456), 10, 9, 8
-
-    # Check sqeuclidean.
-    let
-        x, y = randn(rng, D), randn(rng, D)
-        adjoint_test(x->sqeuclidean(x, y), randn(rng), x)
-        adjoint_test(y->sqeuclidean(x, y), randn(rng), y)
-    end
-
-    # Check binary colwise.
-    let
-        X, Y = randn(rng, D, P), randn(rng, D, P)
-        adjoint_test(X->colwise(SqEuclidean(), X, Y), randn(rng, P), X)
-        adjoint_test(Y->colwise(SqEuclidean(), X, Y), randn(rng, P), Y)
-    end
-
-    # Check binary pairwise.
-    let
-        X, Y = randn(rng, D, P), randn(rng, D, Q)
-        adjoint_test(X->pairwise(SqEuclidean(), X, Y), randn(rng, P, Q), X)
-        adjoint_test(Y->pairwise(SqEuclidean(), X, Y), randn(rng, P, Q), Y)
-    end
-
-    # Check unary pairwise.
-    let
-        X = randn(rng, D, P)
-        adjoint_test(X->pairwise(SqEuclidean(), X), randn(rng, P, P), X)
-    end
-end
-
-# Check that \ and / work.
-let
-    rng, P, Q = MersenneTwister(123456), 10, 9
-    X, Y, y = randn(rng, P, P), randn(rng, P, Q), randn(rng, P)
-
-    # \
-    adjoint_test(X->X \ Y, randn(rng, size(Y)), X)
-    adjoint_test(Y->X \ Y, randn(rng, size(Y)), Y)
-    adjoint_test(X->X \ y, randn(rng, size(y)), X)
-    adjoint_test(y->X \ y, randn(rng, size(y)), y)
-
-    # /
-    Y′, y′ = collect(Y'), collect(y')
-    adjoint_test(X->Y′ / X, randn(rng, size(Y′)), X)
-    adjoint_test(Y′->Y′ / X, randn(rng, size(Y′)), Y′)
-    adjoint_test(X->y′ / X, randn(rng, size(y′)), X)
-    adjoint_test(y′->y′ / X, randn(rng, size(y′)), y′)
-end
-
-# Check that Symmetric works as expected.
-let
-    rng, P = MersenneTwister(123456), 7
-    adjoint_test(Symmetric, randn(rng, P, P), randn(rng, P, P))
-end
-
-# Check that `diag` behaves sensibly.
-let
-    rng, P = MersenneTwister(123456), 10
-    adjoint_test(diag, randn(rng, P), randn(rng, P, P))
-end
-
 # Verify that Cholesky retrieves gradient information correctly.
 let
     rng, N = MersenneTwister(123456), 2
@@ -105,14 +42,7 @@ let
     @test back(1)[1] == (uplo=nothing, info=nothing, factors=nothing)
 
     # Unit test retrieving the factors.
-    @test_broken Zygote.gradient(C->sum(C.factors), C)[1].factors == ones(size(C))
-
-    # Integration testing with backprop and comparison with FDM.
-    let
-        f = A->sum(cholesky(A' * A + 1e-6I).factors)
-        Ā_fd = FDM.grad(central_fdm(5, 1), f, A)
-        @test_broken all(abs.(Zygote.gradient(f, A)[1] .- Ā_fd) .< 1e-8)
-    end
+    @test_throws ErrorException Zygote.forward(C->C.factors, C)
 
     # Test getproperty.
     adjoint_test(A->Cholesky(A, :U, 0).U, randn(rng, N, N), A)
@@ -123,11 +53,13 @@ end
 
 # Verify cholesky factorisation correctness.
 let
-    rng, N = MersenneTwister(123456), 5
+    rng, N = MersenneTwister(123456), 3
     A = randn(rng, N, N)
     adjoint_test(A->logdet(cholesky(Symmetric(A' * A + 1e-3I))), randn(rng), A)
     adjoint_test(A->cholesky(Symmetric(A' * A + 1e-3I)).U, randn(rng, N, N), A)
     adjoint_test(A->cholesky(Symmetric(A' * A + 1e-3I)).L, randn(rng, N, N), A)
+
+    adjoint_test(A->logdet(cholesky(A' * A + 1e-3I)), randn(rng), A)
     adjoint_test(A->cholesky(A' * A + 1e-3I).U, randn(rng, N, N), A)
     adjoint_test(A->cholesky(A' * A + 1e-3I).L, randn(rng, N, N), A)
 end
@@ -144,14 +76,6 @@ let
         rtol=1e-6,
         atol=1e-6,
     )
-end
-
-# Check that addition of matrices and uniform scalings works as hoped.
-let
-    rng, N = MersenneTwister(123456), 10
-    A, λ = randn(rng, N, N), randn(rng)
-    adjoint_test(A->A + λ * I, randn(rng, N, N), A)
-    adjoint_test(λ->A + λ * I, randn(rng, N, N), λ)
 end
 
 end

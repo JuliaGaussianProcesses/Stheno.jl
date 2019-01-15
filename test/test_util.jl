@@ -22,14 +22,6 @@ to_vec(x::Vector{<:Real}) = (x, identity)
 to_vec(x::Real) = ([x], x->x[1])
 to_vec(x::AbstractArray{<:Real}) = (vec(x), x_vec->reshape(x_vec, size(x)))
 to_vec(x::ColsAreObs{<:Real}) = (vec(x.X), x_vec->ColsAreObs(reshape(x_vec, size(x.X))))
-# function to_vec(x::NamedTuple)
-#     x_vecs, backs = zip(map(to_vec, values(x))...)
-#     sz = vcat(0, cumsum([length.(x_vecs)...])) .+ 1
-#     return vcat(x_vecs...), function(x_vec)
-#         back_vals = [backs[n](x_vec[sz[n]:sz[n+1]-1]) for n in 1:length(sz)-1]
-#         return NamedTuple{keys(x)}((back_vals...,))
-#     end
-# end
 
 function adjoint(fdm, f, ȳ, x)
     x_vec, vec_to_x = to_vec(x)
@@ -47,13 +39,13 @@ end
 function fd_isapprox(x_ad::Real, x_fd::Real, rtol, atol)
     return isapprox(x_ad, x_fd; rtol=rtol, atol=atol)
 end
-# function fd_isapprox(x_ad::NamedTuple, x_fd::NamedTuple, rtol, atol)
-#     f = (x_ad, x_fd)->fd_isapprox(x_ad, x_fd, rtol, atol)
-#     return all(map(f, values(x_ad), values(x_fd)))
-# end
+function fd_isapprox(x_ad::NamedTuple, x_fd, rtol, atol)
+    f = (x_ad, x_fd)->fd_isapprox(x_ad, x_fd, rtol, atol)
+    return all([f(getfield(x_ad, key), getfield(x_fd, key)) for key in keys(x_ad)])
+end
 
 # Ensure that `to_vec` and adjoint works correctly.
-for x in [randn(10), 5.0, randn(10, 10), ColsAreObs(randn(2, 5)), (x=5, y=randn(11))]
+for x in [randn(10), 5.0, randn(10, 10), ColsAreObs(randn(2, 5))]
     x_vec, back = to_vec(x)
     @test x_vec isa AbstractVector{<:Real}
     @test back(x_vec) == x
@@ -62,73 +54,19 @@ end
 
 # Ensure that forwards- and reverse- passes are (approximately) correct.
 function adjoint_test(f, ȳ, x; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1))
+
+    # Compute forwards-pass and adjoint.
     y, back = Zygote.forward(f, x)
+    adj_ad = back(ȳ)[1]
+    adj_fd = adjoint(fdm, f, ȳ, x)
+
+    # Check that forwards-pass agrees with plain forwards-pass.
     @test y == f(x)
-    @test fd_isapprox(back(ȳ)[1], adjoint(fdm, f, ȳ, x), rtol, atol)
+
+    # Check that ad and fd adjoints (approximately) agree.
+    # print_adjoints(adj_ad, adj_fd, rtol, atol)
+    @test fd_isapprox(adj_ad, adj_fd, rtol, atol)
 end
-
-# # Compare FDM estimate of the adjoint with Zygotes. Also ensure that forwards passes match.
-# function adjoint_test(f, ȳ::AV{<:Real}, x::AV{<:Real}; rtol=_rtol, atol=_atol)
-
-#     # Compute Zygote forward-pass and ensure that it matches regular evaulation of `f`.
-#     y, back = Zygote.forward(f, x)
-#     @test y == f(x)
-
-#     # Compare gradients.
-#     adjoint_ad = back(ȳ)[1]
-#     adjoint_fd = FDM.adjoint(central_fdm(5, 1), f, ȳ, x)
-#     # if !(adjoint_ad isa Nothing) 
-#     #     print_adjoints(adjoint_ad, adjoint_fd, rtol, atol) # util for debugging.
-#     # end
-#     @test (adjoint_ad isa Nothing &&
-#         isapprox(adjoint_fd, zero(adjoint_fd); rtol=rtol, atol=atol)) ||
-#         isapprox(adjoint_ad, adjoint_fd; rtol=rtol, atol=atol)
-# end
-# function adjoint_test(f, ȳ::Real, x::AV{<:Real}; rtol=_rtol, atol=_atol)
-#     return adjoint_test(x->[f(x)], [ȳ], x; rtol=rtol, atol=atol)
-# end
-# function adjoint_test(f, ȳ::AV{<:Real}, x::Real; rtol=_rtol, atol=_atol)
-#     return adjoint_test(x->f(x[1]), ȳ, [x]; rtol=rtol, atol=atol)
-# end
-# function adjoint_test(f, ȳ::Real, x::Real; rtol=_rtol, atol=_atol)
-#     return adjoint_test(x->[f(x[1])], [ȳ], [x]; rtol=rtol, atol=atol)
-# end
-
-# # If a general array is provided, assume that `size(f(x)) == size(ȳ)`. Do appropriate
-# # reshaping to make stuff work in terms of vectors.
-# function adjoint_test(
-#     f,
-#     ȳ::AbstractArray{<:Real},
-#     x::AbstractArray{<:Real};
-#     rtol=_rtol,
-#     atol=_atol,
-# )
-#     sz = size(x)
-#     return adjoint_test(
-#         x->reshape(f(reshape(x, sz...)), :),
-#         reshape(ȳ, :),
-#         reshape(x, :);
-#         rtol=rtol,
-#         atol=atol,
-#     )
-# end
-# function adjoint_test(f, ȳ::AbstractArray{<:Real}, x::Real; rtol=_rtol, atol=_atol)
-#     return adjoint_test(x->f(x[1]), ȳ, [x]; rtol=rtol, atol=atol)
-# end
-# function adjoint_test(f, ȳ::Real, x::AbstractArray{<:Real}; rtol=_rtol, atol=_atol)
-#     return adjoint_test(x->[f(x)], [ȳ], x; rtol=rtol, atol=atol)
-# end
-
-# function adjoint_test(
-#     f,
-#     ȳ::Union{Real, AbstractArray{<:Real}},
-#     x::ColsAreObs{<:Real};
-#     rtol=_rtol,
-#     atol=_atol,
-# )
-#     return adjoint_test(X->f(ColsAreObs(X)), ȳ, x.X; rtol=rtol, atol=atol)
-# end
-
 
 """
     unary_map_tests(f, X::AbstractVector)

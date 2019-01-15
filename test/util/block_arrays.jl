@@ -307,11 +307,28 @@ using Stheno: are_conformal, ABM
         @test C_.U ≈ Matrix(C.U)
         @test C.U isa UpperTriangular{T, <:ABM{T}} where T
 
-        # HOW THE HELL DO I TEST THIS?
-        # adjoint_test(A->)
-
         # Test `logdet`.
         @test logdet(C) ≈ logdet(C_)
+
+        # Check that the forwards-pass agrees.
+        @test Zygote.forward(logdet, C)[1] == logdet(C)
+
+        # Check that reverse-pass agrees with dense revese-pass.
+        let
+            ȳ = randn(rng)
+
+            # Compute adjoint with dense.
+            _, back_dense = Zygote.forward(logdet, C_)
+            C̄_ = back_dense(ȳ)
+
+            # Compute adjoint with block
+            _, back_block = Zygote.forward(logdet, C)
+            C̄ = back_block(ȳ)
+
+            # Check that both answers approximately agree.
+            @test C̄_[1].factors ≈ C̄[1].factors
+        end
+
         # adjoint_test()
 
         # # Test backsolving for block vector.

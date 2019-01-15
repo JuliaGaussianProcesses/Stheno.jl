@@ -20,7 +20,6 @@ module Stheno
     include("util/block_arrays.jl")
     include("util/abstract_data_set.jl")
     include("util/toeplitz.jl")
-    # include("util/eachindex_util.jl")
 
     # All mean function and kernel related functionality.
     include("mean_and_kernel/mean.jl")

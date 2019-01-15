@@ -15,9 +15,6 @@ import Base.Broadcast: broadcasted, materialize
 @adjoint Zeros{T}(sz::Integer...) where {T} = Zeros{T}(sz...), Δ->(map(_->nothing, sz)...,)
 @adjoint Ones{T}(sz::Integer...) where {T} = Ones{T}(sz...), Δ->(map(_->nothing, sz)...,)
 
-const AbstractFillVec{T} = AbstractFill{T, 1}
-const AbstractFillMat{T} = AbstractFill{T, 2}
-
 @adjoint function broadcasted(op, r::AbstractFill{<:Real})
     y, _back = Zygote.forward(op, getindex_value(r))
     back(Δ::AbstractFill) = (nothing, Fill(_back(getindex_value(Δ))[1], size(r)))
@@ -25,7 +22,7 @@ const AbstractFillMat{T} = AbstractFill{T, 2}
     return Fill(y, size(r)), back
 end
 
-for array_type in [:AbstractFillVec, :AbstractFillMat]
+for array_type in [:(AbstractFill{T, 1} where T), :(AbstractFill{T, 2} where T)]
     @eval @adjoint function broadcasted(::typeof(+), a::$array_type, b::$array_type)
         return broadcasted(+, a, b), Δ->(nothing, Δ, Δ)
     end
@@ -62,46 +59,6 @@ end
     return D, function(Δ)
         d1, d2 = Diagonal(vec(sum(Δ; dims=1))), Diagonal(vec(sum(Δ; dims=2)))
         return (nothing, X * (2 .* (d1 .+ d2 .- Δ .- Δ')))
-    end
-end
-
-@adjoint function \(A::AbstractMatrix, B::AbstractVecOrMat)
-    Y = A \ B
-    return Y, function(Ȳ)
-        B̄ = A' \ Ȳ
-        return (-B̄ * Y', B̄)
-    end
-end
-
-@adjoint function /(A::AbstractMatrix, B::AbstractMatrix)
-    Y = A / B
-    return Y, function(Ȳ)
-        Ā = Ȳ / B'
-        return (Ā, -Y' * Ā)
-    end
-end
-
-symmetric_back(Δ) = UpperTriangular(Δ) + LowerTriangular(Δ)' - Diagonal(Δ)
-symmetric_back(Δ::UpperTriangular) = Δ
-@adjoint function Symmetric(A::AbstractMatrix)
-    back(Δ::AbstractMatrix) = (symmetric_back(Δ),)
-    back(Δ::NamedTuple) = (symmetric_back(Δ.data),)
-    return Symmetric(A), back
-end
-
-@adjoint function cholesky(Σ::Union{StridedMatrix, Symmetric{<:Real, <:StridedMatrix}})
-    C = cholesky(Σ)
-    U = C.U
-    return C, function(Δ)
-        Ū = Δ.factors
-        Σ̄ = Ū * U'
-        Σ̄ = copytri!(Σ̄, 'U')
-        Σ̄ = ldiv!(U, Σ̄)
-        BLAS.trsm!('R', 'U', 'T', 'N', one(eltype(Σ)), U.data, Σ̄)
-        @inbounds for n in diagind(Σ̄)
-            Σ̄[n] /= 2
-        end
-        return (UpperTriangular(Σ̄),)
     end
 end
 
@@ -169,47 +126,11 @@ end
     return Cholesky(L, 'L', 0), back
 end
 
-# Various sensitivities for `literal_getproperty`, depending on the 2nd argument.
-@adjoint function literal_getproperty(C::Cholesky, ::Val{:uplo})
-    return literal_getproperty(C, Val(:uplo)), function(Δ)
-        return ((uplo=nothing, info=nothing, factors=nothing),)
-    end
-end
-@adjoint function literal_getproperty(C::Cholesky, ::Val{:info})
-    return literal_getproperty(C, Val(:info)), function(Δ)
-        return ((uplo=nothing, info=nothing, factors=nothing),)
-    end
-end
 @adjoint function literal_getproperty(C::Cholesky, ::Val{:factors})
+    error("@adjoint not implemented for :factors as is unsafe.")
     return literal_getproperty(C, Val(:factors)), function(Δ)
         error("@adjoint not implemented for :factors. (I couldn't make it work...)")
     end
-end
-@adjoint function literal_getproperty(C::Cholesky, ::Val{:U})
-    return literal_getproperty(C, Val(:U)), function(Δ)
-        Δ_factors = C.uplo == 'U' ? UpperTriangular(Δ) : LowerTriangular(copy(Δ'))
-        return ((uplo=nothing, info=nothing, factors=Δ_factors),)
-    end
-end
-@adjoint function literal_getproperty(C::Cholesky, ::Val{:L})
-    return literal_getproperty(C, Val(:L)), function(Δ)
-        Δ_factors = C.uplo == 'L' ? LowerTriangular(Δ) : UpperTriangular(copy(Δ'))
-        return ((uplo=nothing, info=nothing, factors=Δ_factors),)
-    end
-end
-
-# Return something that the cholesky knows how to work with.
-@adjoint function logdet(C::Cholesky)
-    return logdet(C), function(Δ)
-        return ((info=nothing, uplo=nothing, factors=Diagonal(2 .* Δ ./ diag(C.factors))),)
-    end
-end
-
-
-@adjoint diag(A::AbstractMatrix) = diag(A), Δ->(Diagonal(Δ),)
-
-@adjoint function +(A::AbstractMatrix, S::UniformScaling)
-    return A + S, Δ->(Δ, (λ=sum(view(Δ, diagind(Δ))),))
 end
 
 # @adjoint function map(f, x...)

@@ -19,7 +19,7 @@ include("test_util.jl")
         # include("mean_and_kernel/block.jl")
         # include("mean_and_kernel/input_transform.jl")
         # include("mean_and_kernel/degenerate.jl")
-        # # include("mean_and_kernel/derivative.jl") # These tests currenly fail because Zygote.
+        # include("mean_and_kernel/derivative.jl") # These tests currenly fail because Zygote.
         # include("mean_and_kernel/conditional.jl")
         # include("mean_and_kernel/algebra.jl")
     end
