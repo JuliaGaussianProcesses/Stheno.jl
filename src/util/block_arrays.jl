@@ -382,7 +382,7 @@ function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
         # Update diagonal.
         setblock!(U, getblock(A, j, j), j, j)
         for k in 1:j-1
-            Ukk, Ukj = getblock(U, k, k), getblock(U, k, j)
+            Ukj = getblock(U, k, j)
             setblock!(U, getblock(U, j, j) - Ukj' * Ukj, j, j)
         end
         setblock!(U, cholesky(getblock(U, j, j)).U, j, j)
@@ -395,7 +395,7 @@ end
         Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
         Ū = Δ.factors
         for j in reverse(1:nblocks(A, 2))
-            
+
         end
     end
 end
