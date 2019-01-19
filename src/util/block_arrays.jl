@@ -362,6 +362,7 @@ const BlockMaybeSymmetric{T, V} = Union{BlockMatrix{T, V}, BlockSymmetric{T, V}}
 # compute the adjoint sensitivity.
 function cholesky_and_adjoint(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
     U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 2))
+    backs = Vector{Any}()
 
     # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
     for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
@@ -412,7 +413,7 @@ function cholesky_and_adjoint(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:A
         return (Ā,)
     end
 end
-
+x̄
 function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
     return cholesky_and_adjoint(A)[1]
 end
