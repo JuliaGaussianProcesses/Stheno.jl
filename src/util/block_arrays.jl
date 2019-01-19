@@ -8,7 +8,7 @@ using BlockArrays: cumulsizes, blocksizes, _BlockArray
 
 import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
 import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
-    adjoint, AdjOrTrans, AdjOrTransAbsMat
+    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks
 export unbox, BlockSymmetric
@@ -358,12 +358,14 @@ upper triangular version.
 
 const BlockMaybeSymmetric{T, V} = Union{BlockMatrix{T, V}, BlockSymmetric{T, V}}
 
-function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
-    U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
+# Compute the cholesky factorisation of a symmetric block matrix `A`, and a function to
+# compute the adjoint sensitivity.
+function cholesky_and_adjoint(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
+    U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 2))
 
     # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
     for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
-        setblock!(U, Zeros{T}(blocksize(A, (p, q))...), p, q)
+        U[Block(p, q)] = Zeros{T}(blocksize(A, (p, q))...)
     end
 
     # Fill out the upper triangle with the Cholesky.
@@ -371,23 +373,48 @@ function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
 
         # Update off-diagonals.
         for i in 1:j-1
-            setblock!(U, getblock(A, i, j), i, j)
+            U[Block(i, j)] = copy(A[Block(i, j)])
             for k in 1:i-1
-                Uki, Ukj = getblock(U, k, i), getblock(U, k, j)
-                setblock!(U, getblock(U, i, j) - Uki' * Ukj, i, j)
+                U[Block(i, j)] .-= U[Block(k, i)]' * U[Block(k, j)]
             end
-            setblock!(U, getblock(U, i, i)' \ getblock(U, i, j), i, j)
+            ldiv!(UpperTriangular(U[Block(i, i)])', U[Block(i, j)])
         end
 
         # Update diagonal.
-        setblock!(U, getblock(A, j, j), j, j)
+        U[Block(j, j)] = copy(A[Block(j, j)])
         for k in 1:j-1
-            Ukj = getblock(U, k, j)
-            setblock!(U, getblock(U, j, j) - Ukj' * Ukj, j, j)
+            U[Block(j, j)] .-= U[Block(k, j)]' * U[Block(k, j)]
         end
-        setblock!(U, cholesky(getblock(U, j, j)).U, j, j)
+        U[Block(j, j)] = cholesky(U[Block(j, j)]).U
     end
-    return Cholesky(U, :U, 0)
+
+    return Cholesky(U, :U, 0), function(Δ)
+        Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
+        Ū = Δ.factors
+        for j in reverse(1:nblocks(A, 2))
+
+            Ā[Block(j, j)] = back(Ū[Block(j, j)])
+            for k in 1:j-1
+                ĀjjUkj = Ā[Block(j, j)] * U[Block(k, j)]
+                UkjĀjj = U[Block(k, j)] * Ā[Block(j, j)]
+                Ū[Block(k, j)] .+= ĀjjUkj .+ UkjĀjj
+            end
+
+            for i in reverse(1:j-1)
+                Ā[Block(i, j)] = Ā[Block(i, j)] + U[Block(i, i)] \ Ū[Block(i, j)]
+                Ū[Block(i, i)] = Ū[Block(i, i)] - Ā[Block(i, j)] * U[Block(i, j)]'
+                for k in 1:i-1
+                    Ū[Block(k, i)] = Ū[Block(k, i)] + Ā[Block(i, j)]' * U[Block(k, j)]
+                    Ū[Block(k, j)] = Ū[Block(k, j)] + U[Block(k, i)] * Ā[Block(i, j)]
+                end
+            end
+        end
+        return (Ā,)
+    end
+end
+
+function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
+    return cholesky_and_adjoint(A)[1]
 end
 
 @adjoint function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
@@ -395,8 +422,23 @@ end
         Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
         Ū = Δ.factors
         for j in reverse(1:nblocks(A, 2))
+            Ā[Block(j, j)] = back(Ū[Block(j, j)])
+            for k in 1:j-1
+                ĀjjUkj = Ā[Block(j, j)] * U[Block(k, j)]
+                UkjĀjj = U[Block(k, j)] * Ā[Block(j, j)]
+                Ū[Block(k, j)] .+= ĀjjUkj .+ UkjĀjj
+            end
 
+            for i in reverse(1:j-1)
+                Ā[Block(i, j)] = Ā[Block(i, j)] + U[Block(i, i)] \ Ū[Block(i, j)]
+                Ū[Block(i, i)] = Ū[Block(i, i)] - Ā[Block(i, j)] * U[Block(i, j)]'
+                for k in 1:i-1
+                    Ū[Block(k, i)] = Ū[Block(k, i)] + Ā[Block(i, j)]' * U[Block(k, j)]
+                    Ū[Block(k, j)] = Ū[Block(k, j)] + U[Block(k, i)] * Ā[Block(i, j)]
+                end
+            end
         end
+        return (Ā,)
     end
 end
 
