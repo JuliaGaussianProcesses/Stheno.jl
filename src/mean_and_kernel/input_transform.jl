@@ -4,12 +4,12 @@ export transform, pick_dims, periodic, scale, Indexer
 
 
 """
-    ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
+    ITMean{Tf, Tμ<:MeanFunction} <: MeanFunction
 
 "InputTransformationMean": A `MeanFunction` `μ_it` defined by applying the function `f` to
 the inputs to another `MeanFunction` `μ`. Concretely, `mean(μ_it, X) = mean(μ, f(X))`.
 """
-struct ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
+struct ITMean{Tf, Tμ<:MeanFunction} <: MeanFunction
     μ::Tμ
     f::Tf
 end
@@ -128,6 +128,20 @@ specified by `I`.
 """
 pick_dims(μ::MeanFunction, I) = ITMean(μ, X::AV->X[I])
 pick_dims(k::Kernel, I) = ITKernel(k, X::AV->X[I])
+
+
+"""
+    PickDims{Tidx}
+
+Wrapper for indices, used to specialise for operations involving grabbing a subset of the
+data. 
+"""
+struct PickDims{Tidx}
+    idx::Tidx
+end
+(f::PickDims)(x) = x[f.idx]
+broadcasted(f::PickDims, x::ColsAreObs) = ColsAreObs(x.X[f.idx, :])
+
 
 """
     periodic(k::Union{MeanFunction, Kernel}, θ::Real)
