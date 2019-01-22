@@ -17,7 +17,7 @@ module Stheno
     # Various bits of utility that aren't inherently GP-related.
     include("util/zygote_rules.jl")
     include("util/covariance_matrices.jl")
-    include("util/block_arrays.jl")
+    # include("util/block_arrays.jl")
     include("util/abstract_data_set.jl")
     include("util/toeplitz.jl")
 

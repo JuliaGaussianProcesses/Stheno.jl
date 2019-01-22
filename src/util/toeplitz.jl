@@ -1,7 +1,7 @@
 using ToeplitzMatrices
 import LinearAlgebra: Symmetric, *, mul!
 
-import Base: transpose, adjoint, copy
+import Base: transpose, adjoint, copy, +
 import Base.Broadcast: broadcasted, materialize
 import ToeplitzMatrices: Toeplitz, AbstractToeplitz
 

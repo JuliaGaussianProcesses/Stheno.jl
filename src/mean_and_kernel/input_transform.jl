@@ -1,8 +1,3 @@
-import Base: map, eachindex
-import Distances: pairwise
-export transform, pick_dims, periodic, scale, Indexer
-
-
 """
     ITMean{Tf, Tμ<:MeanFunction} <: MeanFunction
 
@@ -108,69 +103,51 @@ transform(k::CrossKernel, ϕ, ϕ′) = ITCross(k, ϕ, ϕ′)
 
 
 """
-    scale(f::Union{MeanFunction, Kernel}, l::Real)
+    Scale{T<:Real}
 
-Multiply each element of the input by `l`.
+Scale all elements of the inputs by `l`.
 """
-scale(f::Union{MeanFunction, Kernel}, l::Real) = transform(f, Scale(l))
-
 struct Scale{T<:Real}
     l::T
 end
 (s::Scale)(x) = s.l * x
-map(s::Scale, x::AVM) = s.l .* x
+broadcasted(s::Scale, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
+
 
 """
-    pick_dims(x::Union{MeanFunction, Kernel}, I)
+    LinearTransform{T<:AbstractMatrix}
 
-Returns either an `ITMean` or `ITKernel` which uses the columns of the input matrix `X`
-specified by `I`.
+A linear transform.
 """
-pick_dims(μ::MeanFunction, I) = ITMean(μ, X::AV->X[I])
-pick_dims(k::Kernel, I) = ITKernel(k, X::AV->X[I])
+struct LinearTransform{T<:AbstractMatrix}
+    A::T
+end
+(l::LinearTransform)(x::AbstractVector) = l.A * x
+broadcasted(l::LinearTransform, x::ColsAreObs) = ColsAreObs(l.A * x.X)
 
 
 """
     PickDims{Tidx}
 
-Wrapper for indices, used to specialise for operations involving grabbing a subset of the
-data. 
+Use inside an input transformation meanfunction / crosskernel to improve peformance.
 """
 struct PickDims{Tidx}
     idx::Tidx
 end
 (f::PickDims)(x) = x[f.idx]
 broadcasted(f::PickDims, x::ColsAreObs) = ColsAreObs(x.X[f.idx, :])
+broadcasted(f::PickDims{<:Integer}, x::ColsAreObs) = x.X[f.idx, :]
 
 
 """
-    periodic(k::Union{MeanFunction, Kernel}, θ::Real)
+    Periodic{Tf<:Real}
 
-Make `k` periodic with period `f`.
+Make a kernel or mean function periodic by projecting into two dimensions.
 """
-periodic(μ::MeanFunction, f::Real) = ITMean(μ, Periodic(f))
-periodic(k::Kernel, f::Real) = ITKernel(k, Periodic(f))
-periodic(k::EQ, p::Real) = PerEQ(p)
-periodic(f::Union{MeanFunction, Kernel}) = periodic(f, 1.0)
-
 struct Periodic{Tf<:Real}
     f::Tf
 end
 (p::Periodic)(t::Real) = [cos((2π * p.f) * t), sin((2π * p.f) * t)]
-function map(p::Periodic, t::AV)
-    return ColsAreObs(vcat(
-        map(x->cos((2π * p.f) * x), t)',
-        map(x->sin((2π * p.f) * x), t)',
-    ))
+function broadcasted(p::Periodic, x::AbstractVector{<:Real})
+    return ColsAreObs(vcat(cos.((2π * p.f) .* x)', sin.((2π * p.f) .* x)'))
 end
-
-"""
-    Indexer
-
-Pulls out the `n`th index of whatever object is passed.
-"""
-struct Indexer
-    n::Int
-end
-(indexer::Indexer)(x) = x[indexer.n]
-map(indexer::Indexer, x::ColsAreObs) = view(x.X, indexer.n, :)
