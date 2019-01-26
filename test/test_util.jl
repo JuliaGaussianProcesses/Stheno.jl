@@ -1,13 +1,14 @@
 using BlockArrays, LinearAlgebra, FDM, Zygote, ToeplitzMatrices
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise
-using FillArrays: AbstractFill
-
-import Base: adjoint
+using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise
+using FillArrays: AbstractFill, getindex_value
+using LinearAlgebra: AbstractTriangular
 
 const _rtol = 1e-10
 const _atol = 1e-10
 
 function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
+    @show typeof(adjoint_ad), typeof(adjoint_fd)
+    adjoint_ad, adjoint_fd = to_vec(adjoint_ad)[1], to_vec(adjoint_fd)[1]
     println()
     println("atol is $atol, rtol is $rtol")
     println("ad, fd, abs, rel")
@@ -18,15 +19,50 @@ function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
 end
 
 # Transform `x` into a vector, and return a closure which inverts the transformation.
-to_vec(x::Vector{<:Real}) = (x, identity)
+to_vec(x::Nothing) = (x, nothing)
 to_vec(x::Real) = ([x], x->x[1])
-to_vec(x::AbstractArray{<:Real}) = (vec(x), x_vec->reshape(x_vec, size(x)))
-to_vec(x::ColsAreObs{<:Real}) = (vec(x.X), x_vec->ColsAreObs(reshape(x_vec, size(x.X))))
 
-function adjoint(fdm, f, ȳ, x)
+# Arrays.
+to_vec(x::Vector{<:Real}) = (x, identity)
+to_vec(x::Array) = vec(x), x_vec->reshape(x_vec, size(x))
+
+# AbstractArrays.
+to_vec(x::ColsAreObs{<:Real}) = (vec(x.X), x_vec->ColsAreObs(reshape(x_vec, size(x.X))))
+to_vec(x::BlockArray) = vec(Array(x)), x_->BlockArray(reshape(x_, size(x)), blocksizes(x))
+to_vec(x::AbstractFill) = vec(x), nothing
+function to_vec(x::T) where {T<:AbstractTriangular}
+    x_vec, back = to_vec(Matrix(x))
+    return x_vec, x_vec->T(reshape(back(x_vec), size(x)))
+end
+to_vec(x::Symmetric) = vec(Matrix(x)), x_vec->Symmetric(reshape(x_vec, size(x)))
+
+
+# Non-array data structures.
+function to_vec(x::Tuple)
+    x_vecs, x_backs = zip(map(to_vec, x)...)
+    sz = cumsum([map(length, x_vecs)...])
+    return vcat(x...), v->([x_backs[n](v[sz[n]-length(x[n])+1:sz[n]]) for n in 1:length(x)]...,)
+end
+
+function FDM.j′vp(fdm, f, ȳ, x)
     x_vec, vec_to_x = to_vec(x)
-    ȳ_vec, vec_to_ȳ = to_vec(ȳ)
-    return vec_to_x(adjoint(fdm, x_vec->to_vec(f(vec_to_x(x_vec)))[1], ȳ_vec, x_vec))
+    ȳ_vec, _ = to_vec(ȳ)
+    return vec_to_x(FDM.j′vp(fdm, x_vec->to_vec(f(vec_to_x(x_vec)))[1], ȳ_vec, x_vec))
+end
+
+function j′vp(fdm, f, ȳ, xs...)
+    return (map(enumerate(xs)) do (p, x)
+        return FDM.j′vp(
+            fdm,
+            function(x)
+                xs_ = [xs...]
+                xs_[p] = x
+                return f(xs_...)
+            end,
+            ȳ,
+            x,
+        )    
+    end...,)
 end
 
 # My version of isapprox
@@ -43,25 +79,29 @@ function fd_isapprox(x_ad::NamedTuple, x_fd, rtol, atol)
     f = (x_ad, x_fd)->fd_isapprox(x_ad, x_fd, rtol, atol)
     return all([f(getfield(x_ad, key), getfield(x_fd, key)) for key in keys(x_ad)])
 end
+function fd_isapprox(x_ad::Tuple, x_fd::Tuple, rtol, atol)
+    return all(map((x, x′)->fd_isapprox(x, x′, rtol, atol), x_ad, x_fd))
+end
 
-# Ensure that `to_vec` and adjoint works correctly.
-for x in [randn(10), 5.0, randn(10, 10), ColsAreObs(randn(2, 5))]
+# Ensure that `to_vec` and j′vp works correctly.
+for x in [randn(10), 5.0, randn(10, 10), ColsAreObs(randn(2, 5)), (5.0, 4.0),
+        (randn(10), randn(11)), BlockVector([randn(10)]),]
     x_vec, back = to_vec(x)
     @test x_vec isa AbstractVector{<:Real}
     @test back(x_vec) == x
-    @test fd_isapprox(adjoint(central_fdm(5, 1), identity, x, x), x, 1e-10, 1e-10)
+    @test fd_isapprox(j′vp(central_fdm(5, 1), identity, x, x), (x,), 1e-10, 1e-10)
 end
 
 # Ensure that forwards- and reverse- passes are (approximately) correct.
-function adjoint_test(f, ȳ, x; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1))
+function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1))
 
-    # Compute forwards-pass and adjoint.
-    y, back = Zygote.forward(f, x)
-    adj_ad = back(ȳ)[1]
-    adj_fd = adjoint(fdm, f, ȳ, x)
+    # Compute forwards-pass and j′vp.
+    y, back = Zygote.forward(f, x...)
+    adj_ad = back(ȳ)
+    adj_fd = j′vp(fdm, f, ȳ, x...)
 
     # Check that forwards-pass agrees with plain forwards-pass.
-    @test y == f(x)
+    @test y == f(x...)
 
     # Check that ad and fd adjoints (approximately) agree.
     # print_adjoints(adj_ad, adj_fd, rtol, atol)
@@ -135,9 +175,9 @@ Tests that any mean function `μ` should be able to pass.
 function mean_function_tests(μ::MeanFunction, X::AbstractVector)
     __mean_function_tests(μ, X)
 end
-function mean_function_tests(μ::MeanFunction, X::BlockData)
-    __mean_function_tests(μ, X)
-end
+# function mean_function_tests(μ::MeanFunction, X::BlockData)
+#     __mean_function_tests(μ, X)
+# end
 function __mean_function_tests(μ::MeanFunction, X::AbstractVector)
 
     # Test compulsory interface passes.
@@ -158,9 +198,9 @@ and `length(X0) ≠ length(X2)`.
 function cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
     __cross_kernel_tests(k, X0, X1, X2)
 end
-function cross_kernel_tests(k::CrossKernel, X0::BlockData, X1::BlockData, X2::BlockData)
-    __cross_kernel_tests(k, X0, X1, X2)
-end
+# function cross_kernel_tests(k::CrossKernel, X0::BlockData, X1::BlockData, X2::BlockData)
+#     __cross_kernel_tests(k, X0, X1, X2)
+# end
 function __cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
     @assert length(X0) == length(X1)
     @assert length(X0) ≠ length(X2)
@@ -313,9 +353,9 @@ function differentiable_cross_kernel_tests(
     k::CrossKernel,
     ȳ::AbstractVector{<:Real},
     Ȳ::AbstractMatrix{<:Real},
-    x0::AbstractVector{<:Real},
-    x1::AbstractVector{<:Real},
-    x2::AbstractVector{<:Real};
+    x0::AbstractVector,
+    x1::AbstractVector,
+    x2::AbstractVector;
     rtol=_rtol,
     atol=_atol,
 )
@@ -328,79 +368,10 @@ function differentiable_cross_kernel_tests(
     @assert size(Ȳ) == (length(x0), length(x2))
 
     # Binary map.
-    adjoint_test(x->map(k, x, x1), ȳ, x0; rtol=rtol, atol=atol)
-    adjoint_test(x′->map(k, x0, x′), ȳ, x1; rtol=rtol, atol=atol)
+    adjoint_test((x, x′)->map(k, x, x′), ȳ, x0, x1; rtol=rtol, atol=atol)
 
     # Binary pairwise.
-    adjoint_test(
-        x->reshape(pairwise(k, x, x2), :),
-        reshape(Ȳ, :),
-        x0;
-        rtol=rtol,
-        atol=atol,
-    )
-    adjoint_test(
-        x′->reshape(pairwise(k, x0, x′), :),
-        reshape(Ȳ, :),
-        x2;
-        rtol=rtol,
-        atol=atol,
-    )
-end
-function differentiable_cross_kernel_tests(
-    k::CrossKernel,
-    ȳ::AbstractVector{<:Real},
-    Ȳ::AbstractMatrix{<:Real},
-    x0::ColsAreObs{<:Real},
-    x1::ColsAreObs{<:Real},
-    x2::ColsAreObs{<:Real};
-    rtol=_rtol,
-    atol=_atol,
-)
-    # Run forwards-pass cross kernel tests.
-    cross_kernel_tests(k, x0, x1, x2)
-
-    # Ensure that the inputs are as required.
-    @assert length(ȳ) == length(x0)
-    @assert length(ȳ) == length(x1)
-    @assert size(Ȳ) == (length(x0), length(x2))
-
-    # Check that dimensionalities are consistent.
-    D, N, N′ = size(x0.X, 1), length(x0), length(x2)
-    @assert size(x1.X, 1) == D
-    @assert size(x2.X, 1) == D
-
-    # Binary map.
-    adjoint_test(
-        x->map(k, ColsAreObs(reshape(x, div(length(x), length(x1)), :)), x1),
-        ȳ,
-        reshape(x0.X, :);
-        rtol=rtol,
-        atol=atol,
-    )
-    adjoint_test(
-        x′->map(k, x0, ColsAreObs(reshape(x′, div(length(x′), length(x0)), :))),
-        ȳ,
-        reshape(x1.X, :);
-        rtol=rtol,
-        atol=atol,
-    )
-
-    # Binary pairwise.
-    adjoint_test(
-        x->reshape(pw(k, ColsAreObs(reshape(x, size(x2.X, 1), :)), x2), :),
-        reshape(Ȳ, :),
-        reshape(x0.X, :);
-        rtol=rtol,
-        atol=atol,
-    )
-    adjoint_test(
-        x′->reshape(pairwise(k, x0, ColsAreObs(reshape(x′, size(x0.X, 1), :))), :),
-        reshape(Ȳ, :),
-        reshape(x2.X, :);
-        rtol=rtol,
-        atol=atol,
-    )
+    adjoint_test((x, x′)->pw(k, x, x′), Ȳ, x0, x2; rtol=rtol, atol=atol)
 end
 function differentiable_cross_kernel_tests(
     rng::AbstractRNG,
@@ -434,9 +405,9 @@ function differentiable_kernel_tests(
     ȳ::AbstractVector{<:Real},
     Ȳ::AbstractMatrix{<:Real},
     Ȳ_sq::AbstractMatrix{<:Real},
-    x0::AbstractVector{<:Real},
-    x1::AbstractVector{<:Real},
-    x2::AbstractVector{<:Real};
+    x0::AbstractVector,
+    x1::AbstractVector,
+    x2::AbstractVector;
     rtol=_rtol,
     atol=_atol,
 )
@@ -457,51 +428,7 @@ function differentiable_kernel_tests(
     adjoint_test(x->map(k, x), ȳ, x0; rtol=rtol, atol=atol)
 
     # Unary pairwise test.
-    adjoint_test(x->reshape(pairwise(k, x), :), reshape(Ȳ_sq, :), x0; rtol=rtol, atol=atol)
-end
-function differentiable_kernel_tests(
-    k::CrossKernel,
-    ȳ::AbstractVector{<:Real},
-    Ȳ::AbstractMatrix{<:Real},
-    Ȳ_sq::AbstractMatrix{<:Real},
-    x0::ColsAreObs{<:Real},
-    x1::ColsAreObs{<:Real},
-    x2::ColsAreObs{<:Real};
-    rtol=_rtol,
-    atol=_atol,
-)
-    # Run the forwards-pass kernel tests.
-    kernel_tests(k, x0, x1, x2)
-
-    # Ensure that the inputs are as required.
-    @assert length(ȳ) == length(x0)
-    @assert length(ȳ) == length(x1)
-    @assert size(Ȳ) == (length(x0), length(x2))
-    @assert size(Ȳ_sq, 1) == size(Ȳ_sq, 2)
-    @assert size(Ȳ_sq, 1) == length(x0)
-
-    D, N = size(x0.X)
-
-    # Run the CrossKernel tests.
-    differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
-
-    # Unary map tests.
-    adjoint_test(
-        x->map(k, ColsAreObs(reshape(x, size(x0.X, 1), :))),
-        ȳ,
-        reshape(x0.X, :);
-        rtol=rtol,
-        atol=atol,
-    )
-
-    # Unary pairwise test.
-    adjoint_test(
-        x->reshape(pairwise(k, ColsAreObs(reshape(x, size(x0.X, 1), :))), :),
-        reshape(Ȳ_sq, :),
-        reshape(x0.X, :);
-        rtol=rtol,
-        atol=atol,
-    )
+    adjoint_test(x->pw(k, x), Ȳ_sq, x0; rtol=rtol, atol=atol)
 end
 function differentiable_kernel_tests(
     rng::AbstractRNG,

@@ -1,4 +1,5 @@
-using Stheno: FiniteMean, OneMean, AM, AV, pairwise
+using Stheno: FiniteMean, OneMean, AM, AV, pairwise, FiniteKernel, FiniteCrossKernel
+
 
 @testset "finite" begin
 
@@ -39,42 +40,6 @@ using Stheno: FiniteMean, OneMean, AM, AV, pairwise
         adjoint_test(X->pw(FiniteKernel(EQ(), X), :, :), ȳ, X)
     end
 
-    # Tests for LhsFiniteCrossKernel.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
-        k, X, X′ = EQ(), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        x, x′ = randn(rng, N), randn(rng, N′)
-        k′, kx = LhsFiniteCrossKernel(k, X), LhsFiniteCrossKernel(k, x)
-        ȳ = randn(rng, N, N′)
-
-        @test pairwise(kx, :, x′) == pairwise(k, x, x′)
-        adjoint_test(x->pw(LhsFiniteCrossKernel(EQ(), x), :, x′), ȳ, x)
-        adjoint_test(x′->pw(LhsFiniteCrossKernel(EQ(), x), :, x′), ȳ, x′)
-
-        @test pairwise(k′, :, X′) == pairwise(k, X, X′)
-        adjoint_test(X->pw(LhsFiniteCrossKernel(EQ(), X), :, X′), ȳ, X)
-        adjoint_test(X′->pw(LhsFiniteCrossKernel(EQ(), X), :, X′), ȳ, X′)
-    end
-
-    # Tests for RhsFiniteCrossKernel.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
-        X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        x, x′ = randn(rng, N), randn(rng, N′)
-        ȳ = randn(rng, N, N′)
-        k = EQ()
-        k′, kx = RhsFiniteCrossKernel(k, X′), RhsFiniteCrossKernel(k, x′)
-
-        @test pairwise(kx, x, :) == pairwise(k, x, x′)
-        adjoint_test(x->pw(RhsFiniteCrossKernel(k, x′), x, :), ȳ, x)
-        adjoint_test(x′->pw(RhsFiniteCrossKernel(k, x′), x, :), ȳ, x′)
-
-
-        @test pairwise(k′, X, :) == pairwise(k, X, X′)
-        adjoint_test(X->pw(RhsFiniteCrossKernel(k, X′), X, :), ȳ, X)
-        adjoint_test(X′->pw(RhsFiniteCrossKernel(k, X′), X, :), ȳ, X′)
-    end
-
     # Tests for FiniteCrossKernel.
     let
         rng, N, N′, D = MersenneTwister(123456), 5, 7, 2
@@ -91,4 +56,40 @@ using Stheno: FiniteMean, OneMean, AM, AV, pairwise
         adjoint_test(X->pw(FiniteCrossKernel(EQ(), X, X′), :, :), ȳ, X)
         adjoint_test(X′->pw(FiniteCrossKernel(EQ(), X, X′), :, :), ȳ, X′)
     end
+
+    # # Tests for LhsFiniteCrossKernel.
+    # let
+    #     rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
+    #     k, X, X′ = EQ(), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+    #     x, x′ = randn(rng, N), randn(rng, N′)
+    #     k′, kx = LhsFiniteCrossKernel(k, X), LhsFiniteCrossKernel(k, x)
+    #     ȳ = randn(rng, N, N′)
+
+    #     @test pairwise(kx, :, x′) == pairwise(k, x, x′)
+    #     adjoint_test(x->pw(LhsFiniteCrossKernel(EQ(), x), :, x′), ȳ, x)
+    #     adjoint_test(x′->pw(LhsFiniteCrossKernel(EQ(), x), :, x′), ȳ, x′)
+
+    #     @test pairwise(k′, :, X′) == pairwise(k, X, X′)
+    #     adjoint_test(X->pw(LhsFiniteCrossKernel(EQ(), X), :, X′), ȳ, X)
+    #     adjoint_test(X′->pw(LhsFiniteCrossKernel(EQ(), X), :, X′), ȳ, X′)
+    # end
+
+    # # Tests for RhsFiniteCrossKernel.
+    # let
+    #     rng, N, N′, D = MersenneTwister(123456), 4, 5, 2
+    #     X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+    #     x, x′ = randn(rng, N), randn(rng, N′)
+    #     ȳ = randn(rng, N, N′)
+    #     k = EQ()
+    #     k′, kx = RhsFiniteCrossKernel(k, X′), RhsFiniteCrossKernel(k, x′)
+
+    #     @test pairwise(kx, x, :) == pairwise(k, x, x′)
+    #     adjoint_test(x->pw(RhsFiniteCrossKernel(k, x′), x, :), ȳ, x)
+    #     adjoint_test(x′->pw(RhsFiniteCrossKernel(k, x′), x, :), ȳ, x′)
+
+
+    #     @test pairwise(k′, X, :) == pairwise(k, X, X′)
+    #     adjoint_test(X->pw(RhsFiniteCrossKernel(k, X′), X, :), ȳ, X)
+    #     adjoint_test(X′->pw(RhsFiniteCrossKernel(k, X′), X, :), ȳ, X′)
+    # end
 end

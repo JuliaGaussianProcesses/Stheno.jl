@@ -1,88 +1,94 @@
 using Random, LinearAlgebra, BlockArrays, FillArrays
 using BlockArrays: cumulsizes
-using Stheno: are_conformal, ABM
 
 @testset "block_arrays" begin
 
-    # # Test construction of `BlockVector` from a vector of vectors. Also test copying.
-    # let
-    #     rng, N, N′ = MersenneTwister(123456), 5, 6
-    #     x, x′ = randn(rng, N), randn(rng, N′)
-    #     x̂ = BlockVector([x, x′])
-    #     @test length(x̂) == N + N′
-    #     @test x̂ == vcat(x, x′)
-    #     @test getblock(x̂, 1) == x && getblock(x̂, 2) == x′
+    # Test construction of `BlockVector` from a vector of vectors. Also test copying.
+    let
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x, x′ = randn(rng, N), randn(rng, N′)
+        x̂ = BlockVector([x, x′])
+        @test length(x̂) == N + N′
+        @test x̂ == vcat(x, x′)
+        @test getblock(x̂, 1) == x && getblock(x̂, 2) == x′
 
-    #     # Test BlockVector construction adjoint.
-    #     adjoint_test(x->BlockVector([x]), BlockVector([randn(rng, N)]), x)
-    #     adjoint_test(x->BlockVector([x]), randn(rng, N), x)
+        # Test BlockVector construction adjoint.
+        adjoint_test(x->BlockVector([x]), BlockVector([randn(rng, N)]), x)
+        adjoint_test(x->BlockVector([x]), randn(rng, N), x)
 
-    #     adjoint_test(
-    #         x->BlockVector([x, x′]),
-    #         BlockVector([randn(rng, N), randn(rng, N′)]),
-    #         x,
-    #     )
-    #     adjoint_test(x->BlockVector([x, x′]), randn(rng, N + N′), x)
+        adjoint_test(
+            x->BlockVector([x, x′]),
+            BlockVector([randn(rng, N), randn(rng, N′)]),
+            x,
+        )
+        adjoint_test(x->BlockVector([x, x′]), randn(rng, N + N′), x)
 
-    #     # zero of a BlockVector should be a BlockVector
-    #     @test zero(x̂) isa BlockVector
-    #     @test cumulsizes(x̂) == cumulsizes(zero(x̂))
-    #     @test zero(x̂) == zero(Vector(x̂))
-    # end
+        # Test BlockVector conversion to Vector adjoint.
+        adjoint_test(Vector, randn(rng, N), BlockVector([x]))
+        adjoint_test(Vector, randn(rng, N + N′), x̂)
 
-    # # Test construction of `BlockMatrix` from matrix of matrices. Also test copying.
-    # let
-    #     rng, P1, P2, P3, Q1, Q2 = MersenneTwister(123456), 2, 3, 6, 4, 5
-    #     X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
-    #     X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
-    #     X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
-    #     X = BlockMatrix(reshape([X11, X21, X31, X12, X22, X32], 3, 2))
-    #     @test size(X, 1) == P1 + P2 + P3
-    #     @test size(X, 2) == Q1 + Q2
-    #     @test getblock(X, 1, 1) == X11
-    #     @test getblock(X, 1, 2) == X12
-    #     @test getblock(X, 2, 1) == X21
-    #     @test getblock(X, 2, 2) == X22
+        # zero of a BlockVector should be a BlockVector
+        @test zero(x̂) isa BlockVector
+        @test cumulsizes(x̂) == cumulsizes(zero(x̂))
+        @test zero(x̂) == zero(Vector(x̂))
+    end
 
-    #     @test cumulsizes(X, 1) == cumsum([1, P1, P2, P3])
-    #     @test cumulsizes(X, 2) == cumsum([1, Q1, Q2])
+    # Test construction of `BlockMatrix` from matrix of matrices. Also test copying.
+    let
+        rng, P1, P2, P3, Q1, Q2 = MersenneTwister(123456), 2, 3, 6, 4, 5
+        X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
+        X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
+        X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
+        X = BlockMatrix(reshape([X11, X21, X31, X12, X22, X32], 3, 2))
+        @test size(X, 1) == P1 + P2 + P3
+        @test size(X, 2) == Q1 + Q2
+        @test getblock(X, 1, 1) == X11
+        @test getblock(X, 1, 2) == X12
+        @test getblock(X, 2, 1) == X21
+        @test getblock(X, 2, 2) == X22
 
-    #     @test blocksizes(X, 1) == [P1, P2, P3]
-    #     @test blocksizes(X, 2) == [Q1, Q2]
+        @test cumulsizes(X, 1) == cumsum([1, P1, P2, P3])
+        @test cumulsizes(X, 2) == cumsum([1, Q1, Q2])
 
-    #     @test BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2) == X
+        @test blocksizes(X, 1) == [P1, P2, P3]
+        @test blocksizes(X, 2) == [Q1, Q2]
 
-    #     Y = BlockMatrix([X11, X21, X31])
-    #     @test size(Y, 1) == P1 + P2 + P3
-    #     @test size(Y, 2) == Q1
-    #     @test getblock(Y, 1, 1) == X11
-    #     @test getblock(Y, 2, 1) == X21
-    #     @test cumulsizes(Y, 1) == cumsum([1, P1, P2, P3])
-    #     @test cumulsizes(Y, 2) == cumsum([1, Q1])
+        @test BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2) == X
 
-    #     @test blocksizes(Y, 1) == [P1, P2, P3]
-    #     @test blocksizes(Y, 2) == [Q1]
+        Y = BlockMatrix([X11, X21, X31])
+        @test size(Y, 1) == P1 + P2 + P3
+        @test size(Y, 2) == Q1
+        @test getblock(Y, 1, 1) == X11
+        @test getblock(Y, 2, 1) == X21
+        @test cumulsizes(Y, 1) == cumsum([1, P1, P2, P3])
+        @test cumulsizes(Y, 2) == cumsum([1, Q1])
 
-    #     P, Q = P1 + P2 + P3, Q1 + Q2
-    #     adjoint_test(
-    #         X11->BlockMatrix(reshape([X11, X21, X31, X12, X22, X32], 3, 2)),
-    #         randn(rng, P, Q),
-    #         X11,
-    #     )
-    #     adjoint_test(
-    #         X11->BlockMatrix(reshape([X11, X21, X31, X12, X22, X32], 3, 2)),
-    #         X,
-    #         X11,
-    #     )
-    #     adjoint_test(X11->BlockMatrix([X11, X21]), randn(rng, P1 + P2, Q1), X11)
-    #     adjoint_test(X11->BlockMatrix([X11, X21]), BlockMatrix([X11, X21]), X11)
-    #     adjoint_test(X11->BlockMatrix([X11, X12], 1, 2), BlockMatrix([X11, X12], 1, 2), X11)
-    
-    #     # zero of a BlockMatrix should be a BlockMatrix.
-    #     @test zero(X) isa BlockMatrix
-    #     @test cumulsizes(X) == cumulsizes(zero(X))
-    #     @test zero(X) == zero(Matrix(X))
-    # end
+        @test blocksizes(Y, 1) == [P1, P2, P3]
+        @test blocksizes(Y, 2) == [Q1]
+
+        P, Q = P1 + P2 + P3, Q1 + Q2
+        adjoint_test(
+            X11->BlockMatrix(reshape([X11, X21, X31, X12, X22, X32], 3, 2)),
+            randn(rng, P, Q),
+            X11,
+        )
+        adjoint_test(
+            X11->BlockMatrix(reshape([X11, X21, X31, X12, X22, X32], 3, 2)),
+            X,
+            X11,
+        )
+        adjoint_test(X11->BlockMatrix([X11, X21]), randn(rng, P1 + P2, Q1), X11)
+        adjoint_test(X11->BlockMatrix([X11, X21]), BlockMatrix([X11, X21]), X11)
+        adjoint_test(X11->BlockMatrix([X11, X12], 1, 2), BlockMatrix([X11, X12], 1, 2), X11)
+
+        # BlockMatrix conversion to Matrix.
+        adjoint_test(Matrix, randn(rng, size(X)), X)
+
+        # zero of a BlockMatrix should be a BlockMatrix.
+        @test zero(X) isa BlockMatrix
+        @test cumulsizes(X) == cumulsizes(zero(X))
+        @test zero(X) == zero(Matrix(X))
+    end
 
     # # Test Symmetric block matrix construction and util.
     # let
@@ -293,77 +299,77 @@ using Stheno: are_conformal, ABM
     #     end
     # end
 
-    # Test `cholesky`, `logdet`, and backsolving.
-    let
-        rng, P1, P2, P3 = MersenneTwister(123456), 3, 4, 5
-        tmp = randn(rng, P1 + P2 + P3, P1 + P2 + P3)
-        A_ = tmp * tmp' + 1e-9I
-        A = BlockArray(A_, [P1, P2, P3], [P1, P2, P3])
-        @assert A_ == A
+    # # Test `cholesky`, `logdet`, and backsolving.
+    # let
+    #     rng, P1, P2, P3 = MersenneTwister(123456), 3, 4, 5
+    #     tmp = randn(rng, P1 + P2 + P3, P1 + P2 + P3)
+    #     A_ = tmp * tmp' + 1e-9I
+    #     A = BlockArray(A_, [P1, P2, P3], [P1, P2, P3])
+    #     @assert A_ == A
 
-        # Compute cholesky and compare.
-        C_, C = cholesky(A_), cholesky(A)
-        @test C isa Cholesky
-        @test C_.U ≈ Matrix(C.U)
-        @test C.U isa UpperTriangular{T, <:ABM{T}} where T
+    #     # Compute cholesky and compare.
+    #     C_, C = cholesky(A_), cholesky(A)
+    #     @test C isa Cholesky
+    #     @test C_.U ≈ Matrix(C.U)
+    #     @test C.U isa UpperTriangular{T, <:ABM{T}} where T
 
-        # Test `logdet`.
-        @test logdet(C) ≈ logdet(C_)
+    #     # Test `logdet`.
+    #     @test logdet(C) ≈ logdet(C_)
 
-        # Check that the forwards-pass agrees.
-        @test Zygote.forward(logdet, C)[1] == logdet(C)
+    #     # Check that the forwards-pass agrees.
+    #     @test Zygote.forward(logdet, C)[1] == logdet(C)
 
-        # Check that reverse-pass agrees with dense revese-pass.
-        let
-            ȳ = randn(rng)
+    #     # Check that reverse-pass agrees with dense revese-pass.
+    #     let
+    #         ȳ = randn(rng)
 
-            # Compute adjoint with dense.
-            _, back_dense = Zygote.forward(logdet, C_)
-            C̄_ = back_dense(ȳ)
+    #         # Compute adjoint with dense.
+    #         _, back_dense = Zygote.forward(logdet, C_)
+    #         C̄_ = back_dense(ȳ)
 
-            # Compute adjoint with block
-            _, back_block = Zygote.forward(logdet, C)
-            C̄ = back_block(ȳ)
+    #         # Compute adjoint with block
+    #         _, back_block = Zygote.forward(logdet, C)
+    #         C̄ = back_block(ȳ)
 
-            # Check that both answers approximately agree.
-            @test C̄_[1].factors ≈ C̄[1].factors
-        end
+    #         # Check that both answers approximately agree.
+    #         @test C̄_[1].factors ≈ C̄[1].factors
+    #     end
 
-        # adjoint_test()
+    #     # adjoint_test()
 
-        # # Test backsolving for block vector.
-        # x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)
-        # x = BlockVector([x1, x2, x3])
+    #     # # Test backsolving for block vector.
+    #     # x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)
+    #     # x = BlockVector([x1, x2, x3])
 
-        # @test U \ x isa AbstractBlockVector
-        # @test size(U \ x) == size(U_ \ Vector(x))
-        # @test U \ x ≈ U_ \ Vector(x)
+    #     # @test U \ x isa AbstractBlockVector
+    #     # @test size(U \ x) == size(U_ \ Vector(x))
+    #     # @test U \ x ≈ U_ \ Vector(x)
 
-        # @test U' \ x isa AbstractBlockVector
-        # @test typeof(U') <: Adjoint{<:Real, <:UpperTriangular{<:Real, <:ABM}}
-        # @test size(U' \ x) == size(U_' \ Vector(x))
-        # @test U' \ x ≈ U_' \ Vector(x)
+    #     # @test U' \ x isa AbstractBlockVector
+    #     # @test typeof(U') <: Adjoint{<:Real, <:UpperTriangular{<:Real, <:ABM}}
+    #     # @test size(U' \ x) == size(U_' \ Vector(x))
+    #     # @test U' \ x ≈ U_' \ Vector(x)
 
-        # @test transpose(U) \ x isa AbstractBlockVector
-        # @test typeof(transpose(U)) <: Transpose{<:Real, <:UpperTriangular{<:Real, <:ABM}}
-        # @test size(transpose(U) \ x) == size(U_' \ Vector(x))
-        # @test transpose(U) \ x ≈ U_' \ Vector(x)
+    #     # @test transpose(U) \ x isa AbstractBlockVector
+    #     # @test typeof(transpose(U)) <: Transpose{<:Real, <:UpperTriangular{<:Real, <:ABM}}
+    #     # @test size(transpose(U) \ x) == size(U_' \ Vector(x))
+    #     # @test transpose(U) \ x ≈ U_' \ Vector(x)
 
-        # # Test backsolving for block matrix
-        # Q1, Q2 = 7, 6
-        # X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
-        # X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
-        # X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
-        # X = BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2)
+    #     # # Test backsolving for block matrix
+    #     # Q1, Q2 = 7, 6
+    #     # X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
+    #     # X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
+    #     # X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
+    #     # X = BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2)
 
-        # @test U \ X isa AbstractBlockMatrix
-        # @test size(U \ X) == size(U_ \ Matrix(X))
-        # @test U \ X ≈ U_ \ Matrix(X)
+    #     # @test U \ X isa AbstractBlockMatrix
+    #     # @test size(U \ X) == size(U_ \ Matrix(X))
+    #     # @test U \ X ≈ U_ \ Matrix(X)
 
-        # @test U' \ X isa AbstractBlockMatrix
-        # @test size(U' \ X) == size(U_' \ Matrix(X))
-        # @test U' \ X ≈ U_' \ Matrix(X)
-    end
+    #     # @test U' \ X isa AbstractBlockMatrix
+    #     # @test size(U' \ X) == size(U_' \ Matrix(X))
+    #     # @test U' \ X ≈ U_' \ Matrix(X)
+    # end
 
     # # Test UniformScaling interaction.
     # let

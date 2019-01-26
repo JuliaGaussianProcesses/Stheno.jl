@@ -109,9 +109,9 @@ version = "0.0.7"
 
 [[Distances]]
 deps = ["LinearAlgebra", "Printf", "Random", "Statistics", "Test"]
-git-tree-sha1 = "2f38605722542f1c0a32dd2856fb529d8c226c69"
+git-tree-sha1 = "0e37d8a95bafbeb9c800ef27ab6f443d29e17610"
 uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
-version = "0.7.3"
+version = "0.7.4"
 
 [[Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
@@ -123,6 +123,12 @@ git-tree-sha1 = "c24e9b6500c037673f0241a2783472b8c3d080c7"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
 version = "0.16.4"
 
+[[FDM]]
+deps = ["LinearAlgebra", "Printf"]
+path = "/home/wct23/.julia/dev/FDM"
+uuid = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
+version = "0.3.0+"
+
 [[FFTW]]
 deps = ["AbstractFFTs", "BinaryProvider", "Compat", "Conda", "Libdl", "LinearAlgebra", "Reexport", "Test"]
 git-tree-sha1 = "29cda58afbf62f35b1a094882ad6c745a47b2eaa"
@@ -131,9 +137,9 @@ version = "0.2.4"
 
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Test"]
-git-tree-sha1 = "d87b7fc5c086cf157deabec625d53ba55eca6436"
+path = "/home/wct23/.julia/dev/FillArrays"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.3.0"
+version = "0.4.0+"
 
 [[FixedPointNumbers]]
 deps = ["Test"]
@@ -142,30 +148,30 @@ uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
 version = "0.5.3"
 
 [[Flux]]
-deps = ["AbstractTrees", "Adapt", "CodecZlib", "Colors", "DiffRules", "ForwardDiff", "Juno", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Printf", "Random", "Reexport", "Requires", "SpecialFunctions", "Statistics", "StatsBase", "Test", "ZipFile"]
-git-tree-sha1 = "a9b7a93f9a6627abaf5a2eb576b8559279cb499a"
+deps = ["AbstractTrees", "Adapt", "CodecZlib", "Colors", "DiffRules", "ForwardDiff", "Juno", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Pkg", "Printf", "Random", "Reexport", "Requires", "SpecialFunctions", "Statistics", "StatsBase", "Test", "ZipFile"]
+git-tree-sha1 = "a47bb4ba94d0be7a06a77f9ce96ca19e20694a15"
 uuid = "587475ba-b771-5e3f-ad9e-33799f191a9c"
-version = "0.6.9"
+version = "0.7.1"
 
 [[ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "InteractiveUtils", "LinearAlgebra", "NaNMath", "Random", "SparseArrays", "SpecialFunctions", "StaticArrays", "Test"]
-git-tree-sha1 = "b91250044374764e7c29af59a774c4b8d6100b6e"
+git-tree-sha1 = "e393bd3b9102659fb24fe88caedec41f2bc2e7de"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.1"
+version = "0.10.2"
 
 [[GPUArrays]]
-deps = ["Adapt", "FFTW", "FillArrays", "LinearAlgebra", "Pkg", "Printf", "Random", "Serialization", "StaticArrays", "Test"]
-git-tree-sha1 = "f0016298a7c7c8f36a7a94694b6be5e8f663a948"
+deps = ["Adapt", "FFTW", "FillArrays", "LinearAlgebra", "Printf", "Random", "Serialization", "StaticArrays", "Test"]
+git-tree-sha1 = "2b96d7f25fbea82c08a736d78cbf14df8d2100a5"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "0.6.0"
+version = "0.6.1"
 
 [[IRTools]]
 deps = ["InteractiveUtils", "MacroTools", "Test"]
-git-tree-sha1 = "c52253dd14df1a67e67e25598aeedba30fd53dc0"
+git-tree-sha1 = "2b1e5eb77d67033084d1a3a5f3737ea84cb8ec7d"
 repo-rev = "master"
 repo-url = "https://github.com/MikeInnes/IRTools.jl.git"
 uuid = "7869d1d1-7146-5819-86e3-90919afe41df"
-version = "0.1.0"
+version = "0.1.1"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -350,9 +356,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[ToeplitzMatrices]]
 deps = ["Compat", "FFTW", "LinearAlgebra", "StatsBase"]
-git-tree-sha1 = "141e0fc05428a280a056cfdea6b98ef54a208535"
+git-tree-sha1 = "d0773d9c03cbe321899db8286487529263260fed"
 uuid = "c751599d-da0a-543b-9d20-d0a503d91d24"
-version = "0.4.2"
+version = "0.4.3"
 
 [[TranscodingStreams]]
 deps = ["Pkg", "Random", "Test"]

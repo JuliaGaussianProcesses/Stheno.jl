@@ -4,13 +4,14 @@
 Cache for use by `ConditionalMean`s, `ConditionalKernel`s and `ConditionalCrossKernel`s.
 Avoids recomputing the covariance `Σff` and the Kriging vector `α`.
 """
-struct CondCache{TC<:Cholesky, Tα<:AV{<:Real}}
+struct CondCache{TC<:Cholesky, Tα<:AV{<:Real}, Tx<:AV}
     C::TC
     α::Tα
+    x::Tx
 end
 function CondCache(kff::Kernel, μf::MeanFunction, x::AV, f::AV{<:Real})
     C = cholesky(pw(kff, x))
-    return CondCache(C, C \ (f - map(μf, x)))
+    return CondCache(C, C \ (f - map(μf, x)), x)
 end
 
 """

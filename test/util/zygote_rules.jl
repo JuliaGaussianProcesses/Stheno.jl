@@ -17,7 +17,7 @@ let
     @test back(Ones(N))[1] == Ones(N) .* exp(x)
     @test back(ones(N))[1] isa Vector
     @test back(ones(N))[1] == ones(N) .* exp(x)
-    adjoint_test(x->exp.(x), randn(rng, N), Fill(x, N))
+    adjoint_test(x->exp.(Fill(3x, N)), ones(N), x)
 end
 
 # Verify that Cholesky retrieves gradient information correctly.

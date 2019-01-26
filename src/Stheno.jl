@@ -17,7 +17,7 @@ module Stheno
     # Various bits of utility that aren't inherently GP-related.
     include("util/zygote_rules.jl")
     include("util/covariance_matrices.jl")
-    # include("util/block_arrays.jl")
+    include("util/block_arrays.jl")
     include("util/abstract_data_set.jl")
     include("util/toeplitz.jl")
 
@@ -39,7 +39,7 @@ module Stheno
     # include("gp/block_gp.jl")
 
     # Affine transformations of GPs.
-    # include("linops/indexing.jl")
+    include("linops/indexing.jl")
     # include("linops/addition.jl")
     # include("linops/product.jl")
     # include("linops/compose.jl")

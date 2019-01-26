@@ -1,6 +1,3 @@
-export FiniteMean, FiniteKernel, LhsFiniteCrossKernel, RhsFiniteCrossKernel,
-    FiniteCrossKernel
-
 """
     FiniteMean <: Function
 
@@ -38,36 +35,6 @@ pairwise(k::FiniteKernel, ::Colon) = pairwise(k.k, k.X)
 
 
 """
-    LhsFiniteCrossKernel <: CrossKernel
-
-A cross kernel whose first argument is defined on a finite index set. Useful for defining
-cross-covariance between a Finite kernel and other non-Finite kernels.
-"""
-struct LhsFiniteCrossKernel{Tk<:CrossKernel, TX<:AbstractVector} <: CrossKernel
-    k::Tk
-    X::TX
-end
-(k::LhsFiniteCrossKernel)(n, x) = k.k(k.X[n], x)
-map(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = map(k.k, k.X, X′)
-pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = pairwise(k.k, k.X, X′)
-
-
-"""
-    RhsFiniteCrossKernel <: CrossKernel
-
-A cross kernel whose second argument is defined on a finite index set. You can't really do
-anything with this object other than use it to construct other objects.
-"""
-struct RhsFiniteCrossKernel{Tk<:CrossKernel, TX′<:AbstractVector} <: CrossKernel
-    k::Tk
-    X′::TX′
-end
-(k::RhsFiniteCrossKernel)(x, n′) = k.k(x, k.X′[n′])
-map(k::RhsFiniteCrossKernel, X::AV, ::Colon) = map(k.k, X, k.X′)
-pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = pairwise(k.k, X, k.X′)
-
-
-"""
     FiniteCrossKernel <: CrossKernel
 
 A cross kernel valued on a finite index set. Has a method of `cov` which requires no
@@ -81,3 +48,33 @@ end
 (k::FiniteCrossKernel)(n::Integer, n′::Integer) = k.k(k.X[n], k.X′[n′])
 map(k::FiniteCrossKernel, ::Colon, ::Colon) = map(k.k, k.X, k.X′)
 pairwise(k::FiniteCrossKernel, ::Colon, ::Colon) = pairwise(k.k, k.X, k.X′)
+
+
+# """
+#     LhsFiniteCrossKernel <: CrossKernel
+
+# A cross kernel whose first argument is defined on a finite index set. Useful for defining
+# cross-covariance between a Finite kernel and other non-Finite kernels.
+# """
+# struct LhsFiniteCrossKernel{Tk<:CrossKernel, TX<:AbstractVector} <: CrossKernel
+#     k::Tk
+#     X::TX
+# end
+# (k::LhsFiniteCrossKernel)(n, x) = k.k(k.X[n], x)
+# map(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = map(k.k, k.X, X′)
+# pairwise(k::LhsFiniteCrossKernel, ::Colon, X′::AV) = pairwise(k.k, k.X, X′)
+
+
+# """
+#     RhsFiniteCrossKernel <: CrossKernel
+
+# A cross kernel whose second argument is defined on a finite index set. You can't really do
+# anything with this object other than use it to construct other objects.
+# """
+# struct RhsFiniteCrossKernel{Tk<:CrossKernel, TX′<:AbstractVector} <: CrossKernel
+#     k::Tk
+#     X′::TX′
+# end
+# (k::RhsFiniteCrossKernel)(x, n′) = k.k(x, k.X′[n′])
+# map(k::RhsFiniteCrossKernel, X::AV, ::Colon) = map(k.k, X, k.X′)
+# pairwise(k::RhsFiniteCrossKernel, X::AV, ::Colon) = pairwise(k.k, X, k.X′)

@@ -133,15 +133,6 @@ end
     end
 end
 
-# @adjoint function map(f, x...)
-#     y_pairs = map((x...)->Zygote.forward(f, x...), x...)
-#     y = [y_pair[1] for y_pair in y_pairs]
-#     return y, function(Δ)
-#         out_back = map((δ, (y, back))->back(δ), Δ, y_pairs)
-#         xs = (nothing, map(n->[p[n] for p in out_back], 1:length(x))...)
-#     end
-# end
-
 # Get rid of fusion when we're broadcasting because it's a bit of a pain and not
 # _completely_ essential at this stage.
 @adjoint function broadcasted(f, x...)

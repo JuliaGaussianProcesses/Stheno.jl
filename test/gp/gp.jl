@@ -122,7 +122,6 @@ using Stheno: OuterKernel, BinaryKernel
 
         # Ensure that the elbo is close to the logpdf when appropriate.
         @test elbo(f, ŷ, f, σ) isa Real
-        @test elbo(f, ŷ, f, σ) < logpdf(y, ŷ)
-        @test abs(elbo(f, ŷ, f, σ) - logpdf(y, ŷ)) < 1e-3
+        @test abs(elbo(f, ŷ, f, σ) - logpdf(y, ŷ)) < 1e-6
     end
 end

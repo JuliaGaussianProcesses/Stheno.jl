@@ -1,6 +1,12 @@
-using Stheno: BlockMean, BlockCrossKernel, BlockKernel, OneMean, ZeroMean
-using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, map, pairwise
+using Stheno: OneMean, ZeroMean, BlockMean, BlockCrossKernel
+using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, map, pw
 using FillArrays
+
+#= 
+Testing `BlockMean`, `BlockKernel`, and `BlockCrossKernel` is a little bit tricky as we
+don't define the kernel function directly i.e. you can't evaluate `μ(x)` if `μ` is a
+`BlockMean`. Consequently, this file is a little verbose.
+=#
 
 @testset "block" begin
 
@@ -9,22 +15,19 @@ using FillArrays
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x1, x2 = randn(rng, N), randn(rng, N′)
         X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        μ1, μ2 = OneMean(), ZeroMean()
-        μ, Dx, DX = BlockMean([μ1, μ2]), BlockData([x1, x2]), BlockData([X1, X2])
-
-        @test map(μ, DX) == vcat(map(μ1, X1), map(μ2, X2))
-        @test map(μ, Dx) == vcat(map(μ1, x1), map(μ2, x2))
-        # @test Zygote.gradient(Dx->sum(map(μ, Dx)), Dx)
+        μ1, μ2 = FiniteMean(OneMean(), x1), FiniteMean(ZeroMean(), x2)
+        μ = BlockMean([μ1, μ2])
 
 
-        # unary_map_tests(μ, BlockData([X1, X2]))
-
-        # # Tests for finite case colon behaviour.
-        # μ1f, μ2f = FiniteMean(μ1, X1), FiniteMean(μ2, X2)
-        # cat_μ = BlockMean([μ1f, μ2f])
-        # @test eachindex(cat_μ) == BlockData([eachindex(μ1f), eachindex(μ2f)])
-        # @test AbstractVector(cat_μ) ==
-        #     BlockVector([AbstractVector(μ1f), AbstractVector(μ2f)])
+        @test map(μ, :) == vcat(map(μ1, :), map(μ2, :))
+        adjoint_test(
+            function(x1, x2)
+                μ1 = FiniteMean(OneMean(), x1)
+                μ2 = FiniteMean(ZeroMean(), x2)
+                return map(BlockMean([μ1, μ2]), :)
+            end,
+            randn(rng, N + N′), x1, x2,
+        )
     end
 
     # # Test BlockCrossKernel.
@@ -33,20 +36,12 @@ using FillArrays
     #     X0, X0′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
     #     X1, X1′ = ColsAreObs(randn(rng, D, N1′)), ColsAreObs(randn(rng, D, N2′))
     #     X2, X2′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
-    #     k11, k12, k21, k22 =  EQ(), ZeroKernel{Float64}(), ZeroKernel{Float64}(), EQ()
+    #     k11, k12, k21, k22 =  EQ(), ZeroKernel(), ZeroKernel(), EQ()
     #     k = BlockCrossKernel([k11 k12; k21 k22])
 
-    #     @test k == k
-
-    #     @test size(k) == (Inf, Inf)
-    #     @test size(k, 1) == Inf
-    #     @test size(k, 2) == Inf
-
-    #     row1 = hcat(pairwise(k11, X0, X0′), pairwise(k12, X0, X1′))
-    #     row2 = hcat(pairwise(k21, X1, X0′), pairwise(k22, X1, X1′))
-    #     @test pairwise(k, BlockData([X0, X1]), BlockData([X0′, X1′])) == vcat(row1, row2)
-
-    #     # cross_kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
+    #     row1 = hcat(pw(k11, X0, X0′), pw(k12, X0, X1′))
+    #     row2 = hcat(pw(k21, X1, X0′), pw(k22, X1, X1′))
+    #     @test pw(k, BlockData([X0, X1]), BlockData([X0′, X1′])) == vcat(row1, row2)
 
     #     # Tests for finite case.
     #     k11f, k12f = FiniteCrossKernel(k11, X1, X1), FiniteCrossKernel(k12, X1, X0)

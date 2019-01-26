@@ -1,10 +1,10 @@
 using Random
-using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, LhsFiniteCrossKernel,
-    RhsFiniteCrossKernel, ZeroMean, OneMean, ZeroKernel, OneKernel
+using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, ZeroMean, OneMean, ZeroKernel,
+    OneKernel
 
 @testset "algebra" begin
 
-    let
+    @testset "MeanFunction" begin
         rng = MersenneTwister(123456)
         x, α = randn(rng), randn(rng)
 
@@ -27,9 +27,13 @@ using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, LhsFiniteCrossKernel,
         @test ZeroMean() * ZeroMean() === ZeroMean()
         @test ZeroMean() * CustomMean(sin) === ZeroMean()
         @test CustomMean(cos) * ZeroMean() === ZeroMean()
+
+        # Project into finite-dimensions.
+        @test finite(ZeroMean(), randn(10)) isa FiniteMean
+        @test map(finite(ZeroMean(), randn(10)), :) == zeros(10)
     end
 
-    let
+    @testset "(Cross)Kernel" begin
         rng = MersenneTwister(123456)
         α, x, x′ = randn(rng), randn(rng), randn(rng)
 
