@@ -1,12 +1,11 @@
 export project
 
 """
-    project(ϕ, f::GP, g)
+    project(ϕ, f(x)::FiniteGP, g)
 
-The projection operation `f′(x) = Σₘ ϕₘ(x) f(m) + g(x)`. Assumes `f` is finite.
+The projection operation `f′(x) = Σₘ ϕₘ(x) f(m) + g(x)`.
 """
-function project(ϕ, f::GP, g)
-    @assert isfinite(length(f))
+function project(ϕ, f::FiniteGP, g)
     return GP(project, ϕ, f, g)
 end
 

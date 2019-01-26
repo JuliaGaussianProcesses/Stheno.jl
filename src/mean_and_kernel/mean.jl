@@ -1,4 +1,4 @@
-import Base: map
+import Base: map, zero
 
 abstract type MeanFunction end
 
@@ -14,7 +14,7 @@ Returns `zero(T)` everywhere.
 struct ZeroMean{T<:Real} <: MeanFunction end
 ZeroMean() = ZeroMean{Int}()
 _map(::ZeroMean{T}, x::AV) where T = Zeros{T}(length(x))
-
+zero(::MeanFunction) = ZeroMean()
 
 """
     OneMean{T} <: MeanFunction
@@ -23,7 +23,18 @@ Return `one(T)` everywhere.
 """
 struct OneMean{T<:Real} <: MeanFunction end
 OneMean() = OneMean{Int}()
-_map(::OneMean{T}, x::AV) where T = Fill(one(T), length(x))
+_map(::OneMean{T}, x::AV) where T = Ones{T}(length(x))
+
+
+"""
+    ConstMean{T} <: MeanFunction
+
+Returns `c` everywhere.
+"""
+struct ConstMean{T} <: MeanFunction
+    c::T
+end
+_map(m::ConstMean, x::AV) = Fill(m.c, length(x))
 
 
 """

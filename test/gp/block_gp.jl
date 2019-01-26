@@ -14,11 +14,10 @@ using Distributions: MvNormal, PDMat
         # Construct a BlockGP over a single finite process (edge-case).
         f_single = BlockGP([f])
         @test length(f_single) == length(f)
-        # @test eachindex(f_single) == [eachindex(f)]
 
         @test mean(f_single) isa BlockMean
         @test mean(f_single) == BlockMean([mean(f)])
-        @test getblock(mean_vec(f_single), 1) == mean_vec(f)
+        @test getblock(mean(f_single), 1) == mean(f)
 
         @test kernel(f_single) isa BlockKernel
         @test kernel(f_single).ks_diag == [kernel(f)]
@@ -47,7 +46,7 @@ using Distributions: MvNormal, PDMat
 
         @test mean(fs) isa BlockMean
         @test mean(fs) == BlockMean([mean(f), mean(g)])
-        @test mean_vec(fs) == BlockVector([mean_vec(f), mean_vec(g)])
+        @test mean(fs) == BlockVector([mean(f), mean(g)])
 
         @test getblock(Stheno.unbox(cov(fs)), 1, 1) == cov(f)
         @test getblock(Stheno.unbox(cov(fs)), 2, 2) == cov(g)

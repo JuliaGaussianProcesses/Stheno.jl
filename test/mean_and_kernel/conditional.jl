@@ -1,4 +1,4 @@
-using Stheno: CondCache, CondMean, CondKernel, CondCrossKernel,
+using Stheno: CondCache, CondMean, CondKernel, CondCrossKernel, CustomMean,
     OneMean, ZeroMean, ZeroKernel, OneKernel, pairwise, CondCache, OuterKernel, BinaryKernel
 using LinearAlgebra: cholesky
 
@@ -18,13 +18,13 @@ using LinearAlgebra: cholesky
         μf, μg, μh = OneMean(), ZeroMean(), OneMean()
         kff = EQ()
         kgg = BinaryKernel(+, EQ(), EQ())
-        khh = OuterKernel(x->1e-1 * sum(x), EQ())
+        khh = OuterKernel(CustomMean(x->1e-1 * sum(x)), EQ())
         kfg, kfh, kgh = EQ(), ZeroKernel(), ZeroKernel()
 
-        # Points in high dimensions probably won't be very close together.
-        X0 = ColsAreObs(randn(rng, D, N))
-        X1 = ColsAreObs(randn(rng, D, N))
-        X2 = ColsAreObs(randn(rng, D, N′))
+        # # Points in high dimensions probably won't be very close together.
+        # X0 = ColsAreObs(randn(rng, D, N))
+        # X1 = ColsAreObs(randn(rng, D, N))
+        # X2 = ColsAreObs(randn(rng, D, N′))
 
         # Run all tests for both scalar and vector input domains.
         for (X0, X1, X2) in [(x0, x1, x2)]

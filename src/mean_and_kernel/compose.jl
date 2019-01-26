@@ -72,12 +72,12 @@ _pw(k::BinaryCrossKernel, x::AV) = bcd(k.op, _pw(k.k₁, x), _pw(k.k₂, x))
 
 A cross-kernel given by `f(x) * k(x, x′)`.
 """
-struct LhsCross{Tf, Tk<:CrossKernel} <: CrossKernel
+struct LhsCross{Tf<:MeanFunction, Tk<:CrossKernel} <: CrossKernel
     f::Tf
     k::Tk
 end
-_map(k::LhsCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _map(k.k, x, x′))
-_pw(k::LhsCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _pw(k.k, x, x′))
+_map(k::LhsCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′))
+_pw(k::LhsCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′))
 
     
 """
@@ -85,12 +85,12 @@ _pw(k::LhsCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _pw(k.k, x, x′))
 
 A cross-kernel given by `k(x, x′) * f(x′)`.
 """
-struct RhsCross{Tk<:CrossKernel, Tf} <: CrossKernel
+struct RhsCross{Tk<:CrossKernel, Tf<:MeanFunction} <: CrossKernel
     k::Tk
     f::Tf
 end
-_map(k::RhsCross, x::AV, x′::AV) = bcd(*, _map(k.k, x, x′), bcd(k.f, x′))
-_pw(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), bcd(k.f, x′'))
+_map(k::RhsCross, x::AV, x′::AV) = bcd(*, _map(k.k, x, x′), map(k.f, x′))
+_pw(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), map(k.f, x′)')
 
 
 """
@@ -98,12 +98,12 @@ _pw(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), bcd(k.f, x′'))
 
 A kernel given by `f(x) * k(x, x′) * f(x′)`.
 """
-struct OuterCross{Tf, Tk<:CrossKernel} <: CrossKernel
+struct OuterCross{Tf<:MeanFunction, Tk<:CrossKernel} <: CrossKernel
     f::Tf
     k::Tk
 end
-_map(k::OuterCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _map(k.k, x, x′), bcd(k.f, x′))
-_pw(k::OuterCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _pw(k.k, x, x′), bcd(k.f, x′'))
+_map(k::OuterCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′), map(k.f, x′))
+_pw(k::OuterCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′), map(k.f, x′)')
 
 
 """
@@ -111,22 +111,25 @@ _pw(k::OuterCross, x::AV, x′::AV) = bcd(*, bcd(k.f, x), _pw(k.k, x, x′), bcd
 
 A kernel given by `f(x) * k(x, x′) * f(x′)`.
 """
-struct OuterKernel{Tf, Tk<:Kernel} <: Kernel
+struct OuterKernel{Tf<:MeanFunction, Tk<:Kernel} <: Kernel
     f::Tf
     k::Tk
 end
 
 # Binary methods.
-function _map(k::OuterKernel, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(*, bcd(k.f, x), _map(k.k, x, x′), bcd(k.f, x′))
+function _map(k::OuterKernel, x::AV, x′::AV)
+    return bcd(*, map(k.f, x), _map(k.k, x, x′), map(k.f, x′))
 end
-function _pw(k::OuterKernel, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(*, bcd(k.f, x), _pw(k.k, x, x′), bcd(k.f, x′'))
+function _pw(k::OuterKernel, x::AV, x′::AV)
+    return bcd(*, map(k.f, x), _pw(k.k, x, x′), map(k.f, x′)')
 end
 
 # Unary methods.
-_map(k::OuterKernel, x::AV{<:Real}) = bcd(*, bcd(x->k.f(x)^2, x), _map(k.k, x))
-function _pw(k::OuterKernel, x::AV{<:Real})
-    fx = bcd(k.f, x)
-    return bcd(*, fx, _pw(k.k, x), materialize(fx)')
+function _map(k::OuterKernel, x::AV)
+    fx = map(k.f, x)
+    return bcd(*, fx, _map(k.k, x), fx)
+end
+function _pw(k::OuterKernel, x::AV)
+    fx = map(k.f, x)
+    return bcd(*, fx, _pw(k.k, x), fx')
 end

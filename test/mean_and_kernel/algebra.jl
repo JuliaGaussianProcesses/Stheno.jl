@@ -1,5 +1,5 @@
 using Random
-using Stheno: ZeroMean, OneMean, ZeroKernel, OneKernel, CustomMean, pw
+using Stheno: ZeroMean, OneMean, ZeroKernel, OneKernel, CustomMean, pw, ConstKernel
 
 @testset "algebra" begin
 
@@ -7,15 +7,10 @@ using Stheno: ZeroMean, OneMean, ZeroKernel, OneKernel, CustomMean, pw
         rng = MersenneTwister(123456)
         x, α = randn(rng, 3), randn(rng)
 
-
         # MeanFunction addition.
         @test map(α + CustomMean(sin), x) == α .+ map(CustomMean(sin), x)
         @test map(CustomMean(cos) + α, x) == map(CustomMean(cos), x) .+ α
         @test map(CustomMean(sin) + CustomMean(cos), x) == map(sin, x) + map(cos, x)
-
-        # @test (α + CustomMean(sin))(x) == α + CustomMean(sin)(x)
-        # @test (CustomMean(cos) + α)(x) == CustomMean(cos)(x) + α
-        # @test (CustomMean(sin) + CustomMean(cos))(x) == sin(x) + cos(x)
 
         # Special cases of addition.
         @test ZeroMean() + ZeroMean() === ZeroMean()

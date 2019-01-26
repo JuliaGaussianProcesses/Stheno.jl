@@ -44,9 +44,13 @@ export finite
 +(k::ConstKernel, k′::ConstKernel) = ConstKernel(k.c + k′.c)
 
 # Multiply kernels by things.
-*(α::Real, k::Kernel) = LhsCross(x->α, k)
-*(k::Kernel, α::Real) = RhsCross(k, x->α)
 *(k::Kernel, k′::Kernel) = BinaryKernel(*, k, k′)
+*(m::MeanFunction, k::Kernel) = LhsCross(m, k)
+*(k::Kernel, m::MeanFunction) = RhsCross(k, m)
+*(α::Real, k::Kernel) = ConstMean(α) * k
+*(k::Kernel, α::Real) = k * ConstMean(α)
+*(f, k::Kernel) = CustomMean(f) * k
+*(k::Kernel, f) = k * CustomMean(f)
 
 # Optimise multiplication by zeros.
 *(k::ZeroKernel, k′::ZeroKernel) = k
@@ -75,9 +79,13 @@ export finite
 +(k::CrossKernel, k′::ZeroKernel) = k
 
 # Multiply kernels by things.
-*(α::Real, k::CrossKernel) = LhsCross(x->α, k)
-*(k::CrossKernel, α::Real) = RhsCross(k, x->α)
 *(k::CrossKernel, k′::CrossKernel) = BinaryCrossKernel(*, k, k′)
+*(m::MeanFunction, k::CrossKernel) = LhsCross(m, k)
+*(k::CrossKernel, m::MeanFunction) = RhsCross(k, m)
+*(α::Real, k::CrossKernel) = ConstMean(α) * k
+*(k::CrossKernel, α::Real) = k * ConstMean(α)
+*(f, k::CrossKernel) = CustomMean(f) * k
+*(k::CrossKernel, f) = k * CustomMean(f)
 
 # Optimise multiplication by zeros.
 *(k::ZeroKernel, k′::CrossKernel) = k

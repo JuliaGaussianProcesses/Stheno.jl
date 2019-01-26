@@ -37,7 +37,7 @@ end
 # Specialised implementation of `rand` for `BlockGP`s.
 function rand(rng::AbstractRNG, f::BlockGP, N::Int)
     M = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(f.fs), [N])
-    μ = mean_vec(f)
+    μ = mean(f)
     for b in eachindex(f.fs)
         setblock!(M, getblock(μ, b) * ones(1, N), b, 1)
     end
@@ -46,7 +46,7 @@ end
 rand(f::BlockGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 
 function rand(rng::AbstractRNG, f::BlockGP)
-    return mean_vec(f) + chol(cov(f))' * BlockVector(randn.(Ref(rng), length.(f.fs)))
+    return mean(f) + chol(cov(f))' * BlockVector(randn.(Ref(rng), length.(f.fs)))
 end
 rand(f::BlockGP) = rand(Random.GLOBAL_RNG, f)
 

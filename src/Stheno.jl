@@ -4,6 +4,7 @@ module Stheno
         LinearAlgebra
     import Base: length
     import Base.Broadcast: broadcasted, materialize
+    import Statistics: mean, cov
     using LinearAlgebra: AbstractTriangular
     using Zygote: @adjoint, @nograd
 
@@ -33,21 +34,21 @@ module Stheno
     include("mean_and_kernel/algebra.jl")
 
     # Basic Gaussian process definitions.
-    # include("gp/abstract_gp.jl")
-    # include("gp/gp.jl")
+    include("gp/gp.jl")
     # include("gp/block_gp.jl")
+    include("gp/finite_gp.jl")
 
     # Affine transformations of GPs.
-    # include("linops/indexing.jl")
-    # include("linops/addition.jl")
-    # include("linops/product.jl")
-    # include("linops/compose.jl")
+    include("linops/indexing.jl")
+    include("linops/conditioning.jl")
+    include("linops/product.jl")
+    include("linops/addition.jl")
+    include("linops/compose.jl")
     # include("linops/project.jl")
-    # include("linops/conditioning.jl")
     # include("linops/gradient.jl")
     # # include("linops/integrate.jl")
 
-    # # # Various stuff for convenience.
-    # # include("util/model.jl")
+    # # Various stuff for convenience.
+    # include("util/model.jl")
 
 end # module

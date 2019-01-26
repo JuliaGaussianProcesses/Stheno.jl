@@ -1,14 +1,20 @@
-export GP
+export GP, mean, kernel
 
-###################### Implementation of AbstractGaussianProcess interface #################
+abstract type AbstractGP end
+
+# A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
+mutable struct GPC
+    n::Int
+    GPC() = new(0)
+end
 
 """
-    GP{Tμ<:MeanFunction, Tk<:Kernel}
+    GP{Tμ<:MeanFunction, Tk<:Kernel} <: AbstractGP
 
 A Gaussian Process (GP) object. Either constructed using an Affine Transformation of
 existing GPs or by providing a mean function `μ`, a kernel `k`, and a `GPC` `gpc`.
 """
-struct GP{Tμ<:MeanFunction, Tk<:Kernel} <: AbstractGaussianProcess
+struct GP{Tμ<:MeanFunction, Tk<:Kernel} <: AbstractGP
     args::Any
     μ::Tμ
     k::Tk
@@ -30,7 +36,7 @@ function GP(m::Real, k::Kernel, gpc::GPC)
     elseif isone(m)
         return GP(OneMean(), k, gpc)
     else
-        return GP(BinaryMean(x->mx, OneMean()), k, gpc)
+        return GP(ConstMean(m), k, gpc)
     end
 end
 GP(m, k::Kernel, gpc::GPC) = GP(CustomMean(m), k, gpc)
@@ -74,28 +80,3 @@ end
 kernel(::Union{Real, Function}) = ZeroKernel()
 kernel(::Union{Real, Function}, ::GP) = ZeroKernel()
 kernel(::GP, ::Union{Real, Function}) = ZeroKernel()
-
-
-
-# ##################################### Syntactic Sugar#######################################
-
-# import Base: promote, convert
-
-# get_zero(p::Int) = get_zero(p, p)
-# function get_zero(p::Real, q::Real)
-#     if isfinite(p) && isfinite(q)
-#         return p == q ? FiniteZeroKernel(1:p) : FiniteZeroCrossKernel(p, q)
-#     elseif isfinite(p)
-#         return LhsFiniteZeroCrossKernel(1:p)
-#     elseif isfinite(q)
-#         return RhsFiniteZeroCrossKernel(1:q)
-#     else
-#         return ZeroKernel{Float64}()
-#     end
-# end
-
-# promote(f::GP, x::Union{Real, Function, MeanFunction}) = (f, convert(GP, x, f.gpc))
-# promote(x::Union{Real, Function, MeanFunction}, f::GP) = reverse(promote(f, x))
-# convert(::Type{<:GP}, x::Real, gpc::GPC) = GP(ConstantMean(x), ZeroKernel{typeof(x)}(), gpc)
-# convert(::Type{<:GP}, f::Function, gpc::GPC) = GP(CustomMean(f), ZeroKernel{Float64}(), gpc)
-# convert(::Type{<:GP}, μ::MeanFunction, gpc::GPC) = GP(μ, get_zero(length(μ)), gpc)

@@ -1,10 +1,10 @@
 using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
-    LhsCross, RhsCross, OuterCross, OuterKernel, map, pairwise, CustomMean, ZeroMean
+    LhsCross, RhsCross, OuterCross, OuterKernel, map, pairwise, CustomMean, ZeroMean,
+    ZeroKernel, OneKernel, pw
 
 @testset "compose" begin
 
-    # Test UnaryMean.
-    let
+    @testset "UnaryMean" begin
         rng, N = MersenneTwister(123456), 100
         μ, f, ȳ, x = CustomMean(sin), exp, randn(rng, N), randn(rng, N)
         ν = UnaryMean(f, μ)
@@ -16,8 +16,7 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         differentiable_mean_function_tests(UnaryMean(exp, OneMean()), ȳ, x)
     end
 
-    # Test BinaryMean.
-    let
+    @testset "BinaryMean" begin
         rng, N = MersenneTwister(123456), 100
         μ1, μ2 = CustomMean(sin), CustomMean(cos)
         f, ȳ, x = exp, randn(rng, N), randn(rng, N)
@@ -38,8 +37,7 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         differentiable_mean_function_tests(BinaryMean(*, ZeroMean(), μ2), ȳ, x)
     end
 
-    # Test BinaryKernel
-    let
+    @testset "BinaryKernel" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
@@ -75,7 +73,7 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         )
     end
 
-    let
+    @testset "BinaryCrossKernel" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
@@ -107,12 +105,11 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         end
     end
 
-    # Test LhsCross.
-    let
+    @testset "LhsCross" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-        f, k = abs2, EQ()
+        f, k = CustomMean(abs2), EQ()
         ν = LhsCross(f, k)
 
         @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1)
@@ -120,39 +117,36 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
-    # Test RhsCross.
-    let
+    @testset "RhsCross" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-        k, f = EQ(), abs2
+        k, f = EQ(), CustomMean(abs2)
         ν = RhsCross(k, f)
 
         @test pw(ν, x0, x1) == pw(k, x0, x1) .* map(f, x1)'
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
-    # Test OuterCross.
-    let
+    @testset "OuterCross" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-        k, f = EQ(), abs2
+        k, f = EQ(), CustomMean(abs2)
         ν = OuterCross(f, k)
 
         @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1) .* map(f, x1)'
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
-    # Test OuterKernel.
-    let
+    @testset "OuterKernel" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
 
-        k, f = EQ(), abs2
+        k, f = EQ(), CustomMean(abs2)
         ν = OuterKernel(f, k)
 
         @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1) .* map(f, x1)'
-        differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
+        differentiable_kernel_tests(rng, ν, x0, x1, x2)
     end
 end

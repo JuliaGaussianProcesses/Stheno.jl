@@ -1,11 +1,11 @@
-using Stheno: pairwise
+using Stheno: GPC
 
 @testset "addition" begin
-    let
+
+    @testset "correlated GPs" begin
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)
-        f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
+        f1, f2 = GP(1, EQ(), gpc), GP(2, Linear(), gpc)
         f3 = f1 + f2
         f4 = f1 + f3
         f5 = f3 + f4
@@ -15,7 +15,7 @@ using Stheno: pairwise
             ΣpXX′ = cov(fa(X), fa(X′)) + cov(fb(X), fb(X′)) + cov(fa(X), fb(X′)) +
                 cov(fa(X), fb(X′))
             # @test mean(fp) == Stheno.CompositeMean(+, mean(fa), mean(fb))
-            @test mean_vec(fp(X)) ≈ mean_vec(fa(X)) + mean_vec(fb(X))
+            @test mean(fp(X)) ≈ mean(fa(X)) + mean(fb(X))
             @test cov(fp(X)) ≈ Σp
             @test cov(fp(X), fp(X′)) ≈ ΣpXX′
             @test cov(fp(X′), fp(X)) ≈ transpose(ΣpXX′)                
@@ -26,48 +26,45 @@ using Stheno: pairwise
         end
     end
 
-    let
-        rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
-        X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)
+    # let
+    #     rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
+    #     X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+    #     μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)
 
-        # Addition of BlockGPs.
-        f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
-        fj1, fj2 = BlockGP([f1, f2]), BlockGP([f2, f1])
-        @test mean_vec((fj1 + fj2)(BlockData([X, X′]))) ==
-            BlockVector([mean_vec((f1 + f2)(X)), mean_vec((f2 + f1)(X′))])
+    #     # Addition of BlockGPs.
+    #     f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
+    #     fj1, fj2 = BlockGP([f1, f2]), BlockGP([f2, f1])
+    #     @test mean((fj1 + fj2)(BlockData([X, X′]))) ==
+    #         BlockVector([mean((f1 + f2)(X)), mean((f2 + f1)(X′))])
 
-        # Addition of a BlockGP and a GP.
-        @test mean_vec((fj1 + f1)(BlockData([X, X′]))) ==
-            BlockData([mean_vec((f1 + f1)(X)), mean_vec((f2 + f1)(X′))])
+    #     # Addition of a BlockGP and a GP.
+    #     @test mean((fj1 + f1)(BlockData([X, X′]))) ==
+    #         BlockData([mean((f1 + f1)(X)), mean((f2 + f1)(X′))])
 
-        # Addition of a GP and a BlockGP.
-        @test mean_vec((f2 + fj2)(BlockData([X, X′]))) ==
-            BlockData([mean_vec((f2 + f2)(X)), mean_vec((f2 + f1)(X′))])
-    end
+    #     # Addition of a GP and a BlockGP.
+    #     @test mean((f2 + fj2)(BlockData([X, X′]))) ==
+    #         BlockData([mean((f2 + f2)(X)), mean((f2 + f1)(X′))])
+    # end
 
-    # Check that adding a constant to a GP yields a GP with a shifted mean.
-    let
+    @testset "verify mean / kernel numerically" begin
         rng, N, D = MersenneTwister(123456), 5, 6, 2
         X = ColsAreObs(randn(rng, D, N))
-        c, f = randn(rng), GP(5.0, EQ(), GPC())
-        @test map(mean(f + c), X) == map(mean(f), X) .+ c
-        @test map(mean(c + f), X) == c .+ map(mean(f), X)
-        @test pairwise(kernel(f + c), X) == pairwise(kernel(f), X)
-        @test pairwise(kernel(c + f), X) == pairwise(kernel(f), X)
+        c, f = randn(rng), GP(5, EQ(), GPC())
 
-        @test map(mean(f - c), X) == map(mean(f), X) .- c
-        @test map(mean(c - f), X) == c .- map(mean(f), X)
-        @test pairwise(kernel(f - c), X) == pairwise(kernel(f), X)
-        @test pairwise(kernel(c - f), X) == pairwise(kernel(f), X)
+        @test mean((f + c)(X)) == mean(f(X)) .+ c
+        @test mean((f + c)(X)) == c .+ mean(f(X))
+        @test cov((f + c)(X)) == cov(f(X))
+        @test cov((c + f)(X)) == cov(f(X))
 
-        g = f(randn(rng, 10))
-        @test mean_vec(g + c) == mean_vec(g) .+ c
+        @test mean((f - c)(X)) == mean(f(X)) .- c
+        @test mean((c - f)(X)) == c .- mean(f(X))
+        @test cov((f - c)(X)) == cov(f(X))
+        @test cov((c - f)(X)) == cov(f(X))
 
         x = randn(rng, N + D)
-        @test map(mean(f + sin), x) == map(mean(f), x) + map(sin, x)
-        @test map(mean(sin + f), x) == map(sin, x) + map(mean(f), x)
-        @test pairwise(kernel(f + sin), x) == pairwise(kernel(f), x)
-        @test pairwise(kernel(sin + f), x) == pairwise(kernel(f), x)
+        @test mean((f + sin)(x)) == mean(f(x)) + map(sin, x)
+        @test mean((sin + f)(x)) == map(sin, x) + mean(f(x))
+        @test cov((f + sin)(x)) == cov(f(x))
+        @test cov((sin + f)(x)) == cov(f(x))
     end
 end

@@ -2,7 +2,6 @@ import Base: |, merge
 export ←, |
 
 
-
 ################################## Exact Conditioning ######################################
 
 """
@@ -10,34 +9,39 @@ export ←, |
 
 Represents fixing a paricular (finite) GP to have a particular (vector) value.
 """
-struct Observation{Tf<:AbstractGP, Ty<:AbstractVector}
+struct Observation{Tf<:FiniteGP, Ty<:AbstractVector, Tσ²<:Union{Real, AV{<:Real}}}
     f::Tf
     y::Ty
+    σ²::Tσ²
 end
+Observation(f::FiniteGP, y::AbstractVector) = Observation(f, y, eps())
+
+const Obs = Observation
+export Obs
+
 ←(f, y) = Observation(f, y)
 get_f(c::Observation) = c.f
 get_y(c::Observation) = c.y
-function merge(c::Union{AbstractVector{<:Observation}, Tuple{Vararg{Observation}}})
-    return BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
-end
+# function merge(c::Union{AbstractVector{<:Observation}, Tuple{Vararg{Observation}}})
+#     return BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
+# end
 
 """
     |(g::AbstractGP, c::Observation)
 
 Condition `g` on observation `c`.
 """
-|(g::GP, c::Observation) = GP(|, g, c.f, CondCache(mean_vec(c.f), cov(c.f), c.y))
-|(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))
-
+function |(g::GP, c::Observation)
+    f, x, y, σ² = c.f.f, c.f.x, c.y, c.σ²
+    return GP(|, g, f, CondCache(kernel(f), mean(f), x, y, σ²))
+end
+# |(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))
+# CondCache(kff::Kernel, μf::MeanFunction, x::AV, f::AV{<:Real})
 function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
-    return iszero(kernel(f, g)) ?
-        mean(g) :
-        CondMean(cache, mean(g), kernel(f, g))
+    return iszero(kernel(f, g)) ? mean(g) : CondMean(cache, mean(g), kernel(f, g))
 end
 function k_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
-    return iszero(kernel(f, g)) ?
-        kernel(g) :
-        CondKernel(cache, kernel(f, g), kernel(g))
+    return iszero(kernel(f, g)) ? kernel(g) : CondKernel(cache, kernel(f, g), kernel(g))
 end
 function k_p′p(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache, h::AbstractGP)
     return iszero(kernel(f, g)) || iszero(kernel(f, h)) ?
@@ -50,12 +54,12 @@ function k_pp′(h::AbstractGP, ::typeof(|), g::AbstractGP, f::AbstractGP, cache
         CondCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
 end
 
-# Sugar
-|(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)
-|(g::Tuple{Vararg{AbstractGP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
-function |(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}})
-    return deconstruct(BlockGP([g...]) | merge(c))
-end
+# # Sugar
+# |(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)
+# |(g::Tuple{Vararg{AbstractGP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
+# function |(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}})
+#     return deconstruct(BlockGP([g...]) | merge(c))
+# end
 
 
 
@@ -88,10 +92,10 @@ end
 # end
 
 # function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AbstractGP, σ::Real)
-#     μᵤ, Σᵤᵤ = mean_vec(u), cov(u)
+#     μᵤ, Σᵤᵤ = mean(u), cov(u)
 #     U = cholesky(Σᵤᵤ)
 #     Γ = broadcast(/, U' \ cov(u, f), σ)
-#     Ω, δ = LazyPDMat(Symmetric(Γ * Γ' + I), 0), y - mean_vec(f)
+#     Ω, δ = LazyPDMat(Symmetric(Γ * Γ' + I), 0), y - mean(f)
 #     Σ′ᵤᵤ = Xt_invA_X(Ω, U)
 #     μ′ᵤ = μᵤ + broadcast(/, U' * (Ω \ (Γ * δ)), σ)
 #     return μ′ᵤ, Σ′ᵤᵤ

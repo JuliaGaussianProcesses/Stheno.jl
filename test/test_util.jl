@@ -1,5 +1,5 @@
 using BlockArrays, LinearAlgebra, FDM, Zygote, ToeplitzMatrices
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise
+using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, pw
 using FillArrays: AbstractFill, getindex_value
 using LinearAlgebra: AbstractTriangular
 

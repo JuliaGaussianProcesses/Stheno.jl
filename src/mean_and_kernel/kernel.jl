@@ -3,12 +3,11 @@ using Base.Broadcast: DefaultArrayStyle
 using GPUArrays: GPUVector
 
 import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
-import Base: +, *, ==, size, eachindex, print, eltype
+import Base: +, *, ==, size, eachindex, print, eltype, zero
 import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
 import Base.Broadcast: broadcast_shape
 
-export CrossKernel, Kernel, cov, EQ, PerEQ, RQ, Linear, Poly, Noise, Wiener,
-    WienerVelocity, Exp, ZeroKernel, OneKernel, ConstKernel, pairwise, pw
+export EQ, Exp, Linear, Noise
 
 
 
@@ -92,6 +91,7 @@ A rank 0 `Kernel` that always returns zero.
 struct ZeroKernel{T<:Real} <: Kernel end
 ZeroKernel() = ZeroKernel{Int}()
 eltype(::ZeroKernel{T}) where {T} = T
+zero(::CrossKernel) = ZeroKernel()
 
 # Binary methods.
 _map(k::ZeroKernel, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′))...)
