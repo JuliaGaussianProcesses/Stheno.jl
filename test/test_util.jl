@@ -109,104 +109,35 @@ function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1
 end
 
 """
-    unary_map_tests(f, X::AbstractVector)
+    mean_function_tests(m::MeanFunction, X::AbstractVector)
 
-Consistency tests intended for use with `MeanFunction`s.
+Test _very_ basic consistency properties of the mean function `m`.
 """
-function unary_map_tests(f, X::AbstractVector)
-    @test map(f, X) isa AbstractVector
-    @test length(f.(X)) == length(X)
-    @test map(f, X) ≈ [f(x) for x in X]
+function mean_function_tests(m::MeanFunction, x::AbstractVector)
+    @test map(m, x) isa AbstractVector
+    @test length(map(m, x)) == length(x)
 end
 
 """
-    binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
+    cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV)
 
-Consistency tests intended for use with `CrossKernel`s.
+Tests that any cross kernel `k` should be able to pass. Requires that
+`length(x0) == length(x1)` and `length(x0) ≠ length(x2)`.
 """
-function binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
-    @test map(f, X, X′) isa AbstractVector
-    @test length(map(f, X, X′)) == length(X)
-    @test map(f, X, X′) ≈ [f(x, x′) for (x, x′) in zip(X, X′)]
-end
+function cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
+    @assert length(x0) == length(x1)
+    @assert length(x0) ≠ length(x2)
 
-"""
-    binary_map_tests(f, X::AbstractVector)
+    # Check that map basically works.
+    @test map(k, x0, x1) isa AbstractVector
+    @test length(map(k, x0, x1)) == length(x0)
 
-Consistency tests intended for use with `Kernel`s.
-"""
-function binary_map_tests(f, X::AbstractVector)
-    @test map(f, X) isa AbstractVector
-    @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ map(f, X, X)
-end
+    # Check that pairwise basically works.
+    @test pairwise(k, x0, x2) isa AbstractMatrix
+    @test size(pairwise(k, x0, x2)) == (length(x0), length(x2))
 
-"""
-    pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
-
-Consistency tests intended for use with `CrossKernel`s.
-"""
-function pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
-    N, N′ = length(X), length(X′)
-    @test pairwise(f, X, X′) isa AbstractMatrix
-    @test size(pairwise(f, X, X′)) == (N, N′)
-
-    pw_out = pairwise(f, X, X′)
-    loop_out = reshape([f(x, x′) for (x, x′) in Iterators.product(X, X′)], N, N′)
-    @test all(abs.(pw_out .- loop_out) .< 1e-8)
-end
-
-"""
-    pairwise_tests(f, X::AbstractVector)
-
-Consistency tests intended for use with `Kernel`s.
-"""
-function pairwise_tests(f, X::AbstractVector; rtol=eps())
-    @test pairwise(f, X) isa AbstractMatrix
-    @test size(pairwise(f, X)) == (length(X), length(X))
-    @test isapprox(pairwise(f, X), pairwise(f, X, X); atol=rtol)
-end
-
-"""
-    mean_function_tests(μ::MeanFunction, X::AbstractVector)
-
-Tests that any mean function `μ` should be able to pass.
-"""
-function mean_function_tests(μ::MeanFunction, X::AbstractVector)
-    __mean_function_tests(μ, X)
-end
-# function mean_function_tests(μ::MeanFunction, X::BlockData)
-#     __mean_function_tests(μ, X)
-# end
-function __mean_function_tests(μ::MeanFunction, X::AbstractVector)
-
-    # Test compulsory interface passes.
-    @test !(μ(X[1]) isa Nothing)
-
-    @test hasmethod(eachindex, Tuple{typeof(μ)})
-
-    # Test optional interface.
-    unary_map_tests(μ, X)
-end
-
-"""
-    cross_kernel_tests(k::CrossKernel, X::AbstractVector, X′::AbstractVector)
-
-Tests that any kernel `k` should be able to pass. Requires that `length(X0) == length(X1)`
-and `length(X0) ≠ length(X2)`.
-"""
-function cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
-    __cross_kernel_tests(k, X0, X1, X2)
-end
-# function cross_kernel_tests(k::CrossKernel, X0::BlockData, X1::BlockData, X2::BlockData)
-#     __cross_kernel_tests(k, X0, X1, X2)
-# end
-function __cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
-    @assert length(X0) == length(X1)
-    @assert length(X0) ≠ length(X2)
-
-    binary_map_tests(k, X0, X1)
-    pairwise_tests(k, X0, X2)
+    # Check that map is consistent with pairwise.
+    @test map(k, x0, x1) ≈ diag(pairwise(k, x0, x1)) atol=atol
 end
 
 """
@@ -215,31 +146,35 @@ end
 Tests that any kernel `k` should be able to pass. Requires that `length(X0) == length(X1)`
 and `length(X0) ≠ length(X2)`.
 """
-function kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
-    __kernel_tests(k, X0, X1, X2, rtol)
-end
-function kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
-    __kernel_tests(k, X0, X1, X2, rtol)
-end
-function __kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
-    @assert length(X0) == length(X1)
-    @assert length(X0) ≠ length(X2)
+function kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
+    @assert length(x0) == length(x1)
+    @assert length(x0) ≠ length(x2)
 
-    # Generic tests.
-    cross_kernel_tests(k, X0, X1, X2)
-    binary_map_tests(k, X0)
-    pairwise_tests(k, X0; rtol=rtol)
+    # Check that all of the binary methods work as expected.
+    cross_kernel_tests(k, x0, x1, x2)
 
-    # Kernels should be symmetric for same arguments.
-    @test pairwise(k, X0) isa AbstractMatrix
-    @test pairwise(k, X0) ≈ pairwise(k, X0)'
+    # Check additional binary map properties for kernels.
+    @test map(k, x0, x1) ≈ map(k, x1, x0)
+    @test pairwise(k, x0, x2) ≈ pairwise(k, x2, x0)' atol=atol
 
-    # k(x, x′) == k(x′, x)
-    @test map(k, X0, X1) ≈ map(k, X1, X0)
-    @test maximum(abs.(pairwise(k, X0, X2) .- pairwise(k, X2, X0)') .< 1e-8)
+    # Check that unary map basically works.
+    @test map(k, x0) isa AbstractVector
+    @test length(map(k, x0)) == length(x0)
 
-    # Should be (approximately) positive definite.
-    @test all(eigvals(Matrix(pairwise(k, X0))) .> -1e-9)
+    # Check that unary pairwise basically works.
+    @test pairwise(k, x0) isa AbstractMatrix
+    @test size(pairwise(k, x0)) == (length(x0), length(x0))
+    @test pairwise(k, x0) ≈ pairwise(k, x0)' atol=atol
+
+    # Check that unary map is consistent with unary pairwise.
+    @test map(k, x0) ≈ diag(pairwise(k, x0)) atol=atol
+
+    # Check that unary pairwise produces a positive definite matrix (approximately).
+    @test all(eigvals(Matrix(pairwise(k, x0))) .> -atol)
+
+    # Check that unary map / pairwise are consistent with the binary versions.
+    @test map(k, x0) ≈ map(k, x0, x0) atol=atol
+    @test pairwise(k, x0) ≈ pairwise(k, x0, x0) atol=atol
 end
 
 """

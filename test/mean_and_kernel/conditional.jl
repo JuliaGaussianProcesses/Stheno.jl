@@ -1,4 +1,4 @@
-using Stheno: CondCache, ConditionalMean, ConditionalKernel, ConditionalCrossKernel,
+using Stheno: CondCache, CondMean, CondKernel, CondCrossKernel,
     OneMean, ZeroMean, ZeroKernel, OneKernel, pairwise, CondCache, OuterKernel, BinaryKernel
 using LinearAlgebra: cholesky
 
@@ -32,18 +32,15 @@ using LinearAlgebra: cholesky
             # Construct conditioned objects.
             y = map(μf, X0) + cholesky(pairwise(kff, X0)).U' * randn(rng, N)
             cache = CondCache(kff, μf, X0, y)
-            kffX = LhsFiniteCrossKernel(kff, X0)
-            kfgX = LhsFiniteCrossKernel(kfg, X0)
-            kfhX = LhsFiniteCrossKernel(kfh, X0)
-            μ′f = ConditionalMean(cache, μf, kffX)
-            μ′g = ConditionalMean(cache, μg, kfgX)
-            μ′h = ConditionalMean(cache, μh, kfhX)
-            k′ff = ConditionalKernel(cache, kffX, kff)
-            k′gg = ConditionalKernel(cache, kfgX, kgg)
-            k′hh = ConditionalKernel(cache, kfhX, khh)
-            k′fg = ConditionalCrossKernel(cache, kffX, kfgX, kfg)
-            k′fh = ConditionalCrossKernel(cache, kffX, kfhX, kfh)
-            k′gh = ConditionalCrossKernel(cache, kfgX, kfhX, kgh)
+            μ′f = CondMean(cache, μf, kff)
+            μ′g = CondMean(cache, μg, kfg)
+            μ′h = CondMean(cache, μh, kfh)
+            k′ff = CondKernel(cache, kff, kff)
+            k′gg = CondKernel(cache, kfg, kgg)
+            k′hh = CondKernel(cache, kfh, khh)
+            k′fg = CondCrossKernel(cache, kff, kfg, kfg)
+            k′fh = CondCrossKernel(cache, kff, kfh, kfh)
+            k′gh = CondCrossKernel(cache, kfg, kfh, kgh)
 
             # Run standard consistency tests on all of the above.
             for (n, μ′) in enumerate([μ′f, μ′g, μ′h])

@@ -3,7 +3,7 @@ module Stheno
     using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random, Zygote,
         LinearAlgebra
     import Base: length
-    import Base.Broadcast: broadcasted
+    import Base.Broadcast: broadcasted, materialize
     using LinearAlgebra: AbstractTriangular
     using Zygote: @adjoint, @nograd
 
@@ -24,7 +24,6 @@ module Stheno
     # All mean function and kernel related functionality.
     include("mean_and_kernel/mean.jl")
     include("mean_and_kernel/kernel.jl")
-    include("mean_and_kernel/finite.jl")
     include("mean_and_kernel/compose.jl")
     include("mean_and_kernel/block.jl")
     include("mean_and_kernel/input_transform.jl")
@@ -34,12 +33,12 @@ module Stheno
     include("mean_and_kernel/algebra.jl")
 
     # Basic Gaussian process definitions.
-    include("gp/abstract_gp.jl")
-    include("gp/gp.jl")
+    # include("gp/abstract_gp.jl")
+    # include("gp/gp.jl")
     # include("gp/block_gp.jl")
 
     # Affine transformations of GPs.
-    include("linops/indexing.jl")
+    # include("linops/indexing.jl")
     # include("linops/addition.jl")
     # include("linops/product.jl")
     # include("linops/compose.jl")

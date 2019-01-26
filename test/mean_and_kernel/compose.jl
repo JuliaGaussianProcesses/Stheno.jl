@@ -1,5 +1,5 @@
 using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
-    LhsCross, RhsCross, OuterCross, OuterKernel, map, pairwise
+    LhsCross, RhsCross, OuterCross, OuterKernel, map, pairwise, CustomMean, ZeroMean
 
 @testset "compose" begin
 
@@ -8,7 +8,7 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         rng, N = MersenneTwister(123456), 100
         μ, f, ȳ, x = CustomMean(sin), exp, randn(rng, N), randn(rng, N)
         ν = UnaryMean(f, μ)
-        @test ν(x[1]) == exp(μ(x[1]))
+        @test map(ν, x) == map(exp, map(μ, x))
         mean_function_tests(ν, x)
 
         # Ensure FillArray functionality works as intended, particularly with Zygote.
@@ -22,8 +22,12 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         μ1, μ2 = CustomMean(sin), CustomMean(cos)
         f, ȳ, x = exp, randn(rng, N), randn(rng, N)
         ν1, ν2 = BinaryMean(+, μ1, μ2), BinaryMean(*, μ1, μ2)
-        @test ν1(x[1]) == μ1(x[1]) .+ μ2(x[1])
-        @test ν2(x[3]) == μ1(x[3]) .* μ2(x[3])
+
+        let
+            m1, m2 = map(μ1, x), map(μ2, x)
+            @test map(ν1, x) == m1 .+ m2
+            @test map(ν2, x) == m1 .* m2
+        end
 
         differentiable_mean_function_tests(ν1, ȳ, x)
         differentiable_mean_function_tests(ν2, ȳ, x)
@@ -46,11 +50,9 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         kernel_tests(ν, x0, x1, x2)
 
         # Absolute correctness testing.
-        @test ν(x0[1], x1[2]) == k(x0[1], x1[2]) + k(x0[1], x1[2])
         @test map(ν, x0, x1) == map(k, x0, x1) .+ map(k, x0, x1)
         @test pairwise(ν, x0, x2) == pairwise(k, x0, x2) .+ pairwise(k, x0, x2)
 
-        @test ν(x0[1]) == k(x0[1]) + k(x0[1])
         @test map(ν, x0) == map(k, x0) .+ map(k, x0)
         @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
 
@@ -84,11 +86,9 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
 
         # Absolute correctness testing.
-        @test ν(x0[1], x1[2]) == k(x0[1], x1[2]) + k(x0[1], x1[2])
         @test map(ν, x0, x1) == map(k, x0, x1) .+ map(k, x0, x1)
         @test pairwise(ν, x0, x2) == pairwise(k, x0, x2) .+ pairwise(k, x0, x2)
 
-        @test ν(x0[1]) == k(x0[1]) + k(x0[1])
         @test map(ν, x0) == map(k, x0) .+ map(k, x0)
         @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
 
@@ -115,7 +115,8 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         f, k = abs2, EQ()
         ν = LhsCross(f, k)
 
-        @test ν(x0[1], x1[1]) == f(x0[1]) * k(x0[1], x1[1])
+        @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1)
+
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
@@ -127,7 +128,7 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         k, f = EQ(), abs2
         ν = RhsCross(k, f)
 
-        @test ν(x0[1], x1[1]) == k(x0[1], x1[1]) * f(x1[1])
+        @test pw(ν, x0, x1) == pw(k, x0, x1) .* map(f, x1)'
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
@@ -139,7 +140,7 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         k, f = EQ(), abs2
         ν = OuterCross(f, k)
 
-        @test ν(x0[1], x1[1]) == f(x0[1]) * k(x0[1], x1[1]) * f(x1[1])
+        @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1) .* map(f, x1)'
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
@@ -151,7 +152,7 @@ using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
         k, f = EQ(), abs2
         ν = OuterKernel(f, k)
 
-        @test ν(x0[1], x1[1]) == f(x0[1]) * k(x0[1], x1[1]) * f(x1[1])
+        @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1) .* map(f, x1)'
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 end

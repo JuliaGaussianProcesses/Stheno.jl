@@ -5,14 +5,13 @@ This is an attrociously-named type, apologies. `ϕ` is a callable for which
 `pairwise(ϕ, :, x)` does something sensible, `μ` is a finite-dimensional mean function, and
 `g` is just some unary function.
 """
-struct DeltaSumMean{Tϕ, Tμ<:MeanFunction, Tg} <: MeanFunction
+struct DeltaSumMean{Tϕ, Tμ<:MeanFunction, Tg, Tx} <: MeanFunction
     ϕ::Tϕ
     μ::Tμ
     g::Tg
+    x::Tx
 end
-(μ::DeltaSumMean)(x::Number) = _map(μ, [x])[1]
-(μ::DeltaSumMean)(X::AV) = _map(μ, ColsAreObs(reshape(X, :, 1)))[1]
-_map(μ::DeltaSumMean, x::AV) = bcd(+, pw(μ.ϕ, :, x)' * map(μ.μ, :), _map(μ.g, x))
+_map(μ::DeltaSumMean, x::AV) = bcd(+, pw(μ.ϕ, μ.x, x)' * map(μ.μ, μ.x), _map(μ.g, x))
 
 
 """
@@ -20,54 +19,40 @@ _map(μ::DeltaSumMean, x::AV) = bcd(+, pw(μ.ϕ, :, x)' * map(μ.μ, :), _map(μ
 
 `ϕ(:, x)' * pairwise(k, :) * ϕ(:, x′)`
 """
-struct DeltaSumKernel{Tϕ, Tk<:Kernel} <: Kernel
+struct DeltaSumKernel{Tϕ, Tk<:Kernel, Tx} <: Kernel
     ϕ::Tϕ
     k::Tk
+    x::Tx
 end
-(k::DeltaSumKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
-(k::DeltaSumKernel)(x::Number) = map(k, [x])[1]
-function (k::DeltaSumKernel)(x::AV, x′::AV)
-    return map(k, ColsAreObs(reshape(x, :, 1)), ColsAreObs(reshape(x′, :, 1)))[1]
-end
-(k::DeltaSumKernel)(x::AV) = map(k, ColsAreObs(reshape(x, :, 1)))[1]
-
-_map(k::DeltaSumKernel, x::AV) = diag_Xt_A_X(cholesky(pw(k.k, :)), pw(k.ϕ, :, x))
+_map(k::DeltaSumKernel, x::AV) = diag_Xt_A_X(cholesky(pw(k.k, k.x)), pw(k.ϕ, k.x, x))
 function _map(k::DeltaSumKernel, x::AV, x′::AV)
-    return diag_Xt_A_Y(pw(k.ϕ, :, x), cholesky(pw(k.k, :)), pw(k.ϕ, :, x′))
+    return diag_Xt_A_Y(pw(k.ϕ, k.x, x), cholesky(pw(k.k, k.x)), pw(k.ϕ, k.x, x′))
 end
-_pw(k::DeltaSumKernel, x::AV) = Xt_A_X(cholesky(pw(k.k, :)), pw(k.ϕ, :, x))
+_pw(k::DeltaSumKernel, x::AV) = Xt_A_X(cholesky(pw(k.k, k.x)), pw(k.ϕ, k.x, x))
 function _pw(k::DeltaSumKernel, x::AV, x′::AV)
-    return Xt_A_Y(pw(k.ϕ, :, x), cholesky(pw(k.k, :)), pw(k.ϕ, :, x′))
+    return Xt_A_Y(pw(k.ϕ, k.x, x), cholesky(pw(k.k, k.x)), pw(k.ϕ, k.x, x′))
 end
 
 
 """
     LhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel} <: CrossKernel
 """
-struct LhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel} <: CrossKernel
+struct LhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel, Tx} <: CrossKernel
     ϕ::Tϕ
     k::Tk
+    x::Tx
 end
-(k::LhsDeltaSumCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
-function (k::LhsDeltaSumCrossKernel)(x::AV, x′::AV)
-    return map(k, ColsAreObs(reshape(x, : ,1)), ColsAreObs(reshape(x′, :, 1)))[1]
-end
-
-_map(k::LhsDeltaSumCrossKernel, X::AV, X′::AV) = diag_At_B(pw(k.ϕ, :, X), pw(k.k, :, X′))
-_pw(k::LhsDeltaSumCrossKernel, X::AV, X′::AV) = pw(k.ϕ, :, X)' * pw(k.k, :, X′)
+_map(k::LhsDeltaSumCrossKernel, x::AV, x′::AV) = diag_At_B(pw(k.ϕ, k.x, x), pw(k.k, k.x, x′))
+_pw(k::LhsDeltaSumCrossKernel, x::AV, x′::AV) = pw(k.ϕ, k.x, x)' * pw(k.k, k.x, x′)
 
 
 """
-    RhsDeltaSumCrossKernel{Tϕ} <: CrossKernel
+    RhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel} <: CrossKernel
 """
-struct RhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel} <: CrossKernel
+struct RhsDeltaSumCrossKernel{Tϕ, Tk<:CrossKernel, Tx} <: CrossKernel
     k::Tk
     ϕ::Tϕ
+    x::Tx
 end
-(k::RhsDeltaSumCrossKernel)(x::Number, x′::Number) = map(k, [x], [x′])[1]
-function (k::RhsDeltaSumCrossKernel)(x::AV, x′::AV)
-    return map(k, ColsAreObs(reshape(x, :, 1)), ColsAreObs(reshape(x′, :, 1)))[1]
-end
-
-_map(k::RhsDeltaSumCrossKernel, X::AV, X′::AV) = diag_At_B(pw(k.k, :, X), pw(k.ϕ, :, X′))
-_pw(k::RhsDeltaSumCrossKernel, X::AV, X′::AV) = pw(k.k, :, X)' * pw(k.ϕ, :, X′)
+_map(k::RhsDeltaSumCrossKernel, x::AV, x′::AV) = diag_At_B(pw(k.k, k.x, x), pw(k.ϕ, k.x, x′))
+_pw(k::RhsDeltaSumCrossKernel, x::AV, x′::AV) = pw(k.k, k.x, x)' * pw(k.ϕ, k.x, x′)

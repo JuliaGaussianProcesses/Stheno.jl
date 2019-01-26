@@ -8,7 +8,6 @@ struct FiniteMean{Tμ<:MeanFunction, TX<:AbstractVector} <: MeanFunction
     μ::Tμ
     X::TX
 end
-(μ::FiniteMean)(n) = μ.μ(getindex(μ.X, n))
 map(μ::FiniteMean, ::Colon) = map(μ.μ, μ.X)
 
 
@@ -24,12 +23,10 @@ struct FiniteKernel{Tk<:Kernel, TX<:AbstractVector} <: Kernel
 end
 
 # Binary methods.
-(k::FiniteKernel)(n, n′) = k.k(getindex(k.X, n), getindex(k.X, n′))
 map(k::FiniteKernel, ::Colon, ::Colon) = map(k.k, k.X, k.X)
 pairwise(k::FiniteKernel, ::Colon, ::Colon) = pairwise(k.k, k.X, k.X)
 
 # Unary methods.
-(k::FiniteKernel)(n) = k.k(k.X[n], k.X[n])
 map(k::FiniteKernel, ::Colon) = map(k.k, k.X)
 pairwise(k::FiniteKernel, ::Colon) = pairwise(k.k, k.X)
 
@@ -45,7 +42,6 @@ struct FiniteCrossKernel{Tk<:CrossKernel, TX<:AV, TX′<:AV} <: CrossKernel
     X::TX
     X′::TX′
 end
-(k::FiniteCrossKernel)(n::Integer, n′::Integer) = k.k(k.X[n], k.X′[n′])
 map(k::FiniteCrossKernel, ::Colon, ::Colon) = map(k.k, k.X, k.X′)
 pairwise(k::FiniteCrossKernel, ::Colon, ::Colon) = pairwise(k.k, k.X, k.X′)
 

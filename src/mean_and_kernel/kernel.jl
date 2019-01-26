@@ -5,7 +5,7 @@ using GPUArrays: GPUVector
 import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
 import Base: +, *, ==, size, eachindex, print, eltype
 import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
-import Base.Broadcast: broadcasted, materialize, broadcast_shape
+import Base.Broadcast: broadcast_shape
 
 export CrossKernel, Kernel, cov, EQ, PerEQ, RQ, Linear, Poly, Noise, Wiener,
     WienerVelocity, Exp, ZeroKernel, OneKernel, ConstKernel, pairwise, pw
@@ -62,8 +62,7 @@ function toep_pw(k::CrossKernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) wher
             map(k, Fill(x[1], length(x′)), x′),
         )
     else
-        signature = Tuple{typeof(k), Vector{T}, Vector{V}}
-        return invoke(_pw, signature, k, collect(x), collect(x′))
+        return _pw(k, collect(x), collect(x′))
     end
 end
 
@@ -71,10 +70,12 @@ toep_pw(k::Kernel, x::StepRangeLen) = SymmetricToeplitz(map(k, x, Fill(x[1], len
 
 function toep_map(k::Kernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
     if x.step == x′.step
-        return Fill(k(x[1], x′[1]), broadcast_shape(size(x), size(x′)))
+        return Fill(
+            map(k, collect(x[1:1]), collect(x′[1:1]))[1],
+            broadcast_shape(size(x), size(x′)),
+        )
     else
-        signature = Tuple{typeof(k), Vector{T}, Vector{V}}
-        return invoke(_map, signature, k, collect(x), collect(x′))
+        return _map(k, collect(x), collect(x′))
     end
 end
 
@@ -93,12 +94,10 @@ ZeroKernel() = ZeroKernel{Int}()
 eltype(::ZeroKernel{T}) where {T} = T
 
 # Binary methods.
-(k::ZeroKernel)(x, x′) = zero(eltype(k))
 _map(k::ZeroKernel, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′))...)
 _pw(k::ZeroKernel, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
 
 # Unary methods.
-(k::ZeroKernel)(x) = zero(eltype(k))
 _map(k::ZeroKernel, x::AV) = Zeros{eltype(k)}(length(x))
 _pw(k::ZeroKernel, x::AV) = Zeros{eltype(k)}(length(x), length(x))
 
@@ -114,12 +113,10 @@ OneKernel() = OneKernel{Int}()
 eltype(k::OneKernel{T}) where {T} = T
 
 # Binary methods.
-(k::OneKernel)(x, x′) = one(eltype(k))
 _map(k::OneKernel, x::AV, x′::AV) = Ones{eltype(k)}(broadcast_shape(size(x), size(x′))...)
 _pw(k::OneKernel, x::AV, x′::AV) = Ones{eltype(k)}(length(x), length(x′))
 
 # Unary methods.
-(k::OneKernel)(x) = one(eltype(k))
 _map(k::OneKernel, x::AV) = Ones{eltype(k)}(length(x))
 _pw(k::OneKernel, x::AV) = Ones{eltype(k)}(length(x), length(x))
 
@@ -137,12 +134,10 @@ end
 const_kernel(c, x, x′) = c
 
 # Binary methods.
-(k::ConstKernel)(x, x′) = const_kernel(k.c, x, x′)
 _map(k::ConstKernel, x::AV, x′::AV) = Fill(k.c, broadcast_shape(size(x), size(x′))...)
 _pw(k::ConstKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′))
 
 # Unary methods.
-(k::ConstKernel)(x) = const_kernel(k.c, x, x)
 _map(k::ConstKernel, x::AV) = Fill(k.c, length(x))
 _pw(k::ConstKernel, x::AV) = _pw(k, x, x)
 
@@ -155,7 +150,6 @@ The standardised Exponentiated Quadratic kernel (no free parameters).
 struct EQ <: Kernel end
 
 # Binary methods.
-(::EQ)(x, x′) = exp(-sqeuclidean(x, x′) / 2)
 function _map(::EQ, x::AV{<:Real}, x′::AV{<:Real})
     return bcd(exp, bcd((x, x′)->-sqeuclidean(x, x′) / 2, x, x′))
 end
@@ -172,8 +166,6 @@ _map(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x
 _pw(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
-(::EQ)(x::Real) = one(x)
-(::EQ)(x::AV{<:Real}) = one(eltype(x))
 _map(::EQ, x::AV) = Ones{eltype(x)}(length(x))
 _pw(::EQ, x::AV{<:Real}) = _pw(EQ(), x, x)
 _map(::EQ, X::ColsAreObs) = Ones{eltype(X.X)}(length(X))
@@ -219,7 +211,6 @@ The usual periodic kernel derived by mapping the input domain onto the unit circ
 struct PerEQ <: Kernel end
 
 # Binary methods.
-(::PerEQ)(x::Real, x′::Real) = exp(-2 * sin(π * abs(x - x′))^2)
 function _map(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real})
     return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′), x, x′))))
 end
@@ -230,7 +221,6 @@ _map(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k
 _pw(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
-(::PerEQ)(x::Real) = one(x)
 _map(::PerEQ, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
 _pw(k::PerEQ, x::AV{<:Real}) = _pw(k, x, x)
 _pw(k::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
@@ -244,14 +234,12 @@ The standardised Exponential kernel.
 struct Exp <: Kernel end
 
 # Binary methods
-(::Exp)(x::Real, x′::Real) = exp(-abs(x - x′))
 _map(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′))
 _pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′'))
 _map(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
 _pw(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods
-(::Exp)(x) = one(x)
 _map(::Exp, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
 _pw(k::Exp, x::AV{<:Real}) = _pw(k, x, x)
 _pw(k::Exp, x::StepRangeLen{<:Real}) = toep_pw(k, x)
@@ -265,14 +253,12 @@ The standardised linear kernel / dot-product kernel.
 struct Linear <: Kernel end
 
 # Binary methods
-(k::Linear)(x, x′) = dot(x, x′)
 _map(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′
 _pw(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′'
 _map(k::Linear, x::ColsAreObs, x′::ColsAreObs) = reshape(sum(x.X .* x′.X; dims=1), :)
 _pw(k::Linear, x::ColsAreObs, x′::ColsAreObs) = x.X' * x′.X
 
 # Unary methods
-(k::Linear)(x) = dot(x, x)
 _map(k::Linear, x::AV{<:Real}) = x.^2
 _pw(k::Linear, x::AV{<:Real}) = x .* x'
 _map(k::Linear, x::ColsAreObs) = reshape(sum(abs2.(x.X); dims=1), :)
@@ -289,12 +275,10 @@ Noise() = Noise{Int}()
 eltype(k::Noise{T}) where {T} = T
 
 # Binary methods.
-(k::Noise)(x, x′) = zero(eltype(k))
 _map(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′))...)
 _pw(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
 
 # Unary methods.
-(k::Noise)(x) = one(eltype(k))
 _map(k::Noise, x::AV) = Ones{eltype(k)}(length(x))
 _pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
 
@@ -341,21 +325,3 @@ _pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
 # struct WienerVelocity <: Kernel end
 # @inline (::WienerVelocity)(x::Real, x′::Real) =
 #     min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
-
-
-"""
-    EmpiricalKernel <: Kernel
-
-A finite-dimensional kernel defined in terms of a PSD matrix `Σ`.
-"""
-struct EmpiricalKernel{T<:AbstractMatrix} <: Kernel
-    Σ::T
-end
-@inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]
-@inline (k::EmpiricalKernel)(q::Int) = k.Σ[q, q]
-
-_pw(k::EmpiricalKernel, X::AV) = X == eachindex(k) ? k.Σ : k.Σ[X, X]
-
-function _pw(k::EmpiricalKernel, X::AV, X′::AV)
-    return X == eachindex(k) && X′ == eachindex(k) ? k.Σ : k.Σ[X, X′]
-end

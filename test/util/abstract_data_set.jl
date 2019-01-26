@@ -35,35 +35,35 @@ using Stheno: ColsAreObs, BlockData
             end
         end
 
-        # # Test BlockDataSet.
-        # let
-        #     DX = ColsAreObs(X)
-        #     DxX = BlockData([x, DX])
-        #     @test size(DxX) == (2N,)
-        #     @test length(DxX) == 2N
-        #     @test DxX == DxX
-        #     @test DxX == BlockData([x, DX])
-        #     @test length([x for x in DxX]) == 2N
-        #     @test getindex(DxX, 1) === x[1]
-        #     @test getindex(DxX, 2) === x[2]
-        #     @test getindex(DxX, N) === x[N]
-        #     @test getindex(DxX, N + 1) == DX[1]
-        #     @test view(DxX, 2, 1) == view(DX, 1)
-        #     @test view(DxX, 2, N) == view(DX, N)
-        #     @test eachindex(DxX) isa BlockVector
-        #     @test eachindex(DxX) == BlockVector([1:N, N+1:2N])
+        # Test BlockDataSet.
+        let
+            DX = ColsAreObs(X)
+            DxX = BlockData([x, DX])
+            @test size(DxX) == (2N,)
+            @test length(DxX) == 2N
+            @test DxX == DxX
+            @test DxX == BlockData([x, DX])
+            @test length([x for x in DxX]) == 2N
+            @test getindex(DxX, 1) === x[1]
+            @test getindex(DxX, 2) === x[2]
+            @test getindex(DxX, N) === x[N]
+            @test getindex(DxX, N + 1) == DX[1]
+            @test view(DxX, 2, 1) == view(DX, 1)
+            @test view(DxX, 2, N) == view(DX, N)
+            @test eachindex(DxX) isa BlockVector
+            @test eachindex(DxX) == BlockVector([1:N, N+1:2N])
 
-        #     # Test iteration.
-        #     @test [x for x in DxX][1] == x[1]
-        #     @test [x for x in DxX][N] == x[end]
-        #     @test [x for x in DxX][N + 1] == DX[1]
-        #     @test [x for x in DxX][end] == DX[end]
+            # Test iteration.
+            @test [x for x in DxX][1] == x[1]
+            @test [x for x in DxX][N] == x[end]
+            @test [x for x in DxX][N + 1] == DX[1]
+            @test [x for x in DxX][end] == DX[end]
 
-        #     # Test that identically typed arrays yield the appropriate element type.
-        #     @test eltype(BlockData([randn(5), randn(4)])) == Float64
-        #     @test eltype(DxX) == Any
-        #     @test eltype(BlockData([DX, DX])) == Vector{Float64}
-        #     @test eltype(BlockData([eachindex(DX), eachindex(DX)])) == Int
-        # end
+            # Test that identically typed arrays yield the appropriate element type.
+            @test eltype(BlockData([randn(5), randn(4)])) == Float64
+            @test eltype(DxX) == Any
+            @test eltype(BlockData([DX, DX])) == Vector{Float64}
+            @test eltype(BlockData([eachindex(DX), eachindex(DX)])) == Int
+        end
     end
 end

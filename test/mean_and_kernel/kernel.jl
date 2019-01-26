@@ -1,4 +1,5 @@
-using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
+using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, CustomMean
+using FillArrays
 
 @testset "kernel" begin
 
@@ -16,17 +17,27 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
         ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
 
         # Tests for ZeroKernel.
-        @test ZeroKernel()(0, 0) === 0
         @test map(ZeroKernel(), x0) isa Zeros
+        @test map(ZeroKernel(), x0, x1) isa Zeros
+        @test pairwise(ZeroKernel(), x0) isa Zeros
+        @test pairwise(ZeroKernel(), x0, x2) isa Zeros
         differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
         differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
 
         # Tests for OneKernel.
+        @test map(OneKernel(), x0) isa Ones
+        @test map(OneKernel(), x0, x1) isa Ones
+        @test pairwise(OneKernel(), x0) isa Ones
+        @test pairwise(OneKernel(), x0, x2) isa Ones
         differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
         differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
 
         # Tests for ConstKernel.
-        @test ConstKernel(5.0)(randn(rng), randn(rng)) == 5.0
+        @test map(ConstKernel(5), x0) == 5 .* ones(length(x0))
+        @test map(ConstKernel(5), x0) isa Fill
+        @test map(ConstKernel(5), x0, x1) isa Fill
+        @test pairwise(ConstKernel(5), x0) isa Fill
+        @test pairwise(ConstKernel(5), x0, x2) isa Fill
         differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
         differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
 
@@ -53,21 +64,6 @@ using Stheno: CrossKernel, ZeroKernel, OneKernel, pairwise, EmpiricalKernel
         # Tests for Noise. It doesn't follow the usual kernel consistency criteria.
         @test pairwise(Noise(), x0, x0) == zeros(length(x0), length(x0))
         @test pairwise(Noise(), x0) == Diagonal(ones(length(x0)))
-
-        # # Tests for EmpiricalKernel.
-        # A_ = randn(rng, N, N)
-        # A = LazyPDMat(A_ * A_' + 1e-6I)
-        # k = EmpiricalKernel(A)
-        # Ds0, Ds1, Ds2 = 1:N, 1:N, 1:N-1
-        # kernel_tests(k, Ds0, Ds1, Ds2)
-        # @test size(k, 1) == N && size(k, 2) == N
-
-        # @test map(k, :) == diag(A)
-        # @test map(k, :, :) == diag(A)
-        # @test pairwise(k, :) == A
-        # @test pairwise(k, :, :) == A
-
-        # @test_throws AssertionError AbstractMatrix(EQ())
     end
 
     # # Tests for Rational Quadratic (RQ) kernel.

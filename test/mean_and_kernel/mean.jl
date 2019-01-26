@@ -1,4 +1,4 @@
-using Stheno: CustomMean, ZeroMean, OneMean, EmpiricalMean
+using Stheno: CustomMean, ZeroMean, OneMean
 
 @testset "mean" begin
 
@@ -9,10 +9,10 @@ using Stheno: CustomMean, ZeroMean, OneMean, EmpiricalMean
         foo_mean = x->sum(abs2, x)
         f = CustomMean(foo_mean)
 
-        @test f(X[1]) == foo_mean(X[1])
-
-        differentiable_mean_function_tests(f, randn(rng, N), x)
-        differentiable_mean_function_tests(f, randn(rng, N), X)
+        for x in [x, X]
+            @test map(f, x) == map(foo_mean, x)
+            differentiable_mean_function_tests(f, randn(rng, N), x)
+        end
     end
 
     # Test ZeroMean.
@@ -21,10 +21,10 @@ using Stheno: CustomMean, ZeroMean, OneMean, EmpiricalMean
         X, x = ColsAreObs(randn(rng, D, P)), randn(rng, P)
         f = ZeroMean{Float64}()
 
-        @test f(randn(rng)) === zero(Float64)
-
-        differentiable_mean_function_tests(f, randn(rng, P), x)
-        differentiable_mean_function_tests(f, randn(rng, P), X)
+        for x in [x, X]
+            @test map(f, x) == zeros(size(x))
+            differentiable_mean_function_tests(f, randn(rng, P), x)
+        end
     end
 
     # Test OneMean.
@@ -34,20 +34,9 @@ using Stheno: CustomMean, ZeroMean, OneMean, EmpiricalMean
         c = randn(rng)
         f = OneMean()
 
-        @test f(randn(rng)) == 1
-
-        differentiable_mean_function_tests(f, randn(rng, P), x)
-        differentiable_mean_function_tests(f, randn(rng, P), X)
-    end
-
-    # Test EmpiricalMean.
-    let
-        rng, N, D = MersenneTwister(123456), 11, 2
-        x = 1:N
-        m = randn(rng, N)
-        μ = EmpiricalMean(m)
-
-        @test map(μ, :) == m
-        @test AbstractVector(μ) == m
+        for x in [x, X]
+            @test map(f, x) == ones(size(x))
+            differentiable_mean_function_tests(f, randn(rng, P), x)
+        end
     end
 end

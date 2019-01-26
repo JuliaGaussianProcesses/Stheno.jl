@@ -1,4 +1,4 @@
-using Stheno: ITMean, ITKernel, LhsITCross, RhsITCross, ITCross
+using Stheno: ITMean, ITKernel, LhsITCross, RhsITCross, ITCross, OneMean
 
 @testset "input_transform" begin
 
@@ -8,7 +8,7 @@ using Stheno: ITMean, ITKernel, LhsITCross, RhsITCross, ITCross
         μ, f, x = OneMean(), abs2, randn(rng, N)
         μf = ITMean(μ, f)
 
-        @test μf(x[1]) == (μ ∘ f)(x[1])
+        @test map(μf, x) == map(μ, map(f, x))
         differentiable_mean_function_tests(rng, μf, x)
     end
 
@@ -19,7 +19,7 @@ using Stheno: ITMean, ITKernel, LhsITCross, RhsITCross, ITCross
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         kf = ITKernel(k, f)
 
-        @test kf(x0[1], x1[1]) == k(f(x0[1]), f(x1[1]))
+        @test map(kf, x0, x1) == map(k, map(f, x0), map(f, x1))
         differentiable_kernel_tests(rng, kf, x0, x1, x2; rtol=1e-9, atol=1e-9)
     end
 
@@ -30,7 +30,7 @@ using Stheno: ITMean, ITKernel, LhsITCross, RhsITCross, ITCross
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         kf = LhsITCross(k, f)
 
-        @test kf(x0[1], x1[1]) == k(f(x0[1]), x1[1])
+        @test map(kf, x0, x1) == map(k, map(f, x0), x1)
         differentiable_cross_kernel_tests(rng, kf, x0, x1, x2)
     end
 
@@ -41,7 +41,7 @@ using Stheno: ITMean, ITKernel, LhsITCross, RhsITCross, ITCross
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         kf = RhsITCross(k, f)
 
-        @test kf(x0[1], x1[1]) == k(x0[1], f(x1[1]))
+        @test map(kf, x0, x1) == map(k, x0, map(f, x1))
         differentiable_cross_kernel_tests(rng, kf, x0, x1, x2)
     end
 
@@ -52,7 +52,7 @@ using Stheno: ITMean, ITKernel, LhsITCross, RhsITCross, ITCross
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         kf = ITCross(k, f, f′)
 
-        @test kf(x0[1], x1[1]) == k(f(x0[1]), f′(x1[1]))
+        @test map(kf, x0, x1) == map(k, map(f, x0), map(f′, x1))
         differentiable_cross_kernel_tests(rng, kf, x0, x1, x2)
     end
 end

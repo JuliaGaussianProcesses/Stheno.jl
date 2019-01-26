@@ -1,5 +1,5 @@
 import Base: +, *
-export finite, lhs_finite, rhs_finite
+export finite
 
 
 ########################
@@ -25,10 +25,6 @@ export finite, lhs_finite, rhs_finite
 *(m::ZeroMean, m′::ZeroMean) = m
 *(m::ZeroMean, m′::MeanFunction) = m
 *(m::MeanFunction, m′::ZeroMean) = m′
-
-# Creating a finite-dimensional mean function.
-finite(m::MeanFunction, x::AV) = FiniteMean(m, x)
-finite(m::ConditionalMean, x::AV) = ConditionalMean(m.c, )
 
 ##################
 # Kernel algebra #
@@ -65,7 +61,6 @@ finite(m::ConditionalMean, x::AV) = ConditionalMean(m.c, )
 # Optimise for product of `ConstKernel`s.
 *(k::ConstKernel, k′::ConstKernel) = ConstKernel(k.c * k′.c)
 
-
 #######################
 # CrossKernel algebra #
 #######################
@@ -91,10 +86,3 @@ finite(m::ConditionalMean, x::AV) = ConditionalMean(m.c, )
 # Optimise multiplication by one.
 *(k::OneKernel, k′::CrossKernel) = k′
 *(k::CrossKernel, k′::OneKernel) = k
-
-
-# Create finite-dimensional kernels.
-finite(k::Kernel, x::AV) = FiniteKernel(k, x)
-finite(k::CrossKernel, x::AV, x′::AV) = FiniteCrossKernel(k, x, x′)
-# lhs_finite(k::CrossKernel, x::AV) = LhsFiniteCrossKernel(k, x)
-# rhs_finite(k::CrossKernel, x′::AV) = RhsFiniteCrossKernel(k, x′)

@@ -11,26 +11,26 @@ _map(μ::BlockMean, ::Colon) = Vector(BlockVector(map.(μ.μ, :)))
 
 
 
-"""
-    BlockCrossKernel <: CrossKernel
+# """
+#     BlockCrossKernel <: CrossKernel
 
-A cross kernel comprising lots of other kernels.
-"""
-struct BlockCrossKernel <: CrossKernel
-    ks::Matrix
-end
-BlockCrossKernel(ks::AbstractVector) = BlockCrossKernel(reshape(ks, length(ks), 1))
-function BlockCrossKernel(ks::Adjoint{T, AbstractVector{T}} where T)
-    return BlockCrossKernel(reshape(ks, 1, length(ks)))
-end
+# A cross kernel comprising lots of other kernels.
+# """
+# struct BlockCrossKernel <: CrossKernel
+#     ks::Matrix
+# end
+# BlockCrossKernel(ks::AbstractVector) = BlockCrossKernel(reshape(ks, length(ks), 1))
+# function BlockCrossKernel(ks::Adjoint{T, AbstractVector{T}} where T)
+#     return BlockCrossKernel(reshape(ks, 1, length(ks)))
+# end
 
-# Binary methods.
-function _map(k::BlockCrossKernel, X::BlockData, X′::BlockData)
-    return Vector(BlockVector(map.(diag(k.ks), blocks(X), blocks(X′))))
-end
-function _pw(k::BlockCrossKernel, X::BlockData, X′::BlockData)
-    return Matrix(BlockMatrix(broadcast(pw, k.ks, blocks(X), reshape(blocks(X′), 1, :))))
-end
+# # Binary methods.
+# function _map(k::BlockCrossKernel, X::BlockData, X′::BlockData)
+#     return Vector(BlockVector(map.(diag(k.ks), blocks(X), blocks(X′))))
+# end
+# function _pw(k::BlockCrossKernel, X::BlockData, X′::BlockData)
+#     return Matrix(BlockMatrix(broadcast(pw, k.ks, blocks(X), reshape(blocks(X′), 1, :))))
+# end
 
 
 # """
