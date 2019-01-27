@@ -1,4 +1,4 @@
-using Stheno: project, pw, lhsfinite, unbox, Xt_A_X, Xt_A_Y
+using Stheno: project, pw, Xt_A_X, Xt_A_Y, GPC, CustomMean
 
 @testset "project" begin
 
@@ -7,8 +7,7 @@ using Stheno: project, pw, lhsfinite, unbox, Xt_A_X, Xt_A_Y
 
     # Construct projection with non-block matrices.
     f = GP(3, EQ(), GPC())
-    ϕ = lhsfinite(EQ(), Z)
-    f_pr = project(ϕ, f(Z), sin)
+    f_pr = project(EQ(), f(Z), CustomMean(sin))
 
     @test mean(f_pr(X)) == pw(EQ(), X, Z) * mean(f(Z)) + sin.(X)
     @test cov(f_pr(X)) ≈ pw(EQ(), X, Z) * cov(f(Z)) * pw(EQ(), X, Z)'

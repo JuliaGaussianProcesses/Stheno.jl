@@ -35,7 +35,7 @@ function to_vec(x::T) where {T<:AbstractTriangular}
     return x_vec, x_vec->T(reshape(back(x_vec), size(x)))
 end
 to_vec(x::Symmetric) = vec(Matrix(x)), x_vec->Symmetric(reshape(x_vec, size(x)))
-
+to_vec(X::Diagonal) = vec(Matrix(X)), x_vec->Diagonal(reshape(x_vec, size(X)...))
 
 # Non-array data structures.
 function to_vec(x::Tuple)
@@ -85,7 +85,7 @@ end
 
 # Ensure that `to_vec` and j′vp works correctly.
 for x in [randn(10), 5.0, randn(10, 10), ColsAreObs(randn(2, 5)), (5.0, 4.0),
-        (randn(10), randn(11)), BlockVector([randn(10)]),]
+        (randn(10), randn(11)), BlockVector([randn(10)]), Diagonal(randn(10)),]
     x_vec, back = to_vec(x)
     @test x_vec isa AbstractVector{<:Real}
     @test back(x_vec) == x
@@ -104,7 +104,7 @@ function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1
     @test y == f(x...)
 
     # Check that ad and fd adjoints (approximately) agree.
-    # print_adjoints(adj_ad, adj_fd, rtol, atol)
+    print_adjoints(adj_ad, adj_fd, rtol, atol)
     @test fd_isapprox(adj_ad, adj_fd, rtol, atol)
 end
 

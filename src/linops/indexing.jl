@@ -3,7 +3,8 @@
 
 Construct a `FiniteGP` representing the projection of `f` at `x`.
 """
-(f::GP)(x::AbstractVector) = FiniteGP(f, x)
+(f::GP)(x::AbstractVector, σ²::Union{Real, AbstractVector{<:Real}}) = FiniteGP(f, x, σ²)
+(f::GP)(x::AbstractVector) = f(x, 0)
 
 # """
 #     (f_q::BlockGP)(X::BlockData)

@@ -8,9 +8,13 @@ export mean, cov, marginals, rand, logpdf, elbo
 
 The finite-dimensional projection of the GP `f` at `x`.
 """
-struct FiniteGP{Tf<:AbstractGP, Tx} <: ContinuousMultivariateDistribution
+struct FiniteGP{Tf<:AbstractGP, Tx, Tσ²} <: ContinuousMultivariateDistribution
     f::Tf
     x::Tx 
+    σ²::Tσ²
+    function FiniteGP(f::AbstractGP, x::AV, σ²::Union{Real, AV{<:Real}})
+        return new{typeof(f), typeof(x), typeof(σ²)}(f, x, σ²)
+    end
 end
 
 """
@@ -25,7 +29,7 @@ mean(f::FiniteGP) = map(mean(f.f), f.x)
 
 The covariance matrix of `f`.
 """
-cov(f::FiniteGP) = pairwise(kernel(f.f), f.x)
+cov(f::FiniteGP) = pairwise(kernel(f.f), f.x) + _get_mat(f.σ²)
 
 """
     cov(f::FiniteGP, g::FiniteGP)
@@ -39,7 +43,10 @@ cov(f::FiniteGP, g::FiniteGP) = pairwise(kernel(f.f, g.f), f.x, g.x)
 
 Sugar, returns a vector of Normal distributions representing the marginals of `f`.
 """
-marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(map(kernel(f.f), f.x)))
+function marginals(f::FiniteGP)
+    m, σ² = mean(f), map(kernel(f.f), f.x)
+    return Normal.(mean(f), sqrt.(σ² .+ f.σ²))
+end
 
 """
     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
@@ -47,7 +54,7 @@ marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(map(kernel(f.f), f.x)))
 Obtain `N` independent samples from the GP `f` using `rng`.
 """
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
-    μ, C = mean(f), cholesky(cov(f) + 1e-6I)
+    μ, C = mean(f), cholesky(cov(f) + _get_mat(f.σ²))
     return μ .+ C.U' * randn(rng, length(μ), N)
 end
 rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
@@ -60,7 +67,7 @@ rand(f::FiniteGP) = vec(rand(f, 1))
 The log probability density of `y` under `f`.
 """
 function logpdf(f::FiniteGP, y::AbstractVector{<:Real})
-    μ, C = mean(f), cholesky(cov(f))
+    μ, C = mean(f), cholesky(cov(f) + _get_mat(f.σ²))
     return -(length(y) * log(2π) + logdet(C) + Xt_invA_X(C, y - μ)) / 2
 end
 

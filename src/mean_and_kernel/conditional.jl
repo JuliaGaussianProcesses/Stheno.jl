@@ -12,9 +12,9 @@ end
 function CondCache(
     kff::Kernel,
     μf::MeanFunction,
-    x::AbstractVector,
-    y::AbstractVector{<:Real},
-    σ²::Union{Real, AbstractVector{<:Real}}=eps(),
+    x::AV,
+    y::AV{<:Real},
+    σ²::Union{Real, AV{<:Real}},
 )
     C = cholesky(pw(kff, x) + _get_mat(σ²))
     return CondCache(C, C \ (y - map(μf, x)), x)

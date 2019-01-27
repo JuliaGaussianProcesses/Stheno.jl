@@ -9,12 +9,10 @@ export ←, |
 
 Represents fixing a paricular (finite) GP to have a particular (vector) value.
 """
-struct Observation{Tf<:FiniteGP, Ty<:AbstractVector, Tσ²<:Union{Real, AV{<:Real}}}
+struct Observation{Tf<:FiniteGP, Ty<:AbstractVector}
     f::Tf
     y::Ty
-    σ²::Tσ²
 end
-Observation(f::FiniteGP, y::AbstractVector) = Observation(f, y, eps())
 
 const Obs = Observation
 export Obs
@@ -32,7 +30,7 @@ get_y(c::Observation) = c.y
 Condition `g` on observation `c`.
 """
 function |(g::GP, c::Observation)
-    f, x, y, σ² = c.f.f, c.f.x, c.y, c.σ²
+    f, x, y, σ² = c.f.f, c.f.x, c.y, c.f.σ²
     return GP(|, g, f, CondCache(kernel(f), mean(f), x, y, σ²))
 end
 # |(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))

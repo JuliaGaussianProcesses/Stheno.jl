@@ -5,39 +5,18 @@ export project
 
 The projection operation `f′(x) = Σₘ ϕₘ(x) f(m) + g(x)`.
 """
-function project(ϕ, f::FiniteGP, g)
-    return GP(project, ϕ, f, g)
-end
+project(ϕ, f::FiniteGP, g::MeanFunction) = GP(project, ϕ, f.f, g, f.x)
+project(ϕ, f::GP) = project(ϕ, f, ZeroMean())
 
-function project(ϕ, f::GP)
-    if size(ϕ, 2) < Inf
-        return project(ϕ, f, FiniteZeroMean(eachindex(ϕ, 2)))
-    else
-        return project(ϕ, f, ZeroMean{Float64}())
-    end
+function μ_p′(::typeof(project), ϕ, f, g, x)
+    return iszero(mean(f)) ? g : DeltaSumMean(ϕ, mean(f), g, x)
 end
-
-function μ_p′(::typeof(project), ϕ, f, g)
-    return iszero(mean(f)) ? g : DeltaSumMean(ϕ, mean(f), g)
+function k_p′(::typeof(project), ϕ, f, g, x)
+    return iszero(kernel(f)) ? ZeroKernel() : DeltaSumKernel(ϕ, kernel(f), x)
 end
-function k_p′(::typeof(project), ϕ, f, g)
-    if iszero(kernel(f))
-        return get_zero(size(ϕ, 2), size(ϕ, 2))
-    else
-        return DeltaSumKernel(ϕ, kernel(f))
-    end
+function k_p′p(::typeof(project), ϕ, f, g, x, fp)
+    return iszero(kernel(f, fp)) ? ZeroKernel() : LhsDeltaSumCrossKernel(ϕ, kernel(f, fp), x)
 end
-function k_p′p(::typeof(project), ϕ, f, g, fp)
-    if iszero(kernel(f, fp))
-        return get_zero(size(ϕ, 2), length(fp))
-    else
-        return LhsDeltaSumCrossKernel(ϕ, kernel(f, fp))
-    end
-end
-function k_pp′(fp, ::typeof(project), ϕ, f, g)
-    if iszero(kernel(f, fp))
-        return get_zero(length(fp), size(ϕ, 2))
-    else
-        return RhsDeltaSumCrossKernel(kernel(f, fp), ϕ)
-    end
+function k_pp′(fp, ::typeof(project), ϕ, f, g, x)
+    return iszero(kernel(f, fp)) ? ZeroKernel() : RhsDeltaSumCrossKernel(kernel(f, fp), ϕ, x)
 end

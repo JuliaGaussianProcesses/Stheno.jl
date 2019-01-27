@@ -8,6 +8,8 @@ import LinearAlgebra: \, /, cholesky, copytri!
 import FillArrays: Fill, AbstractFill, getindex_value, Zeros, Ones
 import Base.Broadcast: broadcasted, materialize
 
+import StatsFuns: log1pexp, logistic, logexpm1
+
 @nograd MersenneTwister, propertynames
 
 # Adjoints for FillArrays.jl. concrete types.
@@ -164,3 +166,33 @@ unbroadcast(x::AbstractArray, Δ::AbstractArray{Nothing}) = trim(x, Δ)
 unbroadcast(x::Union{Number, Ref}, Δ) = sum(Δ)
 
 unbroadcast(x, Δ::AbstractArray{Nothing}) = nothing
+
+@adjoint function Diagonal(x::AbstractVector)
+    back(Δ::NamedTuple) = (println("foo"); (Δ.diag,))
+    back(Δ::AbstractMatrix) = (println("bar"); (diag(Δ),))
+    return Diagonal(x), back
+end
+
+@adjoint function log1pexp(x::Real)
+    return log1pexp(x), function(Δ)
+        if x < 18.0
+            return (Δ * logistic(x),)
+        elseif x < 33.3
+            return (Δ * (1 - exp(-x)),)
+        else
+            return (Δ,)
+        end
+    end
+end
+
+@adjoint function log1pexp(x::Float32)
+    return log1pexp(x), function(Δ)
+        if x < 9f0
+            return (Δ * logistic(x),)
+        elseif x < 16f0
+            return (Δ * (1 - exp(-x)),)
+        else
+            return (Δ,)
+        end
+    end
+end

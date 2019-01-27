@@ -5,7 +5,7 @@ include("test_util.jl")
 @testset "Stheno" begin
 
     @testset "util" begin
-        # include("util/zygote_rules.jl")
+        include("util/zygote_rules.jl")
         # include("util/covariance_matrices.jl")
         # include("util/block_arrays.jl")
         # include("util/abstract_data_set.jl")
@@ -26,12 +26,12 @@ include("test_util.jl")
     @testset "gp" begin
         # include("gp/gp.jl")
     #     include("gp/block_gp.jl")
-        # include("gp/finite_gp.jl")
+        include("gp/finite_gp.jl")
     end
 
     @testset "linops" begin
         # include("linops/indexing.jl")
-        include("linops/conditioning.jl")
+        # include("linops/conditioning.jl")
         # include("linops/product.jl")
         # include("linops/addition.jl")
         # include("linops/compose.jl")
