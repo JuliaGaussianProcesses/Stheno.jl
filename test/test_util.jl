@@ -101,7 +101,7 @@ function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1
     adj_fd = j′vp(fdm, f, ȳ, x...)
 
     # Check that forwards-pass agrees with plain forwards-pass.
-    @test y == f(x...)
+    @test y ≈ f(x...)
 
     # Check that ad and fd adjoints (approximately) agree.
     print_adjoints(adj_ad, adj_fd, rtol, atol)

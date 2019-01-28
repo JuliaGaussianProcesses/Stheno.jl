@@ -168,31 +168,16 @@ unbroadcast(x::Union{Number, Ref}, Δ) = sum(Δ)
 unbroadcast(x, Δ::AbstractArray{Nothing}) = nothing
 
 @adjoint function Diagonal(x::AbstractVector)
-    back(Δ::NamedTuple) = (println("foo"); (Δ.diag,))
-    back(Δ::AbstractMatrix) = (println("bar"); (diag(Δ),))
+    back(Δ::NamedTuple) = (Δ.diag,)
+    back(Δ::AbstractMatrix) = (diag(Δ),)
     return Diagonal(x), back
 end
 
 @adjoint function log1pexp(x::Real)
-    return log1pexp(x), function(Δ)
-        if x < 18.0
-            return (Δ * logistic(x),)
-        elseif x < 33.3
-            return (Δ * (1 - exp(-x)),)
-        else
-            return (Δ,)
-        end
-    end
+    println(x)
+    return log1pexp(x), Δ->(Δ * (x < 18.0 ? logistic(x) : x < 33.3 ? 1 - exp(-x) : 1),)
 end
 
 @adjoint function log1pexp(x::Float32)
-    return log1pexp(x), function(Δ)
-        if x < 9f0
-            return (Δ * logistic(x),)
-        elseif x < 16f0
-            return (Δ * (1 - exp(-x)),)
-        else
-            return (Δ,)
-        end
-    end
+    return log1pexp(x), Δ->(Δ * (x < 9f0 ? logistic(x) : x < 16f0 ? 1 - exp(-x) : 1),)
 end
