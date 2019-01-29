@@ -179,7 +179,7 @@ __foo(x) = isnothing(x) ? "nothing" : x
         )
             for (k, k_name) in ((eq, "eq"), (linear, "linear"), (exp, "exp"))
             for α in (nothing, randn(rng))
-            for β in (nothing, randn(rng))
+            for β in (nothing, softplus(randn(rng)))
             for l in (nothing, randn(rng))
         ],
     )

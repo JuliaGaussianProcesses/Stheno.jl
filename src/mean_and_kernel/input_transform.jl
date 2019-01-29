@@ -105,6 +105,7 @@ struct Scale{T<:Real}
     l::T
 end
 (s::Scale)(x) = s.l * x
+broadcasted(s::Scale, x::StepRangeLen) = s.l .* x
 broadcasted(s::Scale, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
 
 
