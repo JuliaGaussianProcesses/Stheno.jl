@@ -1,4 +1,5 @@
-using Stheno: CrossKernel, ZeroKernel, OneKernel, ConstKernel, CustomMean, PerEQ, pw
+using Stheno: CrossKernel, ZeroKernel, OneKernel, ConstKernel, CustomMean, pw
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 using FillArrays
 
 @testset "kernel" begin

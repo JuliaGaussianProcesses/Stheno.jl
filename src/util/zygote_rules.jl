@@ -174,7 +174,6 @@ unbroadcast(x, Δ::AbstractArray{Nothing}) = nothing
 end
 
 @adjoint function log1pexp(x::Real)
-    println(x)
     return log1pexp(x), Δ->(Δ * (x < 18.0 ? logistic(x) : x < 33.3 ? 1 - exp(-x) : 1),)
 end
 

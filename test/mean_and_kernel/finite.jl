@@ -1,5 +1,5 @@
 using Stheno: FiniteMean, OneMean, AM, AV, pairwise, FiniteKernel, FiniteCrossKernel
-
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 
 @testset "finite" begin
 

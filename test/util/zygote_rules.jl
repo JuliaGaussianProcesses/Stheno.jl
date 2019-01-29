@@ -61,7 +61,7 @@ using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrice
 
     @testset "cholesky (SymmetricToeplitz)" begin
         rng, N = MersenneTwister(123456), 10
-        x = pairwise(EQ(), range(-3.0, stop=3.0, length=N))[:, 1]
+        x = pairwise(eq(), range(-3.0, stop=3.0, length=N))[:, 1]
         x[1] += 0.1 # ensure positive definite-ness under minor perturbations.
         adjoint_test(
             x->cholesky(SymmetricToeplitz(x)).U,

@@ -1,5 +1,6 @@
 using Stheno: OneMean, ZeroMean, BlockMean, BlockCrossKernel
 using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, map, pw
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 using FillArrays
 
 #= 

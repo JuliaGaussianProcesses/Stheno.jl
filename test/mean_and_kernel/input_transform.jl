@@ -1,4 +1,5 @@
 using Stheno: ITMean, ITKernel, LhsITCross, RhsITCross, ITCross, OneMean
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 
 @testset "input_transform" begin
 

@@ -21,6 +21,7 @@ include("test_util.jl")
         # # include("mean_and_kernel/derivative.jl") # These tests currenly fail because Zygote.
         # include("mean_and_kernel/conditional.jl")
         # include("mean_and_kernel/algebra.jl")
+        # include("mean_and_kernel/util.jl")
     end
 
     @testset "gp" begin

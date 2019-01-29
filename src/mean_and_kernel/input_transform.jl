@@ -1,10 +1,10 @@
 """
-    ITMean{Tf, Tμ<:MeanFunction} <: MeanFunction
+    ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
 
 "InputTransformationMean": A `MeanFunction` `μ_it` defined by applying the function `f` to
 the inputs to another `MeanFunction` `μ`. Concretely, `mean(μ_it, X) = mean(μ, f(X))`.
 """
-struct ITMean{Tf, Tμ<:MeanFunction} <: MeanFunction
+struct ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
     μ::Tμ
     f::Tf
 end
@@ -111,7 +111,7 @@ broadcasted(s::Scale, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
 """
     LinearTransform{T<:AbstractMatrix}
 
-A linear transform.
+A linear transformation of the inputs.
 """
 struct LinearTransform{T<:AbstractMatrix}
     A::T

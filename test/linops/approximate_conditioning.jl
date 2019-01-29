@@ -4,12 +4,12 @@
     rng, N, N′, D, σ² = MersenneTwister(123456), 2, 3, 5, 1e-1
     X_, X′_ = randn(rng, D, N), randn(rng, D, N′)
     X, X′, Z = ColsAreObs(X_), ColsAreObs(X′_), ColsAreObs(randn(rng, D, N + N′))
-    μ, k, XX′ = ConstantMean(1.0), EQ(), ColsAreObs(hcat(X_, X′_))
+    μ, k, XX′ = ConstMean(1.0), eq(), ColsAreObs(hcat(X_, X′_))
 
     # Construct toy problem.
     gpc = GPC()
     f = GP(μ, k, gpc)
-    y = f + GP(Noise(σ²), gpc)
+    y = f + GP(noise(α=sqrt(σ²)), gpc)
     ŷ = rand(rng, y(XX′))
 
     # Compute exact posterior.

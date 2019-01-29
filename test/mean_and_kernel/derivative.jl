@@ -1,5 +1,6 @@
 using Stheno: DerivativeMean, DerivativeKernel, DerivativeLhsCross, DerivativeRhsCross,
     DerivativeCross
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 
 @testset "derivative" begin
 

@@ -1,5 +1,6 @@
 using Stheno: CondCache, CondMean, CondKernel, CondCrossKernel, CustomMean,
     OneMean, ZeroMean, ZeroKernel, OneKernel, pairwise, CondCache, OuterKernel, BinaryKernel
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 using LinearAlgebra: cholesky
 
 @testset "conditional" begin

@@ -1,6 +1,7 @@
 using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
     LhsCross, RhsCross, OuterCross, OuterKernel, map, pairwise, CustomMean, ZeroMean,
     ZeroKernel, OneKernel, pw
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 
 @testset "compose" begin
 

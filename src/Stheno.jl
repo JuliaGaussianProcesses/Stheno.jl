@@ -32,6 +32,7 @@ module Stheno
     include("mean_and_kernel/derivative.jl")
     include("mean_and_kernel/conditional.jl")
     include("mean_and_kernel/algebra.jl")
+    include("mean_and_kernel/util.jl")
 
     # Basic Gaussian process definitions.
     include("gp/gp.jl")

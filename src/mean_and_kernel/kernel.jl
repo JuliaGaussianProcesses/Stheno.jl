@@ -7,9 +7,6 @@ import Base: +, *, ==, size, eachindex, print, eltype, zero
 import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
 import Base.Broadcast: broadcast_shape
 
-export EQ, Exp, Linear, Noise
-
-
 
 ############################# Define CrossKernels and Kernels ##############################
 

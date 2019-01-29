@@ -1,5 +1,6 @@
 using Random
 using Stheno: ZeroMean, OneMean, ZeroKernel, OneKernel, CustomMean, pw, ConstKernel
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 
 @testset "algebra" begin
 

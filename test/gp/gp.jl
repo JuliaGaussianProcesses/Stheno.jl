@@ -1,4 +1,5 @@
 using Stheno: OuterKernel, BinaryKernel, GPC, ZeroMean, OneMean, ZeroKernel
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 
 @testset "gp" begin
 

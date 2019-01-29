@@ -1,5 +1,6 @@
 using Random, LinearAlgebra
 using Stheno: BlockGP, getblock, LazyPDMat
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 using Distributions: MvNormal, PDMat
 
 @testset "block_gp" begin

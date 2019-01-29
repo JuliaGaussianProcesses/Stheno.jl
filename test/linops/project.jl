@@ -6,21 +6,21 @@ using Stheno: project, pw, Xt_A_X, Xt_A_Y, GPC, CustomMean
     X, X′, Z, Z′ = randn(rng, N), randn(rng, N′), randn(rng, NZ), randn(rng, NZ′)
 
     # Construct projection with non-block matrices.
-    f = GP(3, EQ(), GPC())
-    f_pr = project(EQ(), f(Z), CustomMean(sin))
+    f = GP(3, eq(), GPC())
+    f_pr = project(eq(), f(Z), CustomMean(sin))
 
-    @test mean(f_pr(X)) == pw(EQ(), X, Z) * mean(f(Z)) + sin.(X)
-    @test cov(f_pr(X)) ≈ pw(EQ(), X, Z) * cov(f(Z)) * pw(EQ(), X, Z)'
-    @test maximum(abs.(cov(f_pr(X), f(X′)) - pw(EQ(), X, Z) * cov(f(Z), f(X′)))) < eps()
-    @test maximum(abs.(cov(f(X), f_pr(X′)) - cov(f(X), f(Z)) * pw(EQ(), Z, X′))) < eps()
+    @test mean(f_pr(X)) == pw(eq(), X, Z) * mean(f(Z)) + sin.(X)
+    @test cov(f_pr(X)) ≈ pw(eq(), X, Z) * cov(f(Z)) * pw(eq(), X, Z)'
+    @test maximum(abs.(cov(f_pr(X), f(X′)) - pw(eq(), X, Z) * cov(f(Z), f(X′)))) < eps()
+    @test maximum(abs.(cov(f(X), f_pr(X′)) - cov(f(X), f(Z)) * pw(eq(), Z, X′))) < eps()
 
     # # Construct projection with BlockGP as the thing over which we're projecting.
     # Zb = BlockData([Z, Z′])
-    # ϕb = lhsfinite(BlockCrossKernel(reshape([EQ(), EQ()], :, 1)), Zb)
+    # ϕb = lhsfinite(BlockCrossKernel(reshape([eq(), eq()], :, 1)), Zb)
     # f_pr_b = project(ϕb, f(Zb), cos)
  
-    # @test mean(f_pr_b(X)) == pw(EQ(), Zb, X)' * mean(f(Zb)) .+ cos.(X)
-    # ϕZX, ϕZX′, ϕZ = pw(EQ(), Zb, X), pw(EQ(), Zb, X′), cov(f(Zb))
+    # @test mean(f_pr_b(X)) == pw(eq(), Zb, X)' * mean(f(Zb)) .+ cos.(X)
+    # ϕZX, ϕZX′, ϕZ = pw(eq(), Zb, X), pw(eq(), Zb, X′), cov(f(Zb))
     # @test cov(f_pr_b(X)) == Xt_A_X(ϕZ, ϕZX)
     # @test cov(f_pr_b(X), f_pr_b(X′)) == Xt_A_Y(ϕZX, ϕZ, ϕZX′)
     # @test cov(f_pr_b(X), f(X′)) == ϕZX' * cov(f(Zb), f(X′))
@@ -28,7 +28,7 @@ using Stheno: project, pw, Xt_A_X, Xt_A_Y, GPC, CustomMean
 
     # # Check that Blocked version is project is consistent with dense.
     # Zb2 = BlockData([Z[1:3], Z[4:5]])
-    # ϕb2 = lhsfinite(BlockCrossKernel(reshape([EQ(), EQ()], :, 1)), Zb2)
+    # ϕb2 = lhsfinite(BlockCrossKernel(reshape([eq(), eq()], :, 1)), Zb2)
     # f_pr_b2 = project(ϕb2, f(Zb2), sin)
 
     # @test mean(f_pr_b2(X)) ≈ mean(f_pr(X))

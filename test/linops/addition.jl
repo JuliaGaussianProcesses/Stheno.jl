@@ -5,7 +5,7 @@ using Stheno: GPC
     @testset "correlated GPs" begin
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        f1, f2 = GP(1, EQ(), gpc), GP(2, Linear(), gpc)
+        f1, f2 = GP(1, eq(), gpc), GP(2, Linear(), gpc)
         f3 = f1 + f2
         f4 = f1 + f3
         f5 = f3 + f4
@@ -29,7 +29,7 @@ using Stheno: GPC
     # let
     #     rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
     #     X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-    #     μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), EQ(), Linear(1.0)
+    #     μ1, μ2, k1, k2 = ConstantMean(1.0), ConstantMean(2.0), eq(), Linear(1.0)
 
     #     # Addition of BlockGPs.
     #     f1, f2 = GP(μ1, k1, gpc), GP(μ2, k2, gpc)
@@ -49,7 +49,7 @@ using Stheno: GPC
     @testset "verify mean / kernel numerically" begin
         rng, N, D = MersenneTwister(123456), 5, 6, 2
         X = ColsAreObs(randn(rng, D, N))
-        c, f = randn(rng), GP(5, EQ(), GPC())
+        c, f = randn(rng), GP(5, eq(), GPC())
 
         @test mean((f + c)(X)) == mean(f(X)) .+ c
         @test mean((f + c)(X)) == c .+ mean(f(X))

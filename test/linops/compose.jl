@@ -3,7 +3,7 @@ using Stheno: GPC
 @testset "compose" begin
     rng, N, N′, gpc = MersenneTwister(123456), 7, 5, GPC()
     x, x′ = randn(rng, N), randn(rng, N′)
-    f, g, h = GP(sin, EQ(), gpc), cos, GP(exp, Linear(), gpc)
+    f, g, h = GP(sin, eq(), gpc), cos, GP(exp, linear(), gpc)
     fg = f ∘ g
 
     # Check marginals statistics inductively.

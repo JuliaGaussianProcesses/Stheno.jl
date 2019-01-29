@@ -1,5 +1,5 @@
-using Stheno: DeltaSumMean, DeltaSumKernel, LhsDeltaSumCrossKernel, RhsDeltaSumCrossKernel,
-    OneMean
+using Stheno: DeltaSumMean, DeltaSumKernel, LhsDeltaSumCrossKernel, RhsDeltaSumCrossKernel
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, OneMean
 
 @testset "delta sum" begin
 
