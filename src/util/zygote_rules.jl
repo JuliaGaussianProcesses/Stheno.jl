@@ -180,13 +180,3 @@ end
 @adjoint function log1pexp(x::Float32)
     return log1pexp(x), Δ->(Δ * (x < 9f0 ? logistic(x) : x < 16f0 ? 1 - exp(-x) : 1),)
 end
-
-@adjoint function hacky_map(f, x...)
-    @show f, x
-    y_pairs = map((x...)->Zygote.forward(f, x...), x...)
-    y = [y_pair[1] for y_pair in y_pairs]
-    return y, function(Δ)
-        out_back = map((δ, (y, back))->back(δ), Δ, y_pairs)
-        xs = (nothing, map(n->[p[n] for p in out_back], 1:length(x))...)
-    end
-end

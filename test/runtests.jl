@@ -18,16 +18,16 @@ include("test_util.jl")
         include("mean_and_kernel/block.jl")
         # include("mean_and_kernel/input_transform.jl")
         # include("mean_and_kernel/degenerate.jl")
-        # include("mean_and_kernel/derivative.jl") # These tests currenly fail because Zygote.
+        # # include("mean_and_kernel/derivative.jl") # These tests currenly fail because Zygote.
         # include("mean_and_kernel/conditional.jl")
         # include("mean_and_kernel/algebra.jl")
         # include("mean_and_kernel/util.jl")
     end
 
     @testset "gp" begin
-    #     include("gp/gp.jl")
-    # #     include("gp/block_gp.jl")
-    #     include("gp/finite_gp.jl")
+        # include("gp/gp.jl")
+        include("gp/block_gp.jl")
+        # include("gp/finite_gp.jl")
     end
 
     @testset "linops" begin

@@ -1,5 +1,5 @@
 using BlockArrays, LinearAlgebra, FDM, Zygote, ToeplitzMatrices
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, pw
+using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, pw, BlockData, blocks
 using FillArrays: AbstractFill, getindex_value
 using LinearAlgebra: AbstractTriangular
 
@@ -36,6 +36,14 @@ function to_vec(x::T) where {T<:AbstractTriangular}
 end
 to_vec(x::Symmetric) = vec(Matrix(x)), x_vec->Symmetric(reshape(x_vec, size(x)))
 to_vec(X::Diagonal) = vec(Matrix(X)), x_vec->Diagonal(reshape(x_vec, size(X)...))
+function to_vec(x::BlockData)
+    x_vecs, x_backs = zip(map(to_vec, blocks(x))...)
+    sz = cumsum([map(length, x_vecs)...])
+    return vcat(x_vecs...), function(v)
+        return BlockData([x_backs[n](v[sz[n]-length(blocks(x)[n])+1:sz[n]])
+            for n in 1:length(blocks(x))])
+    end
+end
 
 # Non-array data structures.
 function to_vec(x::Tuple)
@@ -84,8 +92,11 @@ function fd_isapprox(x_ad::Tuple, x_fd::Tuple, rtol, atol)
 end
 
 # Ensure that `to_vec` and j′vp works correctly.
-for x in [randn(10), 5.0, randn(10, 10), ColsAreObs(randn(2, 5)), (5.0, 4.0),
-        (randn(10), randn(11)), BlockVector([randn(10)]), Diagonal(randn(10)),]
+for x in [
+        randn(10), 5.0, randn(10, 10), ColsAreObs(randn(2, 5)), (5.0, 4.0),
+        (randn(10), randn(11)), BlockVector([randn(10)]), Diagonal(randn(10)),
+        BlockData([randn(10), randn(11)]),
+    ]
     x_vec, back = to_vec(x)
     @test x_vec isa AbstractVector{<:Real}
     @test back(x_vec) == x

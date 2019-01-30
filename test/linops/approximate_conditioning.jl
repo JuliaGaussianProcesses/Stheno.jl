@@ -39,7 +39,6 @@
     μb, Σb = Stheno.optimal_q(fb, ŷb, fb, sqrt(σ²))
 
     @test μb isa BlockVector
-    @test Σb isa LazyPDMat
     @test Stheno.unbox(Σb) isa Symmetric
     @test Stheno.unbox(Stheno.unbox(Σb)) isa AbstractBlockMatrix
     @test μb ≈ μᵤ

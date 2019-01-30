@@ -1,3 +1,45 @@
+export hacky_map
+
+hacky_map(f, x...) = map(f, x...)
+
+@adjoint function hacky_map(f, x...)
+    y_pairs = hacky_map((x...)->Zygote.forward(f, x...), x...)
+    y = [y_pair[1] for y_pair in y_pairs]
+    return y, function(Δ)
+        out_back = map((δ, (y, back))->back(δ), Δ, y_pairs)
+        xs = (nothing, map(n->[p[n] for p in out_back], 1:length(x))...)
+        return xs
+    end
+end
+
+# These implementations are slow, and are only used because Zygote doesn't currently support
+# another way to achieve the required behaviour.
+function unary_make_vec(foo, fs, xs)
+    y = foo(fs[1], xs[1])
+    for n in 2:length(xs)
+        y = vcat(y, foo(fs[n], xs[n]))
+    end
+    return y
+end
+function binary_make_vec(foo, fs, xs, x′s)
+    y = foo(fs[1], xs[1], x′s[1])
+    for n in 2:length(xs)
+        y = vcat(y, foo(fs[n], xs[n], x′s[n]))
+    end
+    return y
+end
+function binary_make_mat(foo, fs, xs, x′s)
+    Y = unary_make_vec((f, x)->foo(f, x, x′s[1]), fs[:, 1], xs)
+    for n in 2:length(x′s)
+        Y = hcat(Y, unary_make_vec((f, x)->foo(f, x, x′s[n]), fs[:, n], xs))
+    end
+    return Y
+end
+
+
+Base.zero(A::AbstractArray{<:AbstractArray}) = zero.(A)
+
+
 """
     BlockMean <: MeanFunction
 
@@ -7,82 +49,62 @@ struct BlockMean{Tμ<:AbstractVector{<:MeanFunction}} <: MeanFunction
     μ::Tμ
 end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
-_map(μ::BlockMean, ::Colon) = Vector(BlockVector(map.(μ.μ, :)))
+_map(μ::BlockMean, x::BlockData) = unary_make_vec(map, μ.μ, blocks(x))
 
 
+"""
+    BlockCrossKernel <: CrossKernel
 
-# """
-#     BlockCrossKernel <: CrossKernel
+A cross kernel comprising lots of other kernels.
+"""
+struct BlockCrossKernel{Tks<:Matrix{<:CrossKernel}} <: CrossKernel
+    ks::Tks
+end
+BlockCrossKernel(ks::AbstractVector) = BlockCrossKernel(reshape(ks, length(ks), 1))
+function BlockCrossKernel(ks::Adjoint{T, AbstractVector{T}} where T)
+    return BlockCrossKernel(reshape(ks, 1, length(ks)))
+end
 
-# A cross kernel comprising lots of other kernels.
-# """
-# struct BlockCrossKernel <: CrossKernel
-#     ks::Matrix
-# end
-# BlockCrossKernel(ks::AbstractVector) = BlockCrossKernel(reshape(ks, length(ks), 1))
-# function BlockCrossKernel(ks::Adjoint{T, AbstractVector{T}} where T)
-#     return BlockCrossKernel(reshape(ks, 1, length(ks)))
-# end
-
-# # Binary methods.
-# function _map(k::BlockCrossKernel, X::BlockData, X′::BlockData)
-#     return Vector(BlockVector(map.(diag(k.ks), blocks(X), blocks(X′))))
-# end
-# function _pw(k::BlockCrossKernel, X::BlockData, X′::BlockData)
-#     return Matrix(BlockMatrix(broadcast(pw, k.ks, blocks(X), reshape(blocks(X′), 1, :))))
-# end
+# Binary methods.
+function _map(k::BlockCrossKernel, x::BlockData, x′::BlockData)
+    return binary_make_vec(map, diag(k.ks), blocks(x), blocks(x′))
+end
+function _pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
+    return binary_make_mat(pw, k.ks, blocks(x), blocks(x′))
+end
+_pw(k::BlockCrossKernel, x::BlockData, x′::AV) = _pw(k, x, BlockData([x′]))
+_pw(k::BlockCrossKernel, x::AV, x′::BlockData) = _pw(k, BlockData([x]), x′)
 
 
-# """
-#     BlockKernel <: Kernel
+# This whole implementation is a hack to ensure that backprop basically works. This will
+# change in the future, in particular the constructor will certainly change.
 
-# A kernel comprising lots of other kernels. This is represented as a matrix whose diagonal
-# elements are `Kernels`, and whose off-diagonal elements are `CrossKernel`s. In the absence
-# of determining at either either compile- or construction-time whether or not this actually
-# constitutes a valid Mercer kernel, we take the construction of this type to be a promise on
-# the part of the caller that the thing they are constructing does indeed constitute a valid
-# Mercer kernel.
+"""
+    BlockKernel <: Kernel
 
-# `ks_diag` represents the kernels on the diagonal of this matrix-valued kernel, and `ks_off`
-# represents the elements in the rest of the matrix. Only the upper-triangle will actually
-# be used.
-# """
-# struct BlockKernel <: Kernel
-#     ks_diag::Vector{<:Kernel}
-#     ks_off::Matrix{<:CrossKernel}
-# end
+A kernel comprising lots of other kernels. This is represented as a matrix whose diagonal
+elements are `Kernels`, and whose off-diagonal elements are `CrossKernel`s. In the absence
+of determining at either either compile- or construction-time whether or not this actually
+constitutes a valid Mercer kernel, we take the construction of this type to be a promise on
+the part of the caller that the thing they are constructing does indeed constitute a valid
+Mercer kernel.
 
-# # Binary methods.
-# function _map(k::BlockKernel, X::BlockData, X′::BlockData)
-#     return Vector(BlockVector(map.(k.ks_diag, blocks(X), blocks(X′))))
-# end
-# function _pw(k::BlockKernel, X::BlockData, X′::BlockData)
-#     bX, bX′ = blocks(X), blocks(X′)
-#     Ω = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX′))
-#     for q in eachindex(k.ks_diag), p in eachindex(k.ks_diag)
-#         if p == q
-#             setblock!(Ω, pairwise(k.ks_diag[p], bX[p], bX′[p]), p, p)
-#         elseif p < q
-#             setblock!(Ω, pairwise(k.ks_off[p, q], bX[p], bX′[q]), p, q)
-#         else
-#             setblock!(Ω, pairwise(k.ks_off[q, p], bX[p], bX′[q]), p, q)
-#         end
-#     end
-#     return Ω
-# end
+`ks_diag` represents the kernels on the diagonal of this matrix-valued kernel, and `ks_off`
+represents the elements in the rest of the matrix. Only the upper-triangle will actually
+be used.
+"""
+struct BlockKernel{Tks<:Matrix{<:CrossKernel}} <: Kernel
+    ks::Tks
+end
 
-# # Unary methods.
-# Base.adjoint(z::Zeros{T}) where {T} = Zeros{T}(reverse(size(z)))
-# _map(k::BlockKernel, X::BlockData) = BlockVector(map.(k.ks_diag, blocks(X)))
-# function _pw(k::BlockKernel, X::BlockData)
-#     bX = blocks(X)
-#     Σ = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(bX), length.(bX))
-#     for q in eachindex(k.ks_diag)
-#         setblock!(Σ, unbox(pairwise(k.ks_diag[q], bX[q])), q, q)
-#         for p in 1:q-1
-#             setblock!(Σ, pairwise(k.ks_off[p, q], bX[p], bX[q]), p, q)
-#             setblock!(Σ, getblock(Σ, p, q)', q, p)
-#         end
-#     end
-#     return LazyPDMat(Symmetric(Σ))
-# end
+# Binary methods.
+function _map(k::BlockKernel, x::BlockData, x′::BlockData)
+    return binary_make_vec(map, diag(k.ks), blocks(x), blocks(x′))
+end
+function _pw(k::BlockKernel, x::BlockData, x′::BlockData)
+    return binary_make_mat(pw, k.ks, blocks(x), blocks(x′))
+end
+
+# Unary methods.
+_map(k::BlockKernel, x::BlockData) = _map(k, x, x)
+_pw(k::BlockKernel, x::BlockData) = _pw(k, x, x)
