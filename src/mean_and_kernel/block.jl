@@ -1,16 +1,17 @@
-export hacky_map
+# export hacky_map
 
-hacky_map(f, x...) = map(f, x...)
+# hacky_map(f, x...) = map(f, x...)
 
-@adjoint function hacky_map(f, x...)
-    y_pairs = hacky_map((x...)->Zygote.forward(f, x...), x...)
-    y = [y_pair[1] for y_pair in y_pairs]
-    return y, function(Δ)
-        out_back = map((δ, (y, back))->back(δ), Δ, y_pairs)
-        xs = (nothing, map(n->[p[n] for p in out_back], 1:length(x))...)
-        return xs
-    end
-end
+# @adjoint function hacky_map(f, x...)
+#     y_pairs = hacky_map((x...)->Zygote._forward(f, x...), x...)
+#     @show y_pairs
+#     y = [y_pair[1] for y_pair in y_pairs]
+#     return y, function(Δ)
+#         out_back = map((δ, (y, back))->back(δ), Δ, y_pairs)
+#         xs = (map(n->[p[n] for p in out_back], 1:length(x))...)
+#         return xs
+#     end
+# end
 
 # These implementations are slow, and are only used because Zygote doesn't currently support
 # another way to achieve the required behaviour.

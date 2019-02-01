@@ -1,4 +1,4 @@
-using Stheno: CondCache, CondMean, CondKernel, CondCrossKernel, CustomMean,
+using Stheno: CondCache, CondMean, CondKernel, CondCrossKernel, CustomMean, pw,
     OneMean, ZeroMean, ZeroKernel, OneKernel, pairwise, CondCache, OuterKernel, BinaryKernel
 using Stheno: EQ, Exp, Linear, Noise, PerEQ
 using LinearAlgebra: cholesky
@@ -31,8 +31,8 @@ using LinearAlgebra: cholesky
         for (X0, X1, X2) in [(x0, x1, x2)]
 
             # Construct conditioned objects.
-            y = map(μf, X0) + cholesky(pairwise(kff, X0)).U' * randn(rng, N)
-            cache = CondCache(kff, μf, X0, y, 0)
+            y = map(μf, X0) + cholesky(pw(kff, X0)).U' * randn(rng, N)
+            cache = CondCache(kff, μf, X0, y, Zeros(length(y)))
             μ′f = CondMean(cache, μf, kff)
             μ′g = CondMean(cache, μg, kfg)
             μ′h = CondMean(cache, μh, kfh)
@@ -57,11 +57,11 @@ using LinearAlgebra: cholesky
 
             # Test that observing the mean function shrinks the posterior covariance
             # appropriately, but leaves the posterior mean at the prior mean (modulo noise).
-            cache = CondCache(kff, μf, X0, map(μf, X0), 0)
+            cache = CondCache(kff, μf, X0, map(μf, X0), Zeros(length(y)))
             @test cache.α ≈ zeros(N)
 
             # Posterior covariance at the data should be fairly close to zero.
-            @test maximum(abs.(pairwise(k′ff, X0))) < 1e-6
+            @test maximum(abs.(pw(k′ff, X0))) < 1e-6
 
             # Posterior for indep. process should be _exactly_ the same as the prior.
             @test map(μ′h, X0) == map(μh, X0)
@@ -71,10 +71,10 @@ using LinearAlgebra: cholesky
             @test map(k′hh, X1) == map(khh, X1)
             @test map(k′hh, X2) == map(khh, X2)
             @test map(k′hh, X0, X1) == map(khh, X0, X1)
-            @test pairwise(k′hh, X0) == pairwise(khh, X0)
-            @test pairwise(k′hh, X0, X2) == pairwise(khh, X0, X2)
-            @test pairwise(k′fh, X0, X2) == pairwise(kfh, X0, X2)
-            @test pairwise(k′fh, X1, X2) == pairwise(kfh, X0, X2)
+            @test pw(k′hh, X0) == pw(khh, X0)
+            @test pw(k′hh, X0, X2) == pw(khh, X0, X2)
+            @test pw(k′fh, X0, X2) == pw(kfh, X0, X2)
+            @test pw(k′fh, X1, X2) == pw(kfh, X0, X2)
         end
     end
 end

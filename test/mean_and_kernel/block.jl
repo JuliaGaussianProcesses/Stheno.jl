@@ -1,6 +1,6 @@
 using Stheno: ZeroMean, OneMean, ZeroKernel, OneKernel, BlockMean, BlockKernel,
     BlockCrossKernel, BlockData
-using Stheno: map, pw, hacky_map
+using Stheno: map, pw
 using Stheno: EQ, Exp, Linear, Noise, PerEQ
 using FillArrays
 

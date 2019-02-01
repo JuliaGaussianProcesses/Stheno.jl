@@ -14,13 +14,11 @@ function CondCache(
     μf::MeanFunction,
     x::AV,
     y::AV{<:Real},
-    σ²::Union{Real, AV{<:Real}},
+    σ²::AV{<:Real},
 )
-    C = cholesky(pw(kff, x) + _get_mat(σ²))
+    C = cholesky(pw(kff, x) + Diagonal(σ²))
     return CondCache(C, C \ (y - map(μf, x)), x)
 end
-_get_mat(σ²::Real) = σ² * I
-_get_mat(σ²::AV{<:Real}) = Diagonal(σ²)
 
 """
     CondMean <: MeanFunction

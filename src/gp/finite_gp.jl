@@ -1,4 +1,4 @@
-import Base: rand
+import Base: rand, length
 import Distributions: logpdf, ContinuousMultivariateDistribution
 
 export mean, cov, marginals, rand, logpdf, elbo
@@ -12,10 +12,13 @@ struct FiniteGP{Tf<:AbstractGP, Tx, Tσ²} <: ContinuousMultivariateDistribution
     f::Tf
     x::Tx 
     σ²::Tσ²
-    function FiniteGP(f::AbstractGP, x::AV, σ²::Union{Real, AV{<:Real}})
+    function FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real})
         return new{typeof(f), typeof(x), typeof(σ²)}(f, x, σ²)
     end
 end
+FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, Fill(σ², length(x)))
+
+length(f::FiniteGP) = length(f.x)
 
 """
     mean(f::FiniteGP)
@@ -29,7 +32,7 @@ mean(f::FiniteGP) = map(mean(f.f), f.x)
 
 The covariance matrix of `f`.
 """
-cov(f::FiniteGP) = pairwise(kernel(f.f), f.x) + _get_mat(f.σ²)
+cov(f::FiniteGP) = pairwise(kernel(f.f), f.x) + Diagonal(f.σ²)
 
 """
     cov(f::FiniteGP, g::FiniteGP)
@@ -54,7 +57,7 @@ end
 Obtain `N` independent samples from the GP `f` using `rng`.
 """
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
-    μ, C = mean(f), cholesky(cov(f) + _get_mat(f.σ²))
+    μ, C = mean(f), cholesky(cov(f) + Diagonal(f.σ²))
     return μ .+ C.U' * randn(rng, length(μ), N)
 end
 rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
@@ -67,44 +70,69 @@ rand(f::FiniteGP) = vec(rand(f, 1))
 The log probability density of `y` under `f`.
 """
 function logpdf(f::FiniteGP, y::AbstractVector{<:Real})
-    μ, C = mean(f), cholesky(cov(f) + _get_mat(f.σ²))
+    μ, C = mean(f), cholesky(cov(f) + Diagonal(f.σ²))
     return -(length(y) * log(2π) + logdet(C) + Xt_invA_X(C, y - μ)) / 2
 end
 
 """
-    elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP, σ::Real)
+    elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP)
 
-The saturated Titsias-ELBO. Requires a reasonable degree of care.
+The saturated Titsias-ELBO. 
 """
-function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, σ::Real)
-    Γ = (cholesky(cov(u)).U' \ cov(u, f)) ./ σ
-    Ω, δ = cholesky(Γ * Γ' + I), y - mean(f)
-    return -(length(y) * log(2π * σ^2) + logdet(Ω) - sum(abs2, Γ) +
-        (sum(abs2, δ) - sum(abs2, Ω.U' \ (Γ * δ)) + sum(var, marginals(f))) / σ^2) / 2
+function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
+    @assert length(f) == length(y)
+    @assert f.σ² isa Fill
+    σ² = getindex_value(f.σ²)
+    Γ = (cholesky(cov(u)).U' \ cov(u, f)) ./ sqrt(σ²)
+    Ω, δ = cholesky(Symmetric(Γ * Γ' + I)), y - mean(f)
+    return -(length(y) * log(2π * σ²) + logdet(Ω) - sum(abs2, Γ) +
+        (sum(abs2, δ) - sum(abs2, Ω.U' \ (Γ * δ)) + sum(var, marginals(f))) / σ²) / 2
 end
 
+# function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, σ::Real)
+#     Γ = (cholesky(cov(u)).U' \ cov(u, f)) ./ σ
+#     Ω, δ = cholesky(Γ * Γ' + I), y - mean(f)
+#     return -(length(y) * log(2π * σ^2) + logdet(Ω) - sum(abs2, Γ) +
+#         (sum(abs2, δ) - sum(abs2, Ω.U' \ (Γ * δ)) + sum(var, marginals(f))) / σ^2) / 2
+# end
 
-##################################### Syntactic Sugar ######################################
+####################################################
+# `logpdf` and `rand` for collections of processes #
+####################################################
 
-# Specialised implementation of `rand` for `BlockGP`s.
-function rand(rng::AbstractRNG, f::BlockGP, N::Int)
-    M = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(f.fs), [N])
-    μ = mean(f)
-    for b in eachindex(f.fs)
-        setblock!(M, getblock(μ, b) * ones(1, N), b, 1)
-    end
-    return M + chol(cov(f))' * BlockMatrix(randn.(Ref(rng), length.(f.fs), N))
+# function rand(rng::AbstractRNG, f::BlockGP, N::Int)
+#     M = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(f.fs), [N])
+#     μ = mean(f)
+#     for b in eachindex(f.fs)
+#         setblock!(M, getblock(μ, b) * ones(1, N), b, 1)
+#     end
+#     return M + chol(cov(f))' * BlockMatrix(randn.(Ref(rng), length.(f.fs), N))
+# end
+# rand(f::BlockGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
+
+# function rand(rng::AbstractRNG, f::BlockGP)
+#     return mean(f) + chol(cov(f))' * BlockVector(randn.(Ref(rng), length.(f.fs)))
+# end
+# rand(f::BlockGP) = rand(Random.GLOBAL_RNG, f)
+
+# # Convenience methods for invoking `logpdf` and `rand` with multiple processes.
+# logpdf(fs::AV{<:AbstractGP}, ys::AV{<:AV{<:Real}}) = logpdf(BlockGP(fs), BlockVector(ys))
+
+function finites_to_block(fs::AV{<:FiniteGP})
+    return FiniteGP(
+        BlockGP(map(f->f.f, fs)),
+        BlockData(map(f->f.x, fs)),
+        vcat(map(f->f.σ², fs)...),
+    )
 end
-rand(f::BlockGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 
-function rand(rng::AbstractRNG, f::BlockGP)
-    return mean(f) + chol(cov(f))' * BlockVector(randn.(Ref(rng), length.(f.fs)))
+function rand(rng::AbstractRNG, fs::AV{<:FiniteGP}, N::Int)
+    Y = rand(rng, finites_to_block(fs), N)
+    sz = cumsum(map(length, fs))
+    return [Y[sz[n]-length(fs[n])+1:sz[n], :] for n in eachindex(fs)]
 end
-rand(f::BlockGP) = rand(Random.GLOBAL_RNG, f)
+rand(rng::AbstractRNG, fs::AV{<:FiniteGP}) = vec.(rand(rng, fs, 1))
+rand(fs::AV{<:FiniteGP}, N::Int) = rand(Random.GLOBAL_RNG, fs, N)
+rand(fs::AV{<:FiniteGP}) = vec.(rand(Random.GLOBAL_RNG, fs))
 
-# Convenience methods for invoking `logpdf` and `rand` with multiple processes.
-rand(rng::AbstractRNG, fs::AV{<:AbstractGP}) = vec.(rand(rng, fs, 1))
-rand(rng::AbstractRNG, fs::AV{<:AbstractGP}, N::Int) = rand(rng, BlockGP(fs), N).blocks
-rand(fs::AV{<:AbstractGP}, N::Int) = rand(Random.GLOBAL_RNG, fs, N)
-rand(fs::AV{<:AbstractGP}) = vec.(rand(Random.GLOBAL_RNG, fs))
-logpdf(fs::AV{<:AbstractGP}, ys::AV{<:AV{<:Real}}) = logpdf(BlockGP(fs), BlockVector(ys))
+logpdf(fs::AV{<:FiniteGP}, ys::AV{<:AV{<:Real}}) = logpdf(finites_to_block(fs), vcat(ys...))
