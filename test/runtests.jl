@@ -25,14 +25,14 @@ include("test_util.jl")
     end
 
     @testset "gp" begin
-        include("gp/gp.jl")
-        include("gp/block_gp.jl")
-        include("gp/finite_gp.jl")
+        # include("gp/gp.jl")
+        # include("gp/block_gp.jl")
+        # include("gp/finite_gp.jl")
     end
 
     @testset "linops" begin
-        # include("linops/indexing.jl")
-        # include("linops/conditioning.jl")
+        include("linops/indexing.jl")
+        include("linops/conditioning.jl")
         # include("linops/product.jl")
         # include("linops/addition.jl")
         # include("linops/compose.jl")

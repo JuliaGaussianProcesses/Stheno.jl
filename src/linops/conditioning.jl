@@ -20,9 +20,9 @@ export Obs
 ←(f, y) = Observation(f, y)
 get_f(c::Observation) = c.f
 get_y(c::Observation) = c.y
-# function merge(c::Union{AbstractVector{<:Observation}, Tuple{Vararg{Observation}}})
-#     return BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
-# end
+function merge(c::Union{AbstractVector{<:Observation}, Tuple{Vararg{Observation}}})
+    return BlockGP([get_f.(c)...])←BlockVector([get_y.(c)...])
+end
 
 """
     |(g::AbstractGP, c::Observation)
@@ -33,8 +33,8 @@ function |(g::GP, c::Observation)
     f, x, y, σ² = c.f.f, c.f.x, c.y, c.f.σ²
     return GP(|, g, f, CondCache(kernel(f), mean(f), x, y, σ²))
 end
-# |(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))
-# CondCache(kff::Kernel, μf::MeanFunction, x::AV, f::AV{<:Real})
+|(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))
+
 function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
     return iszero(kernel(f, g)) ? mean(g) : CondMean(cache, mean(g), kernel(f, g))
 end
@@ -43,21 +43,19 @@ function k_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
 end
 function k_p′p(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache, h::AbstractGP)
     return iszero(kernel(f, g)) || iszero(kernel(f, h)) ?
-        kernel(g, h) :
-        CondCrossKernel(cache, kernel(f, g), kernel(f, h), kernel(g, h))
+        kernel(g, h) : CondCrossKernel(cache, kernel(f, g), kernel(f, h), kernel(g, h))
 end
 function k_pp′(h::AbstractGP, ::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
     return iszero(kernel(f, g)) || iszero(kernel(f, h)) ?
-        kernel(h, g) :
-        CondCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
+        kernel(h, g) : CondCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
 end
 
-# # Sugar
-# |(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)
-# |(g::Tuple{Vararg{AbstractGP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
-# function |(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}})
-#     return deconstruct(BlockGP([g...]) | merge(c))
-# end
+# Sugar
+|(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)
+|(g::Tuple{Vararg{AbstractGP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
+function |(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}})
+    return deconstruct(BlockGP([g...]) | merge(c))
+end
 
 
 

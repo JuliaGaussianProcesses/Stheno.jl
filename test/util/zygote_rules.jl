@@ -3,11 +3,17 @@ using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrice
 @testset "zygote_rules" begin
     @testset "FillArrays" begin
         rng, N = MersenneTwister(123456), 10
-        @test Zygote.gradient(x->sum(Fill(x, N)), randn(rng))[1] == N
-        @test Zygote.gradient(x->sum(Fill(x, N, 3, 4)), randn(rng))[1] == N * 3 * 4
+        x, y = randn(rng), randn(rng)
+        @test Zygote.gradient(x->sum(Fill(x, N)), x)[1] == N
+        @test Zygote.gradient(x->sum(Fill(x, N, 3, 4)), x)[1] == N * 3 * 4
+        @test Zygote.gradient((x, y)->sum(Fill(x, N)), x, y) == (N, nothing)
+
+        let
+            out, back = Zygote.forward(sum, Fill(x, N))
+            @test back(nothing) isa Nothing
+        end
 
         # Test unary broadcasting gradients.
-        x = randn(rng)
         out, back = Zygote.forward(x->exp.(x), Fill(x, N))
         @test out isa Fill
         @test out == Fill(exp(x), N)

@@ -46,10 +46,7 @@ cov(f::FiniteGP, g::FiniteGP) = pairwise(kernel(f.f, g.f), f.x, g.x)
 
 Sugar, returns a vector of Normal distributions representing the marginals of `f`.
 """
-function marginals(f::FiniteGP)
-    m, σ² = mean(f), map(kernel(f.f), f.x)
-    return Normal.(mean(f), sqrt.(σ² .+ f.σ²))
-end
+marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(map(kernel(f.f), f.x) .+ f.σ²))
 
 """
     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
@@ -57,7 +54,7 @@ end
 Obtain `N` independent samples from the GP `f` using `rng`.
 """
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
-    μ, C = mean(f), cholesky(cov(f) + Diagonal(f.σ²))
+    μ, C = mean(f), cholesky(cov(f))
     return μ .+ C.U' * randn(rng, length(μ), N)
 end
 rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
@@ -70,7 +67,7 @@ rand(f::FiniteGP) = vec(rand(f, 1))
 The log probability density of `y` under `f`.
 """
 function logpdf(f::FiniteGP, y::AbstractVector{<:Real})
-    μ, C = mean(f), cholesky(cov(f) + Diagonal(f.σ²))
+    μ, C = mean(f), cholesky(cov(f))
     return -(length(y) * log(2π) + logdet(C) + Xt_invA_X(C, y - μ)) / 2
 end
 
@@ -82,19 +79,16 @@ The saturated Titsias-ELBO.
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     @assert length(f) == length(y)
     @assert f.σ² isa Fill
-    σ² = getindex_value(f.σ²)
+    σ² = f.σ²[1]
     Γ = (cholesky(cov(u)).U' \ cov(u, f)) ./ sqrt(σ²)
     Ω, δ = cholesky(Symmetric(Γ * Γ' + I)), y - mean(f)
+    # return -(length(y) * log(2π * σ²)) / 2
+    # # return -(length(y) * log(2π * σ²) + logdet(Ω) - sum(abs2, Γ)) / 2
+
     return -(length(y) * log(2π * σ²) + logdet(Ω) - sum(abs2, Γ) +
-        (sum(abs2, δ) - sum(abs2, Ω.U' \ (Γ * δ)) + sum(var, marginals(f))) / σ²) / 2
+        (sum(abs2, δ) - sum(abs2, Ω.U' \ (Γ * δ)) + sum(map(kernel(f.f), f.x))) / σ²) / 2
 end
 
-# function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, σ::Real)
-#     Γ = (cholesky(cov(u)).U' \ cov(u, f)) ./ σ
-#     Ω, δ = cholesky(Γ * Γ' + I), y - mean(f)
-#     return -(length(y) * log(2π * σ^2) + logdet(Ω) - sum(abs2, Γ) +
-#         (sum(abs2, δ) - sum(abs2, Ω.U' \ (Γ * δ)) + sum(var, marginals(f))) / σ^2) / 2
-# end
 
 ####################################################
 # `logpdf` and `rand` for collections of processes #

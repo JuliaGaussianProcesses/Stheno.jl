@@ -13,7 +13,14 @@ import StatsFuns: log1pexp, logistic, logexpm1
 @nograd MersenneTwister, propertynames
 
 # Adjoints for FillArrays.jl. concrete types.
-@adjoint Fill(x, sz::Integer...) = Fill(x, sz...), Δ->(sum(Δ), map(_->nothing, sz)...)
+@adjoint function Fill(x, sz::Integer...)
+    back(Δ::Nothing) = (nothing, map(_->nothing, sz)...)
+    back(Δ::AbstractArray) = (sum(Δ), map(_->nothing, sz)...)
+    function back(Δ::NamedTuple{(:value, :axes)})
+        return (Δ.value isa Nothing ? nothing : sum(Δ.value), map(_->nothing, sz)...)
+    end
+    return Fill(x, sz...), back
+end
 @adjoint Zeros{T}(sz::Integer...) where {T} = Zeros{T}(sz...), Δ->(map(_->nothing, sz)...,)
 @adjoint Ones{T}(sz::Integer...) where {T} = Ones{T}(sz...), Δ->(map(_->nothing, sz)...,)
 
