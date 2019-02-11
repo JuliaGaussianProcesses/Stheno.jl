@@ -9,8 +9,8 @@ Multi-Output Gaussian process.
 struct BlockGP{Tfs<:AV{<:AbstractGP}} <: AbstractGP
     fs::Tfs
 end
-BlockGP(fs::Tuple) = BlockGP([fs...])
-BlockGP(fs...) = BlockGP(fs)
+BlockGP(fs::Tuple{<:AbstractGP}) = BlockGP([fs...])
+BlockGP(fs::AbstractGP...) = BlockGP(fs)
 
 mean(f::BlockGP) = BlockMean(mean.(f.fs))
 kernel(f::BlockGP) = BlockKernel(kernel.(f.fs, permutedims(f.fs)))

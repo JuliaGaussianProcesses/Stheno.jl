@@ -121,20 +121,12 @@ _rng() = MersenneTwister(123456)
             (x, x′)->rand(_rng(), foo(x, x′)), randn(rng, N + N′), x, x′;
             rtol=1e-6,atol=1e-6,
         )
-        # adjoint_test(
-        #     x->rand(_rng(), FiniteGP(bar(), x, eps())),
-        #     randn(rng, N + N′), BlockData([x, x′]),
-        # )
 
         # Check that the gradient w.r.t. the samples is correct (multisample).
         adjoint_test(
             (x, x′)->rand(_rng(), foo(x, x′), S), randn(rng, N + N′, S), x, x′;
             rtol=1e-6, atol=1e-6,
         )
-        # adjoint_test(
-        #     x->rand(_rng(), FiniteGP(bar(), x, eps()), S),
-        #     randn(rng, N + N′, S), BlockData([x, x′]),
-        # )
     end
 
     @testset "logpdf / elbo" begin

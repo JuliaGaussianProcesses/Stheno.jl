@@ -48,6 +48,7 @@ module Stheno
     include("linops/project.jl")
     # include("linops/gradient.jl")
     # # include("linops/integrate.jl")
+    include("linops/approximate_conditioning.jl")
 
     # Various stuff for convenience.
     include("util/model.jl")

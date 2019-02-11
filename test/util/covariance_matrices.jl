@@ -8,20 +8,31 @@ using Stheno: Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X, diag_At_A, diag_At_B, diag_X
     # Test additional operations for Cholesky factorisations.
     let
         # Set up some matrices and factorisations.
-        rng, N, P, Q = MersenneTwister(123456), 5, 6, 2
+        rng, N, N′, P, Q = MersenneTwister(123456), 5, 3, 6, 2
         B = randn(rng, N, N)
         A_ = B' * B + UniformScaling(1e-6)
         A = cholesky(A_)
-        x, X, Y = randn(rng, N), randn(rng, N, P), randn(rng, N, Q)
+        x, y, z = randn(rng, N), randn(rng, N′), randn(rng, N)
+        X, Y = randn(rng, N, P), randn(rng, N, Q)
         Z = randn(rng, N, P)
+        A_1_ = randn(rng)
+        A_1 = cholesky(A_1_)
 
         # Specialised matrix operations.
-
         @test Xt_A_X(A, x) isa Real
         @test Xt_A_X(A, x) ≈ x' * A_ * x
 
+        @test Xt_A_X(A_1, x') isa Symmetric
+        @test Xt_A_X(A_1, x') ≈ x * A_1_ * x'
+
         @test Xt_A_X(A, X) isa Symmetric
         @test Xt_A_X(A, X) ≈ X' * A_ * X
+
+        @test Xt_A_Y(x, A, z) isa Real
+        @test Xt_A_Y(x, A, z) ≈ x' * A_ * z
+
+        @test Xt_A_Y(x', A_1, y') isa Matrix
+        @test Xt_A_Y(x', A_1, y') ≈ x * A_1_ * y'
 
         @test Xt_A_Y(X, A, Y) isa Matrix
         @test Xt_A_Y(X, A, Y) ≈ X' * A_ * Y
@@ -35,12 +46,16 @@ using Stheno: Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X, diag_At_A, diag_At_B, diag_X
         @test Xt_invA_Y(X, A, Y) isa Matrix
         @test Xt_invA_Y(X, A, Y) ≈ X' * (A \ Y)
 
+        @test diag_At_A(x) ≈ [x'x]
         @test diag_At_A(X) ≈ diag(X'X)
 
+        @test diag_At_B(x, z) ≈ [x'z]
         @test diag_At_B(X, Z) ≈ diag(X'Z)
 
+        @test diag_Xt_A_X(A, x) ≈ [Xt_A_X(A, x)]
         @test diag_Xt_A_X(A, X) ≈ diag(Xt_A_X(A, X))
 
+        @test diag_Xt_A_Y(x, A, z) ≈ [x' * A * z]
         @test diag_Xt_A_Y(X, A, Z) ≈ diag(Xt_A_Y(X, A, Z))
 
         @test diag_Xt_invA_X(A, X) ≈ diag(Xt_invA_X(A, X))

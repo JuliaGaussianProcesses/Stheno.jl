@@ -12,8 +12,8 @@ include("test_util.jl")
     end
 
     @testset "mean_and_kernel" begin
-        # include("mean_and_kernel/mean.jl")
-        # include("mean_and_kernel/kernel.jl")
+        include("mean_and_kernel/mean.jl")
+        include("mean_and_kernel/kernel.jl")
         # include("mean_and_kernel/compose.jl")
         # include("mean_and_kernel/block.jl")
         # include("mean_and_kernel/input_transform.jl")
@@ -31,8 +31,8 @@ include("test_util.jl")
     end
 
     @testset "linops" begin
-        include("linops/indexing.jl")
-        include("linops/conditioning.jl")
+        # include("linops/indexing.jl")
+        # include("linops/conditioning.jl")
         # include("linops/product.jl")
         # include("linops/addition.jl")
         # include("linops/compose.jl")

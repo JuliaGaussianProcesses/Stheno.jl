@@ -126,7 +126,7 @@ version = "0.16.4"
 
 [[FDM]]
 deps = ["LinearAlgebra", "Printf"]
-path = "/home/wct23/.julia/dev/FDM"
+path = "../FDM"
 uuid = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
 version = "0.3.0+"
 
@@ -138,7 +138,7 @@ version = "0.2.4"
 
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Test"]
-path = "/home/wct23/.julia/dev/FillArrays"
+path = "../FillArrays"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
 version = "0.4.0+"
 
@@ -394,6 +394,6 @@ version = "0.8.0"
 
 [[Zygote]]
 deps = ["DiffRules", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Test"]
-path = "/home/wct23/.julia/dev/Zygote"
+path = "../Zygote"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
 version = "0.1.0+"

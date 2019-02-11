@@ -8,7 +8,7 @@ export mean, cov, marginals, rand, logpdf, elbo
 
 The finite-dimensional projection of the GP `f` at `x`.
 """
-struct FiniteGP{Tf<:AbstractGP, Tx, Tσ²} <: ContinuousMultivariateDistribution
+struct FiniteGP{Tf<:AbstractGP, Tx<:AV, Tσ²<:AV} <: ContinuousMultivariateDistribution
     f::Tf
     x::Tx 
     σ²::Tσ²
