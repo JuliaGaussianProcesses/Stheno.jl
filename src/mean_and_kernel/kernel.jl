@@ -283,8 +283,8 @@ _pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
 """
     FiniteRank <: Kernel
 
-`k(x, x′) = ϕ(x)' * Σ * ϕ(x′)` where `Σ` is an `M × M` positive-definite matrix, and `ϕ`
-returns an `M`-dimensional vector.
+`k(x, x′) = ϕ(x)' * Σ * ϕ(x′)` where `Σ` is an `M × M` positive-definite matrix given in
+terms of its Cholesky factorisation `C`, and `ϕ` returns an `M`-dimensional vector.
 """
 struct FiniteRank{TC<:Cholesky, Tϕ} <: Kernel
     C::TC

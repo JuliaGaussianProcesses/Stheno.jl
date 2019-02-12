@@ -8,7 +8,7 @@ import LinearAlgebra: \, /, cholesky, copytri!
 import FillArrays: Fill, AbstractFill, getindex_value, Zeros, Ones
 import Base.Broadcast: broadcasted, materialize
 
-import StatsFuns: log1pexp, logistic, logexpm1
+import StatsFuns: log1pexp, logistic, logexpm1, xlogx, xlogy
 
 @nograd MersenneTwister, propertynames
 
@@ -180,7 +180,22 @@ unbroadcast(x, Δ::AbstractArray{Nothing}) = nothing
     return Diagonal(x), back
 end
 
-@adjoint function log1pexp(x::Real)
+@adjoint function xlogx(x::Real)
+    y = xlogx(x)
+    return y, function(Δ::Real)
+        return (x > zero(x) ? Δ * (y / x^2 + one(y)) : zero(y),)
+    end 
+end
+
+# @adjoint function xlogy(x::Real)
+
+# end
+
+using LinearAlgebra: char_uplo
+@nograd char_uplo
+
+
+@adjoint function log1pexp(x::Float64)
     return log1pexp(x), Δ->(Δ * (x < 18.0 ? logistic(x) : x < 33.3 ? 1 - exp(-x) : 1),)
 end
 

@@ -84,6 +84,14 @@ using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrice
         adjoint_test(x->Diagonal(x).diag, randn(rng, N), randn(rng, N))
     end
 
+    @testset "xlogx" begin
+        rng = MersenneTwister(123456)
+        # adjoint_test(xlogx, randn(rng), -5.0)
+        # adjoint_test(xlogx, randn(rng), 0.0; fdm=backward_fdm(5, 1))
+        adjoint_test(xlogx, randn(rng), eps(Float64); fdm=forward_fdm(5, 1))
+        adjoint_test(xlogx, randn(rng), 2.45)
+    end
+
     function test_log1pexp(T, rng, tol, xs)
         for x in xs
             adjoint_test(log1pexp, randn(rng, T), x;

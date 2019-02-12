@@ -77,10 +77,8 @@ using FillArrays, LinearAlgebra
 
         @testset "FiniteRank" begin
             x = randn(rng, N)
-            X = ColsAreObs(randn(rng, 2, N))
-            @test pw(FiniteRank(Diagonal(ones(2)), x->x.X), X) == X.X * X.X'
+            @test pw(FiniteRank(1, identity), x) == x * x'
             differentiable_kernel_tests(rng, FiniteRank(1, identity), x0, x1, x2)
-            println("foo")
         end
     end
 
