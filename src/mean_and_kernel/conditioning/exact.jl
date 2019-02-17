@@ -51,22 +51,12 @@ function _map(k::CondKernel, x::AV, x′::AV)
     return σgg - σ′gg
 end
 function _pw(k::CondKernel, x::AV, x′::AV)
-    Σgg = pw(k.kgg, x, x′)
-    Σ′gg = Xt_invA_Y(pw(k.kfg, k.c.x, x), k.c.C, pw(k.kfg, k.c.x, x′))
-    return Σgg - Σ′gg
+    return pw(k.kgg, x, x′) - Xt_invA_Y(pw(k.kfg, k.c.x, x), k.c.C, pw(k.kfg, k.c.x, x′))
 end
 
 # Unary methods.
-function _map(k::CondKernel, x::AV)
-    σgg = map(k.kgg, x)
-    σ′gg = diag_Xt_invA_X(k.c.C, pw(k.kfg, k.c.x, x))
-    return σgg - σ′gg
-end
-function _pw(k::CondKernel, x::AV)
-    Σgg = pw(k.kgg, x)
-    Σ′gg = Xt_invA_X(k.c.C, pw(k.kfg, k.c.x, x))
-    return Σgg - Σ′gg
-end
+_map(k::CondKernel, x::AV) = map(k.kgg, x) - diag_Xt_invA_X(k.c.C, pw(k.kfg, k.c.x, x))
+_pw(k::CondKernel, x::AV) = pw(k.kgg, x) - Xt_invA_X(k.c.C, pw(k.kfg, k.c.x, x))
 
 
 """
@@ -92,7 +82,5 @@ function _map(k::CondCrossKernel, x::AV, x′::AV)
     return σgh - σ′gh
 end
 function _pw(k::CondCrossKernel, xg::AV, xh::AV)
-    Σgh = pw(k.kgh, xg, xh)
-    Σ′gh = Xt_invA_Y(pw(k.kfg, k.c.x, xg), k.c.C, pw(k.kfh, k.c.x, xh))
-    return Σgh - Σ′gh
+    return pw(k.kgh, xg, xh) - Xt_invA_Y(pw(k.kfg, k.c.x, xg), k.c.C, pw(k.kfh, k.c.x, xh))
 end

@@ -5,7 +5,7 @@ include("test_util.jl")
 @testset "Stheno" begin
 
     @testset "util" begin
-        include("util/zygote_rules.jl")
+        # include("util/zygote_rules.jl")
         # include("util/covariance_matrices.jl")
         # include("util/block_arrays.jl")
         # include("util/abstract_data_set.jl")
@@ -19,7 +19,10 @@ include("test_util.jl")
         # include("mean_and_kernel/input_transform.jl")
         # include("mean_and_kernel/degenerate.jl")
         # # include("mean_and_kernel/derivative.jl") # These tests currenly fail because Zygote.
-        # include("mean_and_kernel/conditional.jl")
+        @testset "conditioning" begin
+        #     include("mean_and_kernel/conditioning/exact.jl")
+            # include("mean_and_kernel/conditioning/titsias.jl")
+        end
         # include("mean_and_kernel/algebra.jl")
         # include("mean_and_kernel/util.jl")
     end
@@ -37,7 +40,8 @@ include("test_util.jl")
         # include("linops/addition.jl")
         # include("linops/compose.jl")
         # include("linops/project.jl")
-        # # include("linops/integrate.jl")
+        include("linops/approximate_conditioning.jl")
+        # include("linops/integrate.jl")
     end
 
     @testset "integration" begin

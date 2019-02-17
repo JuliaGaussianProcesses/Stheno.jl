@@ -280,27 +280,6 @@ _map(k::Noise, x::AV) = Ones{eltype(k)}(length(x))
 _pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
 
 
-"""
-    FiniteRank <: Kernel
-
-`k(x, x′) = ϕ(x)' * Σ * ϕ(x′)` where `Σ` is an `M × M` positive-definite matrix given in
-terms of its Cholesky factorisation `C`, and `ϕ` returns an `M`-dimensional vector.
-"""
-struct FiniteRank{TC<:Cholesky, Tϕ} <: Kernel
-    C::TC
-    ϕ::Tϕ
-end
-FiniteRank(Σ::Union{Real, AbstractMatrix}, ϕ) = FiniteRank(cholesky(Σ), ϕ)
-
-# Binary methods.
-_map(k::FiniteRank, x::AV, x′::AV) = diag_Xt_A_Y(k.ϕ.(x)', k.C, k.ϕ.(x′)')
-_pw(k::FiniteRank, x::AV, x′::AV) = Xt_A_Y(k.ϕ.(x)', k.C, k.ϕ.(x′)')
-
-# Unary methods.
-_map(k::FiniteRank, x::AV) = diag_Xt_A_X(k.C, k.ϕ.(x)')
-_pw(k::FiniteRank, x::AV) = Xt_A_X(k.C, k.ϕ.(x)')
-
-
 # """
 #     RQ{T<:Real} <: Kernel
 

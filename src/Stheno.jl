@@ -30,7 +30,8 @@ module Stheno
     include("mean_and_kernel/input_transform.jl")
     include("mean_and_kernel/degenerate.jl")
     include("mean_and_kernel/derivative.jl")
-    include("mean_and_kernel/conditional.jl")
+    include("mean_and_kernel/conditioning/exact.jl")
+    include("mean_and_kernel/conditioning/titsias.jl")
     include("mean_and_kernel/algebra.jl")
     include("mean_and_kernel/util.jl")
 
@@ -42,13 +43,14 @@ module Stheno
     # Affine transformations of GPs.
     include("linops/indexing.jl")
     include("linops/conditioning.jl")
+    include("linops/approximate_conditioning.jl")
     include("linops/product.jl")
     include("linops/addition.jl")
     include("linops/compose.jl")
     include("linops/project.jl")
     # include("linops/gradient.jl")
     # # include("linops/integrate.jl")
-    include("linops/approximate_conditioning.jl")
+    
 
     # Various stuff for convenience.
     include("util/model.jl")

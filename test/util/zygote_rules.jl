@@ -88,8 +88,28 @@ using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrice
         rng = MersenneTwister(123456)
         # adjoint_test(xlogx, randn(rng), -5.0)
         # adjoint_test(xlogx, randn(rng), 0.0; fdm=backward_fdm(5, 1))
-        adjoint_test(xlogx, randn(rng), eps(Float64); fdm=forward_fdm(5, 1))
+        adjoint_test(xlogx, randn(rng), 1.0; fdm=forward_fdm(5, 1))
         adjoint_test(xlogx, randn(rng), 2.45)
+    end
+
+    @testset "logistic" begin
+        rng = MersenneTwister(123456)
+        adjoint_test(logistic, randn(rng), -5.0)
+        adjoint_test(logistic, randn(rng), -1.0)
+        adjoint_test(logistic, randn(rng), -eps())
+        adjoint_test(logistic, randn(rng), 0.0)
+        adjoint_test(logistic, randn(rng), eps())
+        adjoint_test(logistic, randn(rng), 1.0)
+        adjoint_test(logistic, randn(rng), 5.0)
+    end
+
+    @testset "logit" begin
+        rng = MersenneTwister(123456)
+        adjoint_test(logit, randn(rng), 0.1; fdm=forward_fdm(5, 1), atol=1e-7, rtol=1e-7)
+        adjoint_test(logit, randn(rng), 0.3)
+        adjoint_test(logit, randn(rng), 0.5)
+        adjoint_test(logit, randn(rng), 0.7)
+        adjoint_test(logit, randn(rng), 0.9; fdm=backward_fdm(5, 1), atol=1e-7, rtol=1e-7)
     end
 
     function test_log1pexp(T, rng, tol, xs)
@@ -102,39 +122,77 @@ using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrice
         end
     end
 
-    @testset "log1pexp (Float64)" begin
-        @testset "x ∈ (-∞, 18.0)" begin
-            test_log1pexp(Float64, MersenneTwister(123456), 1e5 * eps(),
-                [-1000.0, -50.0, -25.0, -10.0, 0.0, 10.0, 18.0 - eps()],
-            )
+    @testset "log1psq" begin
+        rng = MersenneTwister(123456)
+        @testset "Float64" begin
+            for x in [-10.0, -5.0, -1.0, -eps(), 0.0, eps(), 1.0, 5.0, 10.0]
+                adjoint_test(log1psq, randn(rng), x)
+            end
         end
-        @testset "x ∈ [18.0, 33.3)" begin
-            test_log1pexp(Float64, MersenneTwister(123456), 1e5 * eps(),
-                [18.0, 18.0 + eps(), 33.3 - eps()],
-            )
-        end
-        @testset "x ∈ [33.3, ∞)" begin
-            test_log1pexp(Float64, MersenneTwister(123456), 1e5 * eps(),
-                [33.3, 33.3 + eps(), 100.0],
-            )
+        @testset "Float32" begin
+            for x in [-10f0, -5f0, -1f0, -eps(Float32), 0f0, eps(Float32), 1f0, 5f0, 10f0]
+                adjoint_test(log1psq, randn(rng, Float32), x;
+                    rtol=10_000 * eps(Float32),
+                    atol=10_000 * eps(Float32),
+                )
+            end
         end
     end
 
-    @testset "log1pexp (Float32)" begin
-        @testset "x ∈ (-∞, 9f0)" begin
-            test_log1pexp(Float32, MersenneTwister(123456), 1000 * eps(Float32),
-                [-1000f0, -50f0, -25f0, -10f0, 0f0, 5f0, 9f0 - eps(Float32)],
-            )
+    @testset "log1pexp" begin
+        @testset "Float64" begin
+            @testset "x ∈ (-∞, 18.0)" begin
+                test_log1pexp(Float64, MersenneTwister(123456), 1e5 * eps(),
+                    [-1000.0, -50.0, -25.0, -10.0, 0.0, 10.0, 18.0 - eps()],
+                )
+            end
+            @testset "x ∈ [18.0, 33.3)" begin
+                test_log1pexp(Float64, MersenneTwister(123456), 1e5 * eps(),
+                    [18.0, 18.0 + eps(), 33.3 - eps()],
+                )
+            end
+            @testset "x ∈ [33.3, ∞)" begin
+                test_log1pexp(Float64, MersenneTwister(123456), 1e5 * eps(),
+                    [33.3, 33.3 + eps(), 100.0],
+                )
+            end
         end
-        @testset "x ∈ [9f0, 16f0)" begin
-            test_log1pexp(Float32, MersenneTwister(123456), 1000 * eps(Float32),
-                [9f0, 9f0 + eps(Float32), 16f0 - eps(Float32)],
-            )
+        @testset "Float32" begin
+            @testset "x ∈ (-∞, 9f0)" begin
+                test_log1pexp(Float32, MersenneTwister(123456), 1000 * eps(Float32),
+                    [-1000f0, -50f0, -25f0, -10f0, 0f0, 5f0, 9f0 - eps(Float32)],
+                )
+            end
+            @testset "x ∈ [9f0, 16f0)" begin
+                test_log1pexp(Float32, MersenneTwister(123456), 1000 * eps(Float32),
+                    [9f0, 9f0 + eps(Float32), 16f0 - eps(Float32)],
+                )
+            end
+            @testset "x ∈ [16f0, ∞)" begin
+                test_log1pexp(Float32, MersenneTwister(123456), 1000 * eps(Float32),
+                    [16f0, 16f0 + eps(Float32), 100f0],
+                )
+            end
         end
-        @testset "x ∈ [16f0, ∞)" begin
-            test_log1pexp(Float32, MersenneTwister(123456), 1000 * eps(Float32),
-                [16f0, 16f0 + eps(Float32), 100f0],
-            )
+    end
+
+    @testset "logsumexp" begin
+        rng = MersenneTwister(123456)
+        @testset "Float64" begin
+            adjoint_test(logsumexp, randn(rng), randn(rng, 1))
+            adjoint_test(logsumexp, randn(rng), randn(rng, 1, 1))
+            adjoint_test(logsumexp, randn(rng), randn(rng, 3))
+            adjoint_test(logsumexp, randn(rng), randn(rng, 3, 4, 5))
+        end
+        @testset "Float32" begin
+            adjoint_test(logsumexp, randn(rng, Float32), randn(rng, Float32, 1);
+                atol=1000 * eps(Float32), rtol=1000 * eps(Float32))
+            adjoint_test(logsumexp, randn(rng, Float32), randn(rng, Float32, 1, 1);
+                atol=1000 * eps(Float32), rtol=1000 * eps(Float32))
+            adjoint_test(logsumexp, randn(rng, Float32), randn(rng, Float32, 3);
+                atol=1000 * eps(Float32), rtol=1000 * eps(Float32))
+            adjoint_test(logsumexp, randn(rng, Float32), randn(rng, Float32, 1, 3);
+                atol=1000 * eps(Float32), rtol=1000 * eps(Float32))
         end
     end
 end

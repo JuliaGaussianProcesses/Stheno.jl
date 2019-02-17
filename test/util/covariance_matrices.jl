@@ -15,7 +15,7 @@ using Stheno: Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X, diag_At_A, diag_At_B, diag_X
         x, y, z = randn(rng, N), randn(rng, N′), randn(rng, N)
         X, Y = randn(rng, N, P), randn(rng, N, Q)
         Z = randn(rng, N, P)
-        A_1_ = randn(rng)
+        A_1_ = exp(randn(rng))
         A_1 = cholesky(A_1_)
 
         # Specialised matrix operations.
@@ -55,7 +55,7 @@ using Stheno: Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X, diag_At_A, diag_At_B, diag_X
         @test diag_Xt_A_X(A, x) ≈ [Xt_A_X(A, x)]
         @test diag_Xt_A_X(A, X) ≈ diag(Xt_A_X(A, X))
 
-        @test diag_Xt_A_Y(x, A, z) ≈ [x' * A * z]
+        @test diag_Xt_A_Y(x, A, z) ≈ [x' * A_ * z]
         @test diag_Xt_A_Y(X, A, Z) ≈ diag(Xt_A_Y(X, A, Z))
 
         @test diag_Xt_invA_X(A, X) ≈ diag(Xt_invA_X(A, X))
