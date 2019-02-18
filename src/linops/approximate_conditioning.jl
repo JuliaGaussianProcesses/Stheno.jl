@@ -3,29 +3,35 @@
 
 
 """
-project(k::CrossKernel, u::GP{<:ZeroMean, <:EagerFinite}, z::AV) = GP(project, k, u, z)
+project(k::CrossKernel, u::GP{<:ZeroMean, <:PseudoPointsCov}, z::AV) = GP(project, k, u, z)
 
 μ_p′(::typeof(project), k, u, z) = ZeroMean()
-k_p′(::typeof(project), k, u, z) = ProjKernel(cholesky(u.k.Σ), k, z)
+k_p′(::typeof(project), k, u, z) = ProjKernel(u.k, k, z)
 function k_p′p(::typeof(project), k, u, z, fp)
     k_ufp = kernel(u, fp)
-    return iszero(k_ufp) ? ZeroKernel() : ProjCrossKernel(k, z, k_ufp)
+    if iszero(k_ufp)
+        return ZeroKernel()
+    elseif k_ufp isa ProjCrossKernel
+        # CONSTRUCT PROJ CROSS KERNEL
+    else
+        error("k_p′p not defined for $fp")
+    end
 end
 function k_pp′(fp, ::typeof(project), k, u, z)
     k_fpu = kernel(fp, u)
-    return iszero(k_fpu) ? ZeroKernel() : ProjCrossKernel(k_fpu, z, k)
+    iszero(k_fpu) && return k_fpu
+    k_fup isa ProjCrossKernel && return # A ProjCrossKernel
+    error("k_pp′ not defined for $fp")
 end
 
 # Compute the optimal approximate posterior mean and covariance for the Titsias post.
 function optimal_q(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     σ = sqrt(FillArrays.getindex_value(f.σ²))
-    μᵤ, Σᵤᵤ = mean(u), cov(u)
-    U = cholesky(Σᵤᵤ).U
+    U = cholesky(cov(u)).U
     Γ = broadcast(/, U' \ cov(u, f), σ)
-    Ω = cholesky(Γ * Γ' + I)
-    Σ′ᵤᵤ = Xt_invA_X(Ω, U)
-    μ′ᵤ = μᵤ + broadcast(/, U' * (Ω \ (Γ * (y - mean(f)))), σ)
-    return μ′ᵤ, Σ′ᵤᵤ
+    Λ = cholesky(Γ * Γ' + I)
+    m′u = mean(u) + broadcast(/, U' * (Λ \ (Γ * (y - mean(f)))), σ)
+    return m′u, Λ, U
 end
 optimal_q(c::Observation, u::FiniteGP) = optimal_q(c.f, c.y, u)
 
@@ -40,17 +46,17 @@ struct Titsias{Tu<:FiniteGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
     u::Tu
     m′u::Tm
     γ::Tγ
-    function Titsias(u::Tu, m′u::Tm, Σ′uu::AM) where {Tu<:FiniteGP, Tm}
-        Σ = EagerFinite(Xtinv_A_Xinv(cholesky(Σ′uu), cholesky(cov(u))))
-        γ = GP(Σ, u.f.gpc)
-        return new{typeof(u), Tm, typeof(γ)}(u, m′u, γ)
-    end
 end
-function |(g::GP, c::Titsias)
-    g′ = g | (c.u←c.m′u)
-    ĝ = project(kernel(c.u.f, g), c.γ, c.u.x)
-    return g′ + ĝ
+function Titsias(u::FiniteGP, m′u::AV{<:Real}, Λ, U)
+    return Titsias(u, m′u, GP(PseudoPointsCov(Λ, U), u.f.gpc))
 end
+Titsias(f::FiniteGP, y::AV{<:Real}, u::FiniteGP) = Titsias(u, optimal_q(f, y, u)...)
+Titsias(c::Observation, u::FiniteGP) = Titsias(c.f, c.y, u)
+
+# Construct an approximate posterior distribution.
+|(g::GP, c::Titsias) = g | (c.u←c.m′u) + project(kernel(c.u.f, g), c.γ, c.u.x)
+
+
 
 
 

@@ -77,21 +77,13 @@
 # moved around in the future if we discover a better home for them.
 
 """
-    EagerFinite <: Kernel
+    PseudoPointsCov <: Kernel
 
-A kernel whose domain is finite, and is represented eagerly in terms of the Cholesky
-factorisation of its covariance matrix. Not a real kernel as you can't do a lot with it.
-Consequently, you won't be able to do a lot with the process defined in terms of this
-kernel.
+
 """
-struct EagerFinite{TΣ<:AbstractMatrix} <: Kernel
-    Σ::TΣ
-end
-
-function pw(k::EagerFinite, x::AV, x′::AV)
-    @assert length(x) == length(x′)
-    @assert length(x) == size(k.Σ, 1)
-    return k.Σ
+struct PseudoPointsCov{TΛ<:Cholesky, TU<:AM} <: Kernel
+    Λ::TΛ
+    U::TU
 end
 
 
@@ -102,24 +94,30 @@ end
 definite matrix given in terms of its Cholesky factorisation `C`, `z` is an `M`-vector. If
 `Σ` is a `Real` then it should be positive, and 
 """
-struct ProjKernel{TC<:Cholesky, Tk<:CrossKernel, Tz<:AV} <: Kernel
-    C::TC
+struct ProjKernel{TΣ<:PseudoPointsCov, Tk<:CrossKernel, Tz<:AV} <: Kernel
+    Σ::TΣ
     k::Tk
     z::Tz
 end
-function ProjKernel(Σ::Union{Real, AbstractMatrix}, k::CrossKernel, z::Union{Real, AV})
+function ProjKernel(Σ::PseudoPointsCov, k::CrossKernel, z::Union{Real, AV})
     return ProjKernel(cholesky(Σ), ϕ, _to_vec(z))
 end
 _to_vec(z::AV) = z
 _to_vec(z::Real) = [z]
 
 # Binary methods.
-_map(k::ProjKernel, x::AV, x′::AV) = diag_Xt_A_Y(pw(k.k, k.z, x), k.C, pw(k.k, k.z, x′))
-_pw(k::ProjKernel, x::AV, x′::AV) = Xt_A_Y(pw(k.k, k.z, x), k.C, pw(k.k, k.z, x′))
+function _map(k::ProjKernel, x::AV, x′::AV)
+    C_εf_zx, C_εf_zx′ = k.Σ.U' \ pw(k.k, k.z, x), k.Σ.U' \ pw(k.k, k.z, x′)
+    return diag_Xt_invA_Y(C_εf_zx, k.Σ.Λ, C_εf_zx′)
+end
+function _pw(k::ProjKernel, x::AV, x′::AV)
+    C_εf_zx, C_εf_zx′ = k.Σ.U' \ pw(k.k, k.z, x), k.Σ.U' \ pw(k.k, k.z, x′)
+    return Xt_invA_Y(C_εf_zx, k.Σ.Λ, C_εf_zx′)
+end
 
 # Unary methods.
-_map(k::ProjKernel, x::AV) = diag_Xt_A_X(k.C, pw(k.k, k.z, x))
-_pw(k::ProjKernel, x::AV) = Xt_A_X(k.C, pw(k.k, k.z, x))
+_map(k::ProjKernel, x::AV) = diag_Xt_invA_X(k.Σ.Λ, k.Σ.U' \ pw(k.k, k.z, x))
+_pw(k::ProjKernel, x::AV) = Xt_invA_X(k.Σ.Λ, k.Σ.U' \ pw(k.k, k.z, x))
 
 
 """
