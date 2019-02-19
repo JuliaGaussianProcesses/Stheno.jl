@@ -11,17 +11,25 @@ function k_p′p(::typeof(project), k, u, z, fp)
     k_ufp = kernel(u, fp)
     if iszero(k_ufp)
         return ZeroKernel()
-    elseif k_ufp isa ProjCrossKernel
-        # CONSTRUCT PROJ CROSS KERNEL
+    elseif u === fp
+        return LhsProjCrossKernel(u.k, k, z)
+    elseif k_ufp isa RhsProjCrossKernel
+        return ProjCrossKernel(u.k, k, k_ufp.kr, z)
     else
         error("k_p′p not defined for $fp")
     end
 end
 function k_pp′(fp, ::typeof(project), k, u, z)
     k_fpu = kernel(fp, u)
-    iszero(k_fpu) && return k_fpu
-    k_fup isa ProjCrossKernel && return # A ProjCrossKernel
-    error("k_pp′ not defined for $fp")
+    if iszero(k_fpu)
+        return k_fpu
+    elseif u === fp 
+        return RhsProjCrossKernel(u.k, k, z)
+    elseif k_fpu isa LhsProjCrossKernel
+        return ProjCrossKernel(u.k, k_fpu.kl, k, z)
+    else
+        error("k_pp′ not defined for $fp")
+    end
 end
 
 # Compute the optimal approximate posterior mean and covariance for the Titsias post.

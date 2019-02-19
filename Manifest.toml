@@ -97,15 +97,15 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffResults]]
 deps = ["Compat", "StaticArrays"]
-git-tree-sha1 = "db8acf46717b13d6c48deb7a12007c7f85a70cf7"
+git-tree-sha1 = "34a4a1e8be7bc99bc9c611b895b5baf37a80584c"
 uuid = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
-version = "0.0.3"
+version = "0.0.4"
 
 [[DiffRules]]
 deps = ["Random", "Test"]
-git-tree-sha1 = "09d69da75967ec48a8b1ad0897ec9144ee052bf9"
+git-tree-sha1 = "26b96a1a506b06cb272ef60568d478adab039b96"
 uuid = "b552c78f-8df3-52c6-915a-8e097449b14b"
-version = "0.0.8"
+version = "0.0.9"
 
 [[Distances]]
 deps = ["LinearAlgebra", "Printf", "Random", "Statistics", "Test"]
@@ -125,7 +125,9 @@ version = "0.16.4"
 
 [[FDM]]
 deps = ["LinearAlgebra", "Printf"]
-path = "/home/wct23/.julia/dev/FDM"
+git-tree-sha1 = "2127dfd294e838f6cb209984f223f8e236e6a217"
+repo-rev = "master"
+repo-url = "FDM"
 uuid = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
 version = "0.3.0+"
 
@@ -137,9 +139,9 @@ version = "0.2.4"
 
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Test"]
-path = "../FillArrays"
+git-tree-sha1 = "471b7e33dc9c9c5b9170045dd57c8ba0927b2918"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.4.0+"
+version = "0.4.0"
 
 [[FixedPointNumbers]]
 deps = ["Test"]
@@ -167,7 +169,7 @@ version = "0.6.1"
 
 [[IRTools]]
 deps = ["InteractiveUtils", "MacroTools", "Test"]
-git-tree-sha1 = "2b1e5eb77d67033084d1a3a5f3737ea84cb8ec7d"
+git-tree-sha1 = "23381d236be62fc80de98466b00f1b7427f81aab"
 repo-rev = "master"
 repo-url = "https://github.com/MikeInnes/IRTools.jl.git"
 uuid = "7869d1d1-7146-5819-86e3-90919afe41df"

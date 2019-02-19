@@ -1,22 +1,9 @@
 # """
-#     TitsiasMean <: MeanFunction
-
-# The approximate posterior mean of a process `g` given pseudo-points `u`.
-# """
-# struct TitsiasMean{Tm<:CondMean} <: MeanFunction
-#     m::Tm
-# end
-# TitsiasMean(cache::CondCache, kug, mg) = TitsiasMean(CondMean(cache, mg, kug))
-
-# _map(m::TitsiasMean, x::AV) = _map(m, x)
-
-
-# """
 #     TitsiasKernel <: Kernel
 
 # # Compute the approximate posterior covariance of a process `g` given pseudo-points `u`.
 # # """
-# struct TitsiasKernel{TS, Tck<:CondKernel} <: Kernel
+# struct TitsiasKernel{TΣ<:PseudoPointsCov, Tck<:CondKernel} <: Kernel
 #     S::TS
 #     ck::Tck
 # end
@@ -125,11 +112,28 @@ _pw(k::ProjKernel, x::AV) = Xt_invA_X(k.Σ.Λ, k.Σ.U' \ pw(k.k, k.z, x))
 
 `pw(k, x, x′) = pw(k.kl, x, z) * pw(k.kr, z, x′)`.
 """
-struct ProjCrossKernel{Tkl<:CrossKernel, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
+struct ProjCrossKernel{TΣ<:PseudoPointsCov, Tkl<:CrossKernel, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
+    Σ::TΣ
     kl::Tkl
-    z::Tz
     kr::Tkr
+    z::Tz
 end
 
-_map(k::ProjCrossKernel, x::AV, x′::AV) = diag_At_B(pw(k.kl, x, k.z)', pw(k.kr, k.z, x′))
-_pw(k::ProjCrossKernel, x::AV, x′::AV) = pw(k.kl, x, k.z) * pw(k.kr, k.z, x′)
+function _map(k::ProjCrossKernel, x::AV, x′::AV)
+    return diag_Xt_invA_Y(k.Σ.U' \ pw(k.kl, k.z, x), k.Σ.Λ, k.Σ.U' \ pw(k.kr, k.z, x′))
+end
+function _pw(k::ProjCrossKernel, x::AV, x′::AV)
+    return Xt_invA_Y(k.Σ.U' \ pw(k.kl, k.z, x), k.Σ.Λ, k.Σ.U' \ pw(k.kr, k.z, x′))
+end
+
+# Placeholder cross-kernels that don't really do anything
+struct LhsProjCrossKernel{TΣ<:PseudoPointsCov, Tkl<:CrossKernel, Tz<:AV} <: CrossKernel
+    Σ::TΣ
+    kl::Tkl
+    z::Tz
+end
+struct RhsProjCrossKernel{TΣ<:PseudoPointsCov, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
+    Σ::TΣ
+    kr::Tkr
+    z::Tz
+end
