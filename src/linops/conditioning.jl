@@ -17,12 +17,16 @@ export Obs
 ←(f, y) = Observation(f, y)
 get_f(c::Observation) = c.f
 get_y(c::Observation) = c.y
-function merge(c::Union{AbstractVector{<:Observation}, Tuple{Vararg{Observation}}})
-    block_gp = BlockGP([map(c->get_f(c).f, c)...])
-    block_x = BlockData([map(c->get_f(c).x, c)...])
-    block_σ² = BlockVector([map(c->get_f(c).σ², c)...])
+
+function merge(fs::Tuple{Vararg{FiniteGP}})
+    block_gp = BlockGP([map(f->f.f, fs)...])
+    block_x = BlockData([map(f->f.x, fs)...])
+    block_σ² = BlockVector([map(f->f.σ², fs)...])
+    return FiniteGP(block_gp, block_x, block_σ²)
+end
+function merge(c::Tuple{Vararg{Observation}})
     block_y = BlockVector([map(get_y, c)...])
-    return FiniteGP(block_gp, block_x, block_σ²)←block_y
+    return merge(map(get_f, c))←block_y
 end
 
 """

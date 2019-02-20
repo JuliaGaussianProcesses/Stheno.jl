@@ -43,6 +43,27 @@ function optimal_q(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
 end
 optimal_q(c::Observation, u::FiniteGP) = optimal_q(c.f, c.y, u)
 
+# Sugar for multiple approximate conditioning.
+optimal_q(c::Observation, us::Tuple{Vararg{FiniteGP}}) = optimal_q(c, merge(us))
+optimal_q(cs::Tuple{Vararg{Observation}}, u::FiniteGP) = optimal_q(merge(cs), u)
+function optimal_q(cs::Tuple{Vararg{Observation}}, us::Tuple{Vararg{FiniteGP}})
+    return optimal_q(merge(cs), merge(us))
+end
+
+
+
+# # Sugar.
+# function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AbstractGP, σ::Real)
+#     return optimal_q(BlockGP(f), BlockVector(y), u, σ)
+# end
+# function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AV{<:AbstractGP}, σ::Real)
+#     return optimal_q(f, y, BlockGP(u), σ)
+# end
+# function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AV{<:AbstractGP}, σ::Real)
+#     return optimal_q(BlockGP(f), BlockVector(y), BlockGP(u), σ)
+# end
+
+
 abstract type AbstractConditioner end
 
 """
@@ -71,21 +92,10 @@ Titsias(c::Observation, u::FiniteGP) = Titsias(c.f, c.y, u)
 
 # FillArrays.Zeros(x::BlockVector) = BlockVector(Zeros.(x.blocks))
 
-# # Sugar.
-# function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AbstractGP, σ::Real)
-#     return optimal_q(BlockGP(f), BlockVector(y), u, σ)
-# end
-# function optimal_q(f::AbstractGP, y::AV{<:Real}, u::AV{<:AbstractGP}, σ::Real)
-#     return optimal_q(f, y, BlockGP(u), σ)
-# end
-# function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AV{<:AbstractGP}, σ::Real)
-#     return optimal_q(BlockGP(f), BlockVector(y), BlockGP(u), σ)
-# end
-
-# |(g::Tuple{Vararg{AbstractGP}}, c::Titsias) = deconstruct(BlockGP([g...]) | c)
-# function |(g::BlockGP, c::Titsias)
-#     return BlockGP(g.fs .| Ref(c))
-# end
+|(g::Tuple{Vararg{AbstractGP}}, c::Titsias) = deconstruct(BlockGP([g...]) | c)
+function |(g::BlockGP, c::Titsias)
+    return BlockGP(g.fs .| Ref(c))
+end
 
 # """
 #     Titsias(

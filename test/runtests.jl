@@ -35,7 +35,7 @@ include("test_util.jl")
 
     @testset "linops" begin
         # include("linops/indexing.jl")
-        # include("linops/conditioning.jl")
+        include("linops/conditioning.jl")
         # include("linops/product.jl")
         # include("linops/addition.jl")
         # include("linops/compose.jl")
