@@ -115,48 +115,4 @@ using Stheno: GPC, PseudoPointsCov, project, Titsias, optimal_q, pw, Xt_invA_X, 
         @test mean(f′_concat(x̂)) == mean(f′_concat(x̂))
         @test cov(f′_concat(x̂)) == cov(f′_concat(x̂))
     end
-
-    # rng, N, N′, D, σ² = MersenneTwister(123456), 2, 3, 5, 1e-1
-    # X_, X′_ = randn(rng, D, N), randn(rng, D, N′)
-    # X, X′, Z = ColsAreObs(X_), ColsAreObs(X′_), ColsAreObs(randn(rng, D, N + N′))
-    # μ, k, XX′ = ConstMean(1.0), eq(), ColsAreObs(hcat(X_, X′_))
-
-    # # Construct toy problem.
-    # gpc = GPC()
-    # f = GP(μ, k, gpc)
-    # y = f + GP(noise(α=sqrt(σ²)), gpc)
-    # ŷ = rand(rng, y(XX′))
-
-    # # Compute exact posterior.
-    # f′XX′ = f(XX′) | (y(XX′)←ŷ)
-
-
-    # # Compute conditioner and exact posterior compute at test points.
-    # conditioner = Stheno.Titsias(f(XX′), μᵤ, Σᵤᵤ)
-    # f′Z = f(Z) | (y(XX′)←ŷ)
-    # f′Z_approx = f(Z) | conditioner
-
-    # # Check that exact and approximate posteriors match up.
-    # @test isapprox(mean(f′Z), mean(f′Z_approx); rtol=1e-4)
-    # @test isapprox(cov(f′Z), cov(f′Z_approx); rtol=1e-4)
-
-
-    # # Check that Titsias with BlockGP works the same as Titsias with regular GP.
-    # ŷX, ŷX′ = ŷ[1:N], ŷ[N+1:end]
-
-    # fb, ŷb = BlockGP([f(X), f(X′)]), BlockVector([ŷX, ŷX′])
-    # μb, Σb = Stheno.optimal_q(fb, ŷb, fb, sqrt(σ²))
-
-    # @test μb isa BlockVector
-    # @test Stheno.unbox(Σb) isa Symmetric
-    # @test Stheno.unbox(Stheno.unbox(Σb)) isa AbstractBlockMatrix
-    # @test μb ≈ μᵤ
-    # @test Σb ≈ Σᵤᵤ
-
-    # # Test that conditioning is indifferent to choice of Blocks.
-    # conditioner_blocked = Stheno.Titsias(fb, μb, Σb)
-    # f′Zb = f(BlockData([Z])) | conditioner_blocked
-
-    # @test isapprox(mean(f′Z), mean(f′Zb); rtol=1e-4)
-    # @test isapprox(cov(f′Z), cov(f′Zb); rtol=1e-4)
 end
