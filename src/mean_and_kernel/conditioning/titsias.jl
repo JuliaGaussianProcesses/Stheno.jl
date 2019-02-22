@@ -1,30 +1,34 @@
-# """
-#     TitsiasKernel <: Kernel
+"""
+    TitsiasKernel <: Kernel
 
-# # Compute the approximate posterior covariance of a process `g` given pseudo-points `u`.
-# # """
-# struct TitsiasKernel{TΣ<:PseudoPointsCov, Tck<:CondKernel} <: Kernel
-#     S::TS
-#     ck::Tck
-# end
-# TitsiasKernel(cache::CondCache, kug, kgg, S) = TitsiasKernel(S, CondKernel(cache, kug, kgg))
-# getproperty(k::TitsiasKernel, d::Symbol) =
-#     d === :kug ? k.ck.kfg :
-#     d === :z ? k.ck.c.x :
-#     getfield(k, d)
+Compute the approximate posterior covariance of a process `g` given pseudo-points `u`.
+"""
+struct TitsiasKernel{TΣ<:PseudoPointsCov, Tkug<:CrossKernel, Tkgg<:Kernel, Tz<:AV} <: Kernel
+    S::TΣ
+    kug::Tkug
+    kgg::Tkgg
+    z::Tz
+end
 
-# # Binary methods.
-# function _map(k::TitsiasKernel, x::AV, x′::AV)
-#     Σug_x, Σug_x′ = pw(k.kug, k.z, x), pw(k.kug, k.z, x′)
-#     return bcd(+, _map(k.ck, x, x′), diag_Xt_A_Y(Σug_x, k.S, Σug_x′))
-# end
-# function _pw(k::TitsiasKernel, x::AV, x′::AV)
-#     return bcd(+, _pw(k.ck, x, x′), Xt_A_Y(pw(k.kug, k.z, x), k.S, pw(k.kug, k.z, x′)))
-# end
+# Binary methods.
+function _map(k::TitsiasKernel, x::AV, x′::AV)
+    Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kug, z, x′)
+    return map(k.kgg, x, x′) .- diag_At_B(Ax, Ax′) .+ diag_Xt_invA_Y(Ax, k.S.Λ, Ax′)
+end
+function _pw(k::TitsiasKernel, x::AV, x′::AV)
+    Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kug, z, x′)
+    return _pw(k.kgg, x, x′) - Ax' * Ax′ + Xt_invA_Y(Ax, k.S.Λ, Ax′)
+end
 
-# # Unary methods.
-# _map(k::TitsiasKernel, x::AV) = bcd(+, _map(k.ck, x), diag_Xt_A_X(k.S, pw(k.kug, k.z, x)))
-# _pw(k::TitsiasKernel, x::AV) = bcd(+, _pw(k.ck, x), Xt_A_X(k.S, pw(k.kug, k.z, x)))
+# Unary methods.
+function _map(k::TitsiasKernel, x::AV)
+    Ax = k.S.U' \ pw(k.kug, k.z, x)
+    return map(k.kgg, x) - diag_At_A(Ax) + diag_Xt_invA_X(k.S.Λ, Ax)
+end
+function _pw(k::TitsiasKernel, x::AV)
+    Ax = k.S.U' \ pw(k.kug, k.z, x)
+    return pw(k.kgg, x) - Ax'Ax + Xt_invA_X(k.S.Λ, Ax)
+end
 
 
 # """
