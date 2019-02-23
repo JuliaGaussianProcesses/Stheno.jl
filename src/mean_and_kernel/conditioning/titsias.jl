@@ -33,21 +33,21 @@ end
 # Binary methods.
 function _map(k::TitsiasKernel, x::AV, x′::AV)
     Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kug, k.z, x′)
-    return bcd(-, _map(k.kgg, x, x′), diag_At_B(Ax, Ax′) + diag_Xt_invA_Y(Ax, k.S.Λ, Ax′))
+    return bcd(-, _map(k.kgg, x, x′), diag_At_B(Ax, Ax′) - diag_Xt_invA_Y(Ax, k.S.Λ, Ax′))
 end
 function _pw(k::TitsiasKernel, x::AV, x′::AV)
     Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kug, k.z, x′)
-    return bcd(-, _pw(k.kgg, x, x′), Ax' * Ax′ + Xt_invA_Y(Ax, k.S.Λ, Ax′))
+    return bcd(-, _pw(k.kgg, x, x′), Ax' * Ax′ - Xt_invA_Y(Ax, k.S.Λ, Ax′))
 end
 
 # Unary methods.
 function _map(k::TitsiasKernel, x::AV)
     Ax = k.S.U' \ pw(k.kug, k.z, x)
-    return bcd(-, _map(k.kgg, x), diag_At_A(Ax) + diag_Xt_invA_X(k.S.Λ, Ax))
+    return bcd(-, _map(k.kgg, x), diag_At_A(Ax) - diag_Xt_invA_X(k.S.Λ, Ax))
 end
 function _pw(k::TitsiasKernel, x::AV)
     Ax = k.S.U' \ pw(k.kug, k.z, x)
-    return bcd(-, _pw(k.kgg, x), Ax' * Ax + Xt_invA_X(k.S.Λ, Ax))
+    return bcd(-, _pw(k.kgg, x), Ax' * Ax - Xt_invA_X(k.S.Λ, Ax))
 end
 
 
@@ -68,11 +68,11 @@ end
 
 function _map(k::TitsiasCrossKernel, x::AV, x′::AV)
     Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kuh, k.z, x′)
-    return bcd(-, _map(k.kgh, x, x′), diag_At_B(Ax, Ax′) + diag_Xt_invA_Y(Ax, k.S.Λ, Ax′))
+    return bcd(-, _map(k.kgh, x, x′), diag_At_B(Ax, Ax′) - diag_Xt_invA_Y(Ax, k.S.Λ, Ax′))
 end
 function _pw(k::TitsiasCrossKernel, x::AV, x′::AV)
     Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kuh, k.z, x′)
-    return bcd(-, _pw(k.kgh, x, x′), Ax' * Ax′ + Xt_invA_Y(Ax, k.S.Λ, Ax′))
+    return bcd(-, _pw(k.kgh, x, x′), Ax' * Ax′ - Xt_invA_Y(Ax, k.S.Λ, Ax′))
 end
 
 
