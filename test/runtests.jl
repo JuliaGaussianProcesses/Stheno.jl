@@ -21,7 +21,7 @@ include("test_util.jl")
         # # include("mean_and_kernel/derivative.jl") # These tests currenly fail because Zygote.
         @testset "conditioning" begin
         #     include("mean_and_kernel/conditioning/exact.jl")
-            # include("mean_and_kernel/conditioning/titsias.jl")
+            include("mean_and_kernel/conditioning/titsias.jl")
         end
         # include("mean_and_kernel/algebra.jl")
         # include("mean_and_kernel/util.jl")
@@ -35,12 +35,12 @@ include("test_util.jl")
 
     @testset "linops" begin
         # include("linops/indexing.jl")
-        include("linops/conditioning.jl")
+        # include("linops/conditioning.jl")
         # include("linops/product.jl")
         # include("linops/addition.jl")
         # include("linops/compose.jl")
         # include("linops/project.jl")
-        include("linops/approximate_conditioning.jl")
+        # include("linops/approximate_conditioning.jl")
         # include("linops/integrate.jl")
     end
 
