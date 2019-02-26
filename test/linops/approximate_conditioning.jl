@@ -1,4 +1,4 @@
-using Stheno: GPC, PseudoPointsCov, project, Titsias, optimal_q, pw, Xt_invA_X, Xt_invA_Y
+using Stheno: GPC, PPC, project, Titsias, optimal_q, pw, Xt_invA_X, Xt_invA_Y
 
 # Test Titsias implementation by checking that it (approximately) recovers exact inference
 # when M = N and Z = X.
@@ -52,7 +52,7 @@ using Stheno: GPC, PseudoPointsCov, project, Titsias, optimal_q, pw, Xt_invA_X, 
         y = rand(rng, f(x, σ²))
 
         m′u, Λ, U = optimal_q(f(x, σ²)←y, f(z))
-        u = GP(PseudoPointsCov(Λ, U), gpc)
+        u = GP(PPC(Λ, U), gpc)
         kg, kh = eq(l=0.5), eq(l=1.1)
         g, h = project(kg, u, z), project(kh, u, z)
 

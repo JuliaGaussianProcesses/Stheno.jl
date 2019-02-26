@@ -1,11 +1,12 @@
 const CK = CrossKernel
 
 """
-    PseudoPointsCov <: Kernel
+    PPC <: Kernel
 
+"PPC" === "PsuedoPointsCov"
 Placeholder kernel for Titsias implementation.
 """
-struct PseudoPointsCov{TΛ<:Cholesky, TU<:UpperTriangular} <: Kernel
+struct PPC{TΛ<:Cholesky, TU<:UpperTriangular} <: Kernel
     Λ::TΛ
     U::TU
 end
@@ -13,17 +14,25 @@ end
 
 """
     TitsiasMean <: MeanFunction
+
+Compute the approximate posterior mean of a process `g` given pseudo-points `u`.
 """
-struct TitsiasMean{Tm̂ε<:AV{<:Real}} <: MeanFunction
+struct TitsiasMean{TΣ<:PPC, Tmg<:MeanFunction, Tkug<:CrossKernel, Tm̂ε<:AV{<:Real}, Tz<:AV} <: MeanFunction
+    S::TΣ
+    mg::Tmg
+    kug::Tkug
     m̂ε::Tm̂ε
+    z::Tz
 end
+_map(m::TitsiasMean, x::AV) = bcd(+, _map(m.mg, x), pw(m.kug, m.z, x)' * (m.S.U \ m.m̂ε))
+
 
 """
     TitsiasKernel <: Kernel
 
 Compute the approximate posterior covariance of a process `g` given pseudo-points `u`.
 """
-struct TitsiasKernel{TΣ<:PseudoPointsCov, Tkug<:CrossKernel, Tkgg<:Kernel, Tz<:AV} <: Kernel
+struct TitsiasKernel{TΣ<:PPC, Tkug<:CrossKernel, Tkgg<:Kernel, Tz<:AV} <: Kernel
     S::TΣ
     kug::Tkug
     kgg::Tkgg
@@ -57,7 +66,7 @@ end
 Compute the approximate posterior cross-covariance between `g` and `h` given pseudo-points
 `u`.
 """
-struct TitsiasCrossKernel{TS<:PseudoPointsCov, Tkug<:CK, Tkuh<:CK, Tkgh<:CK, Tz<:AV{<:Real}
+struct TitsiasCrossKernel{TS<:PPC, Tkug<:CK, Tkuh<:CK, Tkgh<:CK, Tz<:AV{<:Real}
     } <: CrossKernel
     S::TS
     kug::Tkug
@@ -92,12 +101,12 @@ end
 # definite matrix given in terms of its Cholesky factorisation `C`, `z` is an `M`-vector. If
 # `Σ` is a `Real` then it should be positive, and 
 # """
-# struct ProjKernel{TΣ<:PseudoPointsCov, Tk<:CrossKernel, Tz<:AV} <: Kernel
+# struct ProjKernel{TΣ<:PPC, Tk<:CrossKernel, Tz<:AV} <: Kernel
 #     Σ::TΣ
 #     k::Tk
 #     z::Tz
 # end
-# function ProjKernel(Σ::PseudoPointsCov, k::CrossKernel, z::Union{Real, AV})
+# function ProjKernel(Σ::PPC, k::CrossKernel, z::Union{Real, AV})
 #     return ProjKernel(cholesky(Σ), ϕ, _to_vec(z))
 # end
 # _to_vec(z::AV) = z
@@ -123,7 +132,7 @@ end
 
 # `pw(k, x, x′) = pw(k.kl, x, z) * pw(k.kr, z, x′)`.
 # """
-# struct ProjCrossKernel{TΣ<:PseudoPointsCov, Tkl<:CrossKernel, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
+# struct ProjCrossKernel{TΣ<:PPC, Tkl<:CrossKernel, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
 #     Σ::TΣ
 #     kl::Tkl
 #     kr::Tkr
@@ -138,12 +147,12 @@ end
 # end
 
 # # Placeholder cross-kernels that don't really do anything
-# struct LhsProjCrossKernel{TΣ<:PseudoPointsCov, Tkl<:CrossKernel, Tz<:AV} <: CrossKernel
+# struct LhsProjCrossKernel{TΣ<:PPC, Tkl<:CrossKernel, Tz<:AV} <: CrossKernel
 #     Σ::TΣ
 #     kl::Tkl
 #     z::Tz
 # end
-# struct RhsProjCrossKernel{TΣ<:PseudoPointsCov, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
+# struct RhsProjCrossKernel{TΣ<:PPC, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
 #     Σ::TΣ
 #     kr::Tkr
 #     z::Tz

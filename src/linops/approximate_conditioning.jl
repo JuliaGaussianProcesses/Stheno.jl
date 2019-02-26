@@ -3,7 +3,7 @@
 
 
 """
-project(k::CrossKernel, u::GP{<:ZeroMean, <:PseudoPointsCov}, z::AV) = GP(project, k, u, z)
+project(k::CrossKernel, u::GP{<:ZeroMean, <:PPC}, z::AV) = GP(project, k, u, z)
 
 μ_p′(::typeof(project), k, u, z) = ZeroMean()
 k_p′(::typeof(project), k, u, z) = ProjKernel(u.k, k, z)
@@ -77,7 +77,7 @@ struct Titsias{Tu<:FiniteGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
     γ::Tγ
 end
 function Titsias(u::FiniteGP, m′u::AV{<:Real}, Λ, U)
-    return Titsias(u, m′u, GP(PseudoPointsCov(Λ, U), u.f.gpc))
+    return Titsias(u, m′u, GP(PPC(Λ, U), u.f.gpc))
 end
 Titsias(f::FiniteGP, y::AV{<:Real}, u::FiniteGP) = Titsias(u, optimal_q(f, y, u)...)
 Titsias(c::Observation, u::FiniteGP) = Titsias(c.f, c.y, u)
