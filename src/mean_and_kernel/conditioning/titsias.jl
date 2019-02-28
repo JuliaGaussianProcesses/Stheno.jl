@@ -12,6 +12,34 @@ struct PPC{TΛ<:Cholesky, TU<:UpperTriangular} <: Kernel
 end
 
 
+struct PseudoPointCache{Tfq, Tm̂ε, TΛ, TU, Tz}
+    fq::Tfq
+    m̂ε::Tm̂ε
+    Λ::TΛ
+    U::TU
+    z::Tz
+end
+
+struct PseudoPointMean{TC<:PseudoPointCache} <: MeanFunction
+    c::TC
+end
+function _map(m::PseudoPointMean, x::AV)
+    @assert x === m.c.z || x == m.c.z
+    return m.c.m̂ε
+end
+
+struct PseudoPointKernel{TC<:PsuedoPointCache} <: Kernel
+    c::TC
+end
+function _pw(c::PseudoPointKernel, x::AV, x′::AV)
+    @assert x === c.c.z || x == c.c.z
+    @assert x′ === c.c.z || x′ == c.c.z
+    return c.c.
+end
+_pw(c::PseudoPointKernel, x::AV) = _pw(c, x, x)
+
+
+
 """
     TitsiasMean <: MeanFunction
 
