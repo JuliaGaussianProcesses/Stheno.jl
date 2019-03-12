@@ -2,7 +2,7 @@
     CondCache
 
 Cache for use by `CondMean`s, `CondKernel`s and `CondCrossKernel`s.
-Avoids recomputing the covariance `Σff` and the Kriging vector `α`.
+Avoids recomputing the covariance `Cff` and the Kriging vector `α`.
 """
 struct CondCache{TC<:Cholesky, Tα<:AbstractVector{<:Real}, Tx<:AbstractVector}
     C::TC
@@ -23,64 +23,81 @@ end
 """
     CondMean <: MeanFunction
 
-Computes the mean of a GP `g` conditioned on observations of another GP `f`.
+Represent the posterior mean of `f_p` given observations of `f_q` at `c.x`.
+
+# Fields
+- `c::CondCache`: cache of quantities shared by various mean functions and (cross-)kernels
+- `mp::MeanFunction`: the (prior) mean function of `f_p`, `mean(f_p)`
+- `kqp::CrossKernel`: the cross-kernel between `f_q` and `f_p`, `kernel(f_q, f_p)`
 """
-struct CondMean{Tc<:CondCache, Tμg<:MeanFunction, Tkfg<:CrossKernel} <: MeanFunction
+struct CondMean{Tc<:CondCache, Tmp<:MeanFunction, Tkqp<:CrossKernel} <: MeanFunction
     c::Tc
-    μg::Tμg
-    kfg::Tkfg
+    mp::Tmp
+    kqp::Tkqp
 end
-_map(μ::CondMean, xg::AV) = bcd(+, _map(μ.μg, xg), pw(μ.kfg, μ.c.x, xg)' * μ.c.α)
+_map(μ::CondMean, x::AV) = bcd(+, _map(μ.mg, x), pw(μ.kqp, μ.c.x, x)' * μ.c.α)
 
 
 """
     CondKernel <: Kernel
 
-Computes the (co)variance of a GP `g` conditioned on observations of another GP `f`.
+Represents the posterior covariance of `f_p` given observations of `f_q` at `c.x`.
+
+# Fields
+- `c::CondCache`: cache of quantities shared by various mean functions and (cross-)kernels
+- `kqp::CrossKernel`: cross-kernel between `f_q` and `f_p`, `kernel(f_q, f_p)`
+- `kp::Kernel`: kernel of `f_p`, `kernel(f_p)`
 """
-struct CondKernel{Tc<:CondCache, Tkfg<:CrossKernel, Tkgg<:Kernel} <: Kernel
+struct CondKernel{Tc<:CondCache, Tkqp<:CrossKernel, Tkp<:Kernel} <: Kernel
     c::Tc
-    kfg::Tkfg
-    kgg::Tkgg
+    kqp::Tkqp
+    kp::Tkp
 end
 
 # Binary methods.
 function _map(k::CondKernel, x::AV, x′::AV)
-    σgg = map(k.kgg, x, x′)
-    σ′gg = diag_Xt_invA_Y(pw(k.kfg, k.c.x, x), k.c.C, pw(k.kfg, k.c.x, x′))
-    return σgg - σ′gg
+    C_qp_x, C_qp_x′ = pw(k.kqp, k.c.x, x), pw(k.kqp, k.c.x, x′)
+    return map(k.kp, x, x′) - diag_Xt_invA_Y(C_qp_x, k.c.C, C_qp_x′)
 end
 function _pw(k::CondKernel, x::AV, x′::AV)
-    return pw(k.kgg, x, x′) - Xt_invA_Y(pw(k.kfg, k.c.x, x), k.c.C, pw(k.kfg, k.c.x, x′))
+    C_qp_x, C_qp_x′ = pw(k.kqp, k.c.x, x), pw(k.kqp, k.c.x, x′)
+    return pw(k.kp, x, x′) - Xt_invA_Y(C_qp_x, k.c.C, C_qp_x′)
 end
 
 # Unary methods.
-_map(k::CondKernel, x::AV) = map(k.kgg, x) - diag_Xt_invA_X(k.c.C, pw(k.kfg, k.c.x, x))
-_pw(k::CondKernel, x::AV) = pw(k.kgg, x) - Xt_invA_X(k.c.C, pw(k.kfg, k.c.x, x))
+_map(k::CondKernel, x::AV) = map(k.kp, x) - diag_Xt_invA_X(k.c.C, pw(k.kqp, k.c.x, x))
+_pw(k::CondKernel, x::AV) = pw(k.kp, x) - Xt_invA_X(k.c.C, pw(k.kqp, k.c.x, x))
 
 
 """
     CondCrossKernel <: CrossKernel
 
-Computes the covariance between `g` and `h` conditioned on observations of a process `f`.
+Represents the posterior cross-covariance between `f_p` and `f_p′`,given observations of
+`f_q` at `c.x`.
+
+# Fields
+- `c::CondCache`: cache of quantities shared by various mean functions and (cross-)kernels
+- `kqp::CrossKernel`: cross-kernel between `f_q` and `f_p`, `kernel(f_q, f_p)`
+- `kqp′::CrossKernel`: cross-kernel between `f_q` and `f_p′`, `kernel(f_q, f_p′)`
+- `kpp′::CrossKernel`: cross-kernel between `f_p` and f_p′`, `kernel(f_p, f_p′)`
 """
 struct CondCrossKernel{
     Tc<:CondCache,
-    Tkfg<:CrossKernel,
-    Tkfh<:CrossKernel,
-    Tkgh<:CrossKernel,
+    Tkqp<:CrossKernel,
+    Tkqp′<:CrossKernel,
+    Tkpp′<:CrossKernel,
 } <: CrossKernel
     c::Tc
-    kfg::Tkfg
-    kfh::Tkfh
-    kgh::Tkgh
+    kqp::Tkqp
+    kqp′::Tkqp′
+    kpp′::Tkpp′
 end
 
 function _map(k::CondCrossKernel, x::AV, x′::AV)
-    σgh = map(k.kgh, x, x′)
-    σ′gh = diag_Xt_invA_Y(pw(k.kfg, k.c.x, x), k.c.C, pw(k.kfh, k.c.x, x′))
-    return σgh - σ′gh
+    C_qp, C_qp′ = pw(k.kqp, k.c.x, x), pw(k.qp′, k.c.x, x′)
+    return map(k.kpp′, x, x′) - diag_Xt_invA_Y(C_qp, k.c.C, C_qp′)
 end
-function _pw(k::CondCrossKernel, xg::AV, xh::AV)
-    return pw(k.kgh, xg, xh) - Xt_invA_Y(pw(k.kfg, k.c.x, xg), k.c.C, pw(k.kfh, k.c.x, xh))
+function _pw(k::CondCrossKernel, x::AV, x′::AV)
+    C_qp, C_qp′ = pw(k.kqp, k.c.x, x), pw(k.kqp′, k.c.x, x′)
+    return pw(k.kpp′, x, x′) - Xt_invA_Y(C_qp, k.c.C, C_qp′)
 end

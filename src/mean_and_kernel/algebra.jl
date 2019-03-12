@@ -56,6 +56,8 @@ export finite
 *(k::ZeroKernel, k′::ZeroKernel) = k
 *(k::ZeroKernel, k′::Kernel) = k
 *(k::Kernel, k′::ZeroKernel) = k′
+*(k::ZeroKernel, m::MeanFunction) = k
+*(m::MeanFunction, k::ZeroKernel) = k
 
 # Optimise multiplication by one.
 *(k::OneKernel, k′::OneKernel) = k

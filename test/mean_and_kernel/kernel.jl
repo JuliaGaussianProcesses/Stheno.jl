@@ -1,5 +1,5 @@
 using Stheno: CrossKernel, ZeroKernel, OneKernel, ConstKernel, CustomMean, pw
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, FiniteRank
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 using FillArrays, LinearAlgebra
 
 @testset "kernel" begin
@@ -75,11 +75,11 @@ using FillArrays, LinearAlgebra
         #     @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
         # end
 
-        @testset "FiniteRank" begin
-            x = randn(rng, N)
-            @test pw(FiniteRank(1, identity), x) == x * x'
-            differentiable_kernel_tests(rng, FiniteRank(1, identity), x0, x1, x2)
-        end
+        # @testset "FiniteRank" begin
+        #     x = randn(rng, N)
+        #     @test pw(FiniteRank(1, identity), x) == x * x'
+        #     differentiable_kernel_tests(rng, FiniteRank(1, identity), x0, x1, x2)
+        # end
     end
 
     @testset "(is)zero" begin

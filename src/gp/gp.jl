@@ -9,28 +9,28 @@ mutable struct GPC
 end
 
 """
-    GP{Tμ<:MeanFunction, Tk<:Kernel} <: AbstractGP
+    GP{Tμ<:MeanFunction, Tk<:CrossKernel} <: AbstractGP
 
 A Gaussian Process (GP) object. Either constructed using an Affine Transformation of
 existing GPs or by providing a mean function `μ`, a kernel `k`, and a `GPC` `gpc`.
 """
-struct GP{Tμ<:MeanFunction, Tk<:Kernel} <: AbstractGP
+struct GP{Tμ<:MeanFunction, Tk<:CrossKernel} <: AbstractGP
     args::Any
     μ::Tμ
     k::Tk
     n::Int
     gpc::GPC
-    function GP{Tμ, Tk}(args, μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk<:Kernel}
+    function GP{Tμ, Tk}(args, μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk<:CrossKernel}
         gp = new{Tμ, Tk}(args, μ, k, gpc.n, gpc)
         gpc.n += 1
         return gp
     end
     GP{Tμ, Tk}(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk} = GP{Tμ, Tk}((), μ, k, gpc)
 end
-GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ<:MeanFunction, Tk<:Kernel} = GP{Tμ, Tk}(μ, k, gpc)
+GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ<:MeanFunction, Tk<:CrossKernel} = GP{Tμ, Tk}(μ, k, gpc)
 
 # GP initialised with a constant mean. Zero and one are specially handled.
-function GP(m::Real, k::Kernel, gpc::GPC)
+function GP(m::Real, k::CrossKernel, gpc::GPC)
     if iszero(m)
         return GP(k, gpc)
     elseif isone(m)
@@ -39,8 +39,8 @@ function GP(m::Real, k::Kernel, gpc::GPC)
         return GP(ConstMean(m), k, gpc)
     end
 end
-GP(m, k::Kernel, gpc::GPC) = GP(CustomMean(m), k, gpc)
-GP(k::Kernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
+GP(m, k::CrossKernel, gpc::GPC) = GP(CustomMean(m), k, gpc)
+GP(k::CrossKernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
 function GP(args...)
     μ, k, gpc = μ_p′(args...), k_p′(args...), get_check_gpc(args...)
     return GP{typeof(μ), typeof(k)}(args, μ, k, gpc)

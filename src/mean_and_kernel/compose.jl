@@ -78,8 +78,9 @@ struct LhsCross{Tf<:MeanFunction, Tk<:CrossKernel} <: CrossKernel
 end
 _map(k::LhsCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _map(k.k, x, x′))
 _pw(k::LhsCross, x::AV, x′::AV) = bcd(*, map(k.f, x), _pw(k.k, x, x′))
+_pw(k::LhsCross, x::AV) = _pw(k, x)
 
-    
+
 """
     RhsCross <: CrossKernel{Tk<:CrossKernel, Tf}
 
@@ -91,7 +92,7 @@ struct RhsCross{Tk<:CrossKernel, Tf<:MeanFunction} <: CrossKernel
 end
 _map(k::RhsCross, x::AV, x′::AV) = bcd(*, _map(k.k, x, x′), map(k.f, x′))
 _pw(k::RhsCross, x::AV, x′::AV) = bcd(*, _pw(k.k, x, x′), map(k.f, x′)')
-
+_pw(k::RhsCross, x::AV) = _pw(k, x, x)
 
 """
     OuterCross <: CrossKernel{Tf, Tk<:CrossKernel}

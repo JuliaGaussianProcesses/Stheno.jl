@@ -1,187 +1,111 @@
-const CK = CrossKernel
-
 """
-    PPC <: Kernel
+    PseudoPointCache
 
-"PPC" === "PsuedoPointsCov"
-Placeholder kernel for Titsias implementation.
+Various quantities required for approximate conditioning. We let
+`ε := U' \\ (f_q(z) - mean(f_q(z)))` be normally distributed with mean `m̂ε` and precision
+`Λ`.
+
+# Fields
+- `z::AbstractVector`: the locations of the pseudo-points in `f_q`
+- `U::UpperTriangular`: the upper-triangular cholesky factor `cholesky(pw(fq, z)).U`
+- `m̂ε::AbstractVector{<:Real}`: the mean of `ε`
+- `Λ::Cholesky`: the precision of `ε`
 """
-struct PPC{TΛ<:Cholesky, TU<:UpperTriangular} <: Kernel
-    Λ::TΛ
+struct PseudoPointCache{Tz<:AV, TU<:UpperTriangular, Tm̂ε<:AV{<:Real}, TΛ<:Cholesky}
+    z::Tz
     U::TU
-end
-
-
-struct PseudoPointCache{Tfq, Tm̂ε, TΛ, TU, Tz}
-    fq::Tfq
     m̂ε::Tm̂ε
     Λ::TΛ
-    U::TU
-    z::Tz
 end
-
-struct PseudoPointMean{TC<:PseudoPointCache} <: MeanFunction
-    c::TC
-end
-function _map(m::PseudoPointMean, x::AV)
-    @assert x === m.c.z || x == m.c.z
-    return m.c.m̂ε
-end
-
-struct PseudoPointKernel{TC<:PsuedoPointCache} <: Kernel
-    c::TC
-end
-function _pw(c::PseudoPointKernel, x::AV, x′::AV)
-    @assert x === c.c.z || x == c.c.z
-    @assert x′ === c.c.z || x′ == c.c.z
-    return c.c.
-end
-_pw(c::PseudoPointKernel, x::AV) = _pw(c, x, x)
-
+const PPC = PseudoPointCache
 
 
 """
-    TitsiasMean <: MeanFunction
+    ApproxCondMean <: MeanFunction
 
-Compute the approximate posterior mean of a process `g` given pseudo-points `u`.
+Represents the approximate posterior mean function of the pth process `f_p` in a programme,
+conditioned on approximate observations of the qth process `f_q`.
+
+# Fields
+- `c::PPC`: cache storing various quantities shared between different means / kernels
+- `mp::MeanFunction`: the mean function of `f_p`, `mean(f_p)`
+- `kqp::CrossKernel`: the cross-kernel between `f_q` and `f_p`, `kernel(f_q, f_p)`
 """
-struct TitsiasMean{TΣ<:PPC, Tmg<:MeanFunction, Tkug<:CrossKernel, Tm̂ε<:AV{<:Real}, Tz<:AV} <: MeanFunction
-    S::TΣ
-    mg::Tmg
-    kug::Tkug
-    m̂ε::Tm̂ε
-    z::Tz
+struct ApproxCondMean{Tc<:PPC, Tmp<:MeanFunction, Tkqp<:CrossKernel} <: MeanFunction
+    c::Tc
+    mp::Tmp
+    kqp::Tkqp
 end
-_map(m::TitsiasMean, x::AV) = bcd(+, _map(m.mg, x), pw(m.kug, m.z, x)' * (m.S.U \ m.m̂ε))
+_map(m::ApproxCondMean, x::AV) = bcd(+, _map(m.mp, x), pw(m.kqp, m.c.z, x)' * (m.c.U \ m.c.m̂ε))
 
 
 """
-    TitsiasKernel <: Kernel
+    ApproxCondKernel <: Kernel
 
-Compute the approximate posterior covariance of a process `g` given pseudo-points `u`.
+Represents the approximate posterior covariance of a the pth process `f_p` in a programme
+conditioned on approximate observations of the qth process `f_q`.
+
+# Fields
+- `c::PPC`: cache storing various quanties shared between different means / kernels
+- `kqp::CrossKernel`: the cross-kernel between `f_q` and `f_p`, `kernel(f_q, f_p)`
+- `kp::Kernel`: the kernel of `f_p`, `kernel(f_p)`
 """
-struct TitsiasKernel{TΣ<:PPC, Tkug<:CrossKernel, Tkgg<:Kernel, Tz<:AV} <: Kernel
-    S::TΣ
-    kug::Tkug
-    kgg::Tkgg
-    z::Tz
+struct ApproxCondKernel{Tc<:PPC, Tkqp<:CrossKernel, Tkp<:Kernel} <: Kernel
+    c::Tc
+    kqp::Tkqp
+    kp::Tkp
 end
 
 # Binary methods.
-function _map(k::TitsiasKernel, x::AV, x′::AV)
-    Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kug, k.z, x′)
-    return bcd(-, _map(k.kgg, x, x′), diag_At_B(Ax, Ax′) - diag_Xt_invA_Y(Ax, k.S.Λ, Ax′))
+function _map(k::ApproxCondKernel, x::AV, x′::AV)
+    Ax, Ax′ = k.c.U' \ pw(k.kqp, k.c.z, x), k.c.U' \ pw(k.kqp, k.c.z, x′)
+    return bcd(-, _map(k.kp, x, x′), diag_At_B(Ax, Ax′) - diag_Xt_invA_Y(Ax, k.c.Λ, Ax′))
 end
-function _pw(k::TitsiasKernel, x::AV, x′::AV)
-    Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kug, k.z, x′)
-    return bcd(-, _pw(k.kgg, x, x′), Ax' * Ax′ - Xt_invA_Y(Ax, k.S.Λ, Ax′))
+function _pw(k::ApproxCondKernel, x::AV, x′::AV)
+    Ax, Ax′ = k.c.U' \ pw(k.kqp, k.c.z, x), k.c.U' \ pw(k.kqp, k.c.z, x′)
+    return bcd(-, _pw(k.kp, x, x′), Ax' * Ax′ - Xt_invA_Y(Ax, k.c.Λ, Ax′))
 end
 
 # Unary methods.
-function _map(k::TitsiasKernel, x::AV)
-    Ax = k.S.U' \ pw(k.kug, k.z, x)
-    return bcd(-, _map(k.kgg, x), diag_At_A(Ax) - diag_Xt_invA_X(k.S.Λ, Ax))
+function _map(k::ApproxCondKernel, x::AV)
+    Ax = k.c.U' \ pw(k.kqp, k.c.z, x)
+    return bcd(-, _map(k.kp, x), diag_At_A(Ax) - diag_Xt_invA_X(k.c.Λ, Ax))
 end
-function _pw(k::TitsiasKernel, x::AV)
-    Ax = k.S.U' \ pw(k.kug, k.z, x)
-    return bcd(-, _pw(k.kgg, x), Ax' * Ax - Xt_invA_X(k.S.Λ, Ax))
+function _pw(k::ApproxCondKernel, x::AV)
+    Ax = k.c.U' \ pw(k.kqp, k.c.z, x)
+    return bcd(-, _pw(k.kp, x), Ax' * Ax - Xt_invA_X(k.c.Λ, Ax))
 end
 
 
 """
-    TitsiasCrossKernel <: CrossKernel
+    ApproxCondCrossKernel <: CrossKernel
 
-Compute the approximate posterior cross-covariance between `g` and `h` given pseudo-points
-`u`.
+Represents the approximate posterior cross-covariance between the pth and p′th processes
+`f_p` and `f_p′` in a programme, given approximate observations of the qth process `f_q`.
+
+# Fields
+- `c::PPC`: cache storing various quanties shared between different means / kernels
+- `kqp::CrossKernel`: the cross-kernel between `f_q` and `f_p`, `kernel(f_q, f_p)`
+- `kqp′::CrossKernel`: the cross-kernel between `f_q` and `f_p′`, `kernel(f_q, f_p′)`
+- `kpp′::CrossKernel`: the cross-kernel between `f_p` and `f_p′`, `kernel(f_p, f_p′)`
 """
-struct TitsiasCrossKernel{TS<:PPC, Tkug<:CK, Tkuh<:CK, Tkgh<:CK, Tz<:AV{<:Real}
-    } <: CrossKernel
-    S::TS
-    kug::Tkug
-    kuh::Tkuh
-    kgh::Tkgh
-    z::Tz
+struct ApproxCondCrossKernel{
+    Tc<:PPC,
+    Tkqp<:CrossKernel,
+    Tkqp′<:CrossKernel,
+    Tkpp′<:CrossKernel,
+} <: CrossKernel
+    c::Tc
+    kqp::Tkqp
+    kqp′::Tkqp′
+    kpp′::Tkpp′
 end
 
-function _map(k::TitsiasCrossKernel, x::AV, x′::AV)
-    Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kuh, k.z, x′)
-    return bcd(-, _map(k.kgh, x, x′), diag_At_B(Ax, Ax′) - diag_Xt_invA_Y(Ax, k.S.Λ, Ax′))
+function _map(k::ApproxCondCrossKernel, x::AV, x′::AV)
+    Ax, Ax′ = k.c.U' \ pw(k.kqp, k.c.z, x), k.c.U' \ pw(k.kqp′, k.c.z, x′)
+    return bcd(-, _map(k.kpp′, x, x′), diag_At_B(Ax, Ax′) - diag_Xt_invA_Y(Ax, k.c.Λ, Ax′))
 end
-function _pw(k::TitsiasCrossKernel, x::AV, x′::AV)
-    Ax, Ax′ = k.S.U' \ pw(k.kug, k.z, x), k.S.U' \ pw(k.kuh, k.z, x′)
-    return bcd(-, _pw(k.kgh, x, x′), Ax' * Ax′ - Xt_invA_Y(Ax, k.S.Λ, Ax′))
+function _pw(k::ApproxCondCrossKernel, x::AV, x′::AV)
+    Ax, Ax′ = k.c.U' \ pw(k.kqp, k.c.z, x), k.c.U' \ pw(k.kqp′, k.c.z, x′)
+    return bcd(-, _pw(k.kpp′, x, x′), Ax' * Ax′ - Xt_invA_Y(Ax, k.c.Λ, Ax′))
 end
-
-
-
-
-
-
-
-# Various (cross-)kernels used to implement the Titsias approximate posterior. Might be
-# moved around in the future if we discover a better home for them.
-
-
-# """
-#     ProjKernel <: Kernel
-
-# `pw(k, x, x′) = pw(k.k, x, z) * Σ * pw(k.k, z, x′)` where `Σ` is an `M × M` positive
-# definite matrix given in terms of its Cholesky factorisation `C`, `z` is an `M`-vector. If
-# `Σ` is a `Real` then it should be positive, and 
-# """
-# struct ProjKernel{TΣ<:PPC, Tk<:CrossKernel, Tz<:AV} <: Kernel
-#     Σ::TΣ
-#     k::Tk
-#     z::Tz
-# end
-# function ProjKernel(Σ::PPC, k::CrossKernel, z::Union{Real, AV})
-#     return ProjKernel(cholesky(Σ), ϕ, _to_vec(z))
-# end
-# _to_vec(z::AV) = z
-# _to_vec(z::Real) = [z]
-
-# # Binary methods.
-# function _map(k::ProjKernel, x::AV, x′::AV)
-#     C_εf_zx, C_εf_zx′ = k.Σ.U' \ pw(k.k, k.z, x), k.Σ.U' \ pw(k.k, k.z, x′)
-#     return diag_Xt_invA_Y(C_εf_zx, k.Σ.Λ, C_εf_zx′)
-# end
-# function _pw(k::ProjKernel, x::AV, x′::AV)
-#     C_εf_zx, C_εf_zx′ = k.Σ.U' \ pw(k.k, k.z, x), k.Σ.U' \ pw(k.k, k.z, x′)
-#     return Xt_invA_Y(C_εf_zx, k.Σ.Λ, C_εf_zx′)
-# end
-
-# # Unary methods.
-# _map(k::ProjKernel, x::AV) = diag_Xt_invA_X(k.Σ.Λ, k.Σ.U' \ pw(k.k, k.z, x))
-# _pw(k::ProjKernel, x::AV) = Xt_invA_X(k.Σ.Λ, k.Σ.U' \ pw(k.k, k.z, x))
-
-
-# """
-#     ProjCrossKernel <: CrossKernel
-
-# `pw(k, x, x′) = pw(k.kl, x, z) * pw(k.kr, z, x′)`.
-# """
-# struct ProjCrossKernel{TΣ<:PPC, Tkl<:CrossKernel, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
-#     Σ::TΣ
-#     kl::Tkl
-#     kr::Tkr
-#     z::Tz
-# end
-
-# function _map(k::ProjCrossKernel, x::AV, x′::AV)
-#     return diag_Xt_invA_Y(k.Σ.U' \ pw(k.kl, k.z, x), k.Σ.Λ, k.Σ.U' \ pw(k.kr, k.z, x′))
-# end
-# function _pw(k::ProjCrossKernel, x::AV, x′::AV)
-#     return Xt_invA_Y(k.Σ.U' \ pw(k.kl, k.z, x), k.Σ.Λ, k.Σ.U' \ pw(k.kr, k.z, x′))
-# end
-
-# # Placeholder cross-kernels that don't really do anything
-# struct LhsProjCrossKernel{TΣ<:PPC, Tkl<:CrossKernel, Tz<:AV} <: CrossKernel
-#     Σ::TΣ
-#     kl::Tkl
-#     z::Tz
-# end
-# struct RhsProjCrossKernel{TΣ<:PPC, Tkr<:CrossKernel, Tz<:AV} <: CrossKernel
-#     Σ::TΣ
-#     kr::Tkr
-#     z::Tz
-# end
