@@ -133,6 +133,20 @@ end
 broadcasted(f::PickDims, x::ColsAreObs) = ColsAreObs(x.X[f.idx, :])
 broadcasted(f::PickDims{<:Integer}, x::ColsAreObs) = x.X[f.idx, :]
 
+function broadcasted(f::PickDims, x::AbstractVector{<:CartesianIndex})
+    out = Matrix{Int}(undef, length(f.idx), length(x))
+    for i in f.idx, n in eachindex(x)
+        out[i, n] = x[n][i]
+    end
+    return ColsAreObs(out)
+end
+function broadcasted(f::PickDims{<:Integer}, x::AV{<:CartesianIndex})
+    out = Matrix{Int}(undef, length(x))
+    for n in eachindex(x)
+        out[n] = x[n][f.idx]
+    end
+    return out
+end
 
 """
     Periodic{Tf<:Real}

@@ -80,7 +80,7 @@ function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     @assert length(f) == length(y)
     @assert f.σ² isa Fill
     σ² = f.σ²[1]
-    Γ = (cholesky(cov(u)).U' \ cov(u, f)) ./ sqrt(σ²)
+    Γ = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) ./ sqrt(σ²)
     Ω, δ = cholesky(Symmetric(Γ * Γ' + I)), y - mean(f)
     return -(length(y) * log(2π * σ²) + logdet(Ω) - sum(abs2, Γ) +
         (sum(abs2, δ) - sum(abs2, Ω.U' \ (Γ * δ)) + sum(map(kernel(f.f), f.x))) / σ²) / 2
