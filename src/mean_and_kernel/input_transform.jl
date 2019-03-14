@@ -30,7 +30,6 @@ _pw(k::ITKernel, x::AV, x′::AV) = _pw(k.k, k.f.(x), k.f.(x′))
 _map(k::ITKernel, x::AV) = _map(k.k, k.f.(x))
 _pw(k::ITKernel, x::AV) = _pw(k.k, k.f.(x))
 
-
 """
     LhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
 
@@ -108,7 +107,6 @@ end
 broadcasted(s::Scale, x::StepRangeLen) = s.l .* x
 broadcasted(s::Scale, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
 
-
 """
     LinearTransform{T<:AbstractMatrix}
 
@@ -139,6 +137,9 @@ function broadcasted(f::PickDims, x::AbstractVector{<:CartesianIndex})
         out[i, n] = x[n][i]
     end
     return ColsAreObs(out)
+end
+@adjoint function broadcasted(f::PickDims, x::AV{<:CartesianIndex})
+    return broadcasted(f, x), Δ->(nothing, nothing)
 end
 function broadcasted(f::PickDims{<:Integer}, x::AV{<:CartesianIndex})
     out = Matrix{Int}(undef, length(x))

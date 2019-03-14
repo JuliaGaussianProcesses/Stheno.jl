@@ -51,7 +51,7 @@ end
 # Compute the approximate posterior 
 function optimal_q(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     σ = sqrt(FillArrays.getindex_value(f.σ²))
-    U = cholesky(cov(u)).U
+    U = cholesky(Symmetric(cov(u))).U
     Γ = broadcast(/, U' \ cov(u, f), σ)
     Λ = cholesky(Γ * Γ' + I)
     m′u = mean(u) + broadcast(/, U' * (Λ \ (Γ * (y - mean(f)))), σ)
