@@ -17,9 +17,7 @@ import StatsFuns: log1pexp, logistic, logexpm1, xlogx, xlogy, logit, log1psq, lo
 @adjoint function Fill(x, sz::Integer...)
     back(Δ::Nothing) = (nothing, map(_->nothing, sz)...)
     back(Δ::AbstractArray) = (sum(Δ), map(_->nothing, sz)...)
-    function back(Δ::NamedTuple{(:value, :axes)})
-        return (Δ.value isa Nothing ? nothing : sum(Δ.value), map(_->nothing, sz)...)
-    end
+    back(Δ::NamedTuple{(:value, :axes)}) = (Δ.value, map(_->nothing, sz)...)
     return Fill(x, sz...), back
 end
 @adjoint Zeros{T}(sz::Integer...) where {T} = Zeros{T}(sz...), Δ->(map(_->nothing, sz)...,)
@@ -32,14 +30,35 @@ end
     return Fill(y, size(r)), back
 end
 
-for array_type in [:(AbstractFill{T, 1} where T), :(AbstractFill{T, 2} where T)]
-    @eval @adjoint function broadcasted(::typeof(+), a::$array_type, b::$array_type)
-        return broadcasted(+, a, b), Δ->(nothing, Δ, Δ)
-    end
-    @eval @adjoint function broadcasted(::typeof(*), a::$array_type, b::$array_type)
-        return broadcasted(*, a, b), Δ->(nothing, Δ .* b, Δ .* a)
+_sum_accum(::Fill, s::Real) = (value=s, axes=nothing)
+_sum_accum(::Union{Ones, Zeros}, s::Real) = (axes=nothing,)
+@adjoint function broadcasted(::typeof(+), a::AbstractFill, b::AbstractFill)
+    return broadcasted(+, a, b), function(Δ)
+        s = sum(Δ)
+        return (nothing, _sum_accum(a, s), _sum_accum(b, s))
     end
 end
+
+_prod_accum(::Fill, sΔ::Real, sb::Real) = (value=sΔ * sb, axes=nothing)
+_prod_accum(::Union{Ones, Zeros}, ::Real, ::Real) = (axes=nothing,)
+@adjoint function broadcasted(::typeof(*), a::AbstractFill, b::AbstractFill)
+    return broadcasted(*, a, b), function(Δ)
+        sΔ, sa, sb = sum(Δ), sum(a), sum(b)
+        return (nothing, _prod_accum(a, sΔ, sb), _prod_accum(b, sΔ, sa))
+    end
+end
+
+function _zero_mul_adjoint(a::AbstractArray{T}, b::Zeros{V}) where {T, V}
+    return broadcasted(*, a, b), Δ->(nothing, Zeros{T}(size(a)), Zeros{V}(size(b)))
+end
+function _zero_mul_adjoint(a::Zeros{T}, b::AbstractArray{V}) where {T, V}
+    return broadcasted(*, a, b), Δ->(nothing, Zeros{T}(size(a)), Zeros{V}(size(b)))
+end
+
+@adjoint broadcasted(::typeof(*), a::AbstractArray, b::Zeros) = _zero_mul_adjoint(a, b)
+@adjoint broadcasted(::typeof(*), a::AbstractFill, b::Zeros) = _zero_mul_adjoint(a, b)
+@adjoint broadcasted(::typeof(*), a::Zeros, b::AbstractArray) = _zero_mul_adjoint(a, b)
+@adjoint broadcasted(::typeof(*), a::Zeros, b::AbstractFill) = _zero_mul_adjoint(a, b)
 
 @adjoint function sqeuclidean(x::AbstractVector, y::AbstractVector)
     δ = x .- y

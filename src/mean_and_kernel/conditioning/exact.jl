@@ -16,7 +16,7 @@ function CondCache(
     y::AV{<:Real},
     σ²::AV{<:Real},
 )
-    C = cholesky(pw(kff, x) + Diagonal(σ²))
+    C = cholesky(Symmetric(pw(kff, x) + Diagonal(σ²)))
     return CondCache(C, C \ (y - map(μf, x)), x)
 end
 
@@ -35,7 +35,7 @@ struct CondMean{Tc<:CondCache, Tmp<:MeanFunction, Tkqp<:CrossKernel} <: MeanFunc
     mp::Tmp
     kqp::Tkqp
 end
-_map(μ::CondMean, x::AV) = bcd(+, _map(μ.mg, x), pw(μ.kqp, μ.c.x, x)' * μ.c.α)
+_map(μ::CondMean, x::AV) = bcd(+, _map(μ.mp, x), pw(μ.kqp, μ.c.x, x)' * μ.c.α)
 
 
 """
@@ -94,7 +94,7 @@ struct CondCrossKernel{
 end
 
 function _map(k::CondCrossKernel, x::AV, x′::AV)
-    C_qp, C_qp′ = pw(k.kqp, k.c.x, x), pw(k.qp′, k.c.x, x′)
+    C_qp, C_qp′ = pw(k.kqp, k.c.x, x), pw(k.kqp′, k.c.x, x′)
     return map(k.kpp′, x, x′) - diag_Xt_invA_Y(C_qp, k.c.C, C_qp′)
 end
 function _pw(k::CondCrossKernel, x::AV, x′::AV)

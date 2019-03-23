@@ -47,12 +47,9 @@ module Stheno
     include("linops/product.jl")
     include("linops/addition.jl")
     include("linops/compose.jl")
-    include("linops/project.jl")
     # include("linops/gradient.jl")
     # # include("linops/integrate.jl")
-    
 
     # Various stuff for convenience.
     include("util/model.jl")
-
 end # module

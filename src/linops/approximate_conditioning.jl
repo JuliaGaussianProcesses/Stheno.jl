@@ -38,24 +38,16 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
 # Compute the approximate posterior 
 function optimal_q(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-    σ = sqrt(FillArrays.getindex_value(f.σ²))
+    σ = sqrt(FillArrays.getindex_value(f.σ²)) # Can conert this to arbitrary thing quite easily.
+    δ_y = y - mean(f)
     U = cholesky(Symmetric(cov(u))).U
-    Γ = broadcast(/, U' \ cov(u, f), σ)
-    Λ = cholesky(Γ * Γ' + I)
-    m′u = mean(u) + broadcast(/, U' * (Λ \ (Γ * (y - mean(f)))), σ)
-    return m′u, Λ, U
+    A_εf = U' \ cov(u, f)
+    Γ = broadcast(/, A_εf, σ)
+    Λ_ε = cholesky(Γ * Γ' + I)
+    m_ε = broadcast(/, Λ_ε \ (Γ * δ_y), σ)
+    return m_ε, Λ_ε, U
 end
 optimal_q(c::Observation, u::FiniteGP) = optimal_q(c.f, c.y, u)
 
