@@ -8,14 +8,12 @@ export mean, cov, marginals, rand, logpdf, elbo
 
 The finite-dimensional projection of the GP `f` at `x`.
 """
-struct FiniteGP{Tf<:AbstractGP, Tx<:AV, Tσ²<:AV} <: ContinuousMultivariateDistribution
+struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribution
     f::Tf
     x::Tx 
-    σ²::Tσ²
-    function FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real})
-        return new{typeof(f), typeof(x), typeof(σ²)}(f, x, σ²)
-    end
+    Σy::TΣy
 end
+FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
 FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, Fill(σ², length(x)))
 
 length(f::FiniteGP) = length(f.x)
@@ -32,7 +30,7 @@ mean(f::FiniteGP) = map(mean(f.f), f.x)
 
 The covariance matrix of `f`.
 """
-cov(f::FiniteGP) = pairwise(kernel(f.f), f.x) + Diagonal(f.σ²)
+cov(f::FiniteGP) = pairwise(kernel(f.f), f.x) + f.Σy
 
 """
     cov(f::FiniteGP, g::FiniteGP)
@@ -46,7 +44,7 @@ cov(f::FiniteGP, g::FiniteGP) = pairwise(kernel(f.f, g.f), f.x, g.x)
 
 Sugar, returns a vector of Normal distributions representing the marginals of `f`.
 """
-marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(map(kernel(f.f), f.x) .+ f.σ²))
+marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(map(kernel(f.f), f.x) .+ diag(f.Σy)))
 
 """
     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
@@ -78,9 +76,9 @@ The saturated Titsias-ELBO.
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     @assert length(f) == length(y)
-    @assert f.σ² isa Fill
-    σ² = f.σ²[1]
-    A = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) ./ sqrt(σ²)
+    @assert 1 === 0
+    Uy = cholesky(f.Σy).U
+    A = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) / Uy
     Λ_ε, δ = cholesky(Symmetric(A * A' + I)), y - mean(f)
     return -(length(y) * log(2π * σ²) + logdet(Λ_ε) - sum(abs2, A) +
         (sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) + sum(map(kernel(f.f), f.x))) / σ²) / 2
