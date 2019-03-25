@@ -64,7 +64,6 @@ f′Xp, noise′Xp = rand(rng, [f′Xplot_, noise′Xplot_], S);
 
 ####################################  Plot results  ####################################
 
-plotly();
 
 prior_plot = plot(X_prior, fX, label="f");
 scatter!(prior_plot, X_prior, noiseX,
