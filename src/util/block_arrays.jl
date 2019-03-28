@@ -445,6 +445,16 @@ end
 # #     end
 # # end
 
+function LinearAlgebra.diagzero(D::Diagonal{<:AM{T}}, r::Integer, c::Integer) where {T}
+    return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
+end
+
+function cholesky(A::BlockMatrix{T, <:Diagonal{<:AbstractMatrix{T}}} where T)
+    Cs = [cholesky(A).U for A in diag(A.blocks)]
+    @show Cs, A.block_sizes
+    return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
+end
+
 # # A slightly strange util function that shouldn't ever be used outside of `logdet`.
 # reduce_diag(f, A::Matrix{T}) where {T<:Real} = sum(f, view(A, diagind(A)))
 # function reduce_diag(f, A::BlockMatrix{T}) where T<:Real

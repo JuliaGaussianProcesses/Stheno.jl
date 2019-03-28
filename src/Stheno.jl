@@ -7,13 +7,14 @@ module Stheno
     import Statistics: mean, cov
     using LinearAlgebra: AbstractTriangular
     using Zygote: @adjoint, @nograd
+    using BlockArrays: _BlockArray
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
 
-    const bcd = broadcasted
     const pw = pairwise
+    const bcd = broadcasted
 
     # Various bits of utility that aren't inherently GP-related.
     include("util/zygote_rules.jl")
@@ -21,6 +22,7 @@ module Stheno
     include("util/block_arrays.jl")
     include("util/abstract_data_set.jl")
     include("util/toeplitz.jl")
+    include("util/fillarrays.jl")
 
     # All mean function and kernel related functionality.
     include("mean_and_kernel/mean.jl")
@@ -28,7 +30,6 @@ module Stheno
     include("mean_and_kernel/compose.jl")
     include("mean_and_kernel/block.jl")
     include("mean_and_kernel/input_transform.jl")
-    include("mean_and_kernel/degenerate.jl")
     include("mean_and_kernel/derivative.jl")
     include("mean_and_kernel/conditioning/exact.jl")
     include("mean_and_kernel/conditioning/titsias.jl")

@@ -6,10 +6,11 @@ using LinearAlgebra: AbstractTriangular
 const _rtol = 1e-10
 const _atol = 1e-10
 
+Base.length(::Nothing) = 0
+
 function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
     @show typeof(adjoint_ad), typeof(adjoint_fd)
     adjoint_ad, adjoint_fd = to_vec(adjoint_ad)[1], to_vec(adjoint_fd)[1]
-    println()
     println("atol is $atol, rtol is $rtol")
     println("ad, fd, abs, rel")
     abs_err = abs.(adjoint_ad .- adjoint_fd)

@@ -25,7 +25,7 @@ using LinearAlgebra: cholesky
 
         # Construct conditioned objects.
         y = map(μf, X0) + cholesky(pw(kff, X0)).U' * randn(rng, N)
-        cache = CondCache(kff, μf, X0, y, Zeros(length(y)))
+        cache = CondCache(kff, μf, X0, y, Zeros(length(y), length(y)))
         μ′f = CondMean(cache, μf, kff)
         μ′g = CondMean(cache, μg, kfg)
         μ′h = CondMean(cache, μh, kfh)
@@ -50,7 +50,7 @@ using LinearAlgebra: cholesky
 
         # Test that observing the mean function shrinks the posterior covariance
         # appropriately, but leaves the posterior mean at the prior mean (modulo noise).
-        cache = CondCache(kff, μf, X0, map(μf, X0), Zeros(length(y)))
+        cache = CondCache(kff, μf, X0, map(μf, X0), Zeros(length(y), length(y)))
         @test cache.α ≈ zeros(N)
 
         # Posterior covariance at the data should be fairly close to zero.

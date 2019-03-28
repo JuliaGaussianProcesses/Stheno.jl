@@ -70,18 +70,33 @@ function logpdf(f::FiniteGP, y::AbstractVector{<:Real})
 end
 
 """
-    elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP)
+   elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP)
 
-The saturated Titsias-ELBO. 
+The saturated Titsias-ELBO.
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-    @assert length(f) == length(y)
-    @assert 1 === 0
-    Uy = cholesky(f.Σy).U
-    A = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) / Uy
-    Λ_ε, δ = cholesky(Symmetric(A * A' + I)), y - mean(f)
-    return -(length(y) * log(2π * σ²) + logdet(Λ_ε) - sum(abs2, A) +
-        (sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) + sum(map(kernel(f.f), f.x))) / σ²) / 2
+   @assert length(f) == length(y)
+   @show typeof(Symmetric(f.Σy))
+   chol_Σy = cholesky(Symmetric(f.Σy))
+
+   A = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) / chol_Σy.U
+   Λ_ε, δ = cholesky(Symmetric(A * A' + I)), chol_Σy.U' \ (y - mean(f))
+
+   return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
+       sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
+       tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
+end
+
+# Compute tr(Cf / Σy) efficiently for different types of Σy. For dense Σy you obviously need
+# to compute the entirety of Cf, which is bad, but for particular structured Σy one requires
+# only a subset of the elements. Σy isa UniformScaling is version usually considered.
+function tr_Cf_invΣy(f::FiniteGP, Σy::UniformScaling, chol_Σy::Cholesky)
+   diag_Cf = map(kernel(f.f), f.x)
+   return sum(diag_Cf) / Σy.λ
+end
+function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
+   diag_Cf = map(kernel(f.f), f.x)
+   return sum(diag_Cf ./ diag(Σy))
 end
 
 """
@@ -119,10 +134,12 @@ end
 # logpdf(fs::AV{<:AbstractGP}, ys::AV{<:AV{<:Real}}) = logpdf(BlockGP(fs), BlockVector(ys))
 
 function finites_to_block(fs::AV{<:FiniteGP})
+    Σys = map(f->f.Σy, fs)
+    sizes = map(Σy->size(Σy, 1), Σys)
     return FiniteGP(
         BlockGP(map(f->f.f, fs)),
         BlockData(map(f->f.x, fs)),
-        vcat(map(f->f.σ², fs)...),
+        Matrix(_BlockArray(Diagonal(Σys), sizes, sizes)),
     )
 end
 

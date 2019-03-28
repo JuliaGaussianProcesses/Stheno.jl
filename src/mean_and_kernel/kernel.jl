@@ -21,6 +21,13 @@ map `k` over `x`, with the convention that `k(x) := k(x, x)`.
 map(k::CrossKernel, x::AV) = materialize(_map(k, x))
 map(k::CrossKernel, x::GPUVector) = materialize(_map(k, x))
 
+@adjoint function map(k::CrossKernel, x::AV)
+    return Zygote.forward((k, x)->materialize(_map(k, x)), k, x)
+end
+@adjoint function map(k::CrossKernel, x::GPUVector)
+    return Zygote.forward((k, x)->materialize(_map(k, x)), k, x)
+end
+
 """
     map(k::CrossKernel, x::AV, x′::AV)
 
@@ -28,6 +35,13 @@ map `k` over the elements of `x` and `x′`.
 """
 map(k::CrossKernel, x::AV, x′::AV) = materialize(_map(k, x, x′))
 map(k::CrossKernel, x::GPUVector, x′::GPUVector) = materialize(_map(k, x, x′))
+
+@adjoint function map(k::CrossKernel, x::AV, x′::AV)
+    return Zygote.forward((k, x, x′)->materialize(_map(k, x, x′)), k, x, x′)
+end
+@adjoint function map(k::CrossKernel, x::GPUVector, x′::GPUVector)
+    return Zygote.forward((k, x, x′)->materialize(_map(k, x, x′)), k, x, x′)
+end
 
 """
     pairwise(f, x::AV)
@@ -37,6 +51,9 @@ Compute the `length(x) × length(x′)` matrix whose `(p, q)`th element is `k(x[
 broadcasting machinery if required.
 """
 pairwise(k::CrossKernel, x::AV) = materialize(_pw(k, x))
+@adjoint function pairwise(k::CrossKernel, x::AV)
+    return Zygote.forward((k, x)->materialize(_pw(k, x)), k, x)
+end
 
 """
     pairwise(f, x::AV, x′::AV)
@@ -46,7 +63,9 @@ Compute the `length(x) × length(x′)` matrix whose `(p, q)`th element is `k(x[
 broadcasting machinery if required.
 """
 pairwise(k::CrossKernel, x::AV, x′::AV) = materialize(_pw(k, x, x′))
-
+@adjoint function pairwise(k::CrossKernel, x::AV, x′::AV)
+    return Zygote.forward((k, x, x′)->materialize(_pw(k, x, x′)), k, x, x′)
+end
 
 
 ################################ Util. for Toeplitz matrices ###############################
