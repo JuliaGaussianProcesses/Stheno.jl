@@ -33,8 +33,8 @@
             x, ȳ = randn(rng), randn(rng, N)
             d = Fill(x, N)
             D = Diagonal(d)
-            adjoint_test(d->diag(Diagonal(d)), ȳ, d)
-            adjoint_test(x->diag(Diagonal(Fill(x, N))), ȳ, x)
+            # adjoint_test(d->diag(Diagonal(d)), ȳ, d)
+            # adjoint_test(x->diag(Diagonal(Fill(x, N))), ȳ, x)
         end
     end
     @testset "cholesky(Diagonal(Fill(...)))" begin

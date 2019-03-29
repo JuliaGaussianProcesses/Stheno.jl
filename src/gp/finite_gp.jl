@@ -91,24 +91,22 @@ end
 # to compute the entirety of Cf, which is bad, but for particular structured Σy one requires
 # only a subset of the elements. Σy isa UniformScaling is version usually considered.
 function tr_Cf_invΣy(f::FiniteGP, Σy::UniformScaling, chol_Σy::Cholesky)
-   diag_Cf = map(kernel(f.f), f.x)
-   return sum(diag_Cf) / Σy.λ
+   return sum(map(kernel(f.f), f.x)) / Σy.λ
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
-   diag_Cf = map(kernel(f.f), f.x)
-   return sum(diag_Cf ./ diag(Σy))
+   return sum(map(kernel(f.f), f.x) .* inv.(diag(Σy)))
 end
 
-"""
-    elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, mε::AV{<:Real}, Λε::AM{<:Real})
+# """
+#     elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, mε::AV{<:Real}, Λε::AM{<:Real})
 
-The unsaturated Titsias-ELBO.
-"""
-function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, mε::AV{<:Real}, Λε::AM{<:Real})
-    @assert length(u.x) == length(mε)
-    @assert size(Λε) == (length(mε), length(mε))
-    # do stuff.
-end
+# The unsaturated Titsias-ELBO.
+# """
+# function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, mε::AV{<:Real}, Λε::AM{<:Real})
+#     @assert length(u.x) == length(mε)
+#     @assert size(Λε) == (length(mε), length(mε))
+#     # do stuff.
+# end
 
 
 ####################################################

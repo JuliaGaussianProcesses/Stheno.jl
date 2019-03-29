@@ -60,6 +60,10 @@ end
 @adjoint broadcasted(::typeof(*), a::Zeros, b::AbstractArray) = _zero_mul_adjoint(a, b)
 @adjoint broadcasted(::typeof(*), a::Zeros, b::AbstractFill) = _zero_mul_adjoint(a, b)
 
+@adjoint function broadcasted(::typeof(inv), X::Fill)
+    return broadcast(inv, X), Δ->(nothing, -Δ * abs2(inv(getindex_value(X))))
+end
+
 @adjoint function sqeuclidean(x::AbstractVector, y::AbstractVector)
     δ = x .- y
     return sum(abs2, δ), function(Δ::Real)
