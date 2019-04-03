@@ -14,7 +14,7 @@ struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribut
     Σy::TΣy
 end
 FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
-FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, Fill(σ², length(x)))
+FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, fill(σ², length(x)))
 
 length(f::FiniteGP) = length(f.x)
 
@@ -76,7 +76,6 @@ The saturated Titsias-ELBO.
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
    @assert length(f) == length(y)
-   @show typeof(Symmetric(f.Σy))
    chol_Σy = cholesky(Symmetric(f.Σy))
 
    A = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) / chol_Σy.U
@@ -94,7 +93,7 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::UniformScaling, chol_Σy::Cholesky)
    return sum(map(kernel(f.f), f.x)) / Σy.λ
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
-   return sum(map(kernel(f.f), f.x) .* inv.(diag(Σy)))
+   return sum(map(kernel(f.f), f.x) ./ diag(Σy))
 end
 
 # """

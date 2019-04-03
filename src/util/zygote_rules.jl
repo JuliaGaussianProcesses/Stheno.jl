@@ -64,6 +64,8 @@ end
     return broadcast(inv, X), Δ->(nothing, -Δ * abs2(inv(getindex_value(X))))
 end
 
+@adjoint fill(x::Real, dims...) = fill(x, dims...), Δ->(sum(Δ), map(_->nothing, dims)...)
+
 @adjoint function sqeuclidean(x::AbstractVector, y::AbstractVector)
     δ = x .- y
     return sum(abs2, δ), function(Δ::Real)

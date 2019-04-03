@@ -1,28 +1,28 @@
 using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrices, StatsFuns
 
 @testset "zygote_rules" begin
-    @testset "FillArrays" begin
-        rng, N = MersenneTwister(123456), 10
-        x, y = randn(rng), randn(rng)
-        @test Zygote.gradient(x->sum(Fill(x, N)), x)[1] == N
-        @test Zygote.gradient(x->sum(Fill(x, N, 3, 4)), x)[1] == N * 3 * 4
-        @test Zygote.gradient((x, y)->sum(Fill(x, N)), x, y) == (N, nothing)
+    # @testset "FillArrays" begin
+    #     rng, N = MersenneTwister(123456), 10
+    #     x, y = randn(rng), randn(rng)
+    #     @test Zygote.gradient(x->sum(Fill(x, N)), x)[1] == N
+    #     @test Zygote.gradient(x->sum(Fill(x, N, 3, 4)), x)[1] == N * 3 * 4
+    #     @test Zygote.gradient((x, y)->sum(Fill(x, N)), x, y) == (N, nothing)
 
-        let
-            out, back = Zygote.forward(sum, Fill(x, N))
-            @test back(nothing) isa Nothing
-        end
+    #     let
+    #         out, back = Zygote.forward(sum, Fill(x, N))
+    #         @test back(nothing) isa Nothing
+    #     end
 
-        # Test unary broadcasting gradients.
-        out, back = Zygote.forward(x->exp.(x), Fill(x, N))
-        @test out isa Fill
-        @test out == Fill(exp(x), N)
-        @test back(Ones(N))[1] isa Fill
-        @test back(Ones(N))[1] == Ones(N) .* exp(x)
-        @test back(ones(N))[1] isa Vector
-        @test back(ones(N))[1] == ones(N) .* exp(x)
-        adjoint_test(x->exp.(Fill(3x, N)), ones(N), x)
-    end
+    #     # Test unary broadcasting gradients.
+    #     out, back = Zygote.forward(x->exp.(x), Fill(x, N))
+    #     @test out isa Fill
+    #     @test out == Fill(exp(x), N)
+    #     @test back(Ones(N))[1] isa Fill
+    #     @test back(Ones(N))[1] == Ones(N) .* exp(x)
+    #     @test back(ones(N))[1] isa Vector
+    #     @test back(ones(N))[1] == ones(N) .* exp(x)
+    #     adjoint_test(x->exp.(Fill(3x, N)), ones(N), x)
+    # end
 
     @testset "Cholesky (ctor)" begin
         rng, N = MersenneTwister(123456), 2
@@ -82,6 +82,13 @@ using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrice
         rng, N = MersenneTwister(123456), 11
         adjoint_test(Diagonal, rand(rng, N, N), randn(rng, N))
         adjoint_test(x->Diagonal(x).diag, randn(rng, N), randn(rng, N))
+    end
+
+    @testset "fill" begin
+        rng, N, M, P = MersenneTwister(123456), 11, 6, 5
+        adjoint_test(x->fill(x, N), randn(rng, N), randn(rng))
+        adjoint_test(x->fill(x, N, M), randn(rng, N, M), randn(rng))
+        adjoint_test(x->fill(x, N, M, P), randn(rng, N, M, P), randn(rng))
     end
 
     @testset "xlogx" begin

@@ -35,8 +35,8 @@ end
 Condition `g` on observation `c`.
 """
 function |(g::GP, c::Observation)
-    f, x, y, σ² = c.f.f, c.f.x, c.y, c.f.σ²
-    return GP(|, g, f, CondCache(kernel(f), mean(f), x, y, σ²))
+    f, x, y, Σy = c.f.f, c.f.x, c.y, c.f.Σy
+    return GP(|, g, f, CondCache(kernel(f), mean(f), x, y, Σy))
 end
 |(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))
 

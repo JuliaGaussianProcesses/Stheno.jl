@@ -9,7 +9,7 @@ include("test_util.jl")
         # include("util/covariance_matrices.jl")
         # include("util/block_arrays.jl")
         # include("util/abstract_data_set.jl")
-        include("util/fillarrays.jl")
+        # include("util/fillarrays.jl")
     end
 
     @testset "mean_and_kernel" begin
