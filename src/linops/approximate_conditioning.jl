@@ -40,14 +40,20 @@ end
 
 # Compute the approximate posterior 
 function optimal_q(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-    σ = sqrt(FillArrays.getindex_value(f.σ²)) # Can conert this to arbitrary thing quite easily.
-    δ_y = y - mean(f)
-    U = cholesky(Symmetric(cov(u))).U
-    A_εf = U' \ cov(u, f)
-    Γ = broadcast(/, A_εf, σ)
-    Λ_ε = cholesky(Γ * Γ' + I)
-    m_ε = broadcast(/, Λ_ε \ (Γ * δ_y), σ)
+    U_y, U = cholesky(Symmetric(f.Σ)).U, cholesky(Symmetric(cov(u))).U
+    B_εf, b_y = U' \ (cov(u, f) / U_y), U_y' \ y
+    Λ_ε = B_εf * B_εf' + I
+    m_ε = cholesky(Λ_ε) \ (B_εf * b_y)
     return m_ε, Λ_ε, U
+
+
+    # δ_y = y - mean(f)
+    # U = cholesky(Symmetric(cov(u))).U
+    # A_εf = U' \ cov(u, f)
+    # Γ = broadcast(/, A_εf, σ)
+    # Λ_ε = cholesky(Γ * Γ' + I)
+    # m_ε = broadcast(/, Λ_ε \ (Γ * δ_y), σ)
+    return m_ε, Λ_ε, U # What things to I actually need for the unsaturated bound?
 end
 optimal_q(c::Observation, u::FiniteGP) = optimal_q(c.f, c.y, u)
 

@@ -30,7 +30,7 @@ to_vec(x::Array) = vec(x), x_vec->reshape(x_vec, size(x))
 # AbstractArrays.
 to_vec(x::ColsAreObs{<:Real}) = (vec(x.X), x_vec->ColsAreObs(reshape(x_vec, size(x.X))))
 to_vec(x::BlockArray) = vec(Array(x)), x_->BlockArray(reshape(x_, size(x)), blocksizes(x))
-to_vec(x::AbstractFill) = vec(x), nothing
+to_vec(x::AbstractFill) = vec(Array(x)), x->error("No backwards defined")
 function to_vec(x::T) where {T<:AbstractTriangular}
     x_vec, back = to_vec(Matrix(x))
     return x_vec, x_vec->T(reshape(back(x_vec), size(x)))

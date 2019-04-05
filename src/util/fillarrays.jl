@@ -10,7 +10,10 @@ function cholesky(A::Diagonal{T, <:Fill{T, 1}} where T)
     return Cholesky(Diagonal(Fill(sqrt(getindex_value(A.diag)), length(A.diag))), :U, 0)
 end
 @adjoint function cholesky(A::Diagonal{T, <:Fill{T, 1}} where T)
-    return cholesky(A), Δ->(Diagonal(Fill(1 / (2 * sqrt(getindex_value(A.diag))), length(A.diag))),)
+    return cholesky(A), function(Δ)
+        d = sum(diag(Δ.factors)) / length(A.diag)
+        return (Diagonal(Fill(d / (2 * sqrt(getindex_value(A.diag))), length(A.diag))),)
+    end
 end
 
 # Diagonal matrices are always symmetric...
