@@ -41,10 +41,15 @@ end
 
 _prod_accum(::Fill, sΔ::Real, sb::Real) = (value=sΔ * sb, axes=nothing)
 _prod_accum(::Union{Ones, Zeros}, ::Real, ::Real) = (axes=nothing,)
-@adjoint function broadcasted(::typeof(*), a::AbstractFill, b::AbstractFill)
+@adjoint function broadcasted(
+    ::typeof(*),
+    a::AbstractFill{<:Real, N},
+    b::AbstractFill{<:Real, N},
+) where {N}
     return broadcasted(*, a, b), function(Δ)
         sΔ, sa, sb = sum(Δ), sum(a), sum(b)
-        return (nothing, _prod_accum(a, sΔ, sb), _prod_accum(b, sΔ, sa))
+        return (nothing, (value=sum(Δ .* b), axes=nothing), (value=sum(Δ .* a), axes=nothing))
+        return (nothing, _prod_accum(a, sΔ, sb), size(b) * _prod_accum(b, sΔ, sa))
     end
 end
 

@@ -66,10 +66,6 @@ The log probability density of `y` under `f`.
 """
 function logpdf(f::FiniteGP, y::AbstractVector{<:Real})
     μ, C = mean(f), cholesky(Symmetric(cov(f)))
-    # return cov(f)
-    # println("foo")
-    return Xt_invA_X(C, y)# - μ)
-    return -(length(y) * log(2π) + logdet(C)) / 2
     return -(length(y) * log(2π) + logdet(C) + Xt_invA_X(C, y - μ)) / 2
 end
 

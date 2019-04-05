@@ -116,7 +116,7 @@ function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1
     @test y ≈ f(x...)
 
     # Check that ad and fd adjoints (approximately) agree.
-    print_adjoints(adj_ad, adj_fd, rtol, atol)
+    # print_adjoints(adj_ad, adj_fd, rtol, atol)
     @test fd_isapprox(adj_ad, adj_fd, rtol, atol)
 end
 
