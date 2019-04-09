@@ -30,7 +30,7 @@ module Stheno
     include("mean_and_kernel/compose.jl")
     include("mean_and_kernel/block.jl")
     include("mean_and_kernel/input_transform.jl")
-    include("mean_and_kernel/derivative.jl")
+    # include("mean_and_kernel/derivative.jl")
     include("mean_and_kernel/conditioning/exact.jl")
     include("mean_and_kernel/conditioning/titsias.jl")
     include("mean_and_kernel/algebra.jl")

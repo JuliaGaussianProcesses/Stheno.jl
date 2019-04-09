@@ -1,6 +1,57 @@
 using Random, LinearAlgebra, BlockArrays, FillArrays
-using BlockArrays: cumulsizes
+using BlockArrays: cumulsizes, _BlockArray
 using Stheno: block_diagonal
+
+function general_BlockDiagonal_tests(rng, blocks)
+    d = block_diagonal(blocks)
+    Ps, Qs = size.(blocks, 1), size.(blocks, 2)
+
+    @testset "general" begin
+        @test blocksizes(d, 1) == Ps
+        @test blocksizes(d, 2) == Qs
+
+        @test getblock(d, 1, 1) == blocks[1]
+        @test getblock(d, 2, 2) == blocks[2]
+        @test getblock(d, 1, 2) == zeros(Ps[1], Qs[2])
+        @test getblock(d, 2, 1) == zeros(Ps[2], Qs[1])
+
+        @test d[Block(1, 1)] == getblock(d, 1, 1)
+    end
+end
+
+function square_BlockDiagonal_tests(rng, blocks)
+    D, Ps = block_diagonal(blocks), size.(blocks, 1)
+    Dmat = Matrix(D)
+    C, Cmat = cholesky(D), cholesky(Dmat)
+
+    @testset "square" begin
+        @test C.U ≈ Cmat.U
+        @test logdet(C) ≈ logdet(Cmat)
+
+        Csym = cholesky(Symmetric(D))
+        @test C.U ≈ Csym.U
+
+        # Matrix-Vector tests.
+        xs, ys = [randn(rng, P) for P in Ps], [randn(rng, P) for P in Ps]
+        U, y, x = C.U, _BlockArray(ys, Ps), _BlockArray(xs, Ps)
+
+        @test ldiv!(U, copy(x)) ≈ UpperTriangular(Matrix(U)) \ Vector(x)
+        @test U \ x ≈ ldiv!(U, copy(x))
+
+        @test mul!(y, U, x) ≈ Matrix(U) * Vector(x)
+        @test U * x == mul!(y, U, x)
+
+        # Matrix-Matrix tests.
+        Qs = [3, 4]
+        X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+        Y = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+        @test ldiv!(U, copy(X)) ≈ UpperTriangular(Matrix(U)) \ Matrix(X)
+        @test U \ X ≈ ldiv!(U, copy(X))
+
+        @test mul!(Y, U, X) ≈ Matrix(U) * Matrix(X)
+        @test U * X == mul!(Y, U, X)
+    end
+end
 
 @testset "block_arrays" begin
 
@@ -92,38 +143,30 @@ using Stheno: block_diagonal
     end
 
     @testset "BlockDiagonal" begin
-        rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
-        vs = [randn(rng, Ps[1], Qs[1]), randn(rng, Ps[2], Qs[2])]
-        d = block_diagonal(vs)
+        @testset "Matrix" begin
+            rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
+            vs = [randn(rng, Ps[1], Qs[1]), randn(rng, Ps[2], Qs[2])]
+            general_BlockDiagonal_tests(rng, vs)
 
-        @test blocksizes(d, 1) == Ps
-        @test blocksizes(d, 2) == Qs
-
-        @test getblock(d, 1, 1) == vs[1]
-        @test getblock(d, 2, 2) == vs[2]
-        @test getblock(d, 1, 2) == zeros(2, 5)
-        @test getblock(d, 2, 1) == zeros(3, 4)
-
-        @test d[Block(1, 1)] == getblock(d, 1, 1)
-
-        @testset "cholesky" begin
             As = [randn(rng, Ps[n], Ps[n]) for n in eachindex(Ps)]
-            Bs = [As[n] * As[n]' + I for n in eachindex(As)]
+            blocks = [As[n] * As[n]' + I for n in eachindex(As)]
+            square_BlockDiagonal_tests(rng, blocks)
+        end
+        @testset "Diagonal{T, <:Vector{T}}" begin
+            rng, Ps = MersenneTwister(123456), [2, 3]
+            vs = [Diagonal(randn(rng, Ps[n])) for n in eachindex(Ps)]
+            general_BlockDiagonal_tests(rng, vs)
 
-            D = block_diagonal(Bs)
-            Dmat = Matrix(D)
-            C, Cmat = cholesky(D), cholesky(Dmat)
-            @test C.U ≈ Cmat.U
+            blocks = [Diagonal(ones(P) + exp.(randn(rng, P))) for P in Ps]
+            square_BlockDiagonal_tests(rng, blocks)
+        end
+        @testset "Diagonal{T, <:Fill{T, 1}}" begin
+            rng, Ps = MersenneTwister(123456), [2, 3]
+            vs = [Diagonal(Fill(randn(rng), P)) for P in Ps]
+            general_BlockDiagonal_tests(rng, vs)
 
-            Csym = cholesky(Symmetric(D))
-            @test C.U ≈ Csym.U
-
-            @test logdet(C) == logdet(Cmat)
-
-            xs = [randn(rng, Ps[n]) for n in eachindex(Ps)]
-            U, x = C.U, BlockArrays._BlockArray(xs, Ps)
-            @test ldiv!(U, copy(x)) == UpperTriangular(Matrix(U)) \ Vector(x)
-            @test U \ x == ldiv!(U, copy(x))
+            blocks = [Diagonal(Fill(exp(randn(rng)), P)) for P in Ps]
+            square_BlockDiagonal_tests(rng, blocks)
         end
     end
 

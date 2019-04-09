@@ -8,7 +8,7 @@ using BlockArrays: cumulsizes, blocksizes, _BlockArray, blocksizes, BlockSizes
 
 import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
 import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
-    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!, logdet, ldiv!
+    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!, logdet, ldiv!, mul!, logabsdet
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks, getblock!
 export unbox, BlockSymmetric
@@ -117,7 +117,8 @@ end
 
 #################################### BlockDiagonal #########################################
 
-const BlockDiagonal{T} = BlockMatrix{T, <:Diagonal{<:AbstractMatrix{T}}}
+
+const BlockDiagonal{T, TM} = BlockMatrix{T, <:Diagonal{TM}} where {TM <: AbstractMatrix{T}}
 
 function block_diagonal(vs::AbstractVector{<:AbstractMatrix{T}}) where {T}
     return _BlockArray(Diagonal(vs), size.(vs, 1), size.(vs, 2))
@@ -127,13 +128,16 @@ function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T
     return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
 end
 
+# Strip unhelpful wrappers to ensure that ldiv! is efficient.
+strip_block(X::UpperTriangular) = X
+strip_block(X::UpperTriangular{T, <:Diagonal{T}} where {T}) = X.data
 
 function cholesky(A::BlockDiagonal)
-    Cs = [cholesky(A).U for A in diag(A.blocks)]
+    Cs = [strip_block(cholesky(A).U) for A in diag(A.blocks)]
     return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
 end
 function cholesky(A::Symmetric{T, <:BlockDiagonal{T}} where {T})
-    Cs = [cholesky(Symmetric(A)).U for A in diag(A.data.blocks)]
+    Cs = [strip_block(cholesky(Symmetric(A)).U) for A in diag(A.data.blocks)]
     return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.data.block_sizes), :U, 0)
 end
 
@@ -141,22 +145,64 @@ function logdet(C::Cholesky{T, <:BlockDiagonal{T}} where {T})
     return 2 * sum(n->logabsdet(C.factors[Block(n, n)])[1], 1:nblocks(C.factors, 1))
 end
 
-function \(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::AbstractBlockVector)
-    return ldiv!(U, copy(x))
-end
+# Because Base is dumb and hasn't implemented `logabsdet` for `Diagonal` matrices.
+logabsdet(d::Diagonal) = logabsdet(UpperTriangular(d))
 
-function ldiv!(
-    U::UpperTriangular{T, <:BlockDiagonal{T}},
-    x::AbstractBlockVector{V},
-) where {T<:Real, V<:Real}
-    A = U.data
-    @assert are_conformal(A, x)
-    blocks = A.blocks.diag
+function ldiv!(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::ABV)
+    @assert are_conformal(U.data, x)
+    blocks = U.data.blocks.diag
     for n in 1:nblocks(x, 1)
-        setblock!(x, ldiv!(UpperTriangular(blocks[n]), x[Block(n)]), n)
+        setblock!(x, ldiv!(blocks[n], x[Block(n)]), n)
     end
     return x
 end
+\(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::ABV) = ldiv!(U, copy(x))
+
+function ldiv!(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, X::ABM)
+    @assert are_conformal(U.data, X)
+    blocks = U.data.blocks.diag
+    for r in 1:nblocks(X, 1)
+        for c in 1:nblocks(X, 2)
+            setblock!(X, ldiv!(blocks[r], X[Block(r, c)]), r, c)
+        end
+    end
+    return X
+end
+\(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, X::ABM) = ldiv!(U, copy(X))
+
+# THIS IS ALL WRONG AND MY TESTING IS CLEARLY SHIT!
+function mul!(y::ABV, U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::ABV)
+    @assert are_conformal(U.data, x) && are_conformal(U.data, y)
+    blocks = U.data.blocks.diag
+    for r in 1:nblocks(U.data, 1)
+        mul!(getblock(y, r), UpperTriangular(blocks[r]), getblock(x, r))
+    end
+    return y
+end
+mul!(y::ABV, U::UpperTriangular{<:Any, <:BlockDiagonal}, x::ABV) = mul!(y, U.data, x)
+function mul!(y::ABV, D::BlockDiagonal{T, <:Diagonal{T}} where {T}, x::ABV)
+    @assert are_conformal(D, x) && are_conformal(D, y)
+    blocks = D.blocks.diag
+    for r in 1:nblocks(D, 1)
+        mul!(getblock(y, r), blocks[r], getblock(x, r))
+    end
+    return y
+end
+*(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::ABV) = mul!(copy(x), U, x)
+
+function mul!(Y::ABM, U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, X::ABM)
+    @assert are_conformal(U.data, X) && are_conformal(U.data, Y)
+    blocks = U.data.blocks.diag
+    for r in 1:nblocks(U.data, 1)
+        for c in 1:nblocks(X, 2)
+            mul!(getblock(Y, r, c), blocks[r], getblock(X, r, c))
+        end
+    end
+    return Y
+end
+function mul!(Y::ABM, U::UpperTriangular{T, <:Block})
+*(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, X::ABM) = mul!(copy(X), U, X)
+
 
 
 ################################## UpperTriangular BlockMatrices ###########################
