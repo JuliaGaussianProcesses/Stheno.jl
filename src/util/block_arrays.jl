@@ -8,7 +8,7 @@ using BlockArrays: cumulsizes, blocksizes, _BlockArray, blocksizes, BlockSizes
 
 import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
 import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
-    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!, logdet
+    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!, logdet, ldiv!
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks, getblock!
 export unbox, BlockSymmetric
@@ -138,11 +138,24 @@ function cholesky(A::Symmetric{T, <:BlockDiagonal{T}} where {T})
 end
 
 function logdet(C::Cholesky{T, <:BlockDiagonal{T}} where {T})
-    return sum(n->logdet(C.factors[Block(n, n)]), 1:nblocks(C.factors, 1))
+    return 2 * sum(n->logabsdet(C.factors[Block(n, n)])[1], 1:nblocks(C.factors, 1))
 end
 
-function \(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T})
+function \(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::AbstractBlockVector)
+    return ldiv!(U, copy(x))
+end
 
+function ldiv!(
+    U::UpperTriangular{T, <:BlockDiagonal{T}},
+    x::AbstractBlockVector{V},
+) where {T<:Real, V<:Real}
+    A = U.data
+    @assert are_conformal(A, x)
+    blocks = A.blocks.diag
+    for n in 1:nblocks(x, 1)
+        setblock!(x, ldiv!(UpperTriangular(blocks[n]), x[Block(n)]), n)
+    end
+    return x
 end
 
 
@@ -243,15 +256,15 @@ end
 
 # ####################################### Multiplication #####################################
 
-# """
-#     are_conformal(A::BlockVecOrMat, B::BlockVecOrMat)
+"""
+    are_conformal(A::BlockVecOrMat, B::BlockVecOrMat)
 
-# Test whether two block matrices (or vectors) are conformal. This criterion is stricter than
-# that for general matrices / vectors as we additionally require that each block be conformal
-# with block of the other matrix with which it will be multiplied. This ensures that the
-# result is itself straightforwardly representable as `BlockVecOrMat`.
-# """
-# are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
+Test whether two block matrices (or vectors) are conformal. This criterion is stricter than
+that for general matrices / vectors as we additionally require that each block be conformal
+with block of the other matrix with which it will be multiplied. This ensures that the
+result is itself straightforwardly representable as `BlockVecOrMat`.
+"""
+are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
 
 # """
 #     *(A::AdjTransTriABM, x::BlockVector)

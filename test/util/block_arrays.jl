@@ -111,11 +111,19 @@ using Stheno: block_diagonal
             Bs = [As[n] * As[n]' + I for n in eachindex(As)]
 
             D = block_diagonal(Bs)
-            C = cholesky(D)
-            @test C.U ≈ cholesky(Matrix(D)).U
+            Dmat = Matrix(D)
+            C, Cmat = cholesky(D), cholesky(Dmat)
+            @test C.U ≈ Cmat.U
 
             Csym = cholesky(Symmetric(D))
             @test C.U ≈ Csym.U
+
+            @test logdet(C) == logdet(Cmat)
+
+            xs = [randn(rng, Ps[n]) for n in eachindex(Ps)]
+            U, x = C.U, BlockArrays._BlockArray(xs, Ps)
+            @test ldiv!(U, copy(x)) == UpperTriangular(Matrix(U)) \ Vector(x)
+            @test U \ x == ldiv!(U, copy(x))
         end
     end
 
