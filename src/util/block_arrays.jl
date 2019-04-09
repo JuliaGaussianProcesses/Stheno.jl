@@ -4,13 +4,13 @@
 using FillArrays, LinearAlgebra, BlockArrays
 using FillArrays: Fill
 
-using BlockArrays: cumulsizes, blocksizes, _BlockArray
+using BlockArrays: cumulsizes, blocksizes, _BlockArray, blocksizes, BlockSizes
 
 import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
 import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
-    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!
+    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!, logdet
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
-    blocksize, setblock!, nblocks
+    blocksize, setblock!, nblocks, getblock!
 export unbox, BlockSymmetric
 
 # Do some character saving.
@@ -114,6 +114,40 @@ function zero(X::AbstractBlockMatrix)
     blocks = [zero(getblock(X, p, q)) for p in 1:nblocks(X, 1), q in 1:nblocks(X, 2)]
     return BlockMatrix(blocks)
 end
+
+#################################### BlockDiagonal #########################################
+
+const BlockDiagonal{T} = BlockMatrix{T, <:Diagonal{<:AbstractMatrix{T}}}
+
+function block_diagonal(vs::AbstractVector{<:AbstractMatrix{T}}) where {T}
+    return _BlockArray(Diagonal(vs), size.(vs, 1), size.(vs, 2))
+end
+
+function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T}
+    return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
+end
+
+
+function cholesky(A::BlockDiagonal)
+    Cs = [cholesky(A).U for A in diag(A.blocks)]
+    return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
+end
+function cholesky(A::Symmetric{T, <:BlockDiagonal{T}} where {T})
+    Cs = [cholesky(Symmetric(A)).U for A in diag(A.data.blocks)]
+    return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.data.block_sizes), :U, 0)
+end
+
+function logdet(C::Cholesky{T, <:BlockDiagonal{T}} where {T})
+    return sum(n->logdet(C.factors[Block(n, n)]), 1:nblocks(C.factors, 1))
+end
+
+function \(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T})
+
+end
+
+
+################################## UpperTriangular BlockMatrices ###########################
+
 
 
 # ################################# Symmetric BlockMatrices ##############################
@@ -445,15 +479,15 @@ end
 # #     end
 # # end
 
-function LinearAlgebra.diagzero(D::Diagonal{<:AM{T}}, r::Integer, c::Integer) where {T}
-    return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
-end
+# function LinearAlgebra.diagzero(D::Diagonal{<:AM{T}}, r::Integer, c::Integer) where {T}
+#     return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
+# end
 
-function cholesky(A::BlockMatrix{T, <:Diagonal{<:AbstractMatrix{T}}} where T)
-    Cs = [cholesky(A).U for A in diag(A.blocks)]
-    @show Cs, A.block_sizes
-    return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
-end
+# function cholesky(A::BlockMatrix{T, <:Diagonal{<:AbstractMatrix{T}}} where T)
+#     Cs = [cholesky(A).U for A in diag(A.blocks)]
+#     @show Cs, A.block_sizes
+#     return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
+# end
 
 # # A slightly strange util function that shouldn't ever be used outside of `logdet`.
 # reduce_diag(f, A::Matrix{T}) where {T<:Real} = sum(f, view(A, diagind(A)))

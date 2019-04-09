@@ -1,5 +1,6 @@
 using Random, LinearAlgebra, BlockArrays, FillArrays
 using BlockArrays: cumulsizes
+using Stheno: block_diagonal
 
 @testset "block_arrays" begin
 
@@ -88,6 +89,34 @@ using BlockArrays: cumulsizes
         @test zero(X) isa BlockMatrix
         @test cumulsizes(X) == cumulsizes(zero(X))
         @test zero(X) == zero(Matrix(X))
+    end
+
+    @testset "BlockDiagonal" begin
+        rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
+        vs = [randn(rng, Ps[1], Qs[1]), randn(rng, Ps[2], Qs[2])]
+        d = block_diagonal(vs)
+
+        @test blocksizes(d, 1) == Ps
+        @test blocksizes(d, 2) == Qs
+
+        @test getblock(d, 1, 1) == vs[1]
+        @test getblock(d, 2, 2) == vs[2]
+        @test getblock(d, 1, 2) == zeros(2, 5)
+        @test getblock(d, 2, 1) == zeros(3, 4)
+
+        @test d[Block(1, 1)] == getblock(d, 1, 1)
+
+        @testset "cholesky" begin
+            As = [randn(rng, Ps[n], Ps[n]) for n in eachindex(Ps)]
+            Bs = [As[n] * As[n]' + I for n in eachindex(As)]
+
+            D = block_diagonal(Bs)
+            C = cholesky(D)
+            @test C.U ≈ cholesky(Matrix(D)).U
+
+            Csym = cholesky(Symmetric(D))
+            @test C.U ≈ Csym.U
+        end
     end
 
     # # Test Symmetric block matrix construction and util.

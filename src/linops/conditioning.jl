@@ -21,8 +21,8 @@ get_y(c::Observation) = c.y
 function merge(fs::Tuple{Vararg{FiniteGP}})
     block_gp = BlockGP([map(f->f.f, fs)...])
     block_x = BlockData([map(f->f.x, fs)...])
-    block_σ² = BlockVector([map(f->f.σ², fs)...])
-    return FiniteGP(block_gp, block_x, block_σ²)
+    block_Σy = BlockVector([map(f->f.Σy, fs)...])
+    return FiniteGP(block_gp, block_x, block_Σy)
 end
 function merge(c::Tuple{Vararg{Observation}})
     block_y = BlockVector([map(get_y, c)...])

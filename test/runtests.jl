@@ -4,13 +4,13 @@ include("test_util.jl")
 
 @testset "Stheno" begin
 
-    # @testset "util" begin
-    #     include("util/zygote_rules.jl")
-    #     include("util/covariance_matrices.jl")
-    #     include("util/block_arrays.jl")
-    #     include("util/abstract_data_set.jl")
-    #     include("util/fillarrays.jl")
-    # end
+    @testset "util" begin
+        # include("util/zygote_rules.jl")
+        # include("util/covariance_matrices.jl")
+        # include("util/block_arrays.jl")
+        # include("util/abstract_data_set.jl")
+        # include("util/fillarrays.jl")
+    end
 
     # @testset "mean_and_kernel" begin
     #     include("mean_and_kernel/mean.jl")
@@ -36,11 +36,11 @@ include("test_util.jl")
     @testset "linops" begin
         include("linops/indexing.jl")
         include("linops/conditioning.jl")
-        include("linops/product.jl")
-        include("linops/addition.jl")
-        include("linops/compose.jl")
-        include("linops/approximate_conditioning.jl")
-        include("linops/integrate.jl")
+        # include("linops/product.jl")
+        # include("linops/addition.jl")
+        # include("linops/compose.jl")
+        # include("linops/approximate_conditioning.jl")
+        # include("linops/integrate.jl")
     end
 
     @testset "integration" begin

@@ -402,7 +402,7 @@ uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 version = "0.8.0"
 
 [[Zygote]]
-deps = ["DiffRules", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions"]
+deps = ["DiffRules", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics"]
 path = "../Zygote"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
-version = "0.1.0+"
+version = "0.2.0+"

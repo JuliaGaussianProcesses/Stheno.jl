@@ -14,7 +14,8 @@ struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribut
     Σy::TΣy
 end
 FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
-FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, fill(σ², length(x)))
+FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, Fill(σ², length(x)))
+FiniteGP(f::AbstractGP, x::AV) = FiniteGP(f, x, 0)
 
 length(f::FiniteGP) = length(f.x)
 
