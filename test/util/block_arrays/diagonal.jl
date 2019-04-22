@@ -73,7 +73,7 @@ function BlockDiagonal_chol_tests(rng, blocks)
     @test C.U ≈ Csym.U
 end
 
-@testset "BlockDiagonal" begin
+@testset "diagonal" begin
     @testset "Matrix" begin
         rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
         vs = [randn(rng, Ps[1], Qs[1]), randn(rng, Ps[2], Qs[2])]

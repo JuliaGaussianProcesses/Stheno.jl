@@ -18,7 +18,14 @@ transpose(X::BlockUpperTriangular) = LowerTriangular(transpose(X.data))
 #
 
 function mul!(y::BlockVector, L::BlockLowerTriangular, x::BlockVector)
-    error("Not implemented")
+    @assert are_conformal(A, x) && are_conformal(A', y)
+    for r in 1:nblocks(A, 1)
+        mul!(y[Block(r)], A[Block(r, 1)], x[Block(1)])
+        for c in 2:r
+            y[Block(r)] = y[Block(r)] + A[Block(r, c)] * x[Block(c)]
+        end
+    end
+    return y
 end
 
 function mul!(Y::BlockMatrix, L::BlockLowerTriangular, X::BlockMatrix)
