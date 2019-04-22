@@ -19,44 +19,55 @@ function general_BlockDiagonal_tests(rng, blocks)
     end
 end
 
-function square_BlockDiagonal_tests(rng, blocks)
-    D, Ps = block_diagonal(blocks), size.(blocks, 1)
-    Dmat = Matrix(D)
-    C, Cmat = cholesky(D), cholesky(Dmat)
 
-    @testset "square" begin
-        @test C.U ≈ Cmat.U
-        @test logdet(C) ≈ logdet(Cmat)
+function dense_BlockMatrix_BlockVector_mul_tests(rng, X, y)
+    Ps = blocksizes(X, 1)
+    z = _BlockArray([randn(rng, P) for P in Ps], Ps)
 
-        Csym = cholesky(Symmetric(D))
-        @test C.U ≈ Csym.U
+    @test mul!(z, X, y) isa AbstractBlockVector
+    @test Vector(mul!(z, X, y)) ≈ Matrix(X) * Vector(y)
 
-        # Matrix-Vector tests.
-        xs, ys = [randn(rng, P) for P in Ps], [randn(rng, P) for P in Ps]
-        U, y, x = C.U, _BlockArray(ys, Ps), _BlockArray(xs, Ps)
+    @test X * y isa AbstractBlockVector
+    @test Vector(X * y) ≈ Matrix(X) * Vector(y)
 
-        @test ldiv!(U, copy(x)) ≈ UpperTriangular(Matrix(U)) \ Vector(x)
-        @test U \ x ≈ ldiv!(U, copy(x))
+    # z̄ = _BlockArray([randn(rng, P) for P in Ps], Ps)
+    # adjoint_test(*, z̄, X, y)
+    # _, back = Zygote.forward(*, X, y)
+    # X̄, ȳ = back(z)
+    # @test X̄ isa AbstractBlockMatrix
+    # @test ȳ isa AbstractBlockVector
+end
 
-        @test mul!(y, U, x) ≈ Matrix(U) * Vector(x)
-        @test U * x == mul!(y, U, x)
+function dense_BlockMatrix_BlockMatrix_mul_tests(rng, X, Y)
+    Ps, Qs = blocksizes(X, 1), blocksizes(Y, 2)
+    Z = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
 
-        # Matrix-Matrix tests.
-        Qs = [3, 4]
-        X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
-        Y = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
-        @test ldiv!(U, copy(X)) ≈ UpperTriangular(Matrix(U)) \ Matrix(X)
-        @test U \ X ≈ ldiv!(U, copy(X))
+    @test mul!(Z, X, Y) isa AbstractBlockMatrix
+    @test Matrix(mul!(Z, X, Y)) ≈ Matrix(X) * Matrix(Y)
 
-        @test mul!(Y, U, X) ≈ Matrix(U) * Matrix(X)
-        @test U * X == mul!(Y, U, X)
-    end
+    @test X * Y isa AbstractBlockMatrix
+    @test Matrix(X * Y) ≈ Matrix(X) * Matrix(Y)
+
+    # Z̄ = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+    # adjoint_test(*, Z̄, X, Y)
+    # _, back = Zygote.forward(*, X, Y)
+    # X̄, Ȳ = back(Z̄)
+    # @test X̄ isa AbstractBlockMatrix
+    # @test Ȳ isa AbstractBlockMatrix
+end
+
+@testset "fdm stuff" begin
+    rng, Ps, Qs = MersenneTwister(123456), [5, 4], [3, 2, 1]
+    X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+    vec_X, from_vec = FDM.to_vec(X)
+    @test vec_X isa Vector
+    @test from_vec(vec_X) == X
 end
 
 @testset "block_arrays" begin
 
     # Test construction of `BlockVector` from a vector of vectors. Also test copying.
-    let
+    @testset "BlockVector" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x, x′ = randn(rng, N), randn(rng, N′)
         x̂ = BlockVector([x, x′])
@@ -86,7 +97,7 @@ end
     end
 
     # Test construction of `BlockMatrix` from matrix of matrices. Also test copying.
-    let
+    @testset "BlockMatrix" begin
         rng, P1, P2, P3, Q1, Q2 = MersenneTwister(123456), 2, 3, 6, 4, 5
         X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
         X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
@@ -142,32 +153,119 @@ end
         @test zero(X) == zero(Matrix(X))
     end
 
-    @testset "BlockDiagonal" begin
-        @testset "Matrix" begin
-            rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
-            vs = [randn(rng, Ps[1], Qs[1]), randn(rng, Ps[2], Qs[2])]
-            general_BlockDiagonal_tests(rng, vs)
+    @testset "dense, transpose, and adjoint mul" begin
+        rng, Ps, Qs, Rs = MersenneTwister(123456), [2, 3], [4, 5], [6, 7]
+        X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
 
-            As = [randn(rng, Ps[n], Ps[n]) for n in eachindex(Ps)]
-            blocks = [As[n] * As[n]' + I for n in eachindex(As)]
-            square_BlockDiagonal_tests(rng, blocks)
+        for foo in [transpose, adjoint]
+            @test foo(X) isa BlockMatrix
+            @test blocksizes(foo(X), 1) == blocksizes(X, 2)
+            @test blocksizes(foo(X), 2) == blocksizes(X, 1)
+            @test foo(Matrix(X)) == Matrix(foo(X))
+            @test foo(foo(X)) == X
         end
-        @testset "Diagonal{T, <:Vector{T}}" begin
-            rng, Ps = MersenneTwister(123456), [2, 3]
-            vs = [Diagonal(randn(rng, Ps[n])) for n in eachindex(Ps)]
-            general_BlockDiagonal_tests(rng, vs)
 
-            blocks = [Diagonal(ones(P) + exp.(randn(rng, P))) for P in Ps]
-            square_BlockDiagonal_tests(rng, blocks)
-        end
-        @testset "Diagonal{T, <:Fill{T, 1}}" begin
-            rng, Ps = MersenneTwister(123456), [2, 3]
-            vs = [Diagonal(Fill(randn(rng), P)) for P in Ps]
-            general_BlockDiagonal_tests(rng, vs)
+        y = _BlockArray([randn(rng, Q) for Q in Qs], Qs)
+        z = _BlockArray([randn(rng, P) for P in Ps], Ps)
+        dense_BlockMatrix_BlockVector_mul_tests(rng, X, y)
+        dense_BlockMatrix_BlockVector_mul_tests(rng, X', z)
 
-            blocks = [Diagonal(Fill(exp(randn(rng)), P)) for P in Ps]
-            square_BlockDiagonal_tests(rng, blocks)
+        Y = _BlockArray([randn(rng, Q, R) for Q in Qs, R in Rs], Qs, Rs)
+
+        Xt_blocks = Matrix.(transpose(X.blocks))
+        Xt = _BlockArray(Xt_blocks, Qs, Ps)
+        Yt_blocks = Matrix.(transpose(Y.blocks))
+        Yt = _BlockArray(Yt_blocks, Rs, Qs)
+
+        dense_BlockMatrix_BlockMatrix_mul_tests(rng, X, Y)
+        for foo in [transpose, adjoint]
+            dense_BlockMatrix_BlockMatrix_mul_tests(rng, foo(Xt), Y)
+            dense_BlockMatrix_BlockMatrix_mul_tests(rng, X, foo(Yt))
+            dense_BlockMatrix_BlockMatrix_mul_tests(rng, foo(Xt), foo(Yt))
         end
+    end
+
+    @testset "Triangular" begin
+        rng, Ps = MersenneTwister(123456), [5, 4]
+        X = _BlockArray([randn(rng, P, P′) for P in Ps, P′ in Ps], Ps, Ps)
+        Xmat = Matrix(X)
+        for foo in [adjoint, transpose]
+            @test foo(UpperTriangular(X)) isa LowerTriangular{T, <:BlockMatrix{T}} where {T}
+            @test Matrix(foo(UpperTriangular(X))) == collect(foo(UpperTriangular(Xmat)))
+            @test foo(LowerTriangular(X)) isa UpperTriangular{T, <:BlockMatrix{T}} where {T}
+            @test Matrix(foo(LowerTriangular(X))) == collect(foo(LowerTriangular(Xmat)))
+        end
+    end
+
+    @testset "dense cholesky" begin
+        rng, P1, P2, P3 = MersenneTwister(123456), 3, 4, 5
+        tmp = randn(rng, P1 + P2 + P3, P1 + P2 + P3)
+        A_ = tmp * tmp' + 1e-9I
+        A = BlockArray(A_, [P1, P2, P3], [P1, P2, P3])
+        @assert A_ == A
+
+        # Compute cholesky and compare.
+        C_, C = cholesky(A_), cholesky(A)
+        @test C isa Cholesky
+        @test C_.U ≈ Matrix(C.U)
+        @test C.U isa UpperTriangular{T, <:AbstractBlockMatrix{T}} where T
+
+        # Test `logdet`.
+        @test logdet(C) ≈ logdet(C_)
+
+        # Check that the forwards-pass agrees.
+        @test Zygote.forward(logdet, C)[1] == logdet(C)
+
+        # Check that reverse-pass agrees with dense revese-pass.
+        @testset "logdet gradients" begin
+            ȳ = randn(rng)
+
+            # Compute adjoint with dense.
+            _, back_dense = Zygote.forward(logdet, C_)
+            C̄_ = back_dense(ȳ)
+
+            # Compute adjoint with block
+            _, back_block = Zygote.forward(logdet, C)
+            C̄ = back_block(ȳ)
+
+            # Check that both answers approximately agree.
+            @test C̄_[1].factors ≈ C̄[1].factors
+        end
+
+        # adjoint_test()
+
+        # # Test backsolving for block vector.
+        # x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)
+        # x = BlockVector([x1, x2, x3])
+
+        # @test U \ x isa AbstractBlockVector
+        # @test size(U \ x) == size(U_ \ Vector(x))
+        # @test U \ x ≈ U_ \ Vector(x)
+
+        # @test U' \ x isa AbstractBlockVector
+        # @test typeof(U') <: Adjoint{<:Real, <:UpperTriangular{<:Real, <:ABM}}
+        # @test size(U' \ x) == size(U_' \ Vector(x))
+        # @test U' \ x ≈ U_' \ Vector(x)
+
+        # @test transpose(U) \ x isa AbstractBlockVector
+        # @test typeof(transpose(U)) <: Transpose{<:Real, <:UpperTriangular{<:Real, <:ABM}}
+        # @test size(transpose(U) \ x) == size(U_' \ Vector(x))
+        # @test transpose(U) \ x ≈ U_' \ Vector(x)
+
+        # # Test backsolving for block matrix
+        # Q1, Q2 = 7, 6
+        # X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
+        # X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
+        # X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
+        # X = BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2)
+
+        # @test U \ X isa AbstractBlockMatrix
+        # @test size(U \ X) == size(U_ \ Matrix(X))
+        # @test U \ X ≈ U_ \ Matrix(X)
+
+        # @test U' \ X isa AbstractBlockMatrix
+        # @test size(U' \ X) == size(U_' \ Matrix(X))
+        # @test U' \ X ≈ U_' \ Matrix(X)
     end
 
     # # Test Symmetric block matrix construction and util.
@@ -380,7 +478,7 @@ end
     # end
 
     # # Test `cholesky`, `logdet`, and backsolving.
-    # let
+    # @testset "cholesky" begin
     #     rng, P1, P2, P3 = MersenneTwister(123456), 3, 4, 5
     #     tmp = randn(rng, P1 + P2 + P3, P1 + P2 + P3)
     #     A_ = tmp * tmp' + 1e-9I

@@ -33,6 +33,7 @@ using Distributions: MvNormal, PDMat
 
         y = rand(MersenneTwister(123456), fx_single)
         ŷ = rand(MersenneTwister(123456), fx)
+        @show typeof(y), typeof(ŷ)
         @test y == ŷ
         @test logpdf(fx, y) == logpdf(fx_single, y)
 

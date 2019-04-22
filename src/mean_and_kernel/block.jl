@@ -35,7 +35,10 @@ struct BlockMean{Tμ<:AbstractVector{<:MeanFunction}} <: MeanFunction
     μ::Tμ
 end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
-_map(μ::BlockMean, x::BlockData) = unary_make_vec(map, μ.μ, blocks(x))
+function _map(m::BlockMean, x::BlockData)
+    return BlockVector([map(μ, blk) for (μ, blk) in zip(m.μ, blocks(x))])
+end
+# _map(μ::BlockMean, x::BlockData) = unary_make_vec(map, μ.μ, blocks(x))
 
 
 """
@@ -47,16 +50,20 @@ struct BlockCrossKernel{Tks<:Matrix{<:CrossKernel}} <: CrossKernel
     ks::Tks
 end
 BlockCrossKernel(ks::AbstractVector) = BlockCrossKernel(reshape(ks, length(ks), 1))
-function BlockCrossKernel(ks::Adjoint{T, AbstractVector{T}} where T)
+function BlockCrossKernel(ks::Adjoint{T, <:AbstractVector{T}} where T)
     return BlockCrossKernel(reshape(ks, 1, length(ks)))
 end
 
 # Binary methods.
 function _map(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    return binary_make_vec(map, diag(k.ks), blocks(x), blocks(x′))
+    items = zip(diag(k.ks), blocks(x), blocks(x′))
+    return BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items])
+    # return binary_make_vec(map, diag(k.ks), blocks(x), blocks(x′))
 end
 function _pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    return binary_make_mat(pw, k.ks, blocks(x), blocks(x′))
+    x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
+    return BlockMatrix([pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items])
+    # return binary_make_mat(pw, k.ks, blocks(x), blocks(x′))
 end
 _pw(k::BlockCrossKernel, x::BlockData, x′::AV) = _pw(k, x, BlockData([x′]))
 _pw(k::BlockCrossKernel, x::AV, x′::BlockData) = _pw(k, BlockData([x]), x′)
@@ -85,10 +92,14 @@ end
 
 # Binary methods.
 function _map(k::BlockKernel, x::BlockData, x′::BlockData)
-    return binary_make_vec(map, diag(k.ks), blocks(x), blocks(x′))
+    items = zip(diag(k.ks), blocks(x), blocks(x′))
+    return BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items])
+    # return binary_make_vec(map, diag(k.ks), blocks(x), blocks(x′))
 end
 function _pw(k::BlockKernel, x::BlockData, x′::BlockData)
-    return binary_make_mat(pw, k.ks, blocks(x), blocks(x′))
+    x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
+    return BlockMatrix([pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items])
+    # return binary_make_mat(pw, k.ks, blocks(x), blocks(x′))
 end
 
 # Unary methods.

@@ -8,6 +8,7 @@ module Stheno
     using LinearAlgebra: AbstractTriangular
     using Zygote: @adjoint, @nograd
     using BlockArrays: _BlockArray
+    import LinearAlgebra: cholesky
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
@@ -19,7 +20,8 @@ module Stheno
     # Various bits of utility that aren't inherently GP-related.
     include("util/zygote_rules.jl")
     include("util/covariance_matrices.jl")
-    include("util/block_arrays.jl")
+    include("util/block_arrays/dense.jl")
+    include("util/block_arrays/diagonal.jl")
     include("util/abstract_data_set.jl")
     include("util/toeplitz.jl")
     include("util/fillarrays.jl")

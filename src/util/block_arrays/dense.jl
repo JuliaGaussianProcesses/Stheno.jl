@@ -2,16 +2,15 @@
 # independent of Stheno.jl, and will (hopefully) move over to BlockArrays.jl at some point.
 
 using FillArrays, LinearAlgebra, BlockArrays
-using FillArrays: Fill
+using FillArrays: Fill, getindex_value
 
-using BlockArrays: cumulsizes, blocksizes, _BlockArray, blocksizes, BlockSizes
+using BlockArrays: cumulsizes, blocksizes, blocksizes, BlockSizes
 
 import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
 import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
     adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!, logdet, ldiv!, mul!, logabsdet
 import BlockArrays: BlockArray, BlockVector, BlockMatrix, BlockVecOrMat, getblock,
     blocksize, setblock!, nblocks, getblock!
-export unbox, BlockSymmetric
 
 # Do some character saving.
 const BV{T} = BlockVector{T}
@@ -19,17 +18,17 @@ const BM{T} = BlockMatrix{T}
 const ABV{T} = AbstractBlockVector{T}
 const ABM{T} = AbstractBlockMatrix{T}
 const ABVM{T} = AbstractBlockVecOrMat{T}
-const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM}
+# const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM}
 
-const AdjOrTransABM{T} = Union{ABM{T}, AdjOrTrans{T, <:ABM{T}}}
-const AdjTransTriABM{T} = Union{AbstractTriangular{T, <:ABM{T}}, AdjOrTransABM{T}}
-const TriABM{T} = Union{AbstractTriangular{T, <:ABM{T}}, ABM{T}}
-const BlockTri{T} = AbstractTriangular{T, <:ABM{T}}
-const BlockAdjOrTrans{T} = AdjOrTrans{T, <:ABM{T}}
+# const AdjOrTransABM{T} = Union{ABM{T}, AdjOrTrans{T, <:ABM{T}}}
+# const AdjTransTriABM{T} = Union{AbstractTriangular{T, <:ABM{T}}, AdjOrTransABM{T}}
+# const TriABM{T} = Union{AbstractTriangular{T, <:ABM{T}}, ABM{T}}
+# const BlockTri{T} = AbstractTriangular{T, <:ABM{T}}
+# const BlockAdjOrTrans{T} = AdjOrTrans{T, <:ABM{T}}
 
-unbox(X::AbstractBlockMatrix) = X
-unbox(X::Symmetric) = unbox(X.data)
-unbox(X::AbstractMatrix) = X
+# unbox(X::AbstractBlockMatrix) = X
+# unbox(X::Symmetric) = unbox(X.data)
+# unbox(X::AbstractMatrix) = X
 
 
 
@@ -60,11 +59,11 @@ end
 @adjoint Vector(x::BlockVector) = Vector(x), Δ->(Δ,)
 
 """
-    BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
+    BlockMatrix(Xs::Matrix{<:AbstractVecOrMat})
 
 Construct a `BlockMatrix` from a matrix of `AbstractVecOrMat`s.
 """
-function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
+function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat})
 
     # Check that sizes make sense.
     heights, widths = size.(Xs[:, 1], 1), size.(Xs[1, :], 2)
@@ -73,9 +72,9 @@ function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
     end
 
     # Construct BlockMatrix.
-    return _BlockArray(Xs, heights, widths)
+    return _BlockArray(Matrix.(Xs), heights, widths)
 end
-@adjoint function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat{T}}) where T
+@adjoint function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat})
     X = BlockMatrix(Xs)
     function back(Δ::BlockMatrix)
         @assert cumulsizes(X) == cumulsizes(Δ)
@@ -115,93 +114,151 @@ function zero(X::AbstractBlockMatrix)
     return BlockMatrix(blocks)
 end
 
-#################################### BlockDiagonal #########################################
 
+#
+# Dense BlockArrays
+#
 
-const BlockDiagonal{T, TM} = BlockMatrix{T, <:Diagonal{TM}} where {TM <: AbstractMatrix{T}}
-
-function block_diagonal(vs::AbstractVector{<:AbstractMatrix{T}}) where {T}
-    return _BlockArray(Diagonal(vs), size.(vs, 1), size.(vs, 2))
+function *(A::BlockMatrix{T}, x::BlockVector{V}) where {T, V}
+    Ps = blocksizes(A, 1)
+    y = _BlockArray([Vector{promote_type(T, V)}(undef, P) for P in Ps], Ps)
+    return mul!(y, A, x)
 end
 
-function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T}
-    return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
-end
+@adjoint *(A::BlockMatrix, x::BlockVector) = A * x, Δ::BlockVector->(Δ * x', A' * Δ)
 
-# Strip unhelpful wrappers to ensure that ldiv! is efficient.
-strip_block(X::UpperTriangular) = X
-strip_block(X::UpperTriangular{T, <:Diagonal{T}} where {T}) = X.data
-
-function cholesky(A::BlockDiagonal)
-    Cs = [strip_block(cholesky(A).U) for A in diag(A.blocks)]
-    return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
-end
-function cholesky(A::Symmetric{T, <:BlockDiagonal{T}} where {T})
-    Cs = [strip_block(cholesky(Symmetric(A)).U) for A in diag(A.data.blocks)]
-    return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.data.block_sizes), :U, 0)
-end
-
-function logdet(C::Cholesky{T, <:BlockDiagonal{T}} where {T})
-    return 2 * sum(n->logabsdet(C.factors[Block(n, n)])[1], 1:nblocks(C.factors, 1))
-end
-
-# Because Base is dumb and hasn't implemented `logabsdet` for `Diagonal` matrices.
-logabsdet(d::Diagonal) = logabsdet(UpperTriangular(d))
-
-function ldiv!(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::ABV)
-    @assert are_conformal(U.data, x)
-    blocks = U.data.blocks.diag
-    for n in 1:nblocks(x, 1)
-        setblock!(x, ldiv!(blocks[n], x[Block(n)]), n)
-    end
-    return x
-end
-\(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::ABV) = ldiv!(U, copy(x))
-
-function ldiv!(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, X::ABM)
-    @assert are_conformal(U.data, X)
-    blocks = U.data.blocks.diag
-    for r in 1:nblocks(X, 1)
-        for c in 1:nblocks(X, 2)
-            setblock!(X, ldiv!(blocks[r], X[Block(r, c)]), r, c)
+function mul!(y::BlockVector, A::BlockMatrix, x::BlockVector)
+    @assert are_conformal(A, x) && are_conformal(A', y)
+    for r in 1:nblocks(A, 1)
+        mul!(y[Block(r)], A[Block(r, 1)], x[Block(1)])
+        for c in 2:nblocks(A, 2)
+            y[Block(r)] = y[Block(r)] + A[Block(r, c)] * x[Block(c)]
         end
-    end
-    return X
-end
-\(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, X::ABM) = ldiv!(U, copy(X))
-
-# THIS IS ALL WRONG AND MY TESTING IS CLEARLY SHIT!
-function mul!(y::ABV, U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::ABV)
-    @assert are_conformal(U.data, x) && are_conformal(U.data, y)
-    blocks = U.data.blocks.diag
-    for r in 1:nblocks(U.data, 1)
-        mul!(getblock(y, r), UpperTriangular(blocks[r]), getblock(x, r))
     end
     return y
 end
-mul!(y::ABV, U::UpperTriangular{<:Any, <:BlockDiagonal}, x::ABV) = mul!(y, U.data, x)
-function mul!(y::ABV, D::BlockDiagonal{T, <:Diagonal{T}} where {T}, x::ABV)
-    @assert are_conformal(D, x) && are_conformal(D, y)
-    blocks = D.blocks.diag
-    for r in 1:nblocks(D, 1)
-        mul!(getblock(y, r), blocks[r], getblock(x, r))
-    end
-    return y
-end
-*(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, x::ABV) = mul!(copy(x), U, x)
 
-function mul!(Y::ABM, U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, X::ABM)
-    @assert are_conformal(U.data, X) && are_conformal(U.data, Y)
-    blocks = U.data.blocks.diag
-    for r in 1:nblocks(U.data, 1)
-        for c in 1:nblocks(X, 2)
-            mul!(getblock(Y, r, c), blocks[r], getblock(X, r, c))
+function *(A::BlockMatrix{T}, B::BlockMatrix{V}) where {T, V}
+    Ps, Qs = blocksizes(A, 1), blocksizes(B, 2)
+    C = _BlockArray([Matrix{promote_type(T, V)}(undef, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+    return mul!(C, A, B)
+end
+
+@adjoint *(A::BlockMatrix, B::BlockMatrix) = A * B, Δ::BlockMatrix->(Δ * B', A' * Δ)
+
+function mul!(C::BlockMatrix, A::BlockMatrix, B::BlockMatrix)
+    @assert are_conformal(A, B)
+    @assert cumulsizes(A, 1) == cumulsizes(C, 1)
+    @assert cumulsizes(C, 2) == cumulsizes(B, 2)
+
+    P, Q, R = nblocks(A, 1), nblocks(A, 2), nblocks(B, 2)
+    for p in 1:P, r in 1:R
+        mul!(C[Block(p, r)], A[Block(p, 1)], B[Block(1, r)])
+        for q in 2:Q
+            C[Block(p, r)] = C[Block(p, r)] + A[Block(p, q)] * B[Block(q, r)]
         end
     end
-    return Y
+    return C
 end
-function mul!(Y::ABM, U::UpperTriangular{T, <:Block})
-*(U::UpperTriangular{T, <:BlockDiagonal{T}} where {T}, X::ABM) = mul!(copy(X), U, X)
+
+function cholesky_and_adjoint(A::BlockMatrix{T, V}) where {T, V}
+    U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 2))
+    backs = Vector{Any}()
+
+    # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
+    for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
+        U[Block(p, q)] = Zeros{T}(blocksize(A, (p, q))...)
+    end
+
+    # Fill out the upper triangle with the Cholesky.
+    for j in 1:nblocks(A, 2)
+
+        # Update off-diagonals.
+        for i in 1:j-1
+            U[Block(i, j)] = copy(A[Block(i, j)])
+            for k in 1:i-1
+                U[Block(i, j)] .-= U[Block(k, i)]' * U[Block(k, j)]
+            end
+            ldiv!(UpperTriangular(U[Block(i, i)])', U[Block(i, j)])
+        end
+
+        # Update diagonal.
+        U[Block(j, j)] = copy(A[Block(j, j)])
+        for k in 1:j-1
+            U[Block(j, j)] .-= U[Block(k, j)]' * U[Block(k, j)]
+        end
+        U[Block(j, j)] = cholesky(U[Block(j, j)]).U
+    end
+
+    return Cholesky(U, :U, 0), function(Δ)
+        Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
+        Ū = Δ.factors
+        for j in reverse(1:nblocks(A, 2))
+
+            Ā[Block(j, j)] = back(Ū[Block(j, j)])
+            for k in 1:j-1
+                ĀjjUkj = Ā[Block(j, j)] * U[Block(k, j)]
+                UkjĀjj = U[Block(k, j)] * Ā[Block(j, j)]
+                Ū[Block(k, j)] .+= ĀjjUkj .+ UkjĀjj
+            end
+
+            for i in reverse(1:j-1)
+                Ā[Block(i, j)] = Ā[Block(i, j)] + U[Block(i, i)] \ Ū[Block(i, j)]
+                Ū[Block(i, i)] = Ū[Block(i, i)] - Ā[Block(i, j)] * U[Block(i, j)]'
+                for k in 1:i-1
+                    Ū[Block(k, i)] = Ū[Block(k, i)] + Ā[Block(i, j)]' * U[Block(k, j)]
+                    Ū[Block(k, j)] = Ū[Block(k, j)] + U[Block(k, i)] * Ā[Block(i, j)]
+                end
+            end
+        end
+        return (Ā,)
+    end
+end
+
+cholesky(A::BlockMatrix{<:Real}) = first(cholesky_and_adjoint(A))
+
+cholesky(A::Symmetric{T, <:BlockMatrix{T}} where {T<:Real}) = cholesky(A.data)
+
+# A slightly strange util function that shouldn't ever be used outside of `logdet`.
+reduce_diag(f, A::Matrix{<:Real}) = sum(f, view(A, diagind(A)))
+
+function reduce_diag(f, A::BlockMatrix{<:Real})
+    return sum([reduce_diag(f, getblock(A, n, n)) for n in 1:nblocks(A, 1)])
+end
+
+function logdet(C::Cholesky{<:T, <:AbstractBlockMatrix{T}} where {T<:Real})
+    return 2 * reduce_diag(log, C.factors)
+end
+
+@adjoint function logdet(C::Cholesky{<:T, <:AbstractBlockMatrix{T}} where {T<:Real})
+    return logdet(C), function(Δ::Real)
+        function update_diag!(X::Matrix, A::Matrix)
+            X[diagind(X)] .= (2 * Δ) ./ A[diagind(A)]
+            return X
+        end
+        function update_diag!(X::BlockMatrix, A::BlockMatrix)
+            for n in 1:nblocks(A)[1]
+                update_diag!(getblock(X, n, n), getblock(A, n, n))
+            end
+            return X
+        end
+        factors = update_diag!(zero(C.factors), C.factors)
+        return ((factors=factors, uplo=nothing, info=nothing),)
+    end
+end
+
+
+#
+# Adjoint and Transpose
+#
+
+function Base.adjoint(X::BlockMatrix)
+    return _BlockArray(adjoint(X.blocks), blocksizes(X, 2), blocksizes(X, 1))
+end
+
+function Base.transpose(X::BlockMatrix)
+    return _BlockArray(transpose(X.blocks), blocksizes(X, 2), blocksizes(X, 1))
+end
 
 
 
@@ -311,34 +368,6 @@ with block of the other matrix with which it will be multiplied. This ensures th
 result is itself straightforwardly representable as `BlockVecOrMat`.
 """
 are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
-
-# """
-#     *(A::AdjTransTriABM, x::BlockVector)
-
-# Matrix-vector multiplication between `BlockArray`s. Fails if block are not conformal.
-# """
-# function *(
-#     A::Union{ABM{T}, BlockTri{T}, BlockAdjOrTrans{T}, AdjOrTrans{T, <:BlockTri{T}}},
-#     x::ABV{T},
-# ) where T
-#     @assert are_conformal(A, x)
-#     y = BlockVector{T}(undef_blocks, blocksizes(A, 1))
-#     P, Q = nblocks(A)
-#     for p in 1:P
-#         setblock!(y, getblock(A, p, 1) * getblock(x, 1), p)
-#         for q in 2:Q
-#             setblock!(y, getblock(y, p) + getblock(A, p, q) * getblock(x, q), p)
-#         end
-#     end
-#     return y
-# end
-# function *(A::AdjTransTriABM{T}, b::AV{T}) where {T}
-#     @assert nblocks(A, 2) == 1
-#     return A * BlockVector([b])
-# end
-# function *(A::AdjTransTriABM{T}, b::FillArrays.Zeros{T,1}) where T
-#     return invoke(*, Tuple{AbstractMatrix, typeof(b)}, A, b)
-# end
 
 
 
@@ -451,44 +480,11 @@ are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
 # upper triangular version.
 # """
 
-# const BlockMaybeSymmetric{T, V} = Union{BlockMatrix{T, V}, BlockSymmetric{T, V}}
-
-# # Compute the cholesky factorisation of a symmetric block matrix `A`, and a function to
-# # compute the adjoint sensitivity.
-# function cholesky_and_adjoint(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
-#     U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 2))
-#     backs = Vector{Any}()
-
-#     # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
-#     for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
-#         U[Block(p, q)] = Zeros{T}(blocksize(A, (p, q))...)
-#     end
-
-#     # Fill out the upper triangle with the Cholesky.
-#     for j in 1:nblocks(A, 2)
-
-#         # Update off-diagonals.
-#         for i in 1:j-1
-#             U[Block(i, j)] = copy(A[Block(i, j)])
-#             for k in 1:i-1
-#                 U[Block(i, j)] .-= U[Block(k, i)]' * U[Block(k, j)]
-#             end
-#             ldiv!(UpperTriangular(U[Block(i, i)])', U[Block(i, j)])
-#         end
-
-#         # Update diagonal.
-#         U[Block(j, j)] = copy(A[Block(j, j)])
-#         for k in 1:j-1
-#             U[Block(j, j)] .-= U[Block(k, j)]' * U[Block(k, j)]
-#         end
-#         U[Block(j, j)] = cholesky(U[Block(j, j)]).U
-#     end
-
-#     return Cholesky(U, :U, 0), function(Δ)
+# @adjoint function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
+#     return cholesky(A), function(Δ)
 #         Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
 #         Ū = Δ.factors
 #         for j in reverse(1:nblocks(A, 2))
-
 #             Ā[Block(j, j)] = back(Ū[Block(j, j)])
 #             for k in 1:j-1
 #                 ĀjjUkj = Ā[Block(j, j)] * U[Block(k, j)]
@@ -509,35 +505,6 @@ are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
 #     end
 # end
 
-# function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
-#     return cholesky_and_adjoint(A)[1]
-# end
-
-# # @adjoint function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
-# #     return cholesky(A), function(Δ)
-# #         Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
-# #         Ū = Δ.factors
-# #         for j in reverse(1:nblocks(A, 2))
-# #             Ā[Block(j, j)] = back(Ū[Block(j, j)])
-# #             for k in 1:j-1
-# #                 ĀjjUkj = Ā[Block(j, j)] * U[Block(k, j)]
-# #                 UkjĀjj = U[Block(k, j)] * Ā[Block(j, j)]
-# #                 Ū[Block(k, j)] .+= ĀjjUkj .+ UkjĀjj
-# #             end
-
-# #             for i in reverse(1:j-1)
-# #                 Ā[Block(i, j)] = Ā[Block(i, j)] + U[Block(i, i)] \ Ū[Block(i, j)]
-# #                 Ū[Block(i, i)] = Ū[Block(i, i)] - Ā[Block(i, j)] * U[Block(i, j)]'
-# #                 for k in 1:i-1
-# #                     Ū[Block(k, i)] = Ū[Block(k, i)] + Ā[Block(i, j)]' * U[Block(k, j)]
-# #                     Ū[Block(k, j)] = Ū[Block(k, j)] + U[Block(k, i)] * Ā[Block(i, j)]
-# #                 end
-# #             end
-# #         end
-# #         return (Ā,)
-# #     end
-# # end
-
 # function LinearAlgebra.diagzero(D::Diagonal{<:AM{T}}, r::Integer, c::Integer) where {T}
 #     return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
 # end
@@ -545,7 +512,7 @@ are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
 # function cholesky(A::BlockMatrix{T, <:Diagonal{<:AbstractMatrix{T}}} where T)
 #     Cs = [cholesky(A).U for A in diag(A.blocks)]
 #     @show Cs, A.block_sizes
-#     return Cholesky(BlockArrays._BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
+#     return Cholesky(_BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
 # end
 
 # # A slightly strange util function that shouldn't ever be used outside of `logdet`.

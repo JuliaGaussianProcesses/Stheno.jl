@@ -108,27 +108,27 @@ end
     end
 
     @testset "rand (block - gradients)" begin
-        rng, N, N′, S = MersenneTwister(123456), 11, 3, 10
-        f = GP(cos, eq(), GPC())
-        xx′ = collect(range(-3.0, stop=3.0, length=N + N′))
-        x, x′ = xx′[1:N], xx′[N+1:end]
+        # rng, N, N′, S = MersenneTwister(123456), 11, 3, 10
+        # f = GP(cos, eq(), GPC())
+        # xx′ = collect(range(-3.0, stop=3.0, length=N + N′))
+        # x, x′ = xx′[1:N], xx′[N+1:end]
 
-        foo(x, x′) = begin
-            f = GP(sin, eq(), GPC())
-            return FiniteGP(BlockGP([f, f]), BlockData([x, x′]), eps())
-        end
+        # foo(x, x′) = begin
+        #     f = GP(sin, eq(), GPC())
+        #     return FiniteGP(BlockGP([f, f]), BlockData([x, x′]), eps())
+        # end
 
-        # Check that the gradient w.r.t. the samples is correct (single-sample).
-        adjoint_test(
-            (x, x′)->rand(_rng(), foo(x, x′)), randn(rng, N + N′), x, x′;
-            rtol=1e-6,atol=1e-6,
-        )
+        # # Check that the gradient w.r.t. the samples is correct (single-sample).
+        # adjoint_test(
+        #     (x, x′)->rand(_rng(), foo(x, x′)), randn(rng, N + N′), x, x′;
+        #     rtol=1e-6,atol=1e-6,
+        # )
 
-        # Check that the gradient w.r.t. the samples is correct (multisample).
-        adjoint_test(
-            (x, x′)->rand(_rng(), foo(x, x′), S), randn(rng, N + N′, S), x, x′;
-            rtol=1e-6, atol=1e-6,
-        )
+        # # Check that the gradient w.r.t. the samples is correct (multisample).
+        # adjoint_test(
+        #     (x, x′)->rand(_rng(), foo(x, x′), S), randn(rng, N + N′, S), x, x′;
+        #     rtol=1e-6, atol=1e-6,
+        # )
     end
 
     @testset "logpdf / elbo" begin

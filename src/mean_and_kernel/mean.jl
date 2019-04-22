@@ -14,7 +14,7 @@ end
 Returns `zero(T)` everywhere.
 """
 struct ZeroMean{T<:Real} <: MeanFunction end
-ZeroMean() = ZeroMean{Int}()
+ZeroMean() = ZeroMean{Float64}()
 _map(::ZeroMean{T}, x::AV) where T = Zeros{T}(length(x))
 zero(::MeanFunction) = ZeroMean()
 
@@ -24,7 +24,7 @@ zero(::MeanFunction) = ZeroMean()
 Return `one(T)` everywhere.
 """
 struct OneMean{T<:Real} <: MeanFunction end
-OneMean() = OneMean{Int}()
+OneMean() = OneMean{Float64}()
 _map(::OneMean{T}, x::AV) where T = Ones{T}(length(x))
 
 """

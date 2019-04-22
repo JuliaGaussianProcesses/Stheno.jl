@@ -4,7 +4,7 @@ import Zygote: accum
 
 import Base: map, getfield, getproperty, sum
 import Distances: pairwise, colwise
-import LinearAlgebra: \, /, cholesky, copytri!
+import LinearAlgebra: \, /, copytri!
 import FillArrays: Fill, AbstractFill, getindex_value, Zeros, Ones
 import Base.Broadcast: broadcasted, materialize
 
@@ -60,10 +60,18 @@ function _zero_mul_adjoint(a::Zeros{T}, b::AbstractArray{V}) where {T, V}
     return broadcasted(*, a, b), Δ->(nothing, Zeros{T}(size(a)), Zeros{V}(size(b)))
 end
 
-@adjoint broadcasted(::typeof(*), a::AbstractArray, b::Zeros) = _zero_mul_adjoint(a, b)
-@adjoint broadcasted(::typeof(*), a::AbstractFill, b::Zeros) = _zero_mul_adjoint(a, b)
-@adjoint broadcasted(::typeof(*), a::Zeros, b::AbstractArray) = _zero_mul_adjoint(a, b)
-@adjoint broadcasted(::typeof(*), a::Zeros, b::AbstractFill) = _zero_mul_adjoint(a, b)
+@adjoint function broadcasted(::typeof(*), a::AbstractArray{<:Real}, b::Zeros{<:Real})
+    return _zero_mul_adjoint(a, b)
+end
+@adjoint function broadcasted(::typeof(*), a::AbstractFill{<:Real}, b::Zeros{<:Real})
+    return _zero_mul_adjoint(a, b)
+end
+@adjoint function broadcasted(::typeof(*), a::Zeros{<:Real}, b::AbstractArray{<:Real})
+    return _zero_mul_adjoint(a, b)
+end
+@adjoint function broadcasted(::typeof(*), a::Zeros{<:Real}, b::AbstractFill{<:Real})
+    return _zero_mul_adjoint(a, b)
+end
 
 @adjoint function broadcasted(::typeof(inv), X::Fill)
     return broadcast(inv, X), Δ->(nothing, -Δ * abs2(inv(getindex_value(X))))

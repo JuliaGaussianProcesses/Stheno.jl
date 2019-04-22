@@ -2,6 +2,8 @@ using BlockArrays, LinearAlgebra, FDM, Zygote, ToeplitzMatrices
 using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, pw, BlockData, blocks
 using FillArrays: AbstractFill, getindex_value
 using LinearAlgebra: AbstractTriangular
+using FDM: j′vp
+import FDM: to_vec
 
 const _rtol = 1e-10
 const _atol = 1e-10
@@ -19,24 +21,10 @@ function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
     println()
 end
 
-# Transform `x` into a vector, and return a closure which inverts the transformation.
-to_vec(x::Nothing) = (x, nothing)
-to_vec(x::Real) = ([x], x->x[1])
-
-# Arrays.
-to_vec(x::Vector{<:Real}) = (x, identity)
-to_vec(x::Array) = vec(x), x_vec->reshape(x_vec, size(x))
-
 # AbstractArrays.
-to_vec(x::ColsAreObs{<:Real}) = (vec(x.X), x_vec->ColsAreObs(reshape(x_vec, size(x.X))))
+to_vec(x::ColsAreObs{<:Real}) = vec(x.X), x_vec -> ColsAreObs(reshape(x_vec, size(x.X)))
 to_vec(x::BlockArray) = vec(Array(x)), x_->BlockArray(reshape(x_, size(x)), blocksizes(x))
 to_vec(x::AbstractFill) = vec(Array(x)), x->error("No backwards defined")
-function to_vec(x::T) where {T<:AbstractTriangular}
-    x_vec, back = to_vec(Matrix(x))
-    return x_vec, x_vec->T(reshape(back(x_vec), size(x)))
-end
-to_vec(x::Symmetric) = vec(Matrix(x)), x_vec->Symmetric(reshape(x_vec, size(x)))
-to_vec(X::Diagonal) = vec(Matrix(X)), x_vec->Diagonal(reshape(x_vec, size(X)...))
 function to_vec(x::BlockData)
     x_vecs, x_backs = zip(map(to_vec, blocks(x))...)
     sz = cumsum([map(length, x_vecs)...])
@@ -45,33 +33,9 @@ function to_vec(x::BlockData)
             for n in 1:length(blocks(x))])
     end
 end
-
-# Non-array data structures.
-function to_vec(x::Tuple)
-    x_vecs, x_backs = zip(map(to_vec, x)...)
-    sz = cumsum([map(length, x_vecs)...])
-    return vcat(x...), v->([x_backs[n](v[sz[n]-length(x[n])+1:sz[n]]) for n in 1:length(x)]...,)
-end
-
-function FDM.j′vp(fdm, f, ȳ, x)
-    x_vec, vec_to_x = to_vec(x)
-    ȳ_vec, _ = to_vec(ȳ)
-    return vec_to_x(FDM.j′vp(fdm, x_vec->to_vec(f(vec_to_x(x_vec)))[1], ȳ_vec, x_vec))
-end
-
-function j′vp(fdm, f, ȳ, xs...)
-    return (map(enumerate(xs)) do (p, x)
-        return FDM.j′vp(
-            fdm,
-            function(x)
-                xs_ = [xs...]
-                xs_[p] = x
-                return f(xs_...)
-            end,
-            ȳ,
-            x,
-        )    
-    end...,)
+function to_vec(X::T) where T<:Union{Adjoint,Transpose}
+    U = T.name.wrapper
+    return vec(Matrix(X)), x_vec->U(permutedims(reshape(x_vec, size(X))))
 end
 
 # My version of isapprox
@@ -92,25 +56,15 @@ function fd_isapprox(x_ad::Tuple, x_fd::Tuple, rtol, atol)
     return all(map((x, x′)->fd_isapprox(x, x′, rtol, atol), x_ad, x_fd))
 end
 
-# Ensure that `to_vec` and j′vp works correctly.
-for x in [
-        randn(10), 5.0, randn(10, 10), ColsAreObs(randn(2, 5)), (5.0, 4.0),
-        (randn(10), randn(11)), BlockVector([randn(10)]), Diagonal(randn(10)),
-        BlockData([randn(10), randn(11)]),
-    ]
-    x_vec, back = to_vec(x)
-    @test x_vec isa AbstractVector{<:Real}
-    @test back(x_vec) == x
-    @test fd_isapprox(j′vp(central_fdm(5, 1), identity, x, x), (x,), 1e-10, 1e-10)
-end
-
-# Ensure that forwards- and reverse- passes are (approximately) correct.
 function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1))
 
     # Compute forwards-pass and j′vp.
     y, back = Zygote.forward(f, x...)
     adj_ad = back(ȳ)
     adj_fd = j′vp(fdm, f, ȳ, x...)
+
+    # If unary, pull out first thing from ad.
+    adj_ad = length(x) == 1 ? first(adj_ad) : adj_ad
 
     # Check that forwards-pass agrees with plain forwards-pass.
     @test y ≈ f(x...)

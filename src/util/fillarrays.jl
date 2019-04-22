@@ -1,4 +1,4 @@
-import LinearAlgebra: cholesky, HermOrSym, diag, Diagonal
+import LinearAlgebra: HermOrSym, diag, Diagonal
 
 # Make getting the Diagonal of a Symmetric matrix that contains a Diagonal matrix efficient.
 diag(S::Symmetric{T, <:Diagonal{T}} where T) = S.data.diag

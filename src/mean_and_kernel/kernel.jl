@@ -105,7 +105,7 @@ end
 A rank 0 `Kernel` that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
-ZeroKernel() = ZeroKernel{Int}()
+ZeroKernel() = ZeroKernel{Float64}()
 eltype(::ZeroKernel{T}) where {T} = T
 zero(::CrossKernel) = ZeroKernel()
 
@@ -125,7 +125,7 @@ A rank 1 constant `Kernel`. Useful for consistency when creating composite Kerne
 but (almost certainly) shouldn't be used as a base `Kernel`.
 """
 struct OneKernel{T<:Real} <: Kernel end
-OneKernel() = OneKernel{Int}()
+OneKernel() = OneKernel{Float64}()
 eltype(k::OneKernel{T}) where {T} = T
 
 # Binary methods.
