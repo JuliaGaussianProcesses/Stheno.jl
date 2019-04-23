@@ -20,15 +20,7 @@ const ABM{T} = AbstractBlockMatrix{T}
 const ABVM{T} = AbstractBlockVecOrMat{T}
 # const LUABM{T} = Union{ABM, LowerTriangular{T, <:ABM}, UpperTriangular{T}, <:ABM}
 
-# const AdjOrTransABM{T} = Union{ABM{T}, AdjOrTrans{T, <:ABM{T}}}
-# const AdjTransTriABM{T} = Union{AbstractTriangular{T, <:ABM{T}}, AdjOrTransABM{T}}
-# const TriABM{T} = Union{AbstractTriangular{T, <:ABM{T}}, ABM{T}}
-# const BlockTri{T} = AbstractTriangular{T, <:ABM{T}}
-# const BlockAdjOrTrans{T} = AdjOrTrans{T, <:ABM{T}}
-
-# unbox(X::AbstractBlockMatrix) = X
-# unbox(X::Symmetric) = unbox(X.data)
-# unbox(X::AbstractMatrix) = X
+const BlockCholesky{T, V} = Cholesky{T, <:BlockMatrix{T, V}}
 
 
 
@@ -115,6 +107,7 @@ function zero(X::AbstractBlockMatrix)
 end
 
 
+
 #
 # Dense BlockArrays
 #
@@ -125,7 +118,7 @@ function *(A::BlockMatrix{T}, x::BlockVector{V}) where {T, V}
     return mul!(y, A, x)
 end
 
-@adjoint *(A::BlockMatrix, x::BlockVector) = A * x, Δ::BlockVector->(Δ * x', A' * Δ)
+@adjoint *(A::BlockMatrix, x::BlockVector) = A * x, Δ::BlockVector -> (Δ * x', A' * Δ)
 
 function mul!(y::BlockVector, A::BlockMatrix, x::BlockVector)
     @assert are_conformal(A, x) && are_conformal(A', y)
@@ -226,11 +219,9 @@ function reduce_diag(f, A::BlockMatrix{<:Real})
     return sum([reduce_diag(f, getblock(A, n, n)) for n in 1:nblocks(A, 1)])
 end
 
-function logdet(C::Cholesky{<:T, <:AbstractBlockMatrix{T}} where {T<:Real})
-    return 2 * reduce_diag(log, C.factors)
-end
+logdet(C::BlockCholesky{<:Real}) = 2 * reduce_diag(log, C.factors)
 
-@adjoint function logdet(C::Cholesky{<:T, <:AbstractBlockMatrix{T}} where {T<:Real})
+@adjoint function logdet(C::BlockCholesky{<:Real})
     return logdet(C), function(Δ::Real)
         function update_diag!(X::Matrix, A::Matrix)
             X[diagind(X)] .= (2 * Δ) ./ A[diagind(A)]
@@ -247,6 +238,13 @@ end
     end
 end
 
+ldiv!(C::BlockCholesky{<:Real}, x::BlockVector) = ldiv!(C.U, ldiv!(C.U', x))
+ldiv!(C::BlockCholesky{<:Real}, X::BlockMatrix) = ldiv!(C.U, ldiv!(C.U', X))
+
+\(C::BlockCholesky{<:Real}, x::BlockVector) = ldiv!(C, copy(x))
+\(C::BlockCholesky{<:Real}, X::BlockMatrix) = ldiv!(C, copy(X))
+
+
 
 #
 # Adjoint and Transpose
@@ -262,102 +260,7 @@ end
 
 
 
-################################## UpperTriangular BlockMatrices ###########################
-
-
-
-# ################################# Symmetric BlockMatrices ##############################
-
-# const BlockSymmetric{T, V} = Symmetric{T, <:BlockMatrix{T, V}}
-
-# blocksizes(S::BlockSymmetric) = blocksizes(unbox(S))
-# function getblock(X::BlockSymmetric, p::Int, q::Int)
-#     @assert cumulsizes(X, 1) == cumulsizes(X, 2)
-#     X_, uplo = unbox(X), X.uplo
-#     if p < q
-#         return uplo == 'U' ? getblock(X_, p, q) : transpose(getblock(X_, q, p))
-#     elseif p == q
-#         return Symmetric(getblock(X_, p, q))
-#     else
-#         return uplo == 'U' ? transpose(getblock(X_, q, p)) : getblock(X_, p, q)
-#     end
-# end
-
-
-
-# ######################## Util for triangular block matrices ######################
-
-# unbox(A::AbstractTriangular{T, <:ABM{T}} where T) = A.data
-# blocksizes(A::AbstractTriangular{T, <:ABM{T}} where T) = blocksizes(unbox(A))
-# function getblock(U::UpperTriangular{T, <:ABM{T}}, p::Int, q::Int) where T
-#     @assert cumulsizes(U, 1) == cumulsizes(U, 2)
-#     if p > q
-#         return Zeros{T}(blocksize(U, (p, q)))
-#     elseif p == q
-#         return UpperTriangular(getblock(unbox(U), p, q))
-#     else
-#         return getblock(unbox(U), p, q)
-#     end
-# end
-# function BlockMatrix(U::UpperTriangular{T, <:ABM{T}}) where T
-#     B = similar(unbox(U))
-#     for q in 1:nblocks(U, 2)
-#         for p in 1:q-1
-#             setblock!(B, getblock(U, p, q), p, q)
-#         end
-#         setblock!(B, UpperTriangular(getblock(U, q, q)), q, q)
-#         for p in q+1:nblocks(U, 1)
-#             setblock!(B, Zeros{T}(blocksize(U, (p, q))), p, q)
-#         end
-#     end
-#     return B
-# end
-
-# function getblock(L::LowerTriangular{T, <:ABM{T}}, p::Int, q::Int) where T
-#     @assert cumulsizes(L, 1) == cumulsizes(L, 2)
-#     if p > q
-#         return getblock(unbox(L), p, q)
-#     elseif p == q
-#         return LowerTriangular(getblock(unbox(L), p, q))
-#     else
-#         return Zeros{T}(blocksize(L, (p, q)))
-#     end
-# end
-# function BlockMatrix(L::LowerTriangular{T, <:ABM{T}}) where T
-#     B = similar(unbox(L))
-#     for q in 1:nblocks(L, 2)
-#         for p in 1:q-1
-#             setblock!(B, Zeros{T}(blocksize(L, (p, q))), p, q)
-#         end
-#         setblock!(B, LowerTriangular(getblock(L, q, q)), q, q)
-#         for p in q+1:nblocks(L, 1)
-#             setblock!(B, getblock(L, p, q), p, q)
-#         end
-#     end
-#     return B
-# end
-
-
-
-# ####################################### Copying ######################################
-
-# copy(B::BlockSymmetric{T, <:ABM{T}} where T) = Symmetric(copy(unbox(B)))
-# copy(L::LowerTriangular{T, <:BlockSymmetric{T}} where T) = LowerTriangular(copy(unbox(L)))
-# copy(U::UpperTriangular{T, <:BlockSymmetric{T}} where T) = UpperTriangular(copy(unbox(U)))
-
-
-
-# ####################################### Transposition ######################################
-
-# unbox(A::AdjOrTrans) = A.parent
-# blocksizes(A::AdjOrTrans) = BlockSizes(reverse(cumulsizes(unbox(A))))
-
-# getblock(A::Adjoint, p::Int, q::Int) = getblock(A.parent, q, p)'
-# getblock(A::Transpose, p::Int, q::Int) = transpose(getblock(A.parent, q, p))
-
-
-
-# ####################################### Multiplication #####################################
+####################################### Multiplication #####################################
 
 """
     are_conformal(A::BlockVecOrMat, B::BlockVecOrMat)
@@ -368,176 +271,6 @@ with block of the other matrix with which it will be multiplied. This ensures th
 result is itself straightforwardly representable as `BlockVecOrMat`.
 """
 are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
-
-
-
-# """
-#     *(A::AdjTransTriABM{T}, B::AdjTransTriABM{T}) where T
-
-# Matrix-matrix multiplication between `BlockArray`s. Fails if blocks are not conformal.
-# """
-# function *(
-#     A::Union{ABM{T}, BlockTri{T}, BlockAdjOrTrans{T}, AdjOrTrans{T, <:BlockTri{T}}},
-#     B::Union{ABM{T}, BlockTri{T}, BlockAdjOrTrans{T}, AdjOrTrans{T, <:BlockTri{T}}},
-# ) where T
-#     @assert are_conformal(A, B)
-#     C = BlockMatrix{T}(undef_blocks, blocksizes(A, 1), blocksizes(B, 2))
-#     P, Q, R = nblocks(A, 1), nblocks(A, 2), nblocks(B, 2)
-#     for p in 1:P, r in 1:R
-#         setblock!(C, getblock(A, p, 1) * getblock(B, 1, r), p, r)
-#         for q in 2:Q
-#             setblock!(C, getblock(C, p, r) + getblock(A, p, q) * getblock(B, q, r), p, r)
-#         end
-#     end
-#     return C
-# end
-# *(A::AdjTransTriABM{T}, B::AM{T}) where T = A * BlockMatrix([B])
-# *(A::AM{T}, B::AdjTransTriABM{T}) where T = BlockMatrix([A]) * B
-
-# # function *(A::LazyPDMat{T, <:Symmetric{T, <:ABM{T}}}, B::AdjTransTriABM{T}) where T
-# #     return unbox(unbox(A)) * B
-# # end
-
-# const UpperOrAdjLower{T} = Union{
-#     UpperTriangular{T, <:ABM{T}},
-#     AdjOrTrans{T, <:LowerTriangular{T, <:ABM{T}}},
-# }
-# const LowerOrAdjUpper{T} = Union{
-#     LowerTriangular{T, <:ABM{T}},
-#     AdjOrTrans{T, <:UpperTriangular{T, <:ABM{T}}},
-# }
-
-# function \(U::UpperOrAdjLower{T}, x::ABV{T}) where T<:Real
-#     @assert are_conformal(unbox(U), x)
-#     y = BlockVector{T}(undef_blocks, blocksizes(U, 1))
-#     for p in reverse(1:nblocks(y, 1))
-#         setblock!(y, getblock(x, p), p)
-#         for p′ in p+1:nblocks(y, 1)
-#             setblock!(y, getblock(y, p) - getblock(U, p, p′) * getblock(y, p′), p)
-#         end
-#         setblock!(y, getblock(U, p, p) \ getblock(y, p), p)
-#     end
-#     return y
-# end
-
-# function _block_ldiv_mat_upper(U, X)
-#     @assert are_conformal(unbox(U), X)
-#     Y = BlockMatrix{eltype(U)}(undef_blocks, blocksizes(U, 1), blocksizes(X, 2))
-#     for q in 1:nblocks(Y, 2), p in reverse(1:nblocks(Y, 1))
-#         setblock!(Y, getblock(X, p, q), p, q)
-#         for p′ in p+1:nblocks(Y, 1)
-#             setblock!(Y, getblock(Y, p, q) - getblock(U, p, p′) * getblock(Y, p′, q), p, q)
-#         end
-#         setblock!(Y, getblock(U, p, p) \ getblock(Y, p, q), p, q)
-#     end
-#     return Y
-# end
-# function \(U::UpperOrAdjLower{T}, X::Union{ABM{T}, BlockTri{T}}) where T<:Real
-#     return _block_ldiv_mat_upper(U, X)
-# end
-# function \(U::UpperOrAdjLower{T}, X::Adjoint{T, <:UpperTriangular{T, <:ABM{T}}}) where T<:Real
-#     return _block_ldiv_mat_upper(U, X)
-# end
-
-# function \(L::LowerOrAdjUpper{T}, x::ABV{T}) where T<:Real
-#     @assert are_conformal(unbox(L), x)
-#     y = BlockVector{T}(undef_blocks, blocksizes(L, 1))
-#     for p in 1:nblocks(y, 1)
-#         setblock!(y, getblock(x, p), p)
-#         for p′ in 1:p-1
-#             setblock!(y, getblock(y, p) - getblock(L, p, p′) * getblock(y, p′), p)
-#         end
-#         setblock!(y, getblock(L, p, p) \ getblock(y, p), p)
-#     end
-#     return y
-# end
-
-# function _block_ldiv_mat_lower(L, X)
-#     @assert are_conformal(unbox(L), X)
-#     Y = BlockMatrix{eltype(L)}(undef_blocks, blocksizes(L, 1), blocksizes(X, 2))
-#     for q in 1:nblocks(Y, 2), p in 1:nblocks(Y, 1)
-#         setblock!(Y, getblock(X, p, q), p, q)
-#         for p′ in 1:p-1
-#             setblock!(Y, getblock(Y, p, q) - getblock(L, p, p′) * getblock(Y, p′, q), p, q)
-#         end
-#         setblock!(Y, getblock(L, p, p) \ getblock(Y, p, q), p, q)
-#     end
-#     return Y
-# end
-# function \(L::LowerOrAdjUpper{T}, X::Union{ABM{T}, BlockTri{T}}) where T<:Real
-#     return _block_ldiv_mat_lower(L, X)
-# end
-# function \(L::LowerOrAdjUpper{T}, X::Adjoint{T, <:UpperTriangular{T, <:ABM{T}}}) where T<:Real
-#     return _block_ldiv_mat_lower(L, X)
-# end
-
-# """
-#     cholesky(A::Symmetric{T, <:BlockMatrix{T}}) where T<:Real
-
-# Get the Cholesky decomposition of `A` in the form of a `BlockMatrix`.
-
-# Only works for `A` where `is_block_symmetric(A) == true`. Assumes that we want the
-# upper triangular version.
-# """
-
-# @adjoint function cholesky(A::BlockMaybeSymmetric{T, V}) where {T<:Real, V<:AM{T}}
-#     return cholesky(A), function(Δ)
-#         Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
-#         Ū = Δ.factors
-#         for j in reverse(1:nblocks(A, 2))
-#             Ā[Block(j, j)] = back(Ū[Block(j, j)])
-#             for k in 1:j-1
-#                 ĀjjUkj = Ā[Block(j, j)] * U[Block(k, j)]
-#                 UkjĀjj = U[Block(k, j)] * Ā[Block(j, j)]
-#                 Ū[Block(k, j)] .+= ĀjjUkj .+ UkjĀjj
-#             end
-
-#             for i in reverse(1:j-1)
-#                 Ā[Block(i, j)] = Ā[Block(i, j)] + U[Block(i, i)] \ Ū[Block(i, j)]
-#                 Ū[Block(i, i)] = Ū[Block(i, i)] - Ā[Block(i, j)] * U[Block(i, j)]'
-#                 for k in 1:i-1
-#                     Ū[Block(k, i)] = Ū[Block(k, i)] + Ā[Block(i, j)]' * U[Block(k, j)]
-#                     Ū[Block(k, j)] = Ū[Block(k, j)] + U[Block(k, i)] * Ā[Block(i, j)]
-#                 end
-#             end
-#         end
-#         return (Ā,)
-#     end
-# end
-
-# function LinearAlgebra.diagzero(D::Diagonal{<:AM{T}}, r::Integer, c::Integer) where {T}
-#     return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
-# end
-
-# function cholesky(A::BlockMatrix{T, <:Diagonal{<:AbstractMatrix{T}}} where T)
-#     Cs = [cholesky(A).U for A in diag(A.blocks)]
-#     @show Cs, A.block_sizes
-#     return Cholesky(_BlockArray(Diagonal(Cs), A.block_sizes), :U, 0)
-# end
-
-# # A slightly strange util function that shouldn't ever be used outside of `logdet`.
-# reduce_diag(f, A::Matrix{T}) where {T<:Real} = sum(f, view(A, diagind(A)))
-# function reduce_diag(f, A::BlockMatrix{T}) where T<:Real
-#     return sum([reduce_diag(f, getblock(A, n, n)) for n in 1:nblocks(A, 1)])
-# end
-
-# logdet(C::Cholesky{<:Real, <:AbstractBlockMatrix}) = 2 * reduce_diag(log, C.factors)
-# @adjoint function logdet(C::Cholesky{<:Real, <:AbstractBlockMatrix})
-#     return logdet(C), function(Δ::Real)
-#         function update_diag!(X::Matrix, A::Matrix)
-#             X[diagind(X)] .= (2 * Δ) ./ A[diagind(A)]
-#             return X
-#         end
-#         function update_diag!(X::BlockMatrix, A::BlockMatrix)
-#             for n in 1:nblocks(A)[1]
-#                 update_diag!(getblock(X, n, n), getblock(A, n, n))
-#             end
-#             return X
-#         end
-#         factors = update_diag!(zero(C.factors), C.factors)
-#         return ((factors=factors, uplo=nothing, info=nothing),)
-#     end
-# end
 
 # function +(u::UniformScaling, X::AbstractBlockMatrix)
 #     @assert cumulsizes(X, 1) == cumulsizes(X, 2)

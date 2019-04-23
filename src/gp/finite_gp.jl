@@ -53,12 +53,32 @@ marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(map(kernel(f.f), f.x) .+ diag(f.
 Obtain `N` independent samples from the GP `f` using `rng`.
 """
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
-    μ, C = mean(f), cholesky(Symmetric(cov(f)))
-    return μ .+ C.U' * randn(rng, length(μ), N)
+    Σ = cov(f)
+    μ, C = mean(f), cholesky(Symmetric(Σ))
+    return μ .+ C.U' * _rand_eps(rng, Σ, N)
 end
-rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
+
 rand(f::FiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
+
+_rand_eps(rng::AbstractRNG, Σ::AbstractMatrix, N::Int) = randn(rng, size(Σ, 2), N)
+
+function _rand_eps(rng::AbstractRNG, Σ::AbstractBlockMatrix, N::Int)
+    return BlockMatrix([randn(rng, sz, N) for sz in blocksizes(Σ, 2), N in [N]])
+end
+
+function rand(rng::AbstractRNG, f::FiniteGP)
+    Σ = cov(f)
+    μ, C = mean(f), cholesky(Symmetric(Σ))
+    return μ .+ C.U' * _rand_eps(rng, Σ)
+end
+
 rand(f::FiniteGP) = vec(rand(f, 1))
+
+_rand_eps(rng::AbstractRNG, Σ::AbstractMatrix) = randn(rng, size(Σ, 2))
+
+function _rand_eps(rng::AbstractRNG, Σ::AbstractBlockMatrix)
+    return BlockVector([randn(rng, sz) for sz in blocksizes(Σ, 2)])
+end
 
 """
     logpdf(f::FiniteGP, y::AbstractVector{<:Real})
@@ -76,25 +96,25 @@ end
 The saturated Titsias-ELBO.
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-   @assert length(f) == length(y)
-   chol_Σy = cholesky(Symmetric(f.Σy))
+    @assert length(f) == length(y)
+    chol_Σy = cholesky(Symmetric(f.Σy))
 
-   A = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) / chol_Σy.U
-   Λ_ε, δ = cholesky(Symmetric(A * A' + I)), chol_Σy.U' \ (y - mean(f))
+    A = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) / chol_Σy.U
+    Λ_ε, δ = cholesky(Symmetric(A * A' + I)), chol_Σy.U' \ (y - mean(f))
 
-   return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
-       sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
-       tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
+    return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
+        sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
+        tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
 end
 
 # Compute tr(Cf / Σy) efficiently for different types of Σy. For dense Σy you obviously need
 # to compute the entirety of Cf, which is bad, but for particular structured Σy one requires
 # only a subset of the elements. Σy isa UniformScaling is version usually considered.
 function tr_Cf_invΣy(f::FiniteGP, Σy::UniformScaling, chol_Σy::Cholesky)
-   return sum(map(kernel(f.f), f.x)) / Σy.λ
+    return sum(map(kernel(f.f), f.x)) / Σy.λ
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
-   return sum(map(kernel(f.f), f.x) ./ diag(Σy))
+    return sum(map(kernel(f.f), f.x) ./ diag(Σy))
 end
 
 # """
@@ -109,9 +129,9 @@ end
 # end
 
 
-####################################################
+#
 # `logpdf` and `rand` for collections of processes #
-####################################################
+#
 
 # function rand(rng::AbstractRNG, f::BlockGP, N::Int)
 #     M = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(f.fs), [N])

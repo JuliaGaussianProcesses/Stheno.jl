@@ -8,10 +8,10 @@ include("test_util.jl")
         # include("util/zygote_rules.jl")
         # include("util/covariance_matrices.jl")
         @testset "block_arrays" begin
-            include("util/block_arrays/test_util.jl")
-            include("util/block_arrays/dense.jl")
-            # include("util/block_arrays/diagonal.jl")
-            include("util/block_arrays/triangular.jl")
+            # include("util/block_arrays/test_util.jl")
+            # include("util/block_arrays/dense.jl")
+        #     include("util/block_arrays/diagonal.jl")
+        #     include("util/block_arrays/triangular.jl")
         end
         # include("util/abstract_data_set.jl")
         # include("util/fillarrays.jl")
@@ -44,8 +44,8 @@ include("test_util.jl")
         # include("linops/product.jl")
         # include("linops/addition.jl")
         # include("linops/compose.jl")
-        # include("linops/approximate_conditioning.jl")
-        # # include("linops/integrate.jl")
+        include("linops/approximate_conditioning.jl")
+        # include("linops/integrate.jl")
     end
 
     @testset "integration" begin

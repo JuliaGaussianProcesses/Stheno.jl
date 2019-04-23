@@ -141,10 +141,10 @@ end
     end
 
     @testset "dense cholesky" begin
-        rng, P1, P2, P3 = MersenneTwister(123456), 3, 4, 5
-        tmp = randn(rng, P1 + P2 + P3, P1 + P2 + P3)
+        rng, Ps, Qs = MersenneTwister(123456), [3, 4, 5], [8, 7, 6]
+        tmp = randn(rng, sum(Ps), sum(Ps))
         A_ = tmp * tmp' + 1e-9I
-        A = BlockArray(A_, [P1, P2, P3], [P1, P2, P3])
+        A = BlockArray(A_, Ps, Ps)
         @assert A_ == A
 
         # Compute cholesky and compare.
@@ -173,6 +173,13 @@ end
 
             # Check that both answers approximately agree.
             @test C̄_[1].factors ≈ C̄[1].factors
+        end
+
+        @testset "cholesky backsolving" begin
+            x = BlockVector([randn(rng, P) for P in Ps])
+            X = BlockMatrix([randn(rng, P, Q) for P in Ps, Q in Qs])
+            @test Vector(ldiv!(C, copy(x))) ≈ ldiv!(C_, Vector(x))
+            @test Matrix(ldiv!(C, copy(X))) ≈ ldiv!(C_, Matrix(X))
         end
 
         # adjoint_test()

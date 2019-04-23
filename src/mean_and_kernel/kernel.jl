@@ -176,7 +176,7 @@ function _map(::EQ, X::ColsAreObs, X′::ColsAreObs)
     return bcd(x->exp(-x / 2), colwise(SqEuclidean(), X.X, X′.X))
 end
 function _pw(::EQ, X::ColsAreObs, X′::ColsAreObs)
-    return bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X, X′.X))
+    return bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X, X′.X; dims=2))
 end
 _map(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
 _pw(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
@@ -185,17 +185,10 @@ _pw(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, 
 _map(::EQ, x::AV) = Ones{eltype(x)}(length(x))
 _pw(::EQ, x::AV{<:Real}) = _pw(EQ(), x, x)
 _map(::EQ, X::ColsAreObs) = Ones{eltype(X.X)}(length(X))
-_pw(::EQ, X::ColsAreObs) = bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X))
+_pw(::EQ, X::ColsAreObs) = bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X; dims=2))
 _pw(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 # Optimised adjoints. These really do count in terms of performance (I think).
-@adjoint function(::EQ)(x::Real, x′::Real)
-    s = EQ()(x, x′)
-    return s, function(Δ)
-        x̄′ = Δ * (x - x′) * s
-        return -x̄′, x̄′
-    end
-end
 @adjoint function _map(::EQ, x::AV{<:Real}, x′::AV{<:Real})
     s = materialize(_map(EQ(), x, x′))
     return s, function(Δ)

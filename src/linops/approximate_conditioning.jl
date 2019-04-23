@@ -38,22 +38,16 @@ end
 
 
 
-# Compute the approximate posterior 
+#
+# Computing optimal approximate posterior parameters.
+#
+
 function optimal_q(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-    U_y, U = cholesky(Symmetric(f.Σ)).U, cholesky(Symmetric(cov(u))).U
-    B_εf, b_y = U' \ (cov(u, f) / U_y), U_y' \ y
-    Λ_ε = B_εf * B_εf' + I
-    m_ε = cholesky(Λ_ε) \ (B_εf * b_y)
+    U_y, U = cholesky(Symmetric(f.Σy)).U, cholesky(Symmetric(cov(u))).U
+    B_εf, b_y = U' \ (cov(u, f) / U_y), U_y' \ (y - mean(f))
+    Λ_ε = cholesky(B_εf * B_εf' + I)
+    m_ε = Λ_ε \ (B_εf * b_y)
     return m_ε, Λ_ε, U
-
-
-    # δ_y = y - mean(f)
-    # U = cholesky(Symmetric(cov(u))).U
-    # A_εf = U' \ cov(u, f)
-    # Γ = broadcast(/, A_εf, σ)
-    # Λ_ε = cholesky(Γ * Γ' + I)
-    # m_ε = broadcast(/, Λ_ε \ (Γ * δ_y), σ)
-    return m_ε, Λ_ε, U # What things to I actually need for the unsaturated bound?
 end
 optimal_q(c::Observation, u::FiniteGP) = optimal_q(c.f, c.y, u)
 
@@ -63,8 +57,6 @@ optimal_q(cs::Tuple{Vararg{Observation}}, u::FiniteGP) = optimal_q(merge(cs), u)
 function optimal_q(cs::Tuple{Vararg{Observation}}, us::Tuple{Vararg{FiniteGP}})
     return optimal_q(merge(cs), merge(us))
 end
-
-
 
 # # Sugar.
 # function optimal_q(f::AV{<:AbstractGP}, y::AV{<:AV{<:Real}}, u::AbstractGP, σ::Real)
@@ -78,31 +70,39 @@ end
 # end
 
 
-# abstract type AbstractConditioner end
 
-# """
-#     Titsias <: AbstractConditioner
+#
+#
+#
 
-# Construct an object which is able to compute an approximate posterior.
-# """
-# struct Titsias{Tu<:FiniteGP, Tm<:AV{<:Real}, Tγ} <: AbstractConditioner
-#     u::Tu
-#     m′u::Tm
-#     γ::Tγ
-# end
-# function Titsias(u::FiniteGP, m′u::AV{<:Real}, Λ, U)
-#     return Titsias(u, m′u, GP(PPC(Λ, U), u.f.gpc))
-# end
-# Titsias(f::FiniteGP, y::AV{<:Real}, u::FiniteGP) = Titsias(u, optimal_q(f, y, u)...)
-# Titsias(c::Observation, u::FiniteGP) = Titsias(c.f, c.y, u)
+"""
+    Titsias
+
+Construct an object which is able to compute an approximate posterior.
+"""
+struct Titsias{Tu<:FiniteGP, Tcache<:PseudoPointCache} <: AbstractConditioner
+    u::Tu
+    cache::Tcache
+    function Titsias(u::FiniteGP, m_ε::AV{<:Real}, Λ_ε::Cholesky, U::AbstractMatrix)
+        return Titsias(u, )
+    end
+end
+function Titsias(u::FiniteGP, m_ε::AV{<:Real}, Λ_ε::Cholesky, U::AbstractMatrix)
+    return Titsias()
+    return Titsias(u, m′u, GP(PPC(Λ, U), u.f.gpc))
+end
+Titsias(f::FiniteGP, y::AV{<:Real}, u::FiniteGP) = Titsias(u, optimal_q(f, y, u)...)
+Titsias(c::Observation, u::FiniteGP) = Titsias(c.f, c.y, u)
+
+struct PseudoPointCache{Tz<:AV, TU<:UpperTriangular, Tm̂ε<:AV{<:Real}, TΛ<:Cholesky}
+    z::Tz
+    U::TU
+    m̂ε::Tm̂ε
+    Λ::TΛ
+end
 
 # # Construct an approximate posterior distribution.
 # |(g::GP, c::Titsias) = g | (c.u←c.m′u) + project(kernel(c.u.f, g), c.γ, c.u.x)
-
-
-
-
-
 
 # # FillArrays.Zeros(x::BlockVector) = BlockVector(Zeros.(x.blocks))
 

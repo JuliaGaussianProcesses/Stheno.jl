@@ -1,5 +1,5 @@
 using Stheno: FiniteGP, GPC, pw, ConstMean, OuterKernel, AbstractGP, BlockGP
-using Stheno: EQ, Exp, Linear, Noise, PerEQ
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, _rand_eps
 using Statistics, StatsFuns
 using Distributions: MvNormal, PDMat
 
@@ -29,8 +29,16 @@ end
     @testset "rand (deterministic)" begin
         rng, N, D = MersenneTwister(123456), 10, 2
         X, x, Σy = ColsAreObs(randn(rng, D, N)), randn(rng, N), Zeros(N, N)
+        Σy = generate_noise_matrix(rng, N)
         fX = FiniteGP(GP(1, EQ(), GPC()), X, Σy)
         fx = FiniteGP(GP(1, EQ(), GPC()), x, Σy)
+
+        @testset "_rand_eps" begin
+            Σ = cov(fx)
+            E = _rand_eps(rng, Σ, 3)
+            @test E isa Matrix
+            @test size(E) == (size(Σ, 2), 3)
+        end
 
         # Check that single-GP samples have the correct dimensions.
         @test length(rand(rng, fX)) == length(X)
@@ -74,12 +82,21 @@ end
     end
 
     @testset "rand (block - deteministic)" begin
-        rng, N, N′, S = MersenneTwister(123456), 11, 3, 7
+        rng, N, N′, S = MersenneTwister(123456), 2, 3, 7
         x, x′ = randn(rng, N), randn(rng, N′)
         f = GP(sin, eq(), GPC())
         fx, fx′ = FiniteGP(f, x, 1e-3), FiniteGP(f, x′, 1e-3)
         f_blk = BlockGP([f, f])
         f_blk_xx′ = FiniteGP(f_blk, BlockData([x, x′]), 1e-3)
+
+        @testset "_rand_eps" begin
+            Σ = cov(f_blk_xx′)
+            E = _rand_eps(rng, Σ, S)
+            @test E isa BlockMatrix
+            @test size(E) == (N + N′, S)
+            @test blocksizes(E, 1) == blocksizes(Σ, 1)
+            @test blocksizes(E, 2) == [S]
+        end
 
         @test length(rand(rng, f_blk_xx′)) == N + N′
         @test size(rand(rng, f_blk_xx′, S)) == (N + N′, S)
@@ -107,29 +124,29 @@ end
         @test mean(abs.(Σ′ - cov(f_blk_xx′))) < 1e-2
     end
 
-    @testset "rand (block - gradients)" begin
-        # rng, N, N′, S = MersenneTwister(123456), 11, 3, 10
-        # f = GP(cos, eq(), GPC())
-        # xx′ = collect(range(-3.0, stop=3.0, length=N + N′))
-        # x, x′ = xx′[1:N], xx′[N+1:end]
+    # @testset "rand (block - gradients)" begin
+    #     rng, N, N′, S = MersenneTwister(123456), 11, 3, 10
+    #     f = GP(cos, eq(), GPC())
+    #     xx′ = collect(range(-3.0, stop=3.0, length=N + N′))
+    #     x, x′ = xx′[1:N], xx′[N+1:end]
 
-        # foo(x, x′) = begin
-        #     f = GP(sin, eq(), GPC())
-        #     return FiniteGP(BlockGP([f, f]), BlockData([x, x′]), eps())
-        # end
+    #     foo(x, x′) = begin
+    #         f = GP(sin, eq(), GPC())
+    #         return FiniteGP(BlockGP([f, f]), BlockData([x, x′]), eps())
+    #     end
 
-        # # Check that the gradient w.r.t. the samples is correct (single-sample).
-        # adjoint_test(
-        #     (x, x′)->rand(_rng(), foo(x, x′)), randn(rng, N + N′), x, x′;
-        #     rtol=1e-6,atol=1e-6,
-        # )
+    #     # Check that the gradient w.r.t. the samples is correct (single-sample).
+    #     adjoint_test(
+    #         (x, x′)->rand(_rng(), foo(x, x′)), randn(rng, N + N′), x, x′;
+    #         rtol=1e-6,atol=1e-6,
+    #     )
 
-        # # Check that the gradient w.r.t. the samples is correct (multisample).
-        # adjoint_test(
-        #     (x, x′)->rand(_rng(), foo(x, x′), S), randn(rng, N + N′, S), x, x′;
-        #     rtol=1e-6, atol=1e-6,
-        # )
-    end
+    #     # Check that the gradient w.r.t. the samples is correct (multisample).
+    #     adjoint_test(
+    #         (x, x′)->rand(_rng(), foo(x, x′), S), randn(rng, N + N′, S), x, x′;
+    #         rtol=1e-6, atol=1e-6,
+    #     )
+    # end
 
     @testset "logpdf / elbo" begin
         rng, N, σ, gpc = MersenneTwister(123456), 10, 1e-1, GPC()
