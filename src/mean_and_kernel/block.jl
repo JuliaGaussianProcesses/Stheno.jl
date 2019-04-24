@@ -1,28 +1,3 @@
-# These implementations are slow, and are only used because Zygote doesn't currently support
-# another way to achieve the required behaviour.
-function unary_make_vec(foo, fs, xs)
-    y = foo(fs[1], xs[1])
-    for n in 2:length(xs)
-        y = vcat(y, foo(fs[n], xs[n]))
-    end
-    return y
-end
-function binary_make_vec(foo, fs, xs, x′s)
-    y = foo(fs[1], xs[1], x′s[1])
-    for n in 2:length(xs)
-        y = vcat(y, foo(fs[n], xs[n], x′s[n]))
-    end
-    return y
-end
-function binary_make_mat(foo, fs, xs, x′s)
-    Y = unary_make_vec((f, x)->foo(f, x, x′s[1]), fs[:, 1], xs)
-    for n in 2:length(x′s)
-        Y = hcat(Y, unary_make_vec((f, x)->foo(f, x, x′s[n]), fs[:, n], xs))
-    end
-    return Y
-end
-
-
 Base.zero(A::AbstractArray{<:AbstractArray}) = zero.(A)
 
 
@@ -38,7 +13,6 @@ BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
 function _map(m::BlockMean, x::BlockData)
     return BlockVector([map(μ, blk) for (μ, blk) in zip(m.μ, blocks(x))])
 end
-# _map(μ::BlockMean, x::BlockData) = unary_make_vec(map, μ.μ, blocks(x))
 
 
 """
@@ -58,12 +32,10 @@ end
 function _map(k::BlockCrossKernel, x::BlockData, x′::BlockData)
     items = zip(diag(k.ks), blocks(x), blocks(x′))
     return BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items])
-    # return binary_make_vec(map, diag(k.ks), blocks(x), blocks(x′))
 end
 function _pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
     x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
     return BlockMatrix([pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items])
-    # return binary_make_mat(pw, k.ks, blocks(x), blocks(x′))
 end
 _pw(k::BlockCrossKernel, x::BlockData, x′::AV) = _pw(k, x, BlockData([x′]))
 _pw(k::BlockCrossKernel, x::AV, x′::BlockData) = _pw(k, BlockData([x]), x′)
@@ -94,12 +66,12 @@ end
 function _map(k::BlockKernel, x::BlockData, x′::BlockData)
     items = zip(diag(k.ks), blocks(x), blocks(x′))
     return BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items])
-    # return binary_make_vec(map, diag(k.ks), blocks(x), blocks(x′))
 end
 function _pw(k::BlockKernel, x::BlockData, x′::BlockData)
     x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
-    return BlockMatrix([pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items])
-    # return binary_make_mat(pw, k.ks, blocks(x), blocks(x′))
+    blks = [pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items]
+    return _BlockArray(blks, size.(blks[:, 1], 1), size.(blks[1, :], 2))
+    # return BlockMatrix(blks)
 end
 
 # Unary methods.

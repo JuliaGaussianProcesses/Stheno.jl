@@ -59,12 +59,9 @@ function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat})
 
     # Check that sizes make sense.
     heights, widths = size.(Xs[:, 1], 1), size.(Xs[1, :], 2)
-    for q in 1:size(Xs, 2), p in 1:size(Xs, 1)
-        @assert size(Xs[p, q]) == (heights[p], widths[q])
-    end
 
     # Construct BlockMatrix.
-    return _BlockArray(Matrix.(Xs), heights, widths)
+    return _BlockArray(Xs, heights, widths)
 end
 @adjoint function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat})
     X = BlockMatrix(Xs)

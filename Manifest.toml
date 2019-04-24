@@ -40,10 +40,8 @@ uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
 version = "0.5.3"
 
 [[BlockArrays]]
-deps = ["Base64", "LinearAlgebra", "Random", "SparseArrays", "Test"]
-git-tree-sha1 = "b9970ac7c9f0b315692d541d7bfca561f0f221c1"
-repo-rev = "master"
-repo-url = "https://github.com/JuliaArrays/BlockArrays.jl.git"
+deps = ["LinearAlgebra"]
+path = "/Users/willtebbutt/.julia/dev/BlockArrays"
 uuid = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 version = "0.8.0+"
 
@@ -127,7 +125,7 @@ version = "0.17.0"
 
 [[FDM]]
 deps = ["LinearAlgebra", "Printf"]
-path = "/home/wct23/.julia/dev/FDM"
+path = "/Users/willtebbutt/.julia/dev/FDM"
 uuid = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
 version = "0.4.0+"
 
@@ -400,7 +398,7 @@ uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 version = "0.8.1"
 
 [[Zygote]]
-deps = ["DiffRules", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics"]
+deps = ["DiffRules", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics"]
 path = "../Zygote"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
 version = "0.2.0+"
