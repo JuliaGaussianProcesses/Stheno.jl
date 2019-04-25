@@ -35,7 +35,7 @@ include("test_util.jl")
     @testset "gp" begin
         # include("gp/gp.jl")
         # include("gp/block_gp.jl")
-        # include("gp/finite_gp.jl")
+        include("gp/finite_gp.jl")
     end
 
     @testset "linops" begin

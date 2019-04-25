@@ -27,3 +27,4 @@ k_p′p(::typeof(*), g::GP, f::MeanFunction, f_p::GP) = f * kernel(g, f_p)
 
 *(g::GP, f::Real) = g * ConstMean(f)
 *(g::GP, f::Function) = g * CustomMean(f)
+*(g::GP, f) = g * CustomMean(f)

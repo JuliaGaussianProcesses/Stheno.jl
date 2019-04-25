@@ -17,7 +17,8 @@ module Stheno
     const pw = pairwise
     const bcd = broadcasted
 
-    # Various bits of utility that aren't inherently GP-related.
+    # Various bits of utility that aren't inherently GP-related. A lot of this is very
+    # type-piratic.
     include("util/zygote_rules.jl")
     include("util/covariance_matrices.jl")
     include("util/block_arrays/dense.jl")
@@ -26,6 +27,7 @@ module Stheno
     include("util/abstract_data_set.jl")
     include("util/toeplitz.jl")
     include("util/fillarrays.jl")
+    include("util/proper_type_piracy.jl")
 
     # All mean function and kernel related functionality.
     include("mean_and_kernel/mean.jl")

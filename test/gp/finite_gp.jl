@@ -194,86 +194,86 @@ end
     end
 end
 
-"""
-    simple_gp_tests(rng::AbstractRNG, f::AbstractGP, xs::AV{<:AV}, σs::AV{<:Real})
+# """
+#     simple_gp_tests(rng::AbstractRNG, f::AbstractGP, xs::AV{<:AV}, σs::AV{<:Real})
 
-Integration tests for simple GPs.
-"""
-function simple_gp_tests(
-    rng::AbstractRNG,
-    f::AbstractGP,
-    xs::AV{<:AV},
-    isp_σs::AV{<:Real};
-    atol=1e-8,
-    rtol=1e-8,
-)
-    for x in xs, isp_σ in isp_σs
+# Integration tests for simple GPs.
+# """
+# function simple_gp_tests(
+#     rng::AbstractRNG,
+#     f::AbstractGP,
+#     xs::AV{<:AV},
+#     isp_σs::AV{<:Real};
+#     atol=1e-8,
+#     rtol=1e-8,
+# )
+#     for x in xs, isp_σ in isp_σs
 
-        # Test gradient w.r.t. random sampling.
-        N = length(x)
-        adjoint_test(
-            (x, isp_σ)->rand(_rng(), FiniteGP(f, x, softplus(isp_σ)^2)),
-            randn(rng, N),
-            x,
-            isp_σ,;
-            atol=atol, rtol=rtol,
-        )    
-        adjoint_test(
-            (x, isp_σ)->rand(_rng(), FiniteGP(f, x, softplus(isp_σ)^2), 11),
-            randn(rng, N, 11),
-            x,
-            isp_σ,;
-            atol=atol, rtol=rtol,
-        )
+#         # Test gradient w.r.t. random sampling.
+#         N = length(x)
+#         adjoint_test(
+#             (x, isp_σ)->rand(_rng(), FiniteGP(f, x, softplus(isp_σ)^2)),
+#             randn(rng, N),
+#             x,
+#             isp_σ,;
+#             atol=atol, rtol=rtol,
+#         )    
+#         adjoint_test(
+#             (x, isp_σ)->rand(_rng(), FiniteGP(f, x, softplus(isp_σ)^2), 11),
+#             randn(rng, N, 11),
+#             x,
+#             isp_σ,;
+#             atol=atol, rtol=rtol,
+#         )
 
-        # Check that gradient w.r.t. logpdf is correct.
-        y, l̄ = rand(rng, FiniteGP(f, x, softplus(isp_σ))), randn(rng)
-        adjoint_test(
-            (x, isp_σ, y)->logpdf(FiniteGP(f, x, softplus(isp_σ)), y),
-            l̄, x, isp_σ, y;
-            atol=atol, rtol=rtol,
-        )
+#         # Check that gradient w.r.t. logpdf is correct.
+#         y, l̄ = rand(rng, FiniteGP(f, x, softplus(isp_σ))), randn(rng)
+#         adjoint_test(
+#             (x, isp_σ, y)->logpdf(FiniteGP(f, x, softplus(isp_σ)), y),
+#             l̄, x, isp_σ, y;
+#             atol=atol, rtol=rtol,
+#         )
 
-        # Check that elbo is tight-ish when it's meant to be.
-        fx, yx = FiniteGP(f, x, 1e-9), FiniteGP(f, x, softplus(isp_σ))
-        @test isapprox(elbo(yx, y, fx), logpdf(yx, y); atol=1e-6, rtol=1e-6)
+#         # Check that elbo is tight-ish when it's meant to be.
+#         fx, yx = FiniteGP(f, x, 1e-9), FiniteGP(f, x, softplus(isp_σ))
+#         @test isapprox(elbo(yx, y, fx), logpdf(yx, y); atol=1e-6, rtol=1e-6)
 
-        # Check that gradient w.r.t. elbo is correct.
-        adjoint_test(
-            (x, ŷ, isp_σ)->elbo(FiniteGP(f, x, softplus(isp_σ)), ŷ, FiniteGP(f, x, 1e-9)),
-            randn(rng), x, y, isp_σ;
-            atol=1e-6, rtol=1e-6,
-        )
-    end
-end
+#         # Check that gradient w.r.t. elbo is correct.
+#         adjoint_test(
+#             (x, ŷ, isp_σ)->elbo(FiniteGP(f, x, softplus(isp_σ)), ŷ, FiniteGP(f, x, 1e-9)),
+#             randn(rng), x, y, isp_σ;
+#             atol=1e-6, rtol=1e-6,
+#         )
+#     end
+# end
 
-__foo(x) = isnothing(x) ? "nothing" : x
+# __foo(x) = isnothing(x) ? "nothing" : x
 
-@testset "FiniteGP (integration)" begin
-    rng = MersenneTwister(123456)
-    xs = [collect(range(-3.0, stop=3.0, length=N)) for N in [2, 5, 10]]
-    σs = invsoftplus.([1e-1, 1e0, 1e1])
-    for (k, name, atol, rtol) in vcat(
-        [
-            (EQ(), "EQ", 1e-8, 1e-8),
-            (Linear(), "Linear", 1e-8, 1e-8),
-            (PerEQ(), "PerEQ", 5e-5, 1e-8),
-            (Exp(), "Exp", 1e-8, 1e-8),
-        ],
-        [(
-            k(α=α, β=β, l=l), 
-            "$k_name(α=$(__foo(α)), β=$(__foo(β)), l=$(__foo(l)))",
-            1e-8,
-            1e-8,
-        )
-            for (k, k_name) in ((eq, "eq"), (linear, "linear"), (exp, "exp"))
-            for α in (nothing, randn(rng))
-            for β in (nothing, softplus(randn(rng)))
-            for l in (nothing, randn(rng))
-        ],
-    )
-        @testset "$name" begin
-            simple_gp_tests(_rng(), GP(k, GPC()), xs, σs; atol=atol, rtol=rtol)
-        end
-    end
-end
+# @testset "FiniteGP (integration)" begin
+#     rng = MersenneTwister(123456)
+#     xs = [collect(range(-3.0, stop=3.0, length=N)) for N in [2, 5, 10]]
+#     σs = invsoftplus.([1e-1, 1e0, 1e1])
+#     for (k, name, atol, rtol) in vcat(
+#         [
+#             (EQ(), "EQ", 1e-8, 1e-8),
+#             (Linear(), "Linear", 1e-8, 1e-8),
+#             (PerEQ(), "PerEQ", 5e-5, 1e-8),
+#             (Exp(), "Exp", 1e-8, 1e-8),
+#         ],
+#         [(
+#             k(α=α, β=β, l=l), 
+#             "$k_name(α=$(__foo(α)), β=$(__foo(β)), l=$(__foo(l)))",
+#             1e-8,
+#             1e-8,
+#         )
+#             for (k, k_name) in ((eq, "eq"), (linear, "linear"), (exp, "exp"))
+#             for α in (nothing, randn(rng))
+#             for β in (nothing, softplus(randn(rng)))
+#             for l in (nothing, randn(rng))
+#         ],
+#     )
+#         @testset "$name" begin
+#             simple_gp_tests(_rng(), GP(k, GPC()), xs, σs; atol=atol, rtol=rtol)
+#         end
+#     end
+# end

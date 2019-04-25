@@ -41,7 +41,9 @@ version = "0.5.3"
 
 [[BlockArrays]]
 deps = ["LinearAlgebra"]
-path = "/Users/willtebbutt/.julia/dev/BlockArrays"
+git-tree-sha1 = "a8b984a40cca16fc0e7a77b7ed04f04143b71e96"
+repo-rev = "master"
+repo-url = "https://github.com/JuliaArrays/BlockArrays.jl.git"
 uuid = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 version = "0.8.0+"
 
@@ -125,7 +127,7 @@ version = "0.17.0"
 
 [[FDM]]
 deps = ["LinearAlgebra", "Printf"]
-path = "/Users/willtebbutt/.julia/dev/FDM"
+path = "/home/wct23/.julia/dev/FDM"
 uuid = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
 version = "0.4.0+"
 
