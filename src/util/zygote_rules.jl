@@ -13,16 +13,6 @@ import StatsFuns: log1pexp, logistic, logexpm1, xlogx, xlogy, logit, log1psq, lo
 
 @nograd MersenneTwister, propertynames
 
-# Adjoints for FillArrays.jl. concrete types.
-@adjoint function Fill(x, sz::Integer...)
-    back(Δ::Nothing) = (nothing, map(_->nothing, sz)...)
-    back(Δ::AbstractArray) = (sum(Δ), map(_->nothing, sz)...)
-    back(Δ::NamedTuple{(:value, :axes)}) = (Δ.value, map(_->nothing, sz)...)
-    return Fill(x, sz...), back
-end
-@adjoint Zeros{T}(sz::Integer...) where {T} = Zeros{T}(sz...), Δ->(map(_->nothing, sz)...,)
-@adjoint Ones{T}(sz::Integer...) where {T} = Ones{T}(sz...), Δ->(map(_->nothing, sz)...,)
-
 @adjoint function broadcasted(op, r::AbstractFill{<:Real})
     y, _back = Zygote.forward(op, getindex_value(r))
     back(Δ::AbstractFill) = (nothing, Fill(_back(getindex_value(Δ))[1], size(r)))
@@ -30,26 +20,40 @@ end
     return Fill(y, size(r)), back
 end
 
-_sum_accum(::Fill, s::Real) = (value=s, axes=nothing)
-_sum_accum(::Union{Ones, Zeros}, s::Real) = (axes=nothing,)
-@adjoint function broadcasted(::typeof(+), a::AbstractFill, b::AbstractFill)
-    return broadcasted(+, a, b), function(Δ)
-        s = sum(Δ)
-        return (nothing, _sum_accum(a, s), _sum_accum(b, s))
+function harmonised_dims(a::AbstractArray, b::AbstractArray)
+    δ = ndims(a) - ndims(b)
+    if δ > 0
+        new_b_dims = (size(b)..., ntuple(_->1, abs(δ))...)
+        return size(a), new_b_dims
+    elseif δ < 0
+        new_a_dims = (size(a)..., ntuple(_->1, abs(δ))...)
+        return new_a_dims, size(b)
+    else
+        return a, b
     end
 end
 
-_prod_accum(::Fill, sΔ::Real, sb::Real) = (value=sΔ * sb, axes=nothing)
-_prod_accum(::Union{Ones, Zeros}, ::Real, ::Real) = (axes=nothing,)
-@adjoint function broadcasted(
-    ::typeof(*),
-    a::AbstractFill{<:Real, N},
-    b::AbstractFill{<:Real, N},
-) where {N}
+function dims_to_reduce(broadcast_dims, original_dims)
+    return findall(map(==, broadcast_dims, original_dims))
+end
+
+@adjoint function broadcasted(::typeof(+), a::AbstractFill, b::AbstractFill)
+    return broadcasted(+, a, b), function(Δ)
+        a_broadcast_dims, b_broadcast_dims = harmonised_dims(a, b)
+        reduce_dims_a = dims_to_reduce(size(Δ), a_broadcast_dims)
+        reduce_dims_b = dims_to_reduce(size(Δ), b_broadcast_dims)
+        return (nothing, sum(Δ; dims=reduce_dims_a), sum(Δ; dims=reduce_dims_b))
+    end
+end
+
+@adjoint function broadcasted(::typeof(*), a::AbstractFill{<:Real}, b::AbstractFill{<:Real})
     return broadcasted(*, a, b), function(Δ)
-        sΔ, sa, sb = sum(Δ), sum(a), sum(b)
-        return (nothing, (value=sum(Δ .* b), axes=nothing), (value=sum(Δ .* a), axes=nothing))
-        return (nothing, _prod_accum(a, sΔ, sb), size(b) * _prod_accum(b, sΔ, sa))
+        a_broadcast_dims, b_broadcast_dims = harmonised_dims(a, b)
+        reduce_dims_a = dims_to_reduce(size(Δ), a_broadcast_dims)
+        reduce_dims_b = dims_to_reduce(size(Δ), b_broadcast_dims)
+        ā = sum(Δ .* b; dims=reduce_dims_a)
+        b̄ = sum(Δ .* a; dims=reduce_dims_b)
+        return (nothing, ā, b̄)
     end
 end
 

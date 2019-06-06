@@ -22,7 +22,10 @@ function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
 end
 
 # AbstractArrays.
-to_vec(x::ColsAreObs{<:Real}) = vec(x.X), x_vec -> ColsAreObs(reshape(x_vec, size(x.X)))
+function to_vec(x::ColsAreObs{<:Real})
+    x_vec, back = to_vec(x.X)
+    return x_vec, x_vec -> ColsAreObs(back(x_vec))
+end
 to_vec(x::BlockArray) = vec(Array(x)), x_->BlockArray(reshape(x_, size(x)), blocksizes(x))
 to_vec(x::AbstractFill) = vec(Array(x)), x->error("No backwards defined")
 function to_vec(x::BlockData)
@@ -56,7 +59,7 @@ function fd_isapprox(x_ad::Tuple, x_fd::Tuple, rtol, atol)
     return all(map((x, x′)->fd_isapprox(x, x′, rtol, atol), x_ad, x_fd))
 end
 
-function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=central_fdm(5, 1))
+function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=FDM.Central(5, 1))
 
     # Compute forwards-pass and j′vp.
     y, back = Zygote.forward(f, x...)
