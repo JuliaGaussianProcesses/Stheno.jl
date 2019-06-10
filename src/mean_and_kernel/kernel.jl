@@ -110,12 +110,12 @@ eltype(::ZeroKernel{T}) where {T} = T
 zero(::CrossKernel) = ZeroKernel()
 
 # Binary methods.
-_map(k::ZeroKernel, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′))...)
-_pw(k::ZeroKernel, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
+map(k::ZeroKernel, x::AV, x′::AV) = zeros(eltype(k), broadcast_shape(size(x), size(x′))...)
+pw(k::ZeroKernel, x::AV, x′::AV) = zeros(eltype(k), length(x), length(x′))
 
 # Unary methods.
-_map(k::ZeroKernel, x::AV) = Zeros{eltype(k)}(length(x))
-_pw(k::ZeroKernel, x::AV) = Zeros{eltype(k)}(length(x), length(x))
+map(k::ZeroKernel, x::AV) = zeros(eltype(k), length(x))
+pw(k::ZeroKernel, x::AV) = zeros(eltype(k), length(x), length(x))
 
 
 """
@@ -129,12 +129,12 @@ OneKernel() = OneKernel{Float64}()
 eltype(k::OneKernel{T}) where {T} = T
 
 # Binary methods.
-_map(k::OneKernel, x::AV, x′::AV) = Ones{eltype(k)}(broadcast_shape(size(x), size(x′))...)
-_pw(k::OneKernel, x::AV, x′::AV) = Ones{eltype(k)}(length(x), length(x′))
+map(k::OneKernel, x::AV, x′::AV) = ones(eltype(k), broadcast_shape(size(x), size(x′))...)
+pw(k::OneKernel, x::AV, x′::AV) = ones(eltype(k), length(x), length(x′))
 
 # Unary methods.
-_map(k::OneKernel, x::AV) = Ones{eltype(k)}(length(x))
-_pw(k::OneKernel, x::AV) = Ones{eltype(k)}(length(x), length(x))
+map(k::OneKernel, x::AV) = ones(eltype(k), length(x))
+pw(k::OneKernel, x::AV) = ones(eltype(k), length(x), length(x))
 
 
 """
@@ -150,12 +150,12 @@ end
 const_kernel(c, x, x′) = c
 
 # Binary methods.
-_map(k::ConstKernel, x::AV, x′::AV) = Fill(k.c, broadcast_shape(size(x), size(x′))...)
-_pw(k::ConstKernel, x::AV, x′::AV) = Fill(k.c, length(x), length(x′))
+map(k::ConstKernel, x::AV, x′::AV) = fill(k.c, broadcast_shape(size(x), size(x′))...)
+pw(k::ConstKernel, x::AV, x′::AV) = fill(k.c, length(x), length(x′))
 
 # Unary methods.
-_map(k::ConstKernel, x::AV) = Fill(k.c, length(x))
-_pw(k::ConstKernel, x::AV) = _pw(k, x, x)
+map(k::ConstKernel, x::AV) = fill(k.c, length(x))
+pw(k::ConstKernel, x::AV) = pw(k, x, x)
 
 
 """
@@ -166,44 +166,37 @@ The standardised Exponentiated Quadratic kernel (no free parameters).
 struct EQ <: Kernel end
 
 # Binary methods.
-function _map(::EQ, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(exp, bcd((x, x′)->-sqeuclidean(x, x′) / 2, x, x′))
-end
-function _pw(::EQ, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(exp, bcd((x, x′)->-sqeuclidean(x, x′) / 2, x, x′'))
-end
-function _map(::EQ, X::ColsAreObs, X′::ColsAreObs)
-    return bcd(x->exp(-x / 2), colwise(SqEuclidean(), X.X, X′.X))
-end
-function _pw(::EQ, X::ColsAreObs, X′::ColsAreObs)
-    return bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X, X′.X; dims=2))
-end
-_map(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
-_pw(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+map(::EQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-sqeuclidean.(x, x′) ./ 2)
+pw(::EQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-sqeuclidean.(x, x′') ./ 2)
+map(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(.-colwise(SqEuclidean(), X.X, X′.X) ./ 2)
+pw(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(.-pw(SqEuclidean(), X.X, X′.X; dims=2) ./ 2)
+
+map(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+pw(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
-_map(::EQ, x::AV) = Ones{eltype(x)}(length(x))
-_pw(::EQ, x::AV{<:Real}) = _pw(EQ(), x, x)
-_map(::EQ, X::ColsAreObs) = Ones{eltype(X.X)}(length(X))
-_pw(::EQ, X::ColsAreObs) = bcd(x->exp(-x / 2), pairwise(SqEuclidean(), X.X; dims=2))
-_pw(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+map(::EQ, x::AV) = ones(eltype(x), length(x))
+pw(::EQ, x::AV{<:Real}) = _pw(EQ(), x, x)
+map(::EQ, X::ColsAreObs) = ones(eltype(X.X), length(X))
+pw(::EQ, X::ColsAreObs) = bcd(x->exp(-x / 2), pw(SqEuclidean(), X.X; dims=2))
+pw(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 # Optimised adjoints. These really do count in terms of performance (I think).
-@adjoint function _map(::EQ, x::AV{<:Real}, x′::AV{<:Real})
+@adjoint function map(::EQ, x::AV{<:Real}, x′::AV{<:Real})
     s = materialize(_map(EQ(), x, x′))
     return s, function(Δ)
         x̄′ = (x .- x′) .* Δ .* s
         return nothing, -x̄′, x̄′
     end
 end
-@adjoint function _pw(::EQ, x::AV{<:Real}, x′::AV{<:Real})
+@adjoint function pw(::EQ, x::AV{<:Real}, x′::AV{<:Real})
     s = materialize(_pw(EQ(), x, x′))
     return s, function(Δ)
         x̄′ = Δ .* (x .- x′') .* s
         return nothing, -reshape(sum(x̄′; dims=2), :), reshape(sum(x̄′; dims=1), :)
     end
 end
-@adjoint function _pw(::EQ, x::AV{<:Real})
+@adjoint function pw(::EQ, x::AV{<:Real})
     s = materialize(_pw(EQ(), x))
     return s, function(Δ)
         x̄_tmp = Δ .* (x .- x') .* s
@@ -220,19 +213,15 @@ The usual periodic kernel derived by mapping the input domain onto the unit circ
 struct PerEQ <: Kernel end
 
 # Binary methods.
-function _map(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′), x, x′))))
-end
-function _pw(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real})
-    return bcd(exp, bcd(x->-2x^2, bcd(sin, bcd((x, x′)->π * abs(x - x′), x, x′'))))
-end
-_map(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
-_pw(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+map(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-2 .* sin.(π .* abs.(x .- x′)).^2)
+pw(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-2 .* sin.(π .* abs.(x .- x′')).^2)
+map(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+pw(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
-_map(::PerEQ, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
-_pw(k::PerEQ, x::AV{<:Real}) = _pw(k, x, x)
-_pw(k::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+map(::PerEQ, x::AV{<:Real}) = ones(eltype(x), length(x))
+pw(k::PerEQ, x::AV{<:Real}) = pw(k, x, x)
+pw(k::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 
 """
@@ -243,15 +232,15 @@ The standardised Exponential kernel.
 struct Exp <: Kernel end
 
 # Binary methods
-_map(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′))
-_pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = bcd(exp, bcd((x, x′)->-abs(x - x′), x, x′'))
-_map(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
-_pw(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+map(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′))
+pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′'))
+map(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+pw(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods
-_map(::Exp, x::AV{<:Real}) = Ones{eltype(x)}(length(x))
-_pw(k::Exp, x::AV{<:Real}) = _pw(k, x, x)
-_pw(k::Exp, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+map(::Exp, x::AV{<:Real}) = ones(eltype(x), length(x))
+pw(k::Exp, x::AV{<:Real}) = pw(k, x, x)
+pw(k::Exp, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 
 """
@@ -262,16 +251,16 @@ The standardised linear kernel / dot-product kernel.
 struct Linear <: Kernel end
 
 # Binary methods
-_map(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′
-_pw(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′'
-_map(k::Linear, x::ColsAreObs, x′::ColsAreObs) = reshape(sum(x.X .* x′.X; dims=1), :)
-_pw(k::Linear, x::ColsAreObs, x′::ColsAreObs) = x.X' * x′.X
+map(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′
+pw(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′'
+map(k::Linear, x::ColsAreObs, x′::ColsAreObs) = reshape(sum(x.X .* x′.X; dims=1), :)
+pw(k::Linear, x::ColsAreObs, x′::ColsAreObs) = x.X' * x′.X
 
 # Unary methods
-_map(k::Linear, x::AV{<:Real}) = x.^2
-_pw(k::Linear, x::AV{<:Real}) = x .* x'
-_map(k::Linear, x::ColsAreObs) = reshape(sum(abs2.(x.X); dims=1), :)
-_pw(k::Linear, x::ColsAreObs) = x.X' * x.X
+map(k::Linear, x::AV{<:Real}) = x.^2
+pw(k::Linear, x::AV{<:Real}) = x .* x'
+map(k::Linear, x::ColsAreObs) = reshape(sum(abs2.(x.X); dims=1), :)
+pw(k::Linear, x::ColsAreObs) = x.X' * x.X
 
 
 """
@@ -284,12 +273,12 @@ Noise() = Noise{Int}()
 eltype(k::Noise{T}) where {T} = T
 
 # Binary methods.
-_map(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(broadcast_shape(size(x), size(x′))...)
-_pw(k::Noise, x::AV, x′::AV) = Zeros{eltype(k)}(length(x), length(x′))
+map(k::Noise, x::AV, x′::AV) = zeros(eltype(k), broadcast_shape(size(x), size(x′))...)
+pw(k::Noise, x::AV, x′::AV) = zeros(eltype(k), length(x), length(x′))
 
 # Unary methods.
-_map(k::Noise, x::AV) = Ones{eltype(k)}(length(x))
-_pw(k::Noise, x::AV) = Diagonal(Ones{eltype(k)}(length(x)))
+map(k::Noise, x::AV) = ones(eltype(k), length(x))
+pw(k::Noise, x::AV) = diagm(0=>ones(eltype(k), length(x)))
 
 
 # """

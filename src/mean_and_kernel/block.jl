@@ -10,9 +10,7 @@ struct BlockMean{Tμ<:AbstractVector{<:MeanFunction}} <: MeanFunction
     μ::Tμ
 end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
-function _map(m::BlockMean, x::BlockData)
-    return BlockVector([map(μ, blk) for (μ, blk) in zip(m.μ, blocks(x))])
-end
+_map(m::BlockMean, x::BlockData) = BlockVector(map((μ, blk)->map(μ, blk), m.μ, blocks(x)))
 
 
 """
@@ -30,19 +28,15 @@ end
 
 # Binary methods.
 function _map(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    items = zip(diag(k.ks), blocks(x), blocks(x′))
-    return BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items])
+    return BlockVector(map((k, b, b′)->map(k, b, b′), diag(k.ks), blocks(x), blocks(x′)))
 end
 function _pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
-    return BlockMatrix([pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items])
+    blks = pw.(k.ks, blocks(x), permutedims(blocks(x′)))
+    return _BlockArray(blks, _get_block_sizes(blks)...)
 end
 _pw(k::BlockCrossKernel, x::BlockData, x′::AV) = _pw(k, x, BlockData([x′]))
 _pw(k::BlockCrossKernel, x::AV, x′::BlockData) = _pw(k, BlockData([x]), x′)
 
-
-# This whole implementation is a hack to ensure that backprop basically works. This will
-# change in the future, in particular the constructor will certainly change.
 
 """
     BlockKernel <: Kernel
@@ -70,8 +64,7 @@ end
 function _pw(k::BlockKernel, x::BlockData, x′::BlockData)
     x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
     blks = [pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items]
-    return _BlockArray(blks, size.(blks[:, 1], 1), size.(blks[1, :], 2))
-    # return BlockMatrix(blks)
+    return _BlockArray(blks, _get_block_sizes(blks)...)
 end
 
 # Unary methods.

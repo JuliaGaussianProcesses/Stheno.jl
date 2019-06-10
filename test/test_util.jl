@@ -43,10 +43,10 @@ end
 
 # My version of isapprox
 function fd_isapprox(x_ad::Nothing, x_fd, rtol, atol)
-    return isapprox(x_fd, zero(x_fd); rtol=rtol, atol=atol)
+    return fd_isapprox(x_fd, zero(x_fd), rtol, atol)
 end
 function fd_isapprox(x_ad::AbstractArray, x_fd::AbstractArray, rtol, atol)
-    return isapprox(x_ad, x_fd; rtol=rtol, atol=atol)
+    return all(fd_isapprox.(x_ad, x_fd, rtol, atol))
 end
 function fd_isapprox(x_ad::Real, x_fd::Real, rtol, atol)
     return isapprox(x_ad, x_fd; rtol=rtol, atol=atol)

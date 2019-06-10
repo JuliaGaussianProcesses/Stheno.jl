@@ -1,5 +1,5 @@
 using Random, LinearAlgebra, BlockArrays, FillArrays
-using BlockArrays: cumulsizes, _BlockArray
+using BlockArrays: cumulsizes, _BlockArray, BlockSizes
 using Stheno: block_diagonal
 
 function general_BlockDiagonal_tests(rng, blocks)
@@ -20,6 +20,37 @@ function general_BlockDiagonal_tests(rng, blocks)
 end
 
 @testset "dense" begin
+
+    # Test construction of a BlockArray via _BlockArray
+    @testset "_BlockArray" begin
+        rng, P, Q, R = MersenneTwister(123456), 7, 13, 11
+        @testset "Block Vector" begin
+            x, blk_sizes = randn(rng, P), BlockSizes([3, 2, 2])
+            ȳ = randn(rng, P)
+            x_blks = BlockArray(x, blk_sizes).blocks
+            ȳ_blks = BlockArray(ȳ, blk_sizes).blocks
+
+            y, back = Zygote.forward(_BlockArray, x_blks, blk_sizes)
+            @test y == _BlockArray(x_blks, blk_sizes)
+            @test first(back(ȳ)) == ȳ_blks
+            @test last(back(ȳ)) === nothing
+            @test first(back(ȳ)) == first(back(BlockArray(ȳ, blk_sizes)))
+            @test first(back(ȳ)) == first(back((blocks=ȳ_blks, block_sizes=nothing)))
+        end
+        @testset "Block Array 3" begin
+            X, blk_sizes = randn(rng, P, Q, R), BlockSizes([3, 4], [7, 6], [2, 3, 6])
+            Ȳ = randn(rng, P, Q, R)
+            X_blks = BlockArray(X, blk_sizes).blocks
+            Ȳ_blks = BlockArray(Ȳ, blk_sizes).blocks
+
+            Y, back = Zygote.forward(_BlockArray, X_blks, blk_sizes)
+            @test Y == _BlockArray(X_blks, blk_sizes)
+            @test first(back(Ȳ)) == Ȳ_blks
+            @test last(back(Ȳ)) === nothing
+            @test first(back(Ȳ)) == first(back(BlockArray(Ȳ, blk_sizes)))
+            @test first(back(Ȳ)) == first(back((blocks=Ȳ_blks, block_sizes=nothing)))
+        end
+    end
 
     # Test construction of `BlockVector` from a vector of vectors. Also test copying.
     @testset "BlockVector" begin
@@ -182,40 +213,40 @@ end
             @test Matrix(ldiv!(C, copy(X))) ≈ ldiv!(C_, Matrix(X))
         end
 
-        # adjoint_test()
+    #     # adjoint_test()
 
-        # # Test backsolving for block vector.
-        # x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)
-        # x = BlockVector([x1, x2, x3])
+    #     # # Test backsolving for block vector.
+    #     # x1, x2, x3 = randn(rng, P1), randn(rng, P2), randn(rng, P3)
+    #     # x = BlockVector([x1, x2, x3])
 
-        # @test U \ x isa AbstractBlockVector
-        # @test size(U \ x) == size(U_ \ Vector(x))
-        # @test U \ x ≈ U_ \ Vector(x)
+    #     # @test U \ x isa AbstractBlockVector
+    #     # @test size(U \ x) == size(U_ \ Vector(x))
+    #     # @test U \ x ≈ U_ \ Vector(x)
 
-        # @test U' \ x isa AbstractBlockVector
-        # @test typeof(U') <: Adjoint{<:Real, <:UpperTriangular{<:Real, <:ABM}}
-        # @test size(U' \ x) == size(U_' \ Vector(x))
-        # @test U' \ x ≈ U_' \ Vector(x)
+    #     # @test U' \ x isa AbstractBlockVector
+    #     # @test typeof(U') <: Adjoint{<:Real, <:UpperTriangular{<:Real, <:ABM}}
+    #     # @test size(U' \ x) == size(U_' \ Vector(x))
+    #     # @test U' \ x ≈ U_' \ Vector(x)
 
-        # @test transpose(U) \ x isa AbstractBlockVector
-        # @test typeof(transpose(U)) <: Transpose{<:Real, <:UpperTriangular{<:Real, <:ABM}}
-        # @test size(transpose(U) \ x) == size(U_' \ Vector(x))
-        # @test transpose(U) \ x ≈ U_' \ Vector(x)
+    #     # @test transpose(U) \ x isa AbstractBlockVector
+    #     # @test typeof(transpose(U)) <: Transpose{<:Real, <:UpperTriangular{<:Real, <:ABM}}
+    #     # @test size(transpose(U) \ x) == size(U_' \ Vector(x))
+    #     # @test transpose(U) \ x ≈ U_' \ Vector(x)
 
-        # # Test backsolving for block matrix
-        # Q1, Q2 = 7, 6
-        # X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
-        # X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
-        # X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
-        # X = BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2)
+    #     # # Test backsolving for block matrix
+    #     # Q1, Q2 = 7, 6
+    #     # X11, X12 = randn(rng, P1, Q1), randn(rng, P1, Q2)
+    #     # X21, X22 = randn(rng, P2, Q1), randn(rng, P2, Q2)
+    #     # X31, X32 = randn(rng, P3, Q1), randn(rng, P3, Q2)
+    #     # X = BlockMatrix([X11, X21, X31, X12, X22, X32], 3, 2)
 
-        # @test U \ X isa AbstractBlockMatrix
-        # @test size(U \ X) == size(U_ \ Matrix(X))
-        # @test U \ X ≈ U_ \ Matrix(X)
+    #     # @test U \ X isa AbstractBlockMatrix
+    #     # @test size(U \ X) == size(U_ \ Matrix(X))
+    #     # @test U \ X ≈ U_ \ Matrix(X)
 
-        # @test U' \ X isa AbstractBlockMatrix
-        # @test size(U' \ X) == size(U_' \ Matrix(X))
-        # @test U' \ X ≈ U_' \ Matrix(X)
+    #     # @test U' \ X isa AbstractBlockMatrix
+    #     # @test size(U' \ X) == size(U_' \ Matrix(X))
+    #     # @test U' \ X ≈ U_' \ Matrix(X)
     end
 
     # # Test Symmetric block matrix construction and util.

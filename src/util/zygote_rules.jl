@@ -2,16 +2,22 @@ using Zygote, IRTools, Random, ToeplitzMatrices
 using Zygote: @adjoint, _forward, literal_getproperty
 import Zygote: accum
 
-import Base: map, getfield, getproperty, sum
+using Base.Iterators: Zip
+
 import Distances: pairwise, colwise
-import LinearAlgebra: \, /, copytri!
 import FillArrays: Fill, AbstractFill, getindex_value, Zeros, Ones
 import Base.Broadcast: broadcasted, materialize
 
-import StatsFuns: log1pexp, logistic, logexpm1, xlogx, xlogy, logit, log1psq, logsumexp,
-    softmax
-
 @nograd MersenneTwister, propertynames
+
+@adjoint function Zip(a::Tuple)
+    return Zip(a), function(Δ)
+        println(typeof(Δ))
+        display(Δ)
+        println()
+        return (([map(n->Δ[n][ind], eachindex(Δ)) for ind in eachindex(a)]...,),)
+    end
+end
 
 @adjoint function broadcasted(op, r::AbstractFill{<:Real})
     y, _back = Zygote.forward(op, getindex_value(r))
@@ -184,3 +190,7 @@ end
         error("@adjoint not implemented for :factors. (I couldn't make it work...)")
     end
 end
+
+using Base: Generator
+
+@adjoint Generator(f, iter) = Generator(f, iter), Δ::NamedTuple{(:f, :iter)}->(Δ.f, Δ.iter)

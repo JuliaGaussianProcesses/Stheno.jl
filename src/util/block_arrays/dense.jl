@@ -26,28 +26,30 @@ const BlockCholesky{T, V} = Cholesky{T, <:BlockMatrix{T, V}}
 
 ####################################### Various util #######################################
 
-import BlockArrays: BlockVector, BlockMatrix, blocksizes, cumulsizes
+import BlockArrays: BlockVector, BlockMatrix, blocksizes, cumulsizes, AbstractBlockSizes
 export BlockVector, BlockMatrix, blocksizes, blocklengths
+
+@adjoint function _BlockArray(
+    blocks::R,
+    block_sizes::BS,
+) where {T, N, R<:AbstractArray{<:AbstractArray{T,N},N}, BS<:AbstractBlockSizes{N}}
+    back(Δ::NamedTuple{(:blocks, :block_sizes)}) = (Δ.blocks, nothing)
+    back(Δ::BlockArray) = (Δ.blocks, nothing)
+    back(Δ::AbstractArray) = (BlockArray(Δ, block_sizes).blocks, nothing)
+    return _BlockArray(blocks, block_sizes), back
+end
 
 """
     BlockVector(xs::AbstractVector{<:AbstractVector})
 
 Construct a `BlockVector` from a collection of `AbstractVector`s.
 """
-BlockVector(xs::AV{<:AV}) = _BlockArray(xs, convert(Vector{Int}, length.(xs)))
-@adjoint function BlockVector(xs::AV{<:AV})
-    x = BlockVector(xs)
-    function back(Δ::BlockVector)
-        @assert cumulsizes(x) == cumulsizes(Δ)
-        return (Δ.blocks,)
-    end
-    function back(Δ::AbstractVector)
-        sz = cumulsizes(x)[1]
-        backs = [Δ[sz[n]:sz[n+1]-1] for n in 1:length(sz)-1]
-        return (backs,)
-    end
-    return x, back
-end
+BlockVector(xs::AV{<:AV}) = _BlockArray(xs, _get_lengths(xs))
+
+# Tell Zygote to ignore some stuff that doesn't involve gradient info.
+_get_lengths(xs) = convert(Vector{Int}, length.(xs))
+@nograd _get_lengths
+
 @adjoint Vector(x::BlockVector) = Vector(x), Δ->(Δ,)
 
 """
@@ -55,28 +57,12 @@ end
 
 Construct a `BlockMatrix` from a matrix of `AbstractVecOrMat`s.
 """
-function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat})
+BlockMatrix(Xs::Matrix{<:AbstractVecOrMat}) = _BlockArray(Xs, _get_block_sizes(Xs)...)
 
-    # Check that sizes make sense.
-    heights, widths = size.(Xs[:, 1], 1), size.(Xs[1, :], 2)
+# Tell Zygote to ignore some stuff that doesn't involve gradient info.
+_get_block_sizes(Xs) = size.(Xs[:, 1], 1), size.(Xs[1, :], 2)
+@nograd _get_block_sizes
 
-    # Construct BlockMatrix.
-    return _BlockArray(Xs, heights, widths)
-end
-@adjoint function BlockMatrix(Xs::Matrix{<:AbstractVecOrMat})
-    X = BlockMatrix(Xs)
-    function back(Δ::BlockMatrix)
-        @assert cumulsizes(X) == cumulsizes(Δ)
-        return (Δ.blocks,)
-    end
-    function back(Δ_::AbstractMatrix)
-        @assert size(X) == size(Δ_)
-        Δ = PseudoBlockArray(Δ_, blocksizes(X, 1), blocksizes(X, 2))
-        out = ([getblock(Δ, p, q) for p in 1:nblocks(X, 1), q in 1:nblocks(X, 2)],)
-        return out
-    end
-    return X, back
-end
 @adjoint Matrix(X::BlockMatrix) = Matrix(X), Δ->(Δ,)
 
 BlockMatrix(Xs::Vector{<:AbstractVecOrMat}) = BlockMatrix(reshape(Xs, length(Xs), 1))
@@ -248,11 +234,11 @@ ldiv!(C::BlockCholesky{<:Real}, X::BlockMatrix) = ldiv!(C.U, ldiv!(C.U', X))
 #
 
 function Base.adjoint(X::BlockMatrix)
-    return _BlockArray(adjoint(X.blocks), blocksizes(X, 2), blocksizes(X, 1))
+    return _BlockArray(permutedims(adjoint.(X.blocks)), blocksizes(X, 2), blocksizes(X, 1))
 end
 
 function Base.transpose(X::BlockMatrix)
-    return _BlockArray(transpose(X.blocks), blocksizes(X, 2), blocksizes(X, 1))
+    return _BlockArray(permutedims(transpose.(X.blocks)), blocksizes(X, 2), blocksizes(X, 1))
 end
 
 
