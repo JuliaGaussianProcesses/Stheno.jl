@@ -1,5 +1,5 @@
 using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
-    LhsCross, RhsCross, OuterCross, OuterKernel, map, pairwise, CustomMean, ZeroMean,
+    LhsCross, RhsCross, OuterCross, OuterKernel, pairwise, CustomMean, ZeroMean,
     ZeroKernel, OneKernel, pw
 using Stheno: EQ, Exp, Linear, Noise, PerEQ
 
@@ -9,7 +9,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         rng, N = MersenneTwister(123456), 100
         μ, f, ȳ, x = CustomMean(sin), exp, randn(rng, N), randn(rng, N)
         ν = UnaryMean(f, μ)
-        @test map(ν, x) == map(exp, map(μ, x))
+        @test ew(ν, x) == map(exp, ew(μ, x))
         mean_function_tests(ν, x)
 
         # Ensure FillArray functionality works as intended, particularly with Zygote.
@@ -24,9 +24,9 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         ν1, ν2 = BinaryMean(+, μ1, μ2), BinaryMean(*, μ1, μ2)
 
         let
-            m1, m2 = map(μ1, x), map(μ2, x)
-            @test map(ν1, x) == m1 .+ m2
-            @test map(ν2, x) == m1 .* m2
+            m1, m2 = ew(μ1, x), ew(μ2, x)
+            @test ew(ν1, x) == m1 .+ m2
+            @test ew(ν2, x) == m1 .* m2
         end
 
         differentiable_mean_function_tests(ν1, ȳ, x)
@@ -49,10 +49,10 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         kernel_tests(ν, x0, x1, x2)
 
         # Absolute correctness testing.
-        @test map(ν, x0, x1) == map(k, x0, x1) .+ map(k, x0, x1)
+        @test ew(ν, x0, x1) == ew(k, x0, x1) .+ ew(k, x0, x1)
         @test pairwise(ν, x0, x2) == pairwise(k, x0, x2) .+ pairwise(k, x0, x2)
 
-        @test map(ν, x0) == map(k, x0) .+ map(k, x0)
+        @test ew(ν, x0) == ew(k, x0) .+ ew(k, x0)
         @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
 
         # Self-consistency testing with FillArrays
@@ -85,10 +85,10 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
 
         # Absolute correctness testing.
-        @test map(ν, x0, x1) == map(k, x0, x1) .+ map(k, x0, x1)
+        @test ew(ν, x0, x1) == ew(k, x0, x1) .+ ew(k, x0, x1)
         @test pairwise(ν, x0, x2) == pairwise(k, x0, x2) .+ pairwise(k, x0, x2)
 
-        @test map(ν, x0) == map(k, x0) .+ map(k, x0)
+        @test ew(ν, x0) == ew(k, x0) .+ ew(k, x0)
         @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
 
         # Self-consistency testing with FillArrays
@@ -113,7 +113,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         f, k = CustomMean(abs2), EQ()
         ν = LhsCross(f, k)
 
-        @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1)
+        @test pw(ν, x0, x1) == ew(f, x0) .* pw(k, x0, x1)
 
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
@@ -125,7 +125,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         k, f = EQ(), CustomMean(abs2)
         ν = RhsCross(k, f)
 
-        @test pw(ν, x0, x1) == pw(k, x0, x1) .* map(f, x1)'
+        @test pw(ν, x0, x1) == pw(k, x0, x1) .* ew(f, x1)'
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
@@ -136,7 +136,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         k, f = EQ(), CustomMean(abs2)
         ν = OuterCross(f, k)
 
-        @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1) .* map(f, x1)'
+        @test pw(ν, x0, x1) == ew(f, x0) .* pw(k, x0, x1) .* ew(f, x1)'
         differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
@@ -147,7 +147,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         k, f = EQ(), CustomMean(abs2)
         ν = OuterKernel(f, k)
 
-        @test pw(ν, x0, x1) == map(f, x0) .* pw(k, x0, x1) .* map(f, x1)'
+        @test pw(ν, x0, x1) == ew(f, x0) .* pw(k, x0, x1) .* ew(f, x1)'
         differentiable_kernel_tests(rng, ν, x0, x1, x2)
     end
 end

@@ -11,7 +11,7 @@ struct CondCache{TC<:Cholesky, Tα<:AbstractVector{<:Real}, Tx<:AbstractVector}
 end
 function CondCache(k::Kernel, m::MeanFunction, x::AV, y::AV{<:Real}, Σy::AM{<:Real})
     C = cholesky(Symmetric(pw(k, x) + Σy))
-    return CondCache(C, C \ (y - map(m, x)), x)
+    return CondCache(C, C \ (y - ew(m, x)), x)
 end
 
 """
@@ -29,7 +29,7 @@ struct CondMean{Tc<:CondCache, Tmp<:MeanFunction, Tkqp<:CrossKernel} <: MeanFunc
     mp::Tmp
     kqp::Tkqp
 end
-_map(μ::CondMean, x::AV) = bcd(+, _map(μ.mp, x), pw(μ.kqp, μ.c.x, x)' * μ.c.α)
+ew(μ::CondMean, x::AV) = ew(μ.mp, x) .+ pw(μ.kqp, μ.c.x, x)' * μ.c.α
 
 
 """
@@ -49,18 +49,18 @@ struct CondKernel{Tc<:CondCache, Tkqp<:CrossKernel, Tkp<:Kernel} <: Kernel
 end
 
 # Binary methods.
-function _map(k::CondKernel, x::AV, x′::AV)
+function ew(k::CondKernel, x::AV, x′::AV)
     C_qp_x, C_qp_x′ = pw(k.kqp, k.c.x, x), pw(k.kqp, k.c.x, x′)
-    return map(k.kp, x, x′) - diag_Xt_invA_Y(C_qp_x, k.c.C, C_qp_x′)
+    return ew(k.kp, x, x′) - diag_Xt_invA_Y(C_qp_x, k.c.C, C_qp_x′)
 end
-function _pw(k::CondKernel, x::AV, x′::AV)
+function pw(k::CondKernel, x::AV, x′::AV)
     C_qp_x, C_qp_x′ = pw(k.kqp, k.c.x, x), pw(k.kqp, k.c.x, x′)
     return pw(k.kp, x, x′) - Xt_invA_Y(C_qp_x, k.c.C, C_qp_x′)
 end
 
 # Unary methods.
-_map(k::CondKernel, x::AV) = map(k.kp, x) - diag_Xt_invA_X(k.c.C, pw(k.kqp, k.c.x, x))
-_pw(k::CondKernel, x::AV) = pw(k.kp, x) - Xt_invA_X(k.c.C, pw(k.kqp, k.c.x, x))
+ew(k::CondKernel, x::AV) = ew(k.kp, x) - diag_Xt_invA_X(k.c.C, pw(k.kqp, k.c.x, x))
+pw(k::CondKernel, x::AV) = pw(k.kp, x) - Xt_invA_X(k.c.C, pw(k.kqp, k.c.x, x))
 
 
 """
@@ -87,11 +87,11 @@ struct CondCrossKernel{
     kpp′::Tkpp′
 end
 
-function _map(k::CondCrossKernel, x::AV, x′::AV)
+function ew(k::CondCrossKernel, x::AV, x′::AV)
     C_qp, C_qp′ = pw(k.kqp, k.c.x, x), pw(k.kqp′, k.c.x, x′)
-    return map(k.kpp′, x, x′) - diag_Xt_invA_Y(C_qp, k.c.C, C_qp′)
+    return ew(k.kpp′, x, x′) - diag_Xt_invA_Y(C_qp, k.c.C, C_qp′)
 end
-function _pw(k::CondCrossKernel, x::AV, x′::AV)
+function pw(k::CondCrossKernel, x::AV, x′::AV)
     C_qp, C_qp′ = pw(k.kqp, k.c.x, x), pw(k.kqp′, k.c.x, x′)
     return pw(k.kpp′, x, x′) - Xt_invA_Y(C_qp, k.c.C, C_qp′)
 end

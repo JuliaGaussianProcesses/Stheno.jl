@@ -9,7 +9,7 @@ using Stheno: CustomMean, ZeroMean, OneMean, ConstMean
         f = CustomMean(foo_mean)
 
         for x in [x, X]
-            @test map(f, x) == map(foo_mean, x)
+            @test ew(f, x) == map(foo_mean, x)
             differentiable_mean_function_tests(f, randn(rng, N), x)
         end
     end
@@ -20,7 +20,7 @@ using Stheno: CustomMean, ZeroMean, OneMean, ConstMean
         f = ZeroMean{Float64}()
 
         for x in [x, X]
-            @test map(f, x) == zeros(size(x))
+            @test ew(f, x) == zeros(size(x))
             differentiable_mean_function_tests(f, randn(rng, P), x)
         end
     end
@@ -31,7 +31,7 @@ using Stheno: CustomMean, ZeroMean, OneMean, ConstMean
         f = OneMean()
 
         for x in [x, X]
-            @test map(f, x) == ones(size(x))
+            @test ew(f, x) == ones(size(x))
             differentiable_mean_function_tests(f, randn(rng, P), x)
         end
     end
@@ -42,7 +42,7 @@ using Stheno: CustomMean, ZeroMean, OneMean, ConstMean
         m = ConstMean(c)
 
         for x in [x, X]
-            @test map(m, x) == fill(c, N)
+            @test ew(m, x) == fill(c, N)
             differentiable_mean_function_tests(m, randn(rng, N), x)
         end
     end

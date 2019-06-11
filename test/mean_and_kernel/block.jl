@@ -10,11 +10,11 @@ using FillArrays
     #     m1, m2 = ZeroMean(), CustomMean(sin)
     #     m = BlockMean([m1, m2])
 
-    #     # Unary map.
-    #     @test map(m, BlockData([x1, x2])) == vcat(map(m1, x1), map(m2, x2))
-    #     @show Zygote.forward((x1, x2)->map(m, BlockData([x1, x2])), x1, x2)
+    #     # Unary elementwise.
+    #     @test ew(m, BlockData([x1, x2])) == vcat(ew(m1, x1), ew(m2, x2))
+    #     @show Zygote.forward((x1, x2)->ew(m, BlockData([x1, x2])), x1, x2)
     #     adjoint_test(
-    #         (x1, x2)->map(BlockMean(m1, m2), BlockData([x1, x2])),
+    #         (x1, x2)->ew(BlockMean(m1, m2), BlockData([x1, x2])),
     #         randn(rng, N + N′),
     #         x1, x2,
     #     )
@@ -36,10 +36,10 @@ using FillArrays
 
             D, D′ = BlockData([X0, X0′]), BlockData([X2, X2′])
 
-            # Binary map.
-            @test map(k, D, D′) == vcat(map(k11, X0, X2), map(k22, X0′, X2′))
+            # Binary elementwise.
+            @test ew(k, D, D′) == vcat(ew(k11, X0, X2), ew(k22, X0′, X2′))
             adjoint_test(
-                (x0, x0′, x2, x2′)->map(k, BlockData([x0, x0′]), BlockData([x2, x2′])),
+                (x0, x0′, x2, x2′)->ew(k, BlockData([x0, x0′]), BlockData([x2, x2′])),
                 randn(rng, N1 + N2),
                 X0, X0′, X2, X2′,
             )
@@ -114,8 +114,8 @@ using FillArrays
     #     k11, k12, k21, k22 =  EQ(), ZeroKernel(), ZeroKernel(), EQ()
     #     k = BlockKernel([k11 k12; k21 k22])
 
-    #     # Binary map.
-    #     @test map(k, D0, D2) == vcat(map(k11, x0, x2), map(k22, x0′, x2′))
+    #     # Binary elementwise.
+    #     @test ew(k, D0, D2) == vcat(ew(k11, x0, x2), ew(k22, x0′, x2′))
 
     #     # Binary pairwise.
     #     D, D′ = BlockData([x0, x1]), BlockData([x0′, x1′])
@@ -125,8 +125,8 @@ using FillArrays
     #     )
     #     @test pw(k, D, D′) == K
 
-    #     # Unary map.
-    #     @test map(k, D0) == vcat(map(k11, x0), map(k22, x0′))
+    #     # Unary elementwise.
+    #     @test ew(k, D0) == vcat(ew(k11, x0), ew(k22, x0′))
 
     #     # Unary pairwise.
     #     row1 = hcat(pw(k11, x0), pw(k12, x0, x0′))

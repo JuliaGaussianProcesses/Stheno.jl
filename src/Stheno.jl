@@ -2,11 +2,11 @@ module Stheno
 
     using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random, Zygote,
         LinearAlgebra
-    import Base: length
-    import Base.Broadcast: broadcasted, materialize
+    import Base: length, map
+    import Base.Broadcast: broadcasted, materialize, broadcast_shape
     import Statistics: mean, cov
     using LinearAlgebra: AbstractTriangular
-    using Zygote: @adjoint, @nograd
+    using Zygote: @adjoint, @nograd, @showgrad
     using BlockArrays: _BlockArray
     import LinearAlgebra: cholesky
 
@@ -14,8 +14,12 @@ module Stheno
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
 
+    function elementwise end
+
     const pw = pairwise
-    const bcd = broadcasted
+    const ew = elementwise
+
+    Zygote.@nograd broadcast_shape
 
     # Various bits of utility that aren't inherently GP-related. A lot of this is very
     # type-piratic.

@@ -36,7 +36,7 @@ struct ApproxCondMean{Tc<:PPC, Tmp<:MeanFunction, Tkqp<:CrossKernel} <: MeanFunc
     mp::Tmp
     kqp::Tkqp
 end
-_map(m::ApproxCondMean, x::AV) = bcd(+, _map(m.mp, x), pw(m.kqp, m.c.z, x)' * (m.c.U \ m.c.m̂ε))
+ew(m::ApproxCondMean, x::AV) = ew(m.mp, x) .+ pw(m.kqp, m.c.z, x)' * (m.c.U \ m.c.m̂ε)
 
 
 """
@@ -57,23 +57,23 @@ struct ApproxCondKernel{Tc<:PPC, Tkqp<:CrossKernel, Tkp<:Kernel} <: Kernel
 end
 
 # Binary methods.
-function _map(k::ApproxCondKernel, x::AV, x′::AV)
+function ew(k::ApproxCondKernel, x::AV, x′::AV)
     Ax, Ax′ = k.c.U' \ pw(k.kqp, k.c.z, x), k.c.U' \ pw(k.kqp, k.c.z, x′)
-    return bcd(-, _map(k.kp, x, x′), diag_At_B(Ax, Ax′) - diag_Xt_invA_Y(Ax, k.c.Λ, Ax′))
+    return ew(k.kp, x, x′) .- diag_At_B(Ax, Ax′) .+ diag_Xt_invA_Y(Ax, k.c.Λ, Ax′)
 end
-function _pw(k::ApproxCondKernel, x::AV, x′::AV)
+function pw(k::ApproxCondKernel, x::AV, x′::AV)
     Ax, Ax′ = k.c.U' \ pw(k.kqp, k.c.z, x), k.c.U' \ pw(k.kqp, k.c.z, x′)
-    return bcd(-, _pw(k.kp, x, x′), Ax' * Ax′ - Xt_invA_Y(Ax, k.c.Λ, Ax′))
+    return pw(k.kp, x, x′) .- Ax' * Ax′ .+ Xt_invA_Y(Ax, k.c.Λ, Ax′)
 end
 
 # Unary methods.
-function _map(k::ApproxCondKernel, x::AV)
+function ew(k::ApproxCondKernel, x::AV)
     Ax = k.c.U' \ pw(k.kqp, k.c.z, x)
-    return bcd(-, _map(k.kp, x), diag_At_A(Ax) - diag_Xt_invA_X(k.c.Λ, Ax))
+    return ew(k.kp, x) .- diag_At_A(Ax) .+ diag_Xt_invA_X(k.c.Λ, Ax)
 end
-function _pw(k::ApproxCondKernel, x::AV)
+function pw(k::ApproxCondKernel, x::AV)
     Ax = k.c.U' \ pw(k.kqp, k.c.z, x)
-    return bcd(-, _pw(k.kp, x), Ax' * Ax - Xt_invA_X(k.c.Λ, Ax))
+    return pw(k.kp, x) .- Ax' * Ax .+ Xt_invA_X(k.c.Λ, Ax)
 end
 
 
@@ -101,11 +101,11 @@ struct ApproxCondCrossKernel{
     kpp′::Tkpp′
 end
 
-function _map(k::ApproxCondCrossKernel, x::AV, x′::AV)
+function ew(k::ApproxCondCrossKernel, x::AV, x′::AV)
     Ax, Ax′ = k.c.U' \ pw(k.kqp, k.c.z, x), k.c.U' \ pw(k.kqp′, k.c.z, x′)
-    return bcd(-, _map(k.kpp′, x, x′), diag_At_B(Ax, Ax′) - diag_Xt_invA_Y(Ax, k.c.Λ, Ax′))
+    return ew(k.kpp′, x, x′) .- diag_At_B(Ax, Ax′) .+ diag_Xt_invA_Y(Ax, k.c.Λ, Ax′)
 end
-function _pw(k::ApproxCondCrossKernel, x::AV, x′::AV)
+function pw(k::ApproxCondCrossKernel, x::AV, x′::AV)
     Ax, Ax′ = k.c.U' \ pw(k.kqp, k.c.z, x), k.c.U' \ pw(k.kqp′, k.c.z, x′)
-    return bcd(-, _pw(k.kpp′, x, x′), Ax' * Ax′ - Xt_invA_Y(Ax, k.c.Λ, Ax′))
+    return pw(k.kpp′, x, x′) .- Ax' * Ax′ .+ Xt_invA_Y(Ax, k.c.Λ, Ax′)
 end

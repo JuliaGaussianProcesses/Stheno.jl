@@ -8,7 +8,7 @@ struct ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
     μ::Tμ
     f::Tf
 end
-_map(μ::ITMean, X::AV) = _map(μ.μ, μ.f.(X))
+ew(μ::ITMean, X::AV) = ew(μ.μ, μ.f.(X))
 
 
 """
@@ -23,12 +23,12 @@ struct ITKernel{Tk<:Kernel, Tf} <: Kernel
 end
 
 # Binary methods.
-_map(k::ITKernel, x::AV, x′::AV) = _map(k.k, k.f.(x), k.f.(x′))
-_pw(k::ITKernel, x::AV, x′::AV) = _pw(k.k, k.f.(x), k.f.(x′))
+ew(k::ITKernel, x::AV, x′::AV) = ew(k.k, k.f.(x), k.f.(x′))
+pw(k::ITKernel, x::AV, x′::AV) = pw(k.k, k.f.(x), k.f.(x′))
 
 # Unary methods.
-_map(k::ITKernel, x::AV) = _map(k.k, k.f.(x))
-_pw(k::ITKernel, x::AV) = _pw(k.k, k.f.(x))
+ew(k::ITKernel, x::AV) = ew(k.k, k.f.(x))
+pw(k::ITKernel, x::AV) = pw(k.k, k.f.(x))
 
 """
     LhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
@@ -39,8 +39,8 @@ struct LhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
     k::Tk
     f::Tf
 end
-_map(k::LhsITCross, x::AV, x′::AV) = _map(k.k, k.f.(x), x′)
-_pw(k::LhsITCross, x::AV, x′::AV) = _pw(k.k, k.f.(x), x′)
+ew(k::LhsITCross, x::AV, x′::AV) = ew(k.k, k.f.(x), x′)
+pw(k::LhsITCross, x::AV, x′::AV) = pw(k.k, k.f.(x), x′)
 
 
 """
@@ -52,8 +52,8 @@ struct RhsITCross{Tk<:CrossKernel, Tf} <: CrossKernel
     k::Tk
     f::Tf
 end
-_map(k::RhsITCross, x::AV, x′::AV) = _map(k.k, x, k.f.(x′))
-_pw(k::RhsITCross, x::AV, x′::AV) = _pw(k.k, x, k.f.(x′))
+ew(k::RhsITCross, x::AV, x′::AV) = ew(k.k, x, k.f.(x′))
+pw(k::RhsITCross, x::AV, x′::AV) = pw(k.k, x, k.f.(x′))
 
 
 """
@@ -66,8 +66,8 @@ struct ITCross{Tk<:Kernel, Tf, Tf′} <: CrossKernel
     f::Tf
     f′::Tf′
 end
-_map(k::ITCross, x::AV, x′::AV) = _map(k.k, k.f.(x), k.f′.(x′))
-_pw(k::ITCross, x::AV, x′::AV) = _pw(k.k, k.f.(x), k.f′.(x′))
+ew(k::ITCross, x::AV, x′::AV) = ew(k.k, k.f.(x), k.f′.(x′))
+pw(k::ITCross, x::AV, x′::AV) = pw(k.k, k.f.(x), k.f′.(x′))
 
 
 """

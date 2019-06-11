@@ -24,7 +24,7 @@ using LinearAlgebra: cholesky
     for (X0, X1, X2) in [(x0, x1, x2)]
 
         # Construct conditioned objects.
-        y = map(μf, X0) + cholesky(pw(kff, X0)).U' * randn(rng, N)
+        y = ew(μf, X0) + cholesky(pw(kff, X0)).U' * randn(rng, N)
         cache = CondCache(kff, μf, X0, y, Zeros(length(y), length(y)))
         μ′f = CondMean(cache, μf, kff)
         μ′g = CondMean(cache, μg, kfg)
@@ -50,20 +50,20 @@ using LinearAlgebra: cholesky
 
         # Test that observing the mean function shrinks the posterior covariance
         # appropriately, but leaves the posterior mean at the prior mean (modulo noise).
-        cache = CondCache(kff, μf, X0, map(μf, X0), Zeros(length(y), length(y)))
+        cache = CondCache(kff, μf, X0, ew(μf, X0), Zeros(length(y), length(y)))
         @test cache.α ≈ zeros(N)
 
         # Posterior covariance at the data should be fairly close to zero.
         @test maximum(abs.(pw(k′ff, X0))) < 1e-6
 
         # Posterior for indep. process should be _exactly_ the same as the prior.
-        @test map(μ′h, X0) == map(μh, X0)
-        @test map(μ′h, X1) == map(μh, X1)
-        @test map(μ′h, X2) == map(μh, X2)
-        @test map(k′hh, X0) == map(khh, X0)
-        @test map(k′hh, X1) == map(khh, X1)
-        @test map(k′hh, X2) == map(khh, X2)
-        @test map(k′hh, X0, X1) == map(khh, X0, X1)
+        @test ew(μ′h, X0) == ew(μh, X0)
+        @test ew(μ′h, X1) == ew(μh, X1)
+        @test ew(μ′h, X2) == ew(μh, X2)
+        @test ew(k′hh, X0) == ew(khh, X0)
+        @test ew(k′hh, X1) == ew(khh, X1)
+        @test ew(k′hh, X2) == ew(khh, X2)
+        @test ew(k′hh, X0, X1) == ew(khh, X0, X1)
         @test pw(k′hh, X0) == pw(khh, X0)
         @test pw(k′hh, X0, X2) == pw(khh, X0, X2)
         @test pw(k′fh, X0, X2) == pw(kfh, X0, X2)

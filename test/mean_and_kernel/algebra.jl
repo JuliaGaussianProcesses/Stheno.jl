@@ -9,9 +9,9 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         x, α = randn(rng, 3), randn(rng)
 
         # MeanFunction addition.
-        @test map(α + CustomMean(sin), x) == α .+ map(CustomMean(sin), x)
-        @test map(CustomMean(cos) + α, x) == map(CustomMean(cos), x) .+ α
-        @test map(CustomMean(sin) + CustomMean(cos), x) == map(sin, x) + map(cos, x)
+        @test ew(α + CustomMean(sin), x) == α .+ ew(CustomMean(sin), x)
+        @test ew(CustomMean(cos) + α, x) == ew(CustomMean(cos), x) .+ α
+        @test ew(CustomMean(sin) + CustomMean(cos), x) == map(sin, x) + map(cos, x)
 
         # Special cases of addition.
         @test ZeroMean() + ZeroMean() === ZeroMean()
@@ -19,9 +19,9 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         @test OneMean() + ZeroMean() === OneMean()
 
         # MeanFunction multiplication.
-        @test map(α * CustomMean(sin), x) == α .* map(sin, x)
-        @test map(CustomMean(cos) * α, x) == map(cos, x) .* α
-        @test map(CustomMean(sin) * CustomMean(cos), x) == sin.(x) .* cos.(x)
+        @test ew(α * CustomMean(sin), x) == α .* map(sin, x)
+        @test ew(CustomMean(cos) * α, x) == map(cos, x) .* α
+        @test ew(CustomMean(sin) * CustomMean(cos), x) == sin.(x) .* cos.(x)
 
         # Special cases of multiplication.
         @test ZeroMean() * ZeroMean() === ZeroMean()

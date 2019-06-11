@@ -9,7 +9,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         μ, f, x = OneMean(), abs2, randn(rng, N)
         μf = ITMean(μ, f)
 
-        @test map(μf, x) == map(μ, map(f, x))
+        @test ew(μf, x) == ew(μ, map(f, x))
         differentiable_mean_function_tests(rng, μf, x)
     end
 
@@ -20,7 +20,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         kf = ITKernel(k, f)
 
-        @test map(kf, x0, x1) == map(k, map(f, x0), map(f, x1))
+        @test ew(kf, x0, x1) == ew(k, map(f, x0), map(f, x1))
         differentiable_kernel_tests(rng, kf, x0, x1, x2; rtol=1e-9, atol=1e-9)
     end
 
@@ -31,7 +31,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         kf = LhsITCross(k, f)
 
-        @test map(kf, x0, x1) == map(k, map(f, x0), x1)
+        @test ew(kf, x0, x1) == ew(k, map(f, x0), x1)
         differentiable_cross_kernel_tests(rng, kf, x0, x1, x2)
     end
 
@@ -42,7 +42,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         kf = RhsITCross(k, f)
 
-        @test map(kf, x0, x1) == map(k, x0, map(f, x1))
+        @test ew(kf, x0, x1) == ew(k, x0, map(f, x1))
         differentiable_cross_kernel_tests(rng, kf, x0, x1, x2)
     end
 
@@ -53,7 +53,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         kf = ITCross(k, f, f′)
 
-        @test map(kf, x0, x1) == map(k, map(f, x0), map(f′, x1))
+        @test ew(kf, x0, x1) == ew(k, map(f, x0), map(f′, x1))
         differentiable_cross_kernel_tests(rng, kf, x0, x1, x2)
     end
 end

@@ -1,5 +1,5 @@
 using BlockArrays, LinearAlgebra, FDM, Zygote, ToeplitzMatrices
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, pw, BlockData, blocks
+using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, ew, pw, BlockData, blocks
 using FillArrays: AbstractFill, getindex_value
 using LinearAlgebra: AbstractTriangular
 using FDM: j′vp
@@ -83,8 +83,8 @@ end
 Test _very_ basic consistency properties of the mean function `m`.
 """
 function mean_function_tests(m::MeanFunction, x::AbstractVector)
-    @test map(m, x) isa AbstractVector
-    @test length(map(m, x)) == length(x)
+    @test ew(m, x) isa AbstractVector
+    @test length(ew(m, x)) == length(x)
 end
 
 """
@@ -97,16 +97,16 @@ function cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     @assert length(x0) == length(x1)
     @assert length(x0) ≠ length(x2)
 
-    # Check that map basically works.
-    @test map(k, x0, x1) isa AbstractVector
-    @test length(map(k, x0, x1)) == length(x0)
+    # Check that elementwise basically works.
+    @test ew(k, x0, x1) isa AbstractVector
+    @test length(ew(k, x0, x1)) == length(x0)
 
     # Check that pairwise basically works.
-    @test pairwise(k, x0, x2) isa AbstractMatrix
-    @test size(pairwise(k, x0, x2)) == (length(x0), length(x2))
+    @test pw(k, x0, x2) isa AbstractMatrix
+    @test size(pw(k, x0, x2)) == (length(x0), length(x2))
 
-    # Check that map is consistent with pairwise.
-    @test map(k, x0, x1) ≈ diag(pairwise(k, x0, x1)) atol=atol
+    # Check that elementwise is consistent with pairwise.
+    @test ew(k, x0, x1) ≈ diag(pw(k, x0, x1)) atol=atol
 end
 
 """
@@ -122,28 +122,28 @@ function kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     # Check that all of the binary methods work as expected.
     cross_kernel_tests(k, x0, x1, x2)
 
-    # Check additional binary map properties for kernels.
-    @test map(k, x0, x1) ≈ map(k, x1, x0)
-    @test pairwise(k, x0, x2) ≈ pairwise(k, x2, x0)' atol=atol
+    # Check additional binary elementwise properties for kernels.
+    @test ew(k, x0, x1) ≈ ew(k, x1, x0)
+    @test pw(k, x0, x2) ≈ pw(k, x2, x0)' atol=atol
 
-    # Check that unary map basically works.
-    @test map(k, x0) isa AbstractVector
-    @test length(map(k, x0)) == length(x0)
+    # Check that unary elementwise basically works.
+    @test ew(k, x0) isa AbstractVector
+    @test length(ew(k, x0)) == length(x0)
 
     # Check that unary pairwise basically works.
-    @test pairwise(k, x0) isa AbstractMatrix
-    @test size(pairwise(k, x0)) == (length(x0), length(x0))
-    @test pairwise(k, x0) ≈ pairwise(k, x0)' atol=atol
+    @test pw(k, x0) isa AbstractMatrix
+    @test size(pw(k, x0)) == (length(x0), length(x0))
+    @test pw(k, x0) ≈ pw(k, x0)' atol=atol
 
-    # Check that unary map is consistent with unary pairwise.
-    @test map(k, x0) ≈ diag(pairwise(k, x0)) atol=atol
+    # Check that unary elementwise is consistent with unary pairwise.
+    @test ew(k, x0) ≈ diag(pw(k, x0)) atol=atol
 
     # Check that unary pairwise produces a positive definite matrix (approximately).
-    @test all(eigvals(Matrix(pairwise(k, x0))) .> -atol)
+    @test all(eigvals(Matrix(pw(k, x0))) .> -atol)
 
-    # Check that unary map / pairwise are consistent with the binary versions.
-    @test map(k, x0) ≈ map(k, x0, x0) atol=atol
-    @test pairwise(k, x0) ≈ pairwise(k, x0, x0) atol=atol
+    # Check that unary elementwise / pairwise are consistent with the binary versions.
+    @test ew(k, x0) ≈ ew(k, x0, x0) atol=atol
+    @test pw(k, x0) ≈ pw(k, x0, x0) atol=atol
 end
 
 """
@@ -171,25 +171,22 @@ function stationary_kernel_tests(
     @assert length(x4) ≠ length(x0)
     @assert step(x4) ≠ length(x0)
 
-    # Unary map.
-    @test map(k, x0) isa AbstractFill
-    @test map(k, x0) == map(k, collect(x0))
+    # Unary elementwise.
+    @test ew(k, x0) == ew(k, collect(x0))
 
-    # Binary map.
-    @test map(k, x0, x1) isa AbstractFill
-    @test map(k, x0, x1) == map(k, collect(x0), collect(x1))
-    @test !isa(map(k, x0, x2), AbstractFill)
-    @test map(k, x0, x2) == map(k, collect(x0), collect(x2))
+    # Binary elementwise.
+    @test ew(k, x0, x1) == ew(k, collect(x0), collect(x1))
+    @test ew(k, x0, x2) == ew(k, collect(x0), collect(x2))
 
     # Unary pairwise.
-    @test pairwise(k, x0) isa SymmetricToeplitz
-    @test pairwise(k, x0) == pairwise(k, collect(x0))
+    @test pw(k, x0) isa SymmetricToeplitz
+    @test pw(k, x0) == pw(k, collect(x0))
 
     # Binary pairwise.
-    @test pairwise(k, x0, x3) isa Toeplitz
-    @test pairwise(k, x0, x3) == pairwise(k, collect(x0), collect(x3))
-    @test !isa(pairwise(k, x0, x4), Toeplitz)
-    @test pairwise(k, x0, x4) == pairwise(k, collect(x0), collect(x4))
+    @test pw(k, x0, x3) isa Toeplitz
+    @test pw(k, x0, x3) == pw(k, collect(x0), collect(x3))
+    @test !isa(pw(k, x0, x4), Toeplitz)
+    @test pw(k, x0, x4) == pw(k, collect(x0), collect(x4))
 end
 
 """
@@ -209,7 +206,7 @@ function differentiable_mean_function_tests(
 
     # Check adjoint.
     @assert length(ȳ) == length(x)
-    adjoint_test(x->map(m, x), ȳ, x; rtol=rtol, atol=atol)
+    adjoint_test(x->ew(m, x), ȳ, x; rtol=rtol, atol=atol)
 end
 function differentiable_mean_function_tests(
     m::MeanFunction,
@@ -222,7 +219,7 @@ function differentiable_mean_function_tests(
     mean_function_tests(m, x)
 
     @assert length(ȳ) == length(x)
-    adjoint_test(X->map(m, ColsAreObs(X)), ȳ, x.X; rtol=rtol, atol=atol)  
+    adjoint_test(X->ew(m, ColsAreObs(X)), ȳ, x.X; rtol=rtol, atol=atol)  
 end
 function differentiable_mean_function_tests(
     rng::AbstractRNG,
@@ -271,8 +268,8 @@ function differentiable_cross_kernel_tests(
     @assert length(ȳ) == length(x1)
     @assert size(Ȳ) == (length(x0), length(x2))
 
-    # Binary map.
-    adjoint_test((x, x′)->map(k, x, x′), ȳ, x0, x1; rtol=rtol, atol=atol)
+    # Binary elementwise.
+    adjoint_test((x, x′)->ew(k, x, x′), ȳ, x0, x1; rtol=rtol, atol=atol)
 
     # Binary pairwise.
     adjoint_test((x, x′)->pw(k, x, x′), Ȳ, x0, x2; rtol=rtol, atol=atol)
@@ -302,7 +299,8 @@ end
     )
 
 A superset of the tests provided by `differentiable_cross_kernel_tests` designed to test
-kernels (which provide unary, in addition to binary, methods for `map` and `pairwise`.)
+kernels (which provide unary, in addition to binary, methods for `elementwise` and
+`pairwise`.)
 """
 function differentiable_kernel_tests(
     k::CrossKernel,
@@ -328,8 +326,8 @@ function differentiable_kernel_tests(
     # Run the CrossKernel tests.
     differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
 
-    # Unary map tests.
-    adjoint_test(x->map(k, x), ȳ, x0; rtol=rtol, atol=atol)
+    # Unary elementwise tests.
+    adjoint_test(x->ew(k, x), ȳ, x0; rtol=rtol, atol=atol)
 
     # Unary pairwise test.
     adjoint_test(x->pw(k, x), Ȳ_sq, x0; rtol=rtol, atol=atol)

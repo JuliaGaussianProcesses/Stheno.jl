@@ -18,48 +18,33 @@ using FillArrays, LinearAlgebra
         ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
 
         @testset "ZeroKernel" begin
-            @test map(ZeroKernel(), x0) isa Zeros
-            @test map(ZeroKernel(), x0, x1) isa Zeros
-            @test pw(ZeroKernel(), x0) isa Zeros
-            @test pw(ZeroKernel(), x0, x2) isa Zeros
             differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
         @testset "OneKernel" begin
-            @test map(OneKernel(), x0) isa Ones
-            @test map(OneKernel(), x0, x1) isa Ones
-            @test pw(OneKernel(), x0) isa Ones
-            @test pw(OneKernel(), x0, x2) isa Ones
             differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
         @testset "ConstKernel" begin
-            @test map(ConstKernel(5), x0) == 5 .* ones(length(x0))
-            @test map(ConstKernel(5), x0) isa Fill
-            @test map(ConstKernel(5), x0, x1) isa Fill
-            @test pw(ConstKernel(5), x0) isa Fill
-            @test pw(ConstKernel(5), x0, x2) isa Fill
+            @test ew(ConstKernel(5), x0) == 5 .* ones(length(x0))
             differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
         @testset "EQ" begin
-            @test map(EQ(), x0) isa Ones
             differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             stationary_kernel_tests(EQ(), x0_r, x1_r, x2_r, x3_r, x4_r)
         end
 
         @testset "PerEQ" begin
-            @test map(PerEQ(), x0) isa Ones
             differentiable_kernel_tests(PerEQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
             stationary_kernel_tests(PerEQ(), x0_r, x1_r, x2_r, x3_r, x4_r)
         end
 
         @testset "Exp" begin
-            @test map(Exp(), x0) isa Ones
             differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, x0 .+ 1, x1, x2)
             stationary_kernel_tests(Exp(), x0_r, x1_r, x2_r, x3_r, x4_r)
         end

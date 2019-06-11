@@ -10,8 +10,9 @@ struct BlockMean{Tμ<:AbstractVector{<:MeanFunction}} <: MeanFunction
     μ::Tμ
 end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
-_map(m::BlockMean, x::BlockData) = BlockVector(map((μ, blk)->map(μ, blk), m.μ, blocks(x)))
-
+function ew(m::BlockMean, x::BlockData)
+    return Vector(BlockVector(map((μ, blk)->ew(μ, blk), m.μ, blocks(x))))
+end
 
 """
     BlockCrossKernel <: CrossKernel
@@ -27,15 +28,26 @@ function BlockCrossKernel(ks::Adjoint{T, <:AbstractVector{T}} where T)
 end
 
 # Binary methods.
-function _map(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    return BlockVector(map((k, b, b′)->map(k, b, b′), diag(k.ks), blocks(x), blocks(x′)))
+function ew(k::BlockCrossKernel, x::BlockData, x′::BlockData)
+    return Vector(BlockVector(map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′))))
 end
-function _pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    blks = pw.(k.ks, blocks(x), permutedims(blocks(x′)))
+function _pw(ks, x_blks, x′_blks)
+    blks = pw.(ks, x_blks, permutedims(x′_blks))
     return _BlockArray(blks, _get_block_sizes(blks)...)
 end
-_pw(k::BlockCrossKernel, x::BlockData, x′::AV) = _pw(k, x, BlockData([x′]))
-_pw(k::BlockCrossKernel, x::AV, x′::BlockData) = _pw(k, BlockData([x]), x′)
+function pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
+    return _pw(k.ks, blocks(x), permutedims(blocks(x′)))
+end
+@adjoint function _pw(ks, x_blks, x′_blks)
+    ys, backs = broadcast((k, x, x′)->Zygote.forward(pw, k, x, x′), ks, x_blks, x′_blks)
+    # Split this up etc.
+    return y, function(Δ)
+
+    end
+end
+
+pw(k::BlockCrossKernel, x::BlockData, x′::AV) = pw(k, x, BlockData([x′]))
+pw(k::BlockCrossKernel, x::AV, x′::BlockData) = pw(k, BlockData([x]), x′)
 
 
 """
@@ -57,16 +69,16 @@ struct BlockKernel{Tks<:Matrix{<:CrossKernel}} <: Kernel
 end
 
 # Binary methods.
-function _map(k::BlockKernel, x::BlockData, x′::BlockData)
+function ew(k::BlockKernel, x::BlockData, x′::BlockData)
     items = zip(diag(k.ks), blocks(x), blocks(x′))
-    return BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items])
+    return Vector(BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items]))
 end
-function _pw(k::BlockKernel, x::BlockData, x′::BlockData)
+function pw(k::BlockKernel, x::BlockData, x′::BlockData)
     x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
     blks = [pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items]
-    return _BlockArray(blks, _get_block_sizes(blks)...)
+    return Matrix(_BlockArray(blks, _get_block_sizes(blks)...))
 end
 
 # Unary methods.
-_map(k::BlockKernel, x::BlockData) = _map(k, x, x)
-_pw(k::BlockKernel, x::BlockData) = _pw(k, x, x)
+ew(k::BlockKernel, x::BlockData) = ew(k, x, x)
+pw(k::BlockKernel, x::BlockData) = pw(k, x, x)

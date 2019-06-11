@@ -41,11 +41,11 @@ version = "0.5.4"
 
 [[BlockArrays]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "9a758448e355097202fecce7cfbb6249716009a6"
+git-tree-sha1 = "a36887ddaaf66b8f5bd017871f239247aa6f459f"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaArrays/BlockArrays.jl.git"
 uuid = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
-version = "0.9.0"
+version = "0.9.1"
 
 [[CSTParser]]
 deps = ["LibGit2", "Test", "Tokenize"]
@@ -151,9 +151,11 @@ version = "0.2.4"
 
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Test"]
-path = "/home/wct23/.julia/dev/FillArrays"
+git-tree-sha1 = "9ab8f76758cbabba8d7f103c51dce7f73fcf8e92"
+repo-rev = "master"
+repo-url = "https://github.com/JuliaArrays/FillArrays.jl.git"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.6.1"
+version = "0.6.3"
 
 [[FixedPointNumbers]]
 git-tree-sha1 = "d14a6fa5890ea3a7e5dcab6811114f132fec2b4b"
@@ -180,7 +182,9 @@ version = "0.7.1"
 
 [[IRTools]]
 deps = ["InteractiveUtils", "MacroTools", "Test"]
-path = "/home/wct23/.julia/dev/IRTools"
+git-tree-sha1 = "4d0c6647aa89b3678d03967ca11c8a5cdc83d2b5"
+repo-rev = "master"
+repo-url = "https://github.com/MikeInnes/IRTools.jl.git"
 uuid = "7869d1d1-7146-5819-86e3-90919afe41df"
 version = "0.2.1"
 
@@ -422,6 +426,8 @@ version = "0.8.3"
 
 [[Zygote]]
 deps = ["DiffRules", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics"]
-path = "/home/wct23/.julia/dev/Zygote"
+git-tree-sha1 = "72d153a7eb044eca6e6d85378233a18fee2be96d"
+repo-rev = "master"
+repo-url = "https://github.com/FluxML/Zygote.jl.git"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
 version = "0.3.1"

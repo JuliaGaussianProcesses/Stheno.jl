@@ -25,7 +25,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 FDM = ">= 0.6.1"
 FillArrays = ">= 0.4.0"
 ToeplitzMatrices = "^0.4.2"
-julia = "1.0.3"
+julia = ">=1.1.1"
 
 [extras]
 FDM = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
