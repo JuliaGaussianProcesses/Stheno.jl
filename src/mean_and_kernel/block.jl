@@ -11,7 +11,7 @@ struct BlockMean{Tμ<:AbstractVector{<:MeanFunction}} <: MeanFunction
 end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
 function ew(m::BlockMean, x::BlockData)
-    return Vector(BlockVector(map((μ, blk)->ew(μ, blk), m.μ, blocks(x))))
+    return BlockVector(map((μ, blk)->ew(μ, blk), m.μ, blocks(x)))
 end
 
 """
@@ -29,7 +29,7 @@ end
 
 # Binary methods.
 function ew(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    return Vector(BlockVector(map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′))))
+    return BlockVector(map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′)))
 end
 function _pw(ks, x_blks, x′_blks)
     blks = pw.(ks, x_blks, permutedims(x′_blks))
@@ -39,11 +39,16 @@ function pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
     return _pw(k.ks, blocks(x), permutedims(blocks(x′)))
 end
 @adjoint function _pw(ks, x_blks, x′_blks)
-    ys, backs = broadcast((k, x, x′)->Zygote.forward(pw, k, x, x′), ks, x_blks, x′_blks)
-    # Split this up etc.
-    return y, function(Δ)
-
+    blk_backs = broadcast((k, x, x′)->Zygote.forward(pw, k, x, x′), ks, x_blks, x′_blks)
+    blks, backs = [first(y) for y in blk_backs], [last(y) for y in blk_backs]
+    Y = _BlockArray(blks, _get_block_sizes(blks)...)
+    function back(Δ::BlockMatrix)
+        Δ_k_x_x′ = backs.(Δ.blocks)
+        Δ_ks = first.(Δ_k_x_x′), getindex.(Δ_k_x_x′, 2), getindex.(Δ_k_x_x′, 3)
+        
     end
+    back(Δ::AbstractMatrix) = back(BlockArray(Δ, _get_block_sizes(blks)...))
+    return Y, back
 end
 
 pw(k::BlockCrossKernel, x::BlockData, x′::AV) = pw(k, x, BlockData([x′]))
@@ -71,12 +76,12 @@ end
 # Binary methods.
 function ew(k::BlockKernel, x::BlockData, x′::BlockData)
     items = zip(diag(k.ks), blocks(x), blocks(x′))
-    return Vector(BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items]))
+    return BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items])
 end
 function pw(k::BlockKernel, x::BlockData, x′::BlockData)
     x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
     blks = [pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items]
-    return Matrix(_BlockArray(blks, _get_block_sizes(blks)...))
+    return _BlockArray(blks, _get_block_sizes(blks)...)
 end
 
 # Unary methods.
