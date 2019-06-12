@@ -166,7 +166,7 @@ function cholesky_and_adjoint(A::BlockMatrix{T, V}) where {T, V}
         U[Block(j, j)] = cholesky(U[Block(j, j)]).U
     end
 
-    return Cholesky(U, :U, 0), function(Δ)
+    return Cholesky(U, :U, 0), function(Δ::NamedTuple{(:factors, :uplo, :info)})
         Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
         Ū = Δ.factors
         for j in reverse(1:nblocks(A, 2))

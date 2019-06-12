@@ -6,7 +6,7 @@ module Stheno
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
     import Statistics: mean, cov
     using LinearAlgebra: AbstractTriangular
-    using Zygote: @adjoint, @nograd, @showgrad
+    using Zygote: @adjoint, @nograd
     using BlockArrays: _BlockArray
     import LinearAlgebra: cholesky
 

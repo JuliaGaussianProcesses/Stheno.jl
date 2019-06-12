@@ -31,24 +31,8 @@ end
 function ew(k::BlockCrossKernel, x::BlockData, x′::BlockData)
     return BlockVector(map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′)))
 end
-function _pw(ks, x_blks, x′_blks)
-    blks = pw.(ks, x_blks, permutedims(x′_blks))
-    return _BlockArray(blks, _get_block_sizes(blks)...)
-end
 function pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
     return _pw(k.ks, blocks(x), permutedims(blocks(x′)))
-end
-@adjoint function _pw(ks, x_blks, x′_blks)
-    blk_backs = broadcast((k, x, x′)->Zygote.forward(pw, k, x, x′), ks, x_blks, x′_blks)
-    blks, backs = [first(y) for y in blk_backs], [last(y) for y in blk_backs]
-    Y = _BlockArray(blks, _get_block_sizes(blks)...)
-    function back(Δ::BlockMatrix)
-        Δ_k_x_x′ = backs.(Δ.blocks)
-        Δ_ks = first.(Δ_k_x_x′), getindex.(Δ_k_x_x′, 2), getindex.(Δ_k_x_x′, 3)
-        
-    end
-    back(Δ::AbstractMatrix) = back(BlockArray(Δ, _get_block_sizes(blks)...))
-    return Y, back
 end
 
 pw(k::BlockCrossKernel, x::BlockData, x′::AV) = pw(k, x, BlockData([x′]))
@@ -75,15 +59,55 @@ end
 
 # Binary methods.
 function ew(k::BlockKernel, x::BlockData, x′::BlockData)
-    items = zip(diag(k.ks), blocks(x), blocks(x′))
-    return BlockVector([map(k, blk, blk′) for (k, blk, blk′) in items])
+    return BlockVector(map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′)))
 end
 function pw(k::BlockKernel, x::BlockData, x′::BlockData)
-    x_items, x′_items = enumerate(blocks(x)), enumerate(blocks(x′))
-    blks = [pw(k.ks[p, q], x, x′) for (p, x) in x_items, (q, x′) in x′_items]
-    return _BlockArray(blks, _get_block_sizes(blks)...)
+    return _pw(k.ks, blocks(x), permutedims(blocks(x′)))
 end
 
 # Unary methods.
 ew(k::BlockKernel, x::BlockData) = ew(k, x, x)
 pw(k::BlockKernel, x::BlockData) = pw(k, x, x)
+
+
+#
+# Helper for pw.
+#
+
+function _pw(ks, x_blks, x′_blks)
+    blks = pw.(ks, x_blks, x′_blks)
+    return _BlockArray(blks, _get_block_sizes(blks)...)
+end
+@adjoint function _pw(ks, x_blks, x′_blks)
+    blk_backs = broadcast((k, x, x′)->Zygote.forward(pw, k, x, x′), ks, x_blks, x′_blks)
+    blks, backs = first.(blk_backs), last.(blk_backs)
+    Y = _BlockArray(blks, _get_block_sizes(blks)...)
+
+    function back(Δ::BlockMatrix)
+
+        Δ_k_x_x′ = broadcast((back, blk)->back(blk), backs, Δ.blocks)
+        Δ_ks, Δ_x, Δ_x′ = first.(Δ_k_x_x′), getindex.(Δ_k_x_x′, 2), getindex.(Δ_k_x_x′, 3)
+
+        # zero out nothings.
+        for p in 1:length(x_blks), q in 1:length(x′_blks)
+            if Δ_x[p, q] === nothing
+                Δ_x[p, q] = zeros(size(x_blks[p]))
+            end
+            if Δ_x′[p, q] === nothing
+                Δ_x′[p, q] = zeros(size(x′_blks[q]))
+            end
+        end
+
+        # Reduce over appropriate dimensions manually because sum doesn't work... :S
+        δ_x, δ_x′ = zero.(Δ_x[:, 1]), zero.(Δ_x′[1, :])
+        for p in 1:length(x_blks), q in 1:length(x′_blks)
+            δ_x[p] += Δ_x[p, q]
+            δ_x′[q] += Δ_x′[p, q]
+        end
+
+        return Δ_ks, δ_x, δ_x′
+    end
+    back(Δ::AbstractMatrix) = back(BlockArray(Δ, _get_block_sizes(blks)...))
+
+    return Y, back
+end

@@ -184,6 +184,17 @@ end
         @test C_.U ≈ Matrix(C.U)
         @test C.U isa UpperTriangular{T, <:AbstractBlockMatrix{T}} where T
 
+        @testset "cholesky gradients" begin
+
+            # Compute cholesky adjoint with Matrix.
+            
+
+            # Compute cholesky adjoint with BlockMatrix.
+
+            # Ensure approximate agreement.
+
+        end
+
         # Test `logdet`.
         @test logdet(C) ≈ logdet(C_)
 

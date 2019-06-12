@@ -11,7 +11,7 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         @test mean(GP(one(m), EQ(), GPC())) isa OneMean
 
         x = randn(10)
-        @test map(mean(GP(sin, EQ(), GPC())), x) == sin.(x)
+        @test ew(mean(GP(sin, EQ(), GPC())), x) == sin.(x)
     end
 
     # Test the creation of indepenent GPs.

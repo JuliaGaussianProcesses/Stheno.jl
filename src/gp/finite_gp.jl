@@ -24,7 +24,7 @@ length(f::FiniteGP) = length(f.x)
 
 The mean vector of `f`.
 """
-mean(f::FiniteGP) = map(mean(f.f), f.x)
+mean(f::FiniteGP) = ew(mean(f.f), f.x)
 
 """
     cov(f::FiniteGP)
@@ -45,7 +45,7 @@ cov(f::FiniteGP, g::FiniteGP) = pairwise(kernel(f.f, g.f), f.x, g.x)
 
 Sugar, returns a vector of Normal distributions representing the marginals of `f`.
 """
-marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(map(kernel(f.f), f.x) .+ diag(f.Σy)))
+marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(ew(kernel(f.f), f.x) .+ diag(f.Σy)))
 
 """
     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
@@ -112,10 +112,10 @@ end
 # to compute the entirety of Cf, which is bad, but for particular structured Σy one requires
 # only a subset of the elements. Σy isa UniformScaling is version usually considered.
 function tr_Cf_invΣy(f::FiniteGP, Σy::UniformScaling, chol_Σy::Cholesky)
-    return sum(map(kernel(f.f), f.x)) / Σy.λ
+    return sum(ew(kernel(f.f), f.x)) / Σy.λ
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
-    return sum(map(kernel(f.f), f.x) ./ diag(Σy))
+    return sum(ew(kernel(f.f), f.x) ./ diag(Σy))
 end
 
 # """
