@@ -185,14 +185,18 @@ end
         @test C.U isa UpperTriangular{T, <:AbstractBlockMatrix{T}} where T
 
         @testset "cholesky gradients" begin
+            C̄ = (factors=randn(rng, size(A)), uplo=nothing, info=nothing)
 
             # Compute cholesky adjoint with Matrix.
-            
+            _, back_dense = Zygote.forward(cholesky, A_)
+            Ā_ = first(back_dense(C̄))
 
             # Compute cholesky adjoint with BlockMatrix.
+            _, back_block = Zygote.forward(cholesky, A)
+            Ā = first(back_block(C̄))
 
             # Ensure approximate agreement.
-
+            @test Ā_ ≈ Ā
         end
 
         # Test `logdet`.

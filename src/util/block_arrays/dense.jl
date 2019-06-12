@@ -139,7 +139,8 @@ end
 
 function cholesky_and_adjoint(A::BlockMatrix{T, V}) where {T, V}
     U = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 2))
-    backs = Vector{Any}()
+    D = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 2))
+    backs = Vector{Any}(undef, nblocks(A, 2))
 
     # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
     for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
@@ -151,40 +152,55 @@ function cholesky_and_adjoint(A::BlockMatrix{T, V}) where {T, V}
 
         # Update off-diagonals.
         for i in 1:j-1
-            U[Block(i, j)] = copy(A[Block(i, j)])
+            # U[Block(i, j)] = copy(A[Block(i, j)])
+            D[Block(i, j)] = copy(A[Block(i, j)])
             for k in 1:i-1
-                U[Block(i, j)] .-= U[Block(k, i)]' * U[Block(k, j)]
+                D[Block(i, j)] -= U[Block(k, i)]' * U[Block(k, j)]
             end
-            ldiv!(UpperTriangular(U[Block(i, i)])', U[Block(i, j)])
+            U[Block(i, j)] = U[Block(i, i)]' \ D[Block(i, j)]
+            # ldiv!(UpperTriangular(U[Block(i, i)])', U[Block(i, j)])
         end
 
         # Update diagonal.
-        U[Block(j, j)] = copy(A[Block(j, j)])
+        D[Block(j, j)] = copy(A[Block(j, j)])
         for k in 1:j-1
-            U[Block(j, j)] .-= U[Block(k, j)]' * U[Block(k, j)]
+            D[Block(j, j)] -= U[Block(k, j)]' * U[Block(k, j)]
         end
-        U[Block(j, j)] = cholesky(U[Block(j, j)]).U
+        U_tmp, back = Zygote.forward(A->cholesky(A).U, D[Block(j, j)])
+        U[Block(j, j)] = U_tmp
+        backs[j] = back
+        # U[Block(j, j)] = cholesky(U[Block(j, j)]).U
     end
 
+    _to_block(Ū::AbstractMatrix) = BlockArray(copy(Ū), blocksizes(A))
+    _to_block(Ū::AbstractBlockMatrix) = copy(Ū)
+
     return Cholesky(U, :U, 0), function(Δ::NamedTuple{(:factors, :uplo, :info)})
+
+        Ū = _to_block(Δ.factors)
         Ā = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 1))
-        Ū = Δ.factors
+
         for j in reverse(1:nblocks(A, 2))
 
-            Ā[Block(j, j)] = back(Ū[Block(j, j)])
-            for k in 1:j-1
-                ĀjjUkj = Ā[Block(j, j)] * U[Block(k, j)]
-                UkjĀjj = U[Block(k, j)] * Ā[Block(j, j)]
-                Ū[Block(k, j)] .+= ĀjjUkj .+ UkjĀjj
+            Ā[Block(j, j)] = first(backs[j](Ū[Block(j, j)]))
+            for k in reverse(1:j-1)
+                Ū[Block(k, j)] -= U[Block(k, j)] * (Ā[Block(j, j)] + Ā[Block(j, j)]')
             end
 
             for i in reverse(1:j-1)
-                Ā[Block(i, j)] = Ā[Block(i, j)] + U[Block(i, i)] \ Ū[Block(i, j)]
-                Ū[Block(i, i)] = Ū[Block(i, i)] - Ā[Block(i, j)] * U[Block(i, j)]'
-                for k in 1:i-1
-                    Ū[Block(k, i)] = Ū[Block(k, i)] + Ā[Block(i, j)]' * U[Block(k, j)]
-                    Ū[Block(k, j)] = Ū[Block(k, j)] + U[Block(k, i)] * Ā[Block(i, j)]
+                Ā[Block(i, j)] = U[Block(i, i)] \ Ū[Block(i, j)]
+                Ū[Block(i, i)] -= U[Block(i, j)] * Ā[Block(i, j)]'
+                for k in reverse(1:i-1)
+                    Ū[Block(k, i)] -= U[Block(k, j)] * Ā[Block(i, j)]'
+                    Ū[Block(k, j)] -= U[Block(k, i)] * Ā[Block(i, j)]
                 end
+            end
+        end
+
+        # Zero-out the lower triangle.
+        for q in 1:nblocks(A, 1)
+            for p in q+1:nblocks(A, 2)
+                Ā[Block(p, q)] = zeros(size(A[Block(p, q)]))
             end
         end
         return (Ā,)
@@ -192,6 +208,7 @@ function cholesky_and_adjoint(A::BlockMatrix{T, V}) where {T, V}
 end
 
 cholesky(A::BlockMatrix{<:Real}) = first(cholesky_and_adjoint(A))
+@adjoint cholesky(A::BlockMatrix{<:Real}) = cholesky_and_adjoint(A)
 
 cholesky(A::Symmetric{T, <:BlockMatrix{T}} where {T<:Real}) = cholesky(A.data)
 
@@ -234,11 +251,11 @@ ldiv!(C::BlockCholesky{<:Real}, X::BlockMatrix) = ldiv!(C.U, ldiv!(C.U', X))
 #
 
 function Base.adjoint(X::BlockMatrix)
-    return _BlockArray(permutedims(adjoint.(X.blocks)), blocksizes(X, 2), blocksizes(X, 1))
+    return _BlockArray(permutedims(collect(adjoint.(X.blocks))), blocksizes(X, 2), blocksizes(X, 1))
 end
 
 function Base.transpose(X::BlockMatrix)
-    return _BlockArray(permutedims(transpose.(X.blocks)), blocksizes(X, 2), blocksizes(X, 1))
+    return _BlockArray(permutedims(collect(transpose.(X.blocks))), blocksizes(X, 2), blocksizes(X, 1))
 end
 
 
