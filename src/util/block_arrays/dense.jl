@@ -71,6 +71,16 @@ Construct a `BlockMatrix` from a matrix of `AbstractVecOrMat`s.
 """
 BlockMatrix(Xs::Matrix{<:AbstractVecOrMat}) = _BlockArray(Xs, _get_block_sizes(Xs)...)
 
+"""
+    are_conformal(A::BlockVecOrMat, B::BlockVecOrMat)
+
+Test whether two block matrices (or vectors) are conformal. This criterion is stricter than
+that for general matrices / vectors as we additionally require that each block be conformal
+with block of the other matrix with which it will be multiplied. This ensures that the
+result is itself straightforwardly representable as `BlockVecOrMat`.
+"""
+are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
+
 
 
 # BlockMatrix(Xs::Vector{<:AbstractVecOrMat}) = BlockMatrix(reshape(Xs, length(Xs), 1))
@@ -312,15 +322,6 @@ BlockMatrix(Xs::Matrix{<:AbstractVecOrMat}) = _BlockArray(Xs, _get_block_sizes(X
 
 ####################################### Multiplication #####################################
 
-# """
-#     are_conformal(A::BlockVecOrMat, B::BlockVecOrMat)
-
-# Test whether two block matrices (or vectors) are conformal. This criterion is stricter than
-# that for general matrices / vectors as we additionally require that each block be conformal
-# with block of the other matrix with which it will be multiplied. This ensures that the
-# result is itself straightforwardly representable as `BlockVecOrMat`.
-# """
-# are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
 
 # function +(u::UniformScaling, X::AbstractBlockMatrix)
 #     @assert cumulsizes(X, 1) == cumulsizes(X, 2)

@@ -1,18 +1,44 @@
 const BlockDiagonal{T, TM} = BlockMatrix{T, <:Diagonal{TM}} where {TM <: AbstractMatrix{T}}
 const UpperTriangularBlockDiagonal{T} = UpperTriangular{T, <:BlockDiagonal{T}} where {T}
 
+import Base: +
+
 
 
 #
 # Constructors
 #
 
-function block_diagonal(vs::AbstractVector{<:AbstractMatrix{T}}) where {T}
+function block_diagonal(vs::AbstractVector{<:AbstractMatrix})
     return _BlockArray(Diagonal(vs), size.(vs, 1), size.(vs, 2))
 end
 
 function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T}
     return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
+end
+
+
+
+#
+# Addition
+#
+
+function +(A::Matrix, B::BlockDiagonal)
+    @assert size(A) == size(B)
+    C = copy(A)
+    cs = cumulsizes(B, 1)
+    for n in 1:nblocks(B, 1)
+        idx = cs[n]:cs[n+1]-1
+        C[idx, idx] += B[Block(n, n)]
+    end
+    return C
+end
+@adjoint function +(A::Matrix, B::BlockDiagonal{T, <:Matrix{T}} where {T})
+    return A + B, function(Δ)
+        cs = cumulsizes(B, 1)
+        blks = [Δ[cs[n]:cs[n+1]-1, cs[n]:cs[n+1]-1] for n in 1:nblocks(B, 1)]
+        return (Δ, block_diagonal(blks))
+    end
 end
 
 

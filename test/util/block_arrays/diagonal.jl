@@ -1,3 +1,22 @@
+using Stheno: block_diagonal
+
+function general_BlockDiagonal_tests(rng, blocks)
+    d = block_diagonal(blocks)
+    Ps, Qs = size.(blocks, 1), size.(blocks, 2)
+
+    @testset "general" begin
+        @test blocksizes(d, 1) == Ps
+        @test blocksizes(d, 2) == Qs
+
+        @test getblock(d, 1, 1) == blocks[1]
+        @test getblock(d, 2, 2) == blocks[2]
+        @test getblock(d, 1, 2) == zeros(Ps[1], Qs[2])
+        @test getblock(d, 2, 1) == zeros(Ps[2], Qs[1])
+
+        @test d[Block(1, 1)] == getblock(d, 1, 1)
+    end
+end
+
 function BlockDiagonal_mul_tests(rng, blocks)
     D, Ps = block_diagonal(blocks), size.(blocks, 1)
     Dmat = Matrix(D)
@@ -73,6 +92,26 @@ function BlockDiagonal_chol_tests(rng, blocks)
     @test C.U ≈ Csym.U
 end
 
+function BlockDiagonal_add_tests(rng, blks; grad=true)
+
+    D = block_diagonal(blks)
+    Dmat = Matrix(D)
+    A = randn(rng, size(D))
+
+    A_copy = copy(A)
+    C = A_copy + D
+    @test A_copy == A
+    @test C == A + Dmat
+
+    if grad == true
+        @assert length(blks) == 2
+        adjoint_test(
+            (A, b1, b2)->A + block_diagonal([b1, b2]),
+            randn(rng, size(A)), A, blks[1], blks[2],
+        )
+    end
+end
+
 @testset "diagonal" begin
     @testset "Matrix" begin
         rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
@@ -80,13 +119,14 @@ end
         general_BlockDiagonal_tests(rng, vs)
 
         As = [randn(rng, Ps[n], Ps[n]) for n in eachindex(Ps)]
-        blocks = [As[n] * As[n]' + I for n in eachindex(As)]
-        BlockDiagonal_mul_tests(rng, blocks)
-        BlockDiagonal_mul_tests(rng, UpperTriangular.(blocks))
-        BlockDiagonal_mul_tests(rng, Hermitian.(blocks))
-        BlockDiagonal_mul_tests(rng, Symmetric.(blocks))
-        BlockDiagonal_solve_tests(rng, UpperTriangular.(blocks))
-        BlockDiagonal_chol_tests(rng, blocks)
+        blks = [As[n] * As[n]' + I for n in eachindex(As)]
+        BlockDiagonal_mul_tests(rng, blks)
+        BlockDiagonal_mul_tests(rng, UpperTriangular.(blks))
+        BlockDiagonal_mul_tests(rng, Hermitian.(blks))
+        BlockDiagonal_mul_tests(rng, Symmetric.(blks))
+        BlockDiagonal_solve_tests(rng, UpperTriangular.(blks))
+        BlockDiagonal_chol_tests(rng, blks)
+        BlockDiagonal_add_tests(rng, blks; grad=false)
     end
     @testset "Diagonal{T, <:Vector{T}}" begin
         rng, Ps = MersenneTwister(123456), [2, 3]
@@ -97,6 +137,7 @@ end
         BlockDiagonal_mul_tests(rng, blocks)
         BlockDiagonal_solve_tests(rng, blocks)
         BlockDiagonal_chol_tests(rng, blocks)
+        BlockDiagonal_add_tests(rng, blocks; grad=false)
     end
     @testset "Diagonal{T, <:Fill{T, 1}}" begin
         rng, Ps = MersenneTwister(123456), [2, 3]
@@ -107,5 +148,6 @@ end
         BlockDiagonal_mul_tests(rng, blocks)
         BlockDiagonal_solve_tests(rng, blocks)
         BlockDiagonal_chol_tests(rng, blocks)
+        BlockDiagonal_add_tests(rng, blocks; grad=false)
     end
 end
