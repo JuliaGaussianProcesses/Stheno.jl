@@ -291,4 +291,20 @@ __foo(x) = isnothing(x) ? "nothing" : x
         randn(rng), x, As[1], As[2], y;
         atol=1e-6, rtol=1e-6
     )
+
+    @test elbo(f(x, Smat), y, f(x)) ≈ logpdf(f(x, Smat), y)
+    @test elbo(f(x, S), y, f(x)) ≈ elbo(f(x, Smat), y, f(x))
+    adjoint_test(
+        (x, S, y)->elbo(f(x, S), y, f(x)), randn(rng), x, Smat, y;
+        atol=1e-6, rtol=1e-6,
+    )
+    adjoint_test(
+        (x, A1, A2, y) -> begin
+            S = block_diagonal([A1 * A1' + I, A2 * A2' + I])
+            return elbo(f(x, S), y, f(x))
+        end,
+        randn(rng), x, Smat, y;
+        atol=1e-6, rtol=1e-6,
+    )
 end
+

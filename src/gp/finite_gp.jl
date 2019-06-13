@@ -98,6 +98,12 @@ end
 function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
     return sum(ew(kernel(f.f), f.x) ./ diag(Σy))
 end
+function tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky)
+    return tr(chol_Σy \ pw(kernel(f.f), f.x))
+end
+function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
+    error("Not implemented") 
+end
 
 # """
 #     elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, mε::AV{<:Real}, Λε::AM{<:Real})
