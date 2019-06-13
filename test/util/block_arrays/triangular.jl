@@ -60,6 +60,34 @@ end
             @test Matrix(foo(LowerTriangular(X))) == collect(foo(LowerTriangular(Xmat)))
         end
     end
+    @testset "construction" begin
+        rng, Ps = MersenneTwister(123456), [5, 6, 7]
+        @testset "BlockLowerTriangular" begin
+            L = LowerTriangular(randn(rng, sum(Ps), sum(Ps)))
+            @test BlockArray(L, Ps, Ps) isa BlockLowerTriangular
+            @test BlockArray(L, Ps, Ps) == L
+        end
+        @testset "BlockUpperTriangular" begin
+            U = UpperTriangular(randn(rng, sum(Ps), sum(Ps)))
+            @test BlockArray(U, Ps, Ps) isa BlockUpperTriangular
+            @test BlockArray(U, Ps, Ps) == U
+        end 
+    end
+    @testset "copy" begin
+        rng, Ps = MersenneTwister(123456), [5, 4]
+        X = BlockArray(randn(rng, sum(Ps), sum(Ps)), Ps, Ps)
+
+        @testset "BlockLowerTriangular" begin 
+            L = LowerTriangular(X)
+            @test copy(L) isa BlockLowerTriangular
+            @test copy(L) == L
+        end
+        @testset "BlockUpperTriangular" begin
+            U = UpperTriangular(X)
+            @test copy(U) isa BlockUpperTriangular
+            @test copy(U) == U
+        end
+    end
     @testset "mul! / *" begin
         rng, Ps, Qs = MersenneTwister(123456), [5, 4, 3], [7, 6, 5]
         A = _BlockArray([randn(rng, P, P′) for P in Ps, P′ in Ps], Ps, Ps)

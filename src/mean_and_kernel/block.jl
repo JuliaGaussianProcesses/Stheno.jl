@@ -1,6 +1,3 @@
-Base.zero(A::AbstractArray{<:AbstractArray}) = zero.(A)
-
-
 """
     BlockMean <: MeanFunction
 
@@ -11,7 +8,8 @@ struct BlockMean{Tμ<:AbstractVector{<:MeanFunction}} <: MeanFunction
 end
 BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
 function ew(m::BlockMean, x::BlockData)
-    return BlockVector(map((μ, blk)->ew(μ, blk), m.μ, blocks(x)))
+    blks = map((μ, blk)->ew(μ, blk), m.μ, blocks(x))
+    return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
 end
 
 """
@@ -29,10 +27,11 @@ end
 
 # Binary methods.
 function ew(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    return BlockVector(map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′)))
+    blks = map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′))
+    return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
 end
 function pw(k::BlockCrossKernel, x::BlockData, x′::BlockData)
-    return _pw(k.ks, blocks(x), permutedims(blocks(x′)))
+    return Matrix(_pw(k.ks, blocks(x), permutedims(blocks(x′))))
 end
 
 pw(k::BlockCrossKernel, x::BlockData, x′::AV) = pw(k, x, BlockData([x′]))
@@ -59,10 +58,11 @@ end
 
 # Binary methods.
 function ew(k::BlockKernel, x::BlockData, x′::BlockData)
-    return BlockVector(map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′)))
+    blks = map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′))
+    return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
 end
 function pw(k::BlockKernel, x::BlockData, x′::BlockData)
-    return _pw(k.ks, blocks(x), permutedims(blocks(x′)))
+    return Matrix(_pw(k.ks, blocks(x), permutedims(blocks(x′))))
 end
 
 # Unary methods.
@@ -107,7 +107,5 @@ end
 
         return Δ_ks, δ_x, δ_x′
     end
-    back(Δ::AbstractMatrix) = back(BlockArray(Δ, _get_block_sizes(blks)...))
-
     return Y, back
 end

@@ -22,6 +22,10 @@ function dense_BlockMatrix_BlockVector_mul_tests(rng, X, y)
     @test Vector(z) ≈ z_dense
     @test Matrix(X̄) ≈ X̄_dense
     @test Vector(ȳ) ≈ ȳ_dense
+
+    X̄, ȳ = back(Vector(z̄))
+    @test Matrix(X̄) ≈ X̄_dense
+    @test Vector(ȳ) ≈ ȳ_dense
 end
 
 function dense_BlockMatrix_BlockMatrix_mul_tests(rng, X, Y)
@@ -43,6 +47,10 @@ function dense_BlockMatrix_BlockMatrix_mul_tests(rng, X, Y)
     Z_dense, back_dense = Zygote.forward(*, Matrix(X), Matrix(Y))
     X̄_dense, Ȳ_dense = back_dense(Matrix(Z̄))
     @test Matrix(Z) ≈ Z_dense
+    @test Matrix(X̄) ≈ X̄_dense
+    @test Matrix(Ȳ) ≈ Ȳ_dense
+
+    X̄, Ȳ = back(Matrix(Z̄))
     @test Matrix(X̄) ≈ X̄_dense
     @test Matrix(Ȳ) ≈ Ȳ_dense
 end

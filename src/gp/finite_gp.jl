@@ -55,30 +55,11 @@ Obtain `N` independent samples from the GP `f` using `rng`.
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
     Σ = cov(f)
     μ, C = mean(f), cholesky(Symmetric(Σ))
-    return μ .+ C.U' * _rand_eps(rng, Σ, N)
+    return μ .+ C.U' * randn(rng, size(Σ, 1), N)
 end
-
 rand(f::FiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
-
-_rand_eps(rng::AbstractRNG, Σ::AbstractMatrix, N::Int) = randn(rng, size(Σ, 2), N)
-
-function _rand_eps(rng::AbstractRNG, Σ::AbstractBlockMatrix, N::Int)
-    return BlockMatrix([randn(rng, sz, N) for sz in blocksizes(Σ, 2), N in [N]])
-end
-
-function rand(rng::AbstractRNG, f::FiniteGP)
-    Σ = cov(f)
-    μ, C = mean(f), cholesky(Symmetric(Σ))
-    return μ .+ C.U' * _rand_eps(rng, Σ)
-end
-
+rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
 rand(f::FiniteGP) = vec(rand(f, 1))
-
-_rand_eps(rng::AbstractRNG, Σ::AbstractMatrix) = randn(rng, size(Σ, 2))
-
-function _rand_eps(rng::AbstractRNG, Σ::AbstractBlockMatrix)
-    return BlockVector([randn(rng, sz) for sz in blocksizes(Σ, 2)])
-end
 
 """
     logpdf(f::FiniteGP, y::AbstractVector{<:Real})

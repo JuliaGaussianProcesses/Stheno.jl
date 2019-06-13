@@ -6,7 +6,7 @@ export ←, |
 
 Represents fixing a paricular (finite) GP to have a particular (vector) value.
 """
-struct Observation{Tf<:FiniteGP, Ty<:AbstractVector}
+struct Observation{Tf<:FiniteGP, Ty<:Vector}
     f::Tf
     y::Ty
 end
@@ -25,7 +25,7 @@ function merge(fs::Tuple{Vararg{FiniteGP}})
     return FiniteGP(block_gp, block_x, block_Σy)
 end
 function merge(c::Tuple{Vararg{Observation}})
-    block_y = BlockVector([map(get_y, c)...])
+    block_y = Vector(BlockVector([map(get_y, c)...]))
     return merge(map(get_f, c))←block_y
 end
 

@@ -76,7 +76,7 @@ end
         y, y′ = yy′[idx_1], yy′[idx_2]
 
         f′ = f | (f(xx′, σ²)←yy′)
-        fb′ = f | (BlockGP([f, f])(BlockData([x, x′]), σ²)←BlockVector([y, y′]))
+        fb′ = f | (BlockGP([f, f])(BlockData([x, x′]), σ²)←vcat(y, y′))
         fmc′ = f | (f(x, σ²)←y, f(x′, σ²)←y′)
 
         @test mean(f′(xp)) ≈ mean(fb′(xp))

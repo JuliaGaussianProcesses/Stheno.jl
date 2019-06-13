@@ -14,6 +14,11 @@ module Stheno
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
 
+    const BlockLowerTriangular{T} = LowerTriangular{T, <:BlockMatrix{T}}
+    const BlockUpperTriangular{T} = UpperTriangular{T, <:BlockMatrix{T}}
+    const BlockTriangular{T} = Union{BlockLowerTriangular{T}, BlockUpperTriangular{T}}
+
+
     function elementwise end
 
     const pw = pairwise
