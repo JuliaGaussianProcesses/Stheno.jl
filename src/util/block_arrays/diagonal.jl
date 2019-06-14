@@ -118,6 +118,12 @@ function ldiv!(U::UpperTriangularBlockDiagonal, X::BlockMatrix)
 end
 \(U::UpperTriangularBlockDiagonal, X::BlockMatrix) = ldiv!(U, copy(X))
 
+function \(U::UpperTriangularBlockDiagonal, X::BlockDiagonal)
+    @assert cumulsizes(U.data) == cumulsizes(X)
+    U_blks, X_blks = U.data.blocks.diag, X.blocks.diag
+    return block_diagonal(map((U, X)->UpperTriangular(U) \ X, U_blks, X_blks))
+end
+
 
 
 #

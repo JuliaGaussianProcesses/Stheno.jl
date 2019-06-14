@@ -1,9 +1,12 @@
 using Stheno: FiniteGP, GPC, pw, ConstMean, OuterKernel, AbstractGP, BlockGP
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, block_diagonal
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, block_diagonal, tr_Cf_invΣy
 using Statistics, StatsFuns
 using Distributions: MvNormal, PDMat
 
 _rng() = MersenneTwister(123456)
+
+_to_psd(A) = A * A' + I
+
 
 function generate_noise_matrix(rng::AbstractRNG, N::Int)
     A = randn(rng, N, N)
@@ -131,6 +134,45 @@ end
     #         rtol=1e-6, atol=1e-6,
     #     )
     # end
+
+    # Check that util function works properly.
+    @testset "tr_Cf_invΣy" begin
+        N = 11
+        x = collect(range(-3.0, 3.0; length=N))
+        @testset "dense" begin
+            rng = MersenneTwister(123456)
+            A = randn(rng, N, N - 2)
+            adjoint_test((x, A)->begin
+                f = GP(sin, eq(), GPC())
+                Σy = _to_psd(A)
+                C = cholesky(Σy)
+                return tr_Cf_invΣy(FiniteGP(f, x, Σy), Σy, C)
+            end, randn(rng), x, A)
+        end
+        @testset "Diagonal" begin
+            rng = MersenneTwister(123456)
+            a = 0.01 .* randn(rng, N)
+            adjoint_test((x, a)->begin
+                f = GP(sin, eq(), GPC())
+                Σy = Diagonal(exp.(a .+ 1))
+                C = cholesky(Σy)
+                return tr_Cf_invΣy(FiniteGP(f, x, Σy), Σy, C)
+            end, randn(rng), x, a)
+        end
+        @testset "BlockDiagonal" begin
+            rng = MersenneTwister(123456)
+            A1, A2 = randn(rng, N, 4), randn(rng, N+1, 5)
+            x = collect(range(-5.0, 5.0; length=size(A1, 1) + size(A2, 1)))
+            Nx = length(x)
+            adjoint_test((x, A1, A2)->begin
+                f = GP(sin, eq(), GPC())
+                Σ1, Σ2 = _to_psd(A1), _to_psd(A2)
+                Σy = block_diagonal([Σ1, Σ2])
+                C = cholesky(Σy)
+                return tr_Cf_invΣy(FiniteGP(f, x, Σy), Σy, C)
+            end, randn(rng, Nx, Nx), x, A1, A2)
+        end
+    end
 
     # @testset "logpdf / elbo" begin
     #     rng, N, σ, gpc = MersenneTwister(123456), 10, 1e-1, GPC()
@@ -269,42 +311,42 @@ __foo(x) = isnothing(x) ? "nothing" : x
 #     end
 # end
 
-@testset "FiniteGP (BlockDiagonal obs noise)" begin
-    rng, Ns = MersenneTwister(123456), [4, 5]
-    x = collect(range(-5.0, 5.0; length=sum(Ns)))
-    As = [randn(rng, N, N) for N in Ns]
-    Ss = [A' * A + I for A in As]
+# @testset "FiniteGP (BlockDiagonal obs noise)" begin
+#     rng, Ns = MersenneTwister(123456), [4, 5]
+#     x = collect(range(-5.0, 5.0; length=sum(Ns)))
+#     As = [randn(rng, N, N) for N in Ns]
+#     Ss = [A' * A + I for A in As]
 
-    S = block_diagonal(Ss)
-    Smat = Matrix(S)
+#     S = block_diagonal(Ss)
+#     Smat = Matrix(S)
 
-    f = GP(cos, eq(), GPC())
-    y = rand(f(x, S))
+#     f = GP(cos, eq(), GPC())
+#     y = rand(f(x, S))
 
-    @test logpdf(f(x, S), y) ≈ logpdf(f(x, Smat), y)
-    adjoint_test(
-        (x, S, y)->logpdf(f(x, S), y), randn(rng), x, Smat, y;
-        atol=1e-6, rtol=1e-6,
-    )
-    adjoint_test(
-        (x, A1, A2, y)->logpdf(f(x, block_diagonal([A1 * A1' + I, A2 * A2' + I])), y),
-        randn(rng), x, As[1], As[2], y;
-        atol=1e-6, rtol=1e-6
-    )
+#     @test logpdf(f(x, S), y) ≈ logpdf(f(x, Smat), y)
+#     adjoint_test(
+#         (x, S, y)->logpdf(f(x, S), y), randn(rng), x, Smat, y;
+#         atol=1e-6, rtol=1e-6,
+#     )
+#     adjoint_test(
+#         (x, A1, A2, y)->logpdf(f(x, block_diagonal([A1 * A1' + I, A2 * A2' + I])), y),
+#         randn(rng), x, As[1], As[2], y;
+#         atol=1e-6, rtol=1e-6
+#     )
 
-    @test elbo(f(x, Smat), y, f(x)) ≈ logpdf(f(x, Smat), y)
-    @test elbo(f(x, S), y, f(x)) ≈ elbo(f(x, Smat), y, f(x))
-    adjoint_test(
-        (x, S, y)->elbo(f(x, S), y, f(x)), randn(rng), x, Smat, y;
-        atol=1e-6, rtol=1e-6,
-    )
-    adjoint_test(
-        (x, A1, A2, y) -> begin
-            S = block_diagonal([A1 * A1' + I, A2 * A2' + I])
-            return elbo(f(x, S), y, f(x))
-        end,
-        randn(rng), x, Smat, y;
-        atol=1e-6, rtol=1e-6,
-    )
-end
+#     @test elbo(f(x, Smat), y, f(x)) ≈ logpdf(f(x, Smat), y)
+#     @test elbo(f(x, S), y, f(x)) ≈ elbo(f(x, Smat), y, f(x))
+#     adjoint_test(
+#         (x, S, y)->elbo(f(x, S), y, f(x)), randn(rng), x, Smat, y;
+#         atol=1e-6, rtol=1e-6,
+#     )
+#     adjoint_test(
+#         (x, A1, A2, y) -> begin
+#             S = block_diagonal([A1 * A1' + I, A2 * A2' + I])
+#             return elbo(f(x, S), y, f(x))
+#         end,
+#         randn(rng), x, As[1], As[2], y;
+#         atol=1e-6, rtol=1e-6,
+#     )
+# end
 

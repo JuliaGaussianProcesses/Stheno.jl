@@ -102,7 +102,13 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky)
     return tr(chol_Σy \ pw(kernel(f.f), f.x))
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
-    error("Not implemented") 
+    C = _get_kernel_block_diag(f, cumulsizes(Σy, 1)) # this appears to work fine (remarkably)
+    B = chol_Σy.U \ C # this requires some work
+    return sum(diag_At_A(B)) # this should just work
+end
+
+function _get_kernel_block_diag(f::FiniteGP, cs)
+    return block_diagonal([pw(kernel(f.f), f.x[cs[n]:cs[n+1]-1]) for n in 1:length(cs)-1])
 end
 
 # """

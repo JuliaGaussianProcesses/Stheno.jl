@@ -8,6 +8,8 @@ mutable struct GPC
     GPC() = new(0)
 end
 
+@nograd GPC
+
 """
     GP{Tμ<:MeanFunction, Tk<:CrossKernel} <: AbstractGP
 
@@ -21,7 +23,7 @@ struct GP{Tμ<:MeanFunction, Tk<:CrossKernel} <: AbstractGP
     n::Int
     gpc::GPC
     function GP{Tμ, Tk}(args, μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk<:CrossKernel}
-        gp = new{Tμ, Tk}(args, μ, k, gpc.n, gpc)
+        gp = new{Tμ, Tk}(args, μ, k, Zygote.dropgrad(gpc.n), Zygote.dropgrad(gpc))
         gpc.n += 1
         return gp
     end
