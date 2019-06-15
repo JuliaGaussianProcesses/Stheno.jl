@@ -124,6 +124,11 @@ function \(U::UpperTriangularBlockDiagonal, X::BlockDiagonal)
     return block_diagonal(map((U, X)->UpperTriangular(U) \ X, U_blks, X_blks))
 end
 
+function \(L::Adjoint{T, <:UpperTriangularBlockDiagonal{T}} where {T}, X::BlockDiagonal)
+    @assert cumulsizes(L.parent.data) == cumulsizes(X)
+    U_blks, X_blks = L.parent.data.blocks.diag
+    return block_diagonal(map((U, X)->UpperTriangular(U)' \ X, U_blks, X_blks))
+end
 
 
 #

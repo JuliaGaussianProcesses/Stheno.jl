@@ -1,4 +1,4 @@
-using Stheno: block_diagonal
+using Stheno: block_diagonal, BlockDiagonal
 
 function general_BlockDiagonal_tests(rng, blocks)
     d = block_diagonal(blocks)
@@ -155,6 +155,30 @@ end
         U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
         X = block_diagonal([randn(rng, P, P) for P in Ps])
         @test U \ X ≈ UpperTriangular(Matrix(U)) \ Matrix(X)
-        adjoint_test(\, randn(rng, sum(Ps), sum(Ps)), U, X)
+
+        A_diag, back_diag = Zygote.forward(\, U, X)
+        A_dens, back_dens = Zygote.forward(\, Matrix(U), Matrix(X))
+
+        Ā = randn(rng, sum(Ps), sum(Ps))
+        Ū_diag, X̄_diag = back_diag(Ā)
+        Ū_dens, X̄_dens = back_dens(Ā)
+
+        # Correctness testing
+        @test Matrix(A_diag) ≈ Matrix(A_dens)
+        @test Matrix(Ū_diag) ≈ Matrix(Ū_dens)
+        @test Matrix(X̄_diag) ≈ Matrix(X̄_dens)
+
+        # Correct type (i.e. efficiency) testing
+        @test A_diag isa BlockDiagonal
+        @test Ū_diag isa BlockDiagonal
+        @test X̄_diag isa BlockDiagonal
+    end
+    @testset "adjoint(TriangularBlockDiagonal) under BlockDiagonal" begin
+        rng, Ps = MersenneTwister(123456), [4, 5]
+        U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
+        X = block_diagonal([randn(rng, P, P) for P in Ps])
+        @test U' \ X ≈ UpperTriangular(Matrix(U))' \ Matrix(X)
+
+        # IMPLEMENT FUNCTION TO DO COMPARISON AGAINST DENSE VERSION WITH TYPE CHECKING!
     end
 end
