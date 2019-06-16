@@ -78,15 +78,16 @@ The saturated Titsias-ELBO.
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     @assert length(f) == length(y)
-    chol_Σy = cholesky(Symmetric(f.Σy))
+    chol_Σy = cholesky(f.Σy)
 
-    # A = (cholesky(Symmetric(cov(u))).U' \ cov(u, f)) / chol_Σy.U
     A = cholesky(Symmetric(cov(u))).U' \ (chol_Σy.U' \ cov(f, u))'
     Λ_ε, δ = cholesky(Symmetric(A * A' + I)), chol_Σy.U' \ (y - mean(f))
 
-    return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
-        sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
-        tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
+    return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε))
+
+    # return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
+    #     sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
+    #     tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
 end
 
 # Compute tr(Cf / Σy) efficiently for different types of Σy. For dense Σy you obviously need
@@ -102,9 +103,7 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky)
     return tr(chol_Σy \ pw(kernel(f.f), f.x))
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
-    C = _get_kernel_block_diag(f, cumulsizes(Σy, 1)) # this appears to work fine (remarkably)
-    B = chol_Σy.U \ C # this requires some work
-    return sum(diag_At_A(B)) # this should just work
+    return tr_At_A(chol_Σy.U \ _get_kernel_block_diag(f, cumulsizes(Σy, 1)))
 end
 
 function _get_kernel_block_diag(f::FiniteGP, cs)

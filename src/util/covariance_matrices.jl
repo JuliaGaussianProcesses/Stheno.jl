@@ -18,6 +18,8 @@ Xt_invA_Y(X::AVM, A::Cholesky, Y::AVM) = (A.U' \ X)' * (A.U' \ Y)
 
 diag_At_A(A::AVM) = vec(sum(abs2.(A); dims=1))
 
+tr_At_A(A::AVM) = sum(abs2, A)
+
 function diag_At_B(A::AVM, B::AVM)
     @assert size(A) == size(B)
     return vec(sum(A .* B; dims=1))

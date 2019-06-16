@@ -7,7 +7,7 @@ include("test_util.jl")
 
     # @testset "util" begin
     #     include("util/zygote_rules.jl")
-    #     include("util/covariance_matrices.jl")
+        # include("util/covariance_matrices.jl")
     #     @testset "block_arrays" begin
             include("util/block_arrays/test_util.jl")
     #         include("util/block_arrays/dense.jl")
