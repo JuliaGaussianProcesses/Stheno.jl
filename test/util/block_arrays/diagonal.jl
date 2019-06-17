@@ -297,6 +297,7 @@ end
         A = block_diagonal([randn(rng, P, P) for P in Ps])
         B = randn(rng, sum(Ps), Q)
         @test Matrix(A * B) ≈ Matrix(A) * B
+        @test Matrix(A * collect(B')') ≈ Matrix(A) * B
 
         Y_diag, back_diag = Zygote.forward(*, A, B)
         Y_dens, back_dens = Zygote.forward(*, Matrix(A), B)
@@ -337,6 +338,24 @@ end
         @test Y_diag ≈ Y_dens
 
         Ȳ = randn(rng, sum(Ps), Q)
+        Ā_diag, B̄_diag = back_diag(Ȳ)
+        Ā_dens, B̄_dens = back_dens(Ȳ)
+        @test_broken Matrix(Ā_diag) ≈ Ā_dens # we're not checking the right bits of the matrix here
+        @test B̄_diag ≈ B̄_dens
+        @test Ā_diag isa BlockDiagonal
+        @test blocksizes(Ā_diag) == blocksizes(A)
+    end
+    @testset "ldiv(BlockDiagonal, Vector)" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6]
+        A = block_diagonal([randn(rng, P, P) for P in Ps])
+        B = randn(rng, sum(Ps))
+        @test Vector(A \ B) ≈ Matrix(A) \ B
+
+        Y_diag, back_diag = Zygote.forward(\, A, B)
+        Y_dens, back_dens = Zygote.forward(\, Matrix(A), B)
+        @test Y_diag ≈ Y_dens
+
+        Ȳ = randn(rng, sum(Ps))
         Ā_diag, B̄_diag = back_diag(Ȳ)
         Ā_dens, B̄_dens = back_dens(Ȳ)
         @test_broken Matrix(Ā_diag) ≈ Ā_dens # we're not checking the right bits of the matrix here

@@ -21,6 +21,14 @@ end
 
 
 #
+# Accumulation rule for Zygote.
+#
+
+Zygote.accum(A::BlockDiagonal, B::BlockDiagonal) = A + B
+
+
+
+#
 # adjoint / transpose - ensure we get a BlockDiagonal back
 #
 
@@ -40,6 +48,10 @@ UpperTriangular(A::BlockDiagonal) = block_diagonal(UpperTriangular.(A.blocks.dia
 #
 # Addition
 #
+
+function +(A::BlockDiagonal, B::BlockDiagonal)
+    return block_diagonal([a + b for (a, b) in zip(A.blocks.diag, B.blocks.diag)])
+end
 
 function +(A::Matrix, B::BlockDiagonal)
     @assert size(A) == size(B)
@@ -120,16 +132,22 @@ end
     end
 end
 
-function \(A::BlockDiagonal{<:Real}, B::Matrix{<:Real})
-    A_blks, B_blks = diag(A.blocks), BlockArray(B, blocksizes(A, 1), [size(B, 2)]).blocks
+function \(A::BlockDiagonal{<:Real}, B::AbstractMatrix{<:Real})
+    A_blks, B_blks = diag(A.blocks), BlockArray(collect(B), blocksizes(A, 1), [size(B, 2)]).blocks
     return Matrix(BlockMatrix(reshape([a \ b for (a, b) in zip(A_blks, B_blks)], :, 1)))
 end
-@adjoint function \(A::BlockDiagonal{<:Real}, B::Matrix{<:Real})
+@adjoint function \(A::BlockDiagonal{<:Real}, B::AbstractMatrix{<:Real})
     Y = A \ B
-    return Y, function(Ȳ::Matrix)
+    return Y, function(Ȳ::AbstractMatrix{<:Real})
         B̄ = A' \ Ȳ
         return (_block_diag_bit(-B̄, Y', A), B̄)
     end
+end
+
+\(A::BlockDiagonal{<:Real}, x::AbstractVector{<:Real}) = reshape(A \ reshape(x, :, 1), :)
+@adjoint function \(A::BlockDiagonal{<:Real}, x::AbstractVector{<:Real})
+    y_mat, back = Zygote.forward(\, A, reshape(x, :, 1))
+    return vec(y_mat), Δ::AbstractVector{<:Real}->back(reshape(Δ, :, 1))
 end
 
 function _block_diag_bit(A::AbstractMatrix, B::AbstractMatrix, R::BlockDiagonal)
@@ -256,7 +274,6 @@ end
     function back(Ū::BlockDiagonal)
         return (block_diagonal(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs)),)
     end
-    back(Ū::UpperTriangularBlockDiagonal) = back(Ū.data)
     return Cholesky(block_diagonal(Cs), :U, 0), Δ->back(Δ.factors)
 end
 

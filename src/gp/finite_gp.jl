@@ -83,11 +83,9 @@ function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     A = cholesky(Symmetric(cov(u))).U' \ (chol_Σy.U' \ cov(f, u))'
     Λ_ε, δ = cholesky(Symmetric(A * A' + I)), chol_Σy.U' \ (y - mean(f))
 
-    return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε))
-
-    # return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
-    #     sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
-    #     tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
+    return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
+        sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
+        tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
 end
 
 # Compute tr(Cf / Σy) efficiently for different types of Σy. For dense Σy you obviously need
@@ -103,7 +101,7 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky)
     return tr(chol_Σy \ pw(kernel(f.f), f.x))
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
-    return tr_At_A(chol_Σy.U \ _get_kernel_block_diag(f, cumulsizes(Σy, 1)))
+    return tr_At_A(chol_Σy.U' \ cholesky(_get_kernel_block_diag(f, cumulsizes(Σy, 1))).U')
 end
 
 function _get_kernel_block_diag(f::FiniteGP, cs)
