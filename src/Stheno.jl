@@ -58,6 +58,7 @@ module Stheno
     # Affine transformations of GPs.
     include("linops/indexing.jl")
     include("linops/conditioning.jl")
+    include("linops/cross.jl")
     include("linops/approximate_conditioning.jl")
     include("linops/product.jl")
     include("linops/addition.jl")
