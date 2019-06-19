@@ -29,8 +29,25 @@ _kernels(fs1, fs2) = kernel.(fs1, fs2)
     ys, backs = first.(ys_and_backs), last.(ys_and_backs)
     return ys, function(Δ)
         Δ_fs1_fs2 = broadcast((back, δ)->back(δ), backs, Δ)
-        Δ_fs1 = reduce(Zygote.accum, first.(Δ_fs1_fs2); dims=2, init=nothing)
-        Δ_fs2 = reduce(Zygote.accum, last.(Δ_fs1_fs2); dims=1, init=nothing)
-        return Δ_fs1, Δ_fs2
+
+        Δ_fs1, Δ_fs2 = first.(Δ_fs1_fs2), last.(Δ_fs1_fs2)
+        δ_1 = Vector{Any}(undef, length(fs1))
+        δ_2 = Vector{Any}(undef, length(fs2))
+
+        for p in 1:length(δ_1)
+            δ_1[p] = Δ_fs1[p, 1]
+            for q in 2:length(δ_2)
+                δ_1[p] = Zygote.accum(δ_1[p], Δ_fs1[p, q])
+            end
+        end
+
+        for q in 1:length(δ_2)
+            δ_2[q] = Δ_fs2[1, q]
+            for p in 2:length(δ_1)
+                δ_2[q] = Zygote.accum(δ_2[q], Δ_fs2[p, q])
+            end
+        end
+
+        return δ_1, reshape(δ_2, 1, :)
     end
 end

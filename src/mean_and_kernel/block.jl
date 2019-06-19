@@ -88,21 +88,22 @@ end
         Δ_k_x_x′ = broadcast((back, blk)->back(blk), backs, Δ.blocks)
         Δ_ks, Δ_x, Δ_x′ = first.(Δ_k_x_x′), getindex.(Δ_k_x_x′, 2), getindex.(Δ_k_x_x′, 3)
 
-        # zero out nothings.
-        for p in 1:length(x_blks), q in 1:length(x′_blks)
-            if Δ_x[p, q] === nothing
-                Δ_x[p, q] = zeros(size(x_blks[p]))
-            end
-            if Δ_x′[p, q] === nothing
-                Δ_x′[p, q] = zeros(size(x′_blks[q]))
+        # Reduce over appropriate dimensions manually because sum doesn't work... :S
+        δ_x = Vector{Any}(undef, length(x_blks))
+        δ_x′ = Vector{Any}(undef, length(x′_blks))
+
+        for p in 1:length(x_blks)
+            δ_x[p] = Δ_x[p, 1]
+            for q in 2:length(x′_blks)
+                δ_x[p] = Zygote.accum(δ_x[p], Δ_x[p, q])
             end
         end
 
-        # Reduce over appropriate dimensions manually because sum doesn't work... :S
-        δ_x, δ_x′ = zero.(Δ_x[:, 1]), zero.(Δ_x′[1, :])
-        for p in 1:length(x_blks), q in 1:length(x′_blks)
-            δ_x[p] += Δ_x[p, q]
-            δ_x′[q] += Δ_x′[p, q]
+        for q in 1:length(x′_blks)
+            δ_x′[q] = Δ_x′[1, q]
+            for p in 2:length(x_blks)
+                δ_x′[q] = Zygote.accum(δ_x′[q], Δ_x′[p, q])
+            end
         end
 
         return Δ_ks, δ_x, δ_x′

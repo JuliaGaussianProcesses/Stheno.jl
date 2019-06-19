@@ -77,8 +77,10 @@ struct LhsCross{Tf<:MeanFunction, Tk<:CrossKernel} <: CrossKernel
     k::Tk
 end
 ew(k::LhsCross, x::AV, x′::AV) = ew(k.f, x) .* ew(k.k, x, x′)
-pw(k::LhsCross, x::AV, x′::AV) = ew(k.f, x) .* pw(k.k, x, x′)
-pw(k::LhsCross, x::AV) = pw(k, x)
+function pw(k::LhsCross, x::AV, x′::AV)
+    return ew(k.f, x) .* pw(k.k, x, x′)
+end
+pw(k::LhsCross, x::AV) = pw(k, x, x)
 
 
 """

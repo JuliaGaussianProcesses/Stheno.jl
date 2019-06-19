@@ -88,6 +88,9 @@ function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
         tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
 end
 
+elbo(f::FiniteGP, y::AV{<:Real}, u::Vector{<:FiniteGP}) = elbo(f, y, finites_to_block(u))
+
+
 # Compute tr(Cf / Σy) efficiently for different types of Σy. For dense Σy you obviously need
 # to compute the entirety of Cf, which is bad, but for particular structured Σy one requires
 # only a subset of the elements. Σy isa UniformScaling is version usually considered.
@@ -101,11 +104,19 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky)
     return tr(chol_Σy \ pw(kernel(f.f), f.x))
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
-    return tr_At_A(chol_Σy.U' \ cholesky(_get_kernel_block_diag(f, cumulsizes(Σy, 1))).U')
+    return tr_At_A(chol_Σy.U' \ cholesky(Symmetric(_get_kernel_block_diag(f, cumulsizes(Σy, 1)))).U')
+end
+function tr_Cf_invΣy(
+    f::FiniteGP,
+    Σy::Symmetric{T, <:BlockDiagonal{T}} where {T},
+    chol_Σy::Cholesky,
+)
+    return tr_Cf_invΣy(f, Σy.data, chol_Σy)
+    # return tr_At_A(chol_Σy.U' \ cholesky(_get_kernel_block_diag(f, cumulsizes(Σy, 1))).U')
 end
 
 function _get_kernel_block_diag(f::FiniteGP, cs)
-    return block_diagonal([pw(kernel(f.f), f.x[cs[n]:cs[n+1]-1]) for n in 1:length(cs)-1])
+    return block_diagonal([pw(kernel(f.f), f.x[cs[n]:cs[n+1]-1]) + 1e-9I for n in 1:length(cs)-1])
 end
 
 # """
