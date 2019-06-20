@@ -139,7 +139,9 @@ version = "0.20.0"
 
 [[FDM]]
 deps = ["LinearAlgebra", "Printf"]
-path = "/home/wct23/.julia/dev/FDM"
+git-tree-sha1 = "10cfd63935d093865c7d9e40ff31c8ef7f689160"
+repo-rev = "master"
+repo-url = "https://github.com/invenia/FDM.jl.git"
 uuid = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
 version = "0.6.1"
 
@@ -425,6 +427,6 @@ version = "0.8.3"
 
 [[Zygote]]
 deps = ["DiffRules", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics"]
-path = "/home/wct23/.julia/dev/Zygote"
+path = "/Users/willtebbutt/.julia/dev/Zygote"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
 version = "0.3.1"

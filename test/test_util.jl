@@ -8,6 +8,9 @@ import FDM: to_vec
 const _rtol = 1e-10
 const _atol = 1e-10
 
+_to_psd(A::Matrix) = A * A' + I
+_to_psd(σ::Real) = exp(σ)
+
 Base.length(::Nothing) = 0
 
 function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)

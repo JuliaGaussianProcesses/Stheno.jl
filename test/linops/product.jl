@@ -39,8 +39,19 @@ using Stheno: GPC
         @test cov(g3(X), g2′(X′)) ≈ (c^2 * c′) .* cov(g1(X), g1(X′))
         @test cov(g2(X), g4′(X′)) ≈ (c * c′^3) .* cov(g1(X), g1(X′))
         @test cov(g4(X), g2′(X′)) ≈ (c^3 * c′) .* cov(g1(X), g1(X′))
-    end
 
+        @testset "Standardised Tests" begin
+            function foo(θ)
+                f = GP(sin, eq(l=θ[:l]), GPC())
+                return θ[:σ] * f, f
+            end
+            x, A = collect(range(-5.0, 5.0; length=N)), randn(rng, N, N)
+            z, B = collect(range(-5.0, 5.0; length=N′)), randn(rng, N′, N′)
+            θ = Dict(:l=>0.5, :σ=>2.3)
+            y = rand(rng, first(foo(θ))(x, _to_psd(A)))
+            check_consistency(rng, θ, foo, x, y, A, _to_psd, z, B)
+        end
+    end
     @testset "multiply by function" begin
         rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))

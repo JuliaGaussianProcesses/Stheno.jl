@@ -6,8 +6,6 @@ function abs_rel_errs(x, y)
     return [δ δ ./ vec(y)]
 end
 
-_to_psd(A::Matrix) = A * A' + I
-
 @testset "conditioning" begin
     @testset "Observation" begin
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
@@ -59,7 +57,7 @@ _to_psd(A::Matrix) = A * A' + I
         @test cov(f′(xx′)) ≈ cov(f′2(xx′))
         @test cov(f′(x), f′(x′)) ≈ cov(f′2(x), f′2(x′))
     end
-    @testset "Standardised consistency checks" begin
+    @testset "Standardised Tests" begin
         rng, N, P, Q = MersenneTwister(123456), 11, 13, 7
         function foo(θ)
             f = GP(sin, eq(l=θ[:l]), GPC())
