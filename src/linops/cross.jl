@@ -6,14 +6,19 @@ Make something a bit like a multi-output GP.
 cross(fs::AbstractVector{<:GP}) = GP(cross, fs)
 
 μ_p′(::typeof(cross), fs) = BlockMean(mean.(fs))
+
 k_p′(::typeof(cross), fs) = BlockKernel(_kernels(f.fs, permutedims(f.fs)))
+
 function k_pp′(fp::GP{<:Any, <:BlockKernel}, ::typeof(cross), fs)
     return BlockCrossKernel(_kernels(fp.args[2:end], permutedims(fs)))
 end
-k_pp′(fp::GP, ::typeof{cross}, fs) = BlockCrossKernel(kernel.(Ref(f1), permutedims(f2.fs)))
+
+k_pp′(fp::GP, ::typeof(cross), fs) = BlockCrossKernel(kernel.(Ref(f1), permutedims(f2.fs)))
+
 function k_p′p(::typeof(cross), fs, fp::GP{<:Any, <:BlockKernel})
     return BlockCrossKernel(_kernels(fs, permutedims(fp.args[2:end])))
 end
+
 k_p′p(::typeof(cross), fs, fp::GP) = BlockCrossKernel(kernel.(f1.fs, Ref(f2)))
 
 _kernels(fs1, fs2) = kernel.(fs1, fs2)

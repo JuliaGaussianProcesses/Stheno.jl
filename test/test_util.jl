@@ -41,6 +41,8 @@ function to_vec(X::T) where T<:Union{Adjoint,Transpose}
     return vec(Matrix(X)), x_vec->U(permutedims(reshape(x_vec, size(X))))
 end
 
+Base.zero(d::Dict) = Dict([(key, zero(val)) for (key, val) in d])
+
 # My version of isapprox
 function fd_isapprox(x_ad::Nothing, x_fd, rtol, atol)
     return fd_isapprox(x_fd, zero(x_fd), rtol, atol)
@@ -57,6 +59,10 @@ function fd_isapprox(x_ad::NamedTuple, x_fd, rtol, atol)
 end
 function fd_isapprox(x_ad::Tuple, x_fd::Tuple, rtol, atol)
     return all(map((x, x′)->fd_isapprox(x, x′, rtol, atol), x_ad, x_fd))
+end
+function fd_isapprox(x_ad::Dict, x_fd::Dict, rtol, atol)
+    iters = zip(values(x_ad), values(x_fd))
+    return all([fd_isapprox(v_ad, v_fd, rtol, atol) for (v_ad, v_fd) in iters])
 end
 
 function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=FDM.Central(5, 1))

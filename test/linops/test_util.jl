@@ -1,4 +1,5 @@
 using LinearAlgebra
+using Stheno: FiniteGP
 
 """
     check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, _to_psd, z::AV)
@@ -14,41 +15,43 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, _to_psd, z:
 
     # Check input consistency to prevent test failures for the wrong reasons.
     @assert length(x) == length(y)
-    @assert size(Σ, 1) == length(y)
-    @assert size(Σ, 1) == size(Σ, 2)
-    @assert all(eigvals(Σ) > 0)
-    @assert issymmetric(Σ)
 
     g = (θ, x, A)->FiniteGP(first(f(θ)), x, _to_psd(A))
     function h(θ, x, A, z, B)
-        f, u = f(θ)
-        return FiniteGP(f, x, _to_psd(A)), FiniteGP(u, z, _to_psd(B))
+        g, u = f(θ)
+        return FiniteGP(g, x, _to_psd(A)), FiniteGP(u, z, _to_psd(B))
     end
 
     # Check that the gradient w.r.t. the samples is correct (single-sample).
     adjoint_test(
         (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A)),
         randn(rng, length(x)),
-        θ, x, A,
+        θ, x, A;
+        rtol=1e-7, atol=1e-7,
     )
 
     # Check that the gradient w.r.t. the samples is correct (multi-sample).
     adjoint_test(
         (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A), 11),
         randn(rng, length(x), 11),
-        θ, x, A,
+        θ, x, A;
+        rtol=1e-7, atol=1e-7,
     )
 
     # Check adjoints for logpdf.
-    adjoint_test((θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A)
+    adjoint_test(
+        (θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A, y;
+        rtol=1e-7, atol=1e-7,
+    )
 
     # Check adjoint for elbo.
     adjoint_test(
-        (ϴ, x, A, y)->begin
+        (ϴ, x, A, y, z, B)->begin
             fx, uz = h(θ, x, A, z, B)
             return elbo(fx, y, uz)
         end,
         randn(rng),
-        θ, x, A, y, z, B,
+        θ, x, A, y, z, B;
+        rtol=1e-7, atol=1e-7,
     )
 end
