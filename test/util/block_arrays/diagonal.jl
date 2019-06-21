@@ -254,6 +254,21 @@ end
     #     @test Ā_diag == Ā_dens
     #     @test Ā_diag isa BlockDiagonal
     # end
+    @testset "Symmetric" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6]
+        A = block_diagonal([randn(rng, P, P) for P in Ps])
+        S = Symmetric(A)
+        @test S == Symmetric(Matrix(A))
+        @test S isa BlockDiagonal
+
+        S_diag, back_diag = Zygote.forward(Symmetric, A)
+        S_dens, back_dens = Zygote.forward(Symmetric, Matrix(A))
+        @test S_diag ≈ S_dens
+       
+        Ā_diag, Ā_dens = first(back_diag(S̄)), first(back_dens(S̄))
+        @test Ā_diag ≈ Ā_dens
+        @test Ā_diag isa BlockDiagonal
+    end
     # @testset "tr_At_A" begin
     #     rng, Ps = MersenneTwister(123456), [4, 5, 6]
     #     A = block_diagonal([randn(rng, P, P) for P in Ps])

@@ -1,9 +1,7 @@
 const BlockDiagonal{T, TM} = BlockMatrix{T, <:Diagonal{TM}} where {TM <: AbstractMatrix{T}}
-const UpperTriangularBlockDiagonal{T} = UpperTriangular{T, <:BlockDiagonal{T}} where {T}
 
 import Base: +, -, adjoint, transpose
-import LinearAlgebra: UpperTriangular
-
+import LinearAlgebra: UpperTriangular, LowerTriangular, Symmetric
 
 
 #
@@ -19,13 +17,11 @@ function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T
 end
 
 
-
 #
 # Accumulation rule for Zygote.
 #
 
 Zygote.accum(A::BlockDiagonal, B::BlockDiagonal) = A + B
-
 
 
 #
@@ -36,13 +32,22 @@ adjoint(A::BlockDiagonal) = block_diagonal(adjoint.(A.blocks.diag))
 transpose(A::BlockDiagonal) = block_diagonal(transpose.(A.blocks.diag))
 
 
-
 #
 # UpperTriangular - ensure we get a BlockDiagonal back
 #
 
 UpperTriangular(A::BlockDiagonal) = block_diagonal(UpperTriangular.(A.blocks.diag))
+LowerTriangular(A::BlockDiagonal) = block_diagonal(LowerTriangular.(A.blocks.diag))
 
+
+#
+# Symmetric - ensure we get a BlockDiagonal back
+#
+
+Symmetric(A::BlockDiagonal) = block_diagonal(Symmetric.(A.blocks.diag))
+@adjoint function Symmetric(A::BlockDiagonal)
+    return Zygote.forward(A->block_diagonal(Symmetric.(A.blocks.diag)), A)
+end
 
 
 #
@@ -79,8 +84,6 @@ end
 -(A::BlockDiagonal) = block_diagonal([-a for a in A.blocks.diag])
 
 
-
-
 #
 # tr_At_A
 #
@@ -95,7 +98,6 @@ end
 #
 # BlockDiagonal multiplication
 #
-
 
 function *(A::BlockDiagonal{<:Real}, B::BlockDiagonal{<:Real})
     return block_diagonal([a * b for (a, b) in zip(A.blocks.diag, B.blocks.diag)])
@@ -112,7 +114,6 @@ function *(A::BlockDiagonal{<:Real}, x::Vector{<:Real})
     A_blks, x_blks = diag(A.blocks), BlockArray(x, blocksizes(A, 1)).blocks
     return Vector(BlockVector([a * x for (a, x) in zip(A_blks, x_blks)]))
 end
-
 
 
 #
@@ -157,105 +158,6 @@ function _block_diag_bit(A::AbstractMatrix, B::AbstractMatrix, R::BlockDiagonal)
 end
 
 
-# function ldiv!(U::UpperTriangularBlockDiagonal, x::BlockVector)
-#     @assert are_conformal(U.data, x)
-#     blocks = U.data.blocks.diag
-#     for n in 1:nblocks(x, 1)
-#         setblock!(x, ldiv!(blocks[n], x[Block(n)]), n)
-#     end
-#     return x
-# end
-# \(U::UpperTriangularBlockDiagonal, x::BlockVector) = ldiv!(U, copy(x))
-
-# function ldiv!(U::UpperTriangularBlockDiagonal, X::BlockMatrix)
-#     @assert are_conformal(U.data, X)
-#     blocks = U.data.blocks.diag
-#     for r in 1:nblocks(X, 1)
-#         for c in 1:nblocks(X, 2)
-#             setblock!(X, ldiv!(blocks[r], X[Block(r, c)]), r, c)
-#         end
-#     end
-#     return X
-# end
-# \(U::UpperTriangularBlockDiagonal, X::BlockMatrix) = ldiv!(U, copy(X))
-
-# function \(U::UpperTriangularBlockDiagonal, X::BlockDiagonal)
-#     @assert cumulsizes(U.data) == cumulsizes(X)
-#     U_blks, X_blks = U.data.blocks.diag, X.blocks.diag
-#     return block_diagonal(map((U, X)->UpperTriangular(U) \ X, U_blks, X_blks))
-# end
-
-# function \(
-#     L::Adjoint{T, <:UpperTriangularBlockDiagonal{T}} where {T<:Real},
-#     X::BlockDiagonal,
-# )
-#     @assert cumulsizes(L.parent.data) == cumulsizes(X)
-#     U_blks, X_blks = L.parent.data.blocks.diag, X.blocks.diag
-#     return block_diagonal(map((U, X)->UpperTriangular(U)' \ X, U_blks, X_blks))
-# end
-
-#
-# ldiv Adjoint of UpperTriangularBlockDiagonal \ Vector
-#
-
-# function \(
-#     L::Adjoint{T, <:UpperTriangularBlockDiagonal{T}} where {T<:Real},
-#     x::AbstractVector{<:Real},
-# )
-#     @assert size(L, 2) == length(x)
-#     L_blk = L.parent.data
-#     x_blk = BlockArray(x, blocksizes(L_blk))
-#     return Vector(BlockVector([L \ x for (L, x) in zip(L_blk.blocks, x_blk.blocks)]))
-# end
-
-# @adjoint function \(
-#     A::Adjoint{T, <:UpperTriangularBlockDiagonal{T}} where {T<:Real},
-#     b::AbstractVector{<:Real},
-# )
-#     @assert size(L, 2) == length(x)
-#     L_blk = L.parent.data
-#     x_blk = BlockArray(x, blocksizes(L_blk))
-#     y_blk = BlockVector([L \ x for (L, x) in zip(L_blk.blocks, x_blk.blocks)])
-#     return Vector(y_blk), function(ȳ)
-#         println("in the thing")
-#         cs = cumulsizes(x_blk)
-#         x̄ = A' \ ȳ
-#         Ā_blks = [-x̄[cs[n]:cs[n+1]-1] * y[cs[n]:cs[n+1]-1]' for n in 1:nblocks(x_blk, 1)]
-#         return (block_diagonal(Ā_blks), x̄)
-#     end 
-# end
-
-
-
-#
-# UpperTriangularBlockDiagonal mul! and *
-#
-
-*(D::UpperTriangularBlockDiagonal, x::BlockVector) = mul!(copy(x), D, x)
-*(D::UpperTriangularBlockDiagonal, X::BlockMatrix) = mul!(copy(X), D, X)
-
-function mul!(y::BlockVector, U::UpperTriangularBlockDiagonal, x::BlockVector)
-    @assert are_conformal(U.data, x) && are_conformal(U.data, y)
-    blocks = U.data.blocks.diag
-    for r in 1:nblocks(U.data, 1)
-        mul!(getblock(y, r), UpperTriangular(blocks[r]), getblock(x, r))
-    end
-    return y
-end
-
-function mul!(Y::BlockMatrix, U::UpperTriangularBlockDiagonal, X::BlockMatrix)
-    @assert are_conformal(U.data, X) && are_conformal(U.data, Y)
-    blocks = U.data.blocks.diag
-    for r in 1:nblocks(U.data, 1)
-        for c in 1:nblocks(X, 2)
-            mul!(getblock(Y, r, c), UpperTriangular(blocks[r]), getblock(X, r, c))
-        end
-    end
-    return Y
-end
-
-
-
 #
 # cholesky
 #
@@ -295,13 +197,13 @@ end
 end
 
 
-
 #
 # Misc
 #
 
 # Because Base is dumb and hasn't implemented `logabsdet` for `Diagonal` matrices.
 logabsdet(d::Diagonal) = logabsdet(UpperTriangular(d))
+
 
 #
 # BlockDiagonal mul! and *

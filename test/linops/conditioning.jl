@@ -59,20 +59,18 @@ end
     end
     @testset "Standardised Tests" begin
         rng, N, P, Q = MersenneTwister(123456), 11, 13, 7
-        function foo(θ)
-            f = GP(sin, eq(l=θ[:l]), GPC())
-            f′ = f | (f(θ[:x], _to_psd(θ[:A]))←θ[:y])
-            return f′, f′
-        end
-
         x_obs, A_obs = collect(range(-5.0, 5.0; length=N)), randn(rng, N, N)
         y_obs = rand(rng, GP(sin, eq(l=0.5), GPC())(x_obs, _to_psd(A_obs)))
-        θ = Dict(:l=>0.5, :x=>x_obs, :y=>y_obs, :A=>A_obs)
-        f, f = foo(θ)
-        x, z = collect(range(-5.0, 5.0; length=P)), collect(range(-5.0, 5.0; length=Q))
-        A, B = randn(rng, P, P), randn(rng, Q, Q)
-        y = rand(rng, f(x, _to_psd(A)))
-        check_consistency(rng, θ, foo, x, y, A, _to_psd, z, B)
+        standard_1D_tests(
+            MersenneTwister(123456),
+            Dict(:x=>x_obs, :y=>y_obs, :A=>A_obs),
+            θ->begin
+                f = GP(sin, eq(), GPC())
+                f′ = f | (f(θ[:x], _to_psd(θ[:A]))←θ[:y])
+                return f′, f′
+            end,
+            P, Q,
+        )
     end
     # @testset "BlockGP" begin
     #     rng, N, N′, σ² = MersenneTwister(123456), 3, 7, 1.0

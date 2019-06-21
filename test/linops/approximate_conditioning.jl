@@ -104,6 +104,36 @@ using Stheno: GPC, PPC, optimal_q, pw, Xt_invA_X, Xt_invA_Y, PseudoPoints
         @test cov(f′(x′), f′(x)) ≈ cov(f′_approx(x′), f′_approx(x))
         @test cov(f′(x′), f′(x)) ≈ cov(f′_approx(x′), g′_approx(x))
         @test cov(f′(x′), f′(x)) ≈ cov(g′_approx(x′), f′_approx(x))
+
+        @testset "Standardised Tests" begin
+            @testset "Dense Obs. Noise" begin
+                # N_obs, M_obs = 11, 13
+                # x_obs = collect(range(-5.0, 5.0; length=N_obs))
+                # z_obs = collect(range(-5.0, 5.0; length=M_obs))
+                # A, B = randn(rng, N_obs, N_obs), randn(rng, M_obs, M_obs)
+                # y = rand(rng, (2.3 * GP(cos, eq(l=0.5), GPC()))(x_obs, _to_psd(A)))
+                # standard_1D_tests(
+                #     MersenneTwister(123456),
+                #     Dict(:l=>0.5, :σ=>2.3, :z=>z_obs, :x=>x_obs, :A=>A, :B=>B, :y=>y),
+                #     θ->begin
+                #         f = θ[:σ] * GP(cos, eq(l=θ[:l]), GPC())
+                #         u = f(θ[:z], _to_psd(θ[:B]))
+                #         f′ = f | PseudoPoints(f(θ[:x], _to_psd(θ[:A]))←θ[:y], u)
+                #         return f′, f′
+                #     end,
+                #     17, 19,
+                # )
+            end
+            @testset "Diagonal Obs. Noise" begin
+                
+            end
+            @testset "Isotropic Obs. Noise" begin
+                
+            end
+            @testset "BlockDiagonal Obs. Noise" begin
+                
+            end
+        end 
     end
     # @testset "multiple approximate conditioning" begin
     #     rng, N, N′, Nz, σ², gpc = MersenneTwister(123456), 11, 10, 11, 1e-1, GPC()

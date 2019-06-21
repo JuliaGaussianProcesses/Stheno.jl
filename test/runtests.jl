@@ -1,4 +1,4 @@
-using Stheno, Test, Random, FillArrays, BlockArrays
+using Stheno, Test, Random, FillArrays, BlockArrays, StatsFuns
 using BlockArrays: _BlockArray
 
 include("test_util.jl")
@@ -9,9 +9,9 @@ include("test_util.jl")
     #     include(joinpath("util", "zygote_rules.jl"))
     #     include(joinpath("util", "covariance_matrices.jl"))
     #     @testset "block_arrays" begin
-    #         include(joinpath("util", "block_arrays", "test_util.jl"))
+            # include(joinpath("util", "block_arrays", "test_util.jl"))
     #         include(joinpath("util", "block_arrays", "dense.jl"))
-    #         include(joinpath("util", "block_arrays", "diagonal.jl"))
+            # include(joinpath("util", "block_arrays", "diagonal.jl"))
     #         include(joinpath("util", "block_arrays", "triangular.jl"))
     #     end
     #     include(joinpath("util", "abstract_data_set.jl"))
@@ -41,10 +41,11 @@ include("test_util.jl")
     @testset "linops" begin
         include(joinpath("linops", "test_util.jl"))
         # include(joinpath("linops", "indexing.jl"))
-        # include(joinpath("linops", "conditioning.jl"))
+        # include(joinpath("linops", "cross.jl"))
+        include(joinpath("linops", "conditioning.jl"))
         # include(joinpath("linops", "product.jl"))
         # include(joinpath("linops", "addition.jl"))
-        include(joinpath("linops", "compose.jl"))
+        # include(joinpath("linops", "compose.jl"))
         # include(joinpath("linops", "approximate_conditioning.jl"))
         # include(joinpath("linops", "integrate.jl"))
     end

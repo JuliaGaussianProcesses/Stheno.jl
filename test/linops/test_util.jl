@@ -27,7 +27,7 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
         (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A)),
         randn(rng, length(x)),
         θ, x, A;
-        rtol=1e-7, atol=1e-7,
+        rtol=1e-4, atol=1e-4,
     )
 
     # Check that the gradient w.r.t. the samples is correct (multi-sample).
@@ -35,13 +35,13 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
         (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A), 11),
         randn(rng, length(x), 11),
         θ, x, A;
-        rtol=1e-7, atol=1e-7,
+        rtol=1e-4, atol=1e-4,
     )
 
     # Check adjoints for logpdf.
     adjoint_test(
         (θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A, y;
-        rtol=1e-7, atol=1e-7,
+        rtol=1e-4, atol=1e-4,
     )
 
     # Check adjoint for elbo.
@@ -52,7 +52,7 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
         end,
         randn(rng),
         θ, x, A, y, z, B;
-        rtol=1e-7, atol=1e-7,
+        rtol=1e-4, atol=1e-4,
     )
 end
 
@@ -77,8 +77,18 @@ function standard_1D_isotropic_test(rng::AbstractRNG, θ, f, N::Int, M::Int)
     check_consistency(rng, θ, f, x, y, a, z, b)
 end
 
+function standard_1D_block_diagonal_test(rng::AbstractRNG, θ, f, N::Int, M::Int)
+    @assert N > 2 && M > 3
+    x, z = collect(range(-5.0, 5.0; length=N)), collect(range(-5.0, 5.0; length=M))
+    As = [randn(rng, 2, 2), randn(rng, N - 2, N - 2)]
+    Bs = [randn(rng, 3, 3), randn(rng, M - 3, M - 3)]
+    y = rand(rng, first(f(θ))(x, _to_psd(As)))
+    check_consistency(rng, θ, f, x, y, As, z, Bs)
+end
+
 function standard_1D_tests(rng::AbstractRNG, θ, f, N::Int, M::Int)
     standard_1D_dense_test(rng, θ, f, N, M)
     standard_1D_diag_test(rng, θ, f, N, M)
     standard_1D_isotropic_test(rng, θ, f, N, M)
+    standard_1D_block_diagonal_test(rng, θ, f, N, M)
 end
