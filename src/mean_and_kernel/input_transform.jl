@@ -15,7 +15,7 @@ ew(μ::ITMean, X::AV) = ew(μ.μ, μ.f.(X))
     ITKernel{Tk<:Kernel, Tf} <: Kernel
 
 "InputTransformationKernel": An `ITKernel` `kit` is the kernel defined by applying a
-transform `f` to the argument to a kernel `k`. Concretely: `k(x, x′) = k(f(x), f(x′))`.
+transform `f` to the argument to a kernel `k`. Concretely: `kit(x, x′) = k(f(x), f(x′))`.
 """
 struct ITKernel{Tk<:Kernel, Tf} <: Kernel
     k::Tk
@@ -75,24 +75,26 @@ pw(k::ITCross, x::AV, x′::AV) = pw(k.k, k.f.(x), k.f′.(x′))
 
 Applies the input-transform `ϕ` to `f`.
 """
-transform(μ::MeanFunction, ϕ) = ITMean(μ, ϕ)
+transform(μ::MeanFunction, ϕ) = ITMean(μ, _transform(ϕ))
 
 transform(μ::MeanFunction, ::typeof(identity)) = μ
 transform(μ::ZeroMean, ϕ) = μ
 transform(μ::ZeroMean, ::typeof(identity)) = μ
 
-transform(k::Kernel, ϕ) = ITKernel(k, ϕ)
+transform(k::Kernel, ϕ) = ITKernel(k, _transform(ϕ))
 transform(k::Kernel, ::typeof(identity)) = k
 transform(k::ZeroKernel, ϕ) = k
 transform(k::ZeroKernel, ::typeof(identity)) = k
 
-transform(k::CrossKernel, ϕ, ::Val{1}) = LhsITCross(k, ϕ)
-transform(k::CrossKernel, ϕ, ::Val{2}) = RhsITCross(k, ϕ)
+transform(k::CrossKernel, ϕ, ::Val{1}) = LhsITCross(k, _transform(ϕ))
+transform(k::CrossKernel, ϕ, ::Val{2}) = RhsITCross(k, _transform(ϕ))
 
 transform(k::ZeroKernel, ϕ, ::Val{1}) = k
 transform(k::ZeroKernel, ϕ, ::Val{2}) = k
 
-transform(k::CrossKernel, ϕ, ϕ′) = ITCross(k, ϕ, ϕ′)
+transform(k::CrossKernel, ϕ, ϕ′) = ITCross(k, _transform(ϕ), _transform(ϕ′))
+
+_transform(ϕ) = ϕ
 
 
 """
@@ -107,6 +109,10 @@ end
 broadcasted(s::Scale, x::StepRangeLen) = s.l .* x
 broadcasted(s::Scale, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
 
+_transform(ϕ::Real) = Scale(ϕ)
+_transform(ϕ::Scale) = ϕ
+
+
 """
     LinearTransform{T<:AbstractMatrix}
 
@@ -117,6 +123,9 @@ struct LinearTransform{T<:AbstractMatrix}
 end
 (l::LinearTransform)(x::AbstractVector) = l.A * x
 broadcasted(l::LinearTransform, x::ColsAreObs) = ColsAreObs(l.A * x.X)
+
+_transform(ϕ::AbstractMatrix{<:Real}) = LinearTransform(A)
+_transform(ϕ::LinearTransform) = ϕ
 
 
 """
@@ -148,6 +157,7 @@ function broadcasted(f::PickDims{<:Integer}, x::AV{<:CartesianIndex})
     end
     return out
 end
+
 
 """
     Periodic{Tf<:Real}

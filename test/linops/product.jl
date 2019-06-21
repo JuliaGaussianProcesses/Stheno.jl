@@ -41,15 +41,15 @@ using Stheno: GPC
         @test cov(g4(X), g2′(X′)) ≈ (c^3 * c′) .* cov(g1(X), g1(X′))
 
         @testset "Standardised Tests" begin
-            function foo(θ)
-                f = GP(sin, eq(l=θ[:l]), GPC())
-                return θ[:σ] * f, f
-            end
-            x, A = collect(range(-5.0, 5.0; length=N)), randn(rng, N, N)
-            z, B = collect(range(-5.0, 5.0; length=N′)), randn(rng, N′, N′)
-            θ = Dict(:l=>0.5, :σ=>2.3)
-            y = rand(rng, first(foo(θ))(x, _to_psd(A)))
-            check_consistency(rng, θ, foo, x, y, A, _to_psd, z, B)
+            standard_1D_tests(
+                MersenneTwister(123456),
+                Dict(:l=>0.5, :σ=>2.3),
+                θ->begin
+                    f = GP(sin, eq(l=θ[:l]), GPC())
+                    return θ[:σ] * f, f
+                end,
+                N, N′,
+            )
         end
     end
     @testset "multiply by function" begin
@@ -95,5 +95,17 @@ using Stheno: GPC
         @test cov(g3(X), g2′(X′)) ≈ fX.^2 .* cov(g1(X), g1(X′)) .* (f′X′')
         @test cov(g2(X), g4′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* (f′X′').^3
         @test cov(g4(X), g2′(X′)) ≈ fX.^3 .* cov(g1(X), g1(X′)) .* (f′X′')
+
+        @testset "Standardised Tests" begin
+            standard_1D_tests(
+                MersenneTwister(123456),
+                Dict(:l=>0.5, :σ=>2.3),
+                θ->begin
+                    f = GP(sin, eq(l=θ[:l]), GPC())
+                    return cos * f, f
+                end,
+                N, N′,
+            )
+        end
     end
 end
