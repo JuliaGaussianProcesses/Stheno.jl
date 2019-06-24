@@ -5,7 +5,10 @@ import Base: +, -
 
 Produces a GP `f` satisfying `f(x) = fa(x) + fb(x)`.
 """
-+(fa::GP, fb::GP) = GP(+, fa, fb)
+function +(fa::GP, fb::GP)
+    @assert fa.gpc == fb.gpc
+    return GP(fa.gpc, +, fa, fb)
+end
 
 """
     +(fa::AbstractGP, fb::AbstractGP)

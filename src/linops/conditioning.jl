@@ -36,7 +36,7 @@ Condition `g` on observation `c`.
 """
 function |(g::GP, c::Observation)
     f, x, y, Σy = c.f.f, c.f.x, c.y, c.f.Σy
-    return GP(|, g, f, CondCache(kernel(f), mean(f), x, y, Σy))
+    return GP(g.gpc, |, g, f, CondCache(kernel(f), mean(f), x, y, Σy))
 end
 
 function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)

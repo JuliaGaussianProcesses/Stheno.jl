@@ -43,16 +43,7 @@ function GP(m::Real, k::CrossKernel, gpc::GPC)
 end
 GP(m, k::CrossKernel, gpc::GPC) = GP(CustomMean(m), k, gpc)
 GP(k::CrossKernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
-function GP(args...)
-    μ, k, gpc = μ_p′(args...), k_p′(args...), get_check_gpc(args...)
-    return GP{typeof(μ), typeof(k)}(args, μ, k, gpc)
-end
-
-function get_check_gpc(args...)
-    gpc = args[findfirst(map(arg->arg isa GP, args))].gpc
-    @assert all([!(arg isa GP) || arg.gpc == gpc for arg in args])
-    return gpc
-end
+GP(gpc::GPC, args...) = GP(args, μ_p′(args...), k_p′(args...), gpc)
 
 mean(f::GP) = f.μ
 

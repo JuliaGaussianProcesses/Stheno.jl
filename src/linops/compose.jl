@@ -5,7 +5,7 @@ import Base: ∘
 
 Constructs the GP f′ given by f′(x) := f(g(x))
 """
-∘(f::AbstractGP, g) = GP(transform, f, g)
+∘(f::AbstractGP, g) = GP(f.gpc, transform, f, g)
 
 μ_p′(::typeof(transform), f::AbstractGP, g) = transform(mean(f), g)
 k_p′(::typeof(transform), f::AbstractGP, g) = transform(kernel(f), g)

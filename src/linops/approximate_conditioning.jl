@@ -41,7 +41,7 @@ function PseudoPoints(cs::Tuple{Vararg{Observation}}, us::Tuple{Vararg{FiniteGP}
     return PseudoPoints(merge(cs), merge(us))
 end
 
-|(f::AbstractGP, u::PseudoPoints) = GP(|, f, u)
+|(f::AbstractGP, u::PseudoPoints) = GP(f.gpc, |, f, u)
 
 function μ_p′(::typeof(|), f::AbstractGP, u::PseudoPoints)
     return ApproxCondMean(u.c, mean(f), kernel(u.f_q, f))
