@@ -12,9 +12,13 @@ struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribut
     f::Tf
     x::Tx 
     Σy::TΣy
+    function FiniteGP(f::Tf, x::Tx, Σy::TΣy) where {Tf<:AbstractGP, Tx<:AV, TΣy}
+        @assert length(x) == size(Σy, 1)
+        return new{Tf, Tx, TΣy}(f, x, Σy)
+    end
 end
 FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
-FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, Fill(σ², length(x)))
+FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, fill(σ², length(x)))
 FiniteGP(f::AbstractGP, x::AV) = FiniteGP(f, x, 0)
 
 length(f::FiniteGP) = length(f.x)
@@ -53,9 +57,8 @@ marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(ew(kernel(f.f), f.x) .+ diag(f.�
 Obtain `N` independent samples from the GP `f` using `rng`.
 """
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
-    Σ = cov(f)
-    μ, C = mean(f), cholesky(Symmetric(Σ))
-    return μ .+ C.U' * randn(rng, size(Σ, 1), N)
+    μ, C = mean(f), cholesky(Symmetric(cov(f)))
+    return μ .+ C.U' * randn(rng, length(μ), N)
 end
 rand(f::FiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
@@ -84,10 +87,12 @@ function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     Λ_ε, δ = cholesky(Symmetric(A * A' + I)), chol_Σy.U' \ (y - mean(f))
 
     return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
-        sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
-        tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
-end
+        sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)))
 
+    # return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
+    #     sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
+    #     tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
+end
 elbo(f::FiniteGP, y::AV{<:Real}, u::Vector{<:FiniteGP}) = elbo(f, y, finites_to_block(u))
 
 
@@ -105,14 +110,6 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky)
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
     return tr_At_A(chol_Σy.U' \ cholesky(Symmetric(_get_kernel_block_diag(f, cumulsizes(Σy, 1)))).U')
-end
-function tr_Cf_invΣy(
-    f::FiniteGP,
-    Σy::Symmetric{T, <:BlockDiagonal{T}} where {T},
-    chol_Σy::Cholesky,
-)
-    return tr_Cf_invΣy(f, Σy.data, chol_Σy)
-    # return tr_At_A(chol_Σy.U' \ cholesky(_get_kernel_block_diag(f, cumulsizes(Σy, 1))).U')
 end
 
 function _get_kernel_block_diag(f::FiniteGP, cs)

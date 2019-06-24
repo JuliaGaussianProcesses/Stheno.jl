@@ -8,7 +8,7 @@ module Stheno
     using LinearAlgebra: AbstractTriangular
     using Zygote: @adjoint, @nograd
     using BlockArrays: _BlockArray
-    import LinearAlgebra: cholesky
+    import LinearAlgebra: cholesky, cross
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}

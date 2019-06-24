@@ -43,7 +43,10 @@ function GP(m::Real, k::CrossKernel, gpc::GPC)
 end
 GP(m, k::CrossKernel, gpc::GPC) = GP(CustomMean(m), k, gpc)
 GP(k::CrossKernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
-GP(gpc::GPC, args...) = GP(args, μ_p′(args...), k_p′(args...), gpc)
+function GP(gpc::GPC, args...)
+    μ, k = μ_p′(args...), k_p′(args...)
+    return GP{typeof(μ), typeof(k)}(args, μ, k, gpc)
+end
 
 mean(f::GP) = f.μ
 

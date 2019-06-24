@@ -6,7 +6,6 @@
 struct BlockMean{Tμ<:AbstractVector{<:MeanFunction}} <: MeanFunction
     μ::Tμ
 end
-BlockMean(μs::Vararg{<:MeanFunction}) = BlockMean([μs...])
 function ew(m::BlockMean, x::BlockData)
     blks = map((μ, blk)->ew(μ, blk), m.μ, blocks(x))
     return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
@@ -25,7 +24,6 @@ function BlockCrossKernel(ks::Adjoint{T, <:AbstractVector{T}} where T)
     return BlockCrossKernel(reshape(ks, 1, length(ks)))
 end
 
-# Binary methods.
 function ew(k::BlockCrossKernel, x::BlockData, x′::BlockData)
     blks = map((k, b, b′)->ew(k, b, b′), diag(k.ks), blocks(x), blocks(x′))
     return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
@@ -106,7 +104,7 @@ end
             end
         end
 
-        return Δ_ks, δ_x, δ_x′
+        return Δ_ks, δ_x, permutedims(δ_x′)
     end
     return Y, back
 end

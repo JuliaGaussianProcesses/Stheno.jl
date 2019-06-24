@@ -48,6 +48,7 @@ function to_vec(X::T) where T<:Union{Adjoint,Transpose}
 end
 
 Base.zero(d::Dict) = Dict([(key, zero(val)) for (key, val) in d])
+Base.zero(x::Array) = zero.(x)
 
 # My version of isapprox
 function fd_isapprox(x_ad::Nothing, x_fd, rtol, atol)

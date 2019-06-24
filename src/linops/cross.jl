@@ -1,29 +1,36 @@
 """
     cross(fs::AbstractVector{<:GP})
 
-Make something a bit like a multi-output GP.
+Creates a multi-output GP from an `AbstractVector` of `GP`s.
 """
 function cross(fs::AbstractVector{<:GP})
-    @assert length(fs) >= 1
-    @assert all([f.gpc == first(fs).gpc for f in fs])
+    consistency_checks(fs)
     return GP(first(fs).gpc, cross, fs)
 end
+
+function consistency_checks(fs)
+    @assert length(fs) >= 1
+    @assert all([f.gpc == first(fs).gpc for f in fs])
+end
+Zygote.@nograd consistency_checks
+
 μ_p′(::typeof(cross), fs) = BlockMean(mean.(fs))
 
 k_p′(::typeof(cross), fs) = BlockKernel(_kernels(fs, permutedims(fs)))
 
-function k_pp′(fp::GP{<:Any, <:BlockKernel}, ::typeof(cross), fs)
-    return BlockCrossKernel(_kernels(fp.args[2:end], permutedims(fs)))
+function k_pp′(fp::GP{<:MeanFunction, <:BlockKernel}, ::typeof(cross), fs)
+    return BlockCrossKernel(_kernels(last(fp.args), permutedims(fs)))
 end
 
-# k_pp′(fp::GP, ::typeof(cross), fs) = BlockCrossKernel(kernel.(Ref(f1), permutedims(f2.fs)))
+k_pp′(fp::GP, ::typeof(cross), fs) = BlockCrossKernel(_kernels(Ref(fp), permutedims(fs)))
 
-function k_p′p(::typeof(cross), fs, fp::GP{<:Any, <:BlockKernel})
-    return BlockCrossKernel(_kernels(fs, permutedims(fp.args[2:end])))
+function k_p′p(::typeof(cross), fs, fp::GP{<:MeanFunction, <:BlockKernel})
+    return BlockCrossKernel(_kernels(fs, permutedims(last(fp.args))))
 end
 
-# k_p′p(::typeof(cross), fs, fp::GP) = BlockCrossKernel(kernel.(f1.fs, Ref(f2)))
+k_p′p(::typeof(cross), fs, fp::GP) = BlockCrossKernel(kernel.(fs, Ref(fp)))
 
+# This is a helper function to ensure that Zygote-based AD can be employed.
 _kernels(fs1, fs2) = kernel.(fs1, fs2)
 @adjoint function _kernels(fs1, fs2)
     ys_and_backs = broadcast((f1, f2)->Zygote.forward(kernel, f1, f2), fs1, fs2)
