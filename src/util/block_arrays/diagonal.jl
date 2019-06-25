@@ -148,7 +148,10 @@ end
 \(A::BlockDiagonal{<:Real}, x::AbstractVector{<:Real}) = reshape(A \ reshape(x, :, 1), :)
 @adjoint function \(A::BlockDiagonal{<:Real}, x::AbstractVector{<:Real})
     y_mat, back = Zygote.forward(\, A, reshape(x, :, 1))
-    return vec(y_mat), Δ::AbstractVector{<:Real}->back(reshape(Δ, :, 1))
+    return vec(y_mat), function(Δ::AbstractVector{<:Real})
+        Ā, x̄ = back(reshape(Δ, :, 1))
+        return Ā, vec(x̄)
+    end
 end
 
 function _block_diag_bit(A::AbstractMatrix, B::AbstractMatrix, R::BlockDiagonal)

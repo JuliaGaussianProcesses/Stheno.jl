@@ -6,8 +6,9 @@ module Stheno
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
     import Statistics: mean, cov
     using LinearAlgebra: AbstractTriangular
-    using Zygote: @adjoint, @nograd
+    using Zygote: @adjoint, @nograd, @showgrad, hook
     using BlockArrays: _BlockArray
+    using InteractiveUtils
     import LinearAlgebra: cholesky, cross
 
     const AV{T} = AbstractVector{T}
@@ -25,6 +26,11 @@ module Stheno
     const ew = elementwise
 
     Zygote.@nograd broadcast_shape
+
+
+    showtype(x) = (@show typeof(x); x)
+    showsize(x) = (@show size(x); x)
+
 
     # Various bits of utility that aren't inherently GP-related. A lot of this is very
     # type-piratic.

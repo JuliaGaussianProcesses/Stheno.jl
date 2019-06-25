@@ -80,20 +80,29 @@ end
 The saturated Titsias-ELBO.
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-    @assert length(f) == length(y)
+    consistency_check(f, y, u)
     chol_Σy = cholesky(f.Σy)
 
     A = cholesky(Symmetric(cov(u))).U' \ (chol_Σy.U' \ cov(f, u))'
-    Λ_ε, δ = cholesky(Symmetric(A * A' + I)), chol_Σy.U' \ (y - mean(f))
+    Λ_ε = cholesky(Symmetric(A * A' + I))
+    δ = chol_Σy.U' \ (y - mean(f))
 
     return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
-        sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)))
-
-    # return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
-    #     sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
-    #     tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
+        sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
+        tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
 end
 elbo(f::FiniteGP, y::AV{<:Real}, u::Vector{<:FiniteGP}) = elbo(f, y, finites_to_block(u))
+
+function consistency_check(f, y, u)
+    @assert length(f) == length(y)
+end
+Zygote.@nograd consistency_check
+
+import Base: \
+\(A::AbstractMatrix, B::Diagonal) = A \ Matrix(B)
+
+\(A::Union{LowerTriangular, UpperTriangular}, B::Diagonal) = A \ Matrix(B)
+\(A::Adjoint{<:Any, <:Union{LowerTriangular, UpperTriangular}}, B::Diagonal) = A \ Matrix(B)
 
 
 # Compute tr(Cf / Σy) efficiently for different types of Σy. For dense Σy you obviously need
