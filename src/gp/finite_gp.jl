@@ -122,7 +122,11 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
 end
 
 function _get_kernel_block_diag(f::FiniteGP, cs)
-    return block_diagonal([pw(kernel(f.f), f.x[cs[n]:cs[n+1]-1]) + 1e-9I for n in 1:length(cs)-1])
+    k, xs = kernel(f.f), [f.x[cs[n]:cs[n+1]-1] for n in 1:length(cs)-1]
+    return block_diagonal([pw(k, x) + 1e-9I for x in xs])
+    # return block_diagonal(
+    #     [pw(kernel(f.f), f.x[cs[n]:cs[n+1]-1]) + 1e-9I for n in 1:length(cs)-1],
+    # )
 end
 
 # """

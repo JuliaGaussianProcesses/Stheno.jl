@@ -21,7 +21,9 @@ end
 # Accumulation rule for Zygote.
 #
 
-Zygote.accum(A::BlockDiagonal, B::BlockDiagonal) = A + B
+function Zygote.accum(A::BlockDiagonal, B::BlockDiagonal)
+    return block_diagonal(accum.(A.blocks.diag, B.blocks.diag))
+end
 
 
 #

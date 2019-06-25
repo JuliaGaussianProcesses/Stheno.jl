@@ -18,51 +18,53 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
 
     g = (θ, x, A)->FiniteGP(first(f(θ)), x, _to_psd(A))
     function h(θ, x, A, z, B)
-        g, u = f(θ)
-        return FiniteGP(g, x, _to_psd(A)), FiniteGP(u, z, _to_psd(B))
+        v, u = f(θ)
+        return FiniteGP(v, x, _to_psd(A)), FiniteGP(u, z, _to_psd(B))
     end
 
-    # # Check that we can differentiate through evaluation of the mean vector.
-    # adjoint_test(
-    #     (θ, x, A)->mean(g(θ, x, A)),
-    #     randn(rng, length(x)), θ, x, A;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check that we can differentiate through evaluation of the mean vector.
+    adjoint_test(
+        (θ, x, A)->mean(g(θ, x, A)),
+        randn(rng, length(x)), θ, x, A;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # # Check that we can differentiate through evaluation of the covariance matrix.
-    # adjoint_test(
-    #     (θ, x, A)->cov(g(θ, x, A)),
-    #     randn(rng, length(x), length(x)), θ, x, A;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check that we can differentiate through evaluation of the covariance matrix.
+    adjoint_test(
+        (θ, x, A)->cov(g(θ, x, A)),
+        randn(rng, length(x), length(x)), θ, x, A;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # adjoint_test(
-    #     (θ, x, A, z, B)->cov(h(θ, x, A, z, B)...),
-    #     randn(rng, length(x), length(z)), θ, x, A, z, B;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    adjoint_test(
+        (θ, x, A, z, B)->cov(h(θ, x, A, z, B)...),
+        randn(rng, length(x), length(z)), θ, x, A, z, B;
+        rtol=1e-4, atol=1e-4,
+    )
 
     # If the above two tests pass, then the ones below should also pass. Test them anyway.
 
-    # # Check that the gradient w.r.t. the samples is correct (single-sample).
-    # adjoint_test(
-    #     (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A)),
-    #     randn(rng, length(x)), θ, x, A;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check that the gradient w.r.t. the samples is correct (single-sample).
+    # @show typeof(θ), typeof(x), typeof(A)
+    # @show g(θ, x, A)
+    adjoint_test(
+        (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A)),
+        randn(rng, length(x)), θ, x, A;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # # Check that the gradient w.r.t. the samples is correct (multi-sample).
-    # adjoint_test(
-    #     (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A), 11),
-    #     randn(rng, length(x), 11), θ, x, A;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check that the gradient w.r.t. the samples is correct (multi-sample).
+    adjoint_test(
+        (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A), 11),
+        randn(rng, length(x), 11), θ, x, A;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # # Check adjoints for logpdf.
-    # adjoint_test(
-    #     (θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A, y;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check adjoints for logpdf.
+    adjoint_test(
+        (θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A, y;
+        rtol=1e-4, atol=1e-4,
+    )
 
     # Check adjoint for elbo.
     adjoint_test(
@@ -111,19 +113,8 @@ function standard_1D_isotropic_test(rng::AbstractRNG, θ, f, N::Int, M::Int)
     check_consistency(rng, θ, f, x, y, a, z, b)
 end
 
-function standard_1D_block_diagonal_test(rng::AbstractRNG, θ, f, N::Int, M::Int)
-    @assert N > 2 && M > 3
-    g, u = f(θ)
-    x, z = inputs(kernel(g), N), inputs(kernel(u), M)
-    As = [randn(rng, 2, 2), randn(rng, N - 2, N - 2)]
-    Bs = [randn(rng, 3, 3), randn(rng, M - 3, M - 3)]
-    y = rand(rng, first(f(θ))(x, _to_psd(As)))
-    check_consistency(rng, θ, f, x, y, As, z, Bs)
-end
-
 function standard_1D_tests(rng::AbstractRNG, θ, f, N::Int, M::Int)
     standard_1D_dense_test(rng, θ, f, N, M)
     standard_1D_diag_test(rng, θ, f, N, M)
     standard_1D_isotropic_test(rng, θ, f, N, M)
-    standard_1D_block_diagonal_test(rng, θ, f, N, M)
 end

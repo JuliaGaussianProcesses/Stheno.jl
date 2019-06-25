@@ -55,29 +55,6 @@ function BlockDiagonal_mul_tests(rng, blocks)
     @test mul!(Y, U, X) == U * X
 end
 
-function BlockDiagonal_solve_tests(rng, blocks)
-
-    D, Ps = block_diagonal(blocks), size.(blocks, 1)
-    Dmat = Matrix(D)
-
-    U = UpperTriangular(D)
-
-    xs, ys = [randn(rng, P) for P in Ps], [randn(rng, P) for P in Ps]
-    y, x = _BlockArray(ys, Ps), _BlockArray(xs, Ps)
-
-    # Matrix-Vector tests.
-    @test ldiv!(U, copy(x)) ≈ UpperTriangular(Matrix(U)) \ Vector(x)
-    @test U \ x ≈ ldiv!(U, copy(x))
-
-    Qs = [3, 4]
-    X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
-    Y = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
-
-    # Matrix-Matrix tests.
-    @test ldiv!(U, copy(X)) ≈ UpperTriangular(Matrix(U)) \ Matrix(X)
-    @test U \ X ≈ ldiv!(U, copy(X))
-end
-
 function BlockDiagonal_chol_tests(rng, blocks)
 
     D, Ps = block_diagonal(blocks), size.(blocks, 1)
@@ -137,123 +114,120 @@ function BlockDiagonal_add_tests(rng, blks; grad=true)
 end
 
 @testset "BlockDiagonal" begin
-    # @testset "Matrix" begin
-    #     rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
-    #     vs = [randn(rng, Ps[1], Qs[1]), randn(rng, Ps[2], Qs[2])]
-    #     general_BlockDiagonal_tests(rng, vs)
+    @testset "Matrix" begin
+        rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
+        vs = [randn(rng, Ps[1], Qs[1]), randn(rng, Ps[2], Qs[2])]
+        general_BlockDiagonal_tests(rng, vs)
 
-    #     As = [randn(rng, Ps[n], Ps[n]) for n in eachindex(Ps)]
-    #     blks = [As[n] * As[n]' + I for n in eachindex(As)]
-    #     BlockDiagonal_mul_tests(rng, blks)
-    #     BlockDiagonal_mul_tests(rng, UpperTriangular.(blks))
-    #     BlockDiagonal_mul_tests(rng, Hermitian.(blks))
-    #     BlockDiagonal_mul_tests(rng, Symmetric.(blks))
-    #     BlockDiagonal_solve_tests(rng, UpperTriangular.(blks))
-    #     BlockDiagonal_chol_tests(rng, blks)
-    #     BlockDiagonal_add_tests(rng, blks; grad=false)
-    # end
-    # @testset "Diagonal{T, <:Vector{T}}" begin
-    #     rng, Ps = MersenneTwister(123456), [2, 3]
-    #     vs = [Diagonal(randn(rng, Ps[n])) for n in eachindex(Ps)]
-    #     general_BlockDiagonal_tests(rng, vs)
+        As = [randn(rng, Ps[n], Ps[n]) for n in eachindex(Ps)]
+        blks = [As[n] * As[n]' + I for n in eachindex(As)]
+        BlockDiagonal_mul_tests(rng, blks)
+        BlockDiagonal_mul_tests(rng, UpperTriangular.(blks))
+        BlockDiagonal_mul_tests(rng, Hermitian.(blks))
+        BlockDiagonal_mul_tests(rng, Symmetric.(blks))
+        BlockDiagonal_chol_tests(rng, blks)
+        BlockDiagonal_add_tests(rng, blks; grad=false)
+    end
+    @testset "Diagonal{T, <:Vector{T}}" begin
+        rng, Ps = MersenneTwister(123456), [2, 3]
+        vs = [Diagonal(randn(rng, Ps[n])) for n in eachindex(Ps)]
+        general_BlockDiagonal_tests(rng, vs)
 
-    #     blocks = [Diagonal(ones(P) + exp.(randn(rng, P))) for P in Ps]
-    #     BlockDiagonal_mul_tests(rng, blocks)
-    #     BlockDiagonal_solve_tests(rng, blocks)
-    #     BlockDiagonal_chol_tests(rng, blocks)
-    #     BlockDiagonal_add_tests(rng, blocks; grad=false)
-    # end
-    # @testset "Diagonal{T, <:Fill{T, 1}}" begin
-    #     rng, Ps = MersenneTwister(123456), [2, 3]
-    #     vs = [Diagonal(Fill(randn(rng), P)) for P in Ps]
-    #     general_BlockDiagonal_tests(rng, vs)
+        blocks = [Diagonal(ones(P) + exp.(randn(rng, P))) for P in Ps]
+        BlockDiagonal_mul_tests(rng, blocks)
+        BlockDiagonal_chol_tests(rng, blocks)
+        BlockDiagonal_add_tests(rng, blocks; grad=false)
+    end
+    @testset "Diagonal{T, <:Fill{T, 1}}" begin
+        rng, Ps = MersenneTwister(123456), [2, 3]
+        vs = [Diagonal(Fill(randn(rng), P)) for P in Ps]
+        general_BlockDiagonal_tests(rng, vs)
 
-    #     blocks = [Diagonal(Fill(exp(randn(rng)), P)) for P in Ps]
-    #     BlockDiagonal_mul_tests(rng, blocks)
-    #     BlockDiagonal_solve_tests(rng, blocks)
-    #     BlockDiagonal_chol_tests(rng, blocks)
-    #     BlockDiagonal_add_tests(rng, blocks; grad=false)
-    # end
-    # @testset "Negation" begin
-    #     rng, Ps = MersenneTwister(123456), [4, 5, 6, 7]
-    #     A = block_diagonal([randn(rng, P, P) for P in Ps])
+        blocks = [Diagonal(Fill(exp(randn(rng)), P)) for P in Ps]
+        BlockDiagonal_mul_tests(rng, blocks)
+        BlockDiagonal_chol_tests(rng, blocks)
+        BlockDiagonal_add_tests(rng, blocks; grad=false)
+    end
+    @testset "Negation" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6, 7]
+        A = block_diagonal([randn(rng, P, P) for P in Ps])
 
-    #     @test Matrix(-A) == -Matrix(A)
-    #     @test -A isa BlockDiagonal
+        @test Matrix(-A) == -Matrix(A)
+        @test -A isa BlockDiagonal
 
-    #     Y_diag, back_diag = Zygote.forward(-, A)
-    #     Y_dens, back_dens = Zygote.forward(-, Matrix(A))
+        Y_diag, back_diag = Zygote.forward(-, A)
+        Y_dens, back_dens = Zygote.forward(-, Matrix(A))
 
-    #     Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     @test Y_diag == -A
-    #     @test Matrix(first(back_diag(Ȳ))) == first(back_dens(Matrix(Ȳ)))
-    #     @test first(back_diag(Ȳ)) isa BlockDiagonal
-    # end
+        Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
+        @test Y_diag == -A
+        @test Matrix(first(back_diag(Ȳ))) == first(back_dens(Matrix(Ȳ)))
+        @test first(back_diag(Ȳ)) isa BlockDiagonal
+    end
 
-    # @testset "ldiv(AdjointUpperTriangularBlockMatrix, Vector)" begin
-    #     rng, Ps = MersenneTwister(123456), [4, 5, 6]
-    #     A = block_diagonal([UpperTriangular(randn(rng, P, P)) for P in Ps])
-    #     x = randn(rng, sum(Ps))
+    @testset "ldiv(AdjointUpperTriangularBlockMatrix, Vector)" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6]
+        A = block_diagonal([UpperTriangular(randn(rng, P, P)) for P in Ps])
+        x = randn(rng, sum(Ps))
 
-    #     @test A' \ x ≈ Matrix(A)' \ x
+        @test A' \ x ≈ Matrix(A)' \ x
 
-    #     y_diag, back_diag = Zygote.forward((A, x)->A' \ x, A, x)
-    #     y_dens, back_dens = Zygote.forward((A, x)->A' \ x, Matrix(A), x)
-    #     @test y_diag ≈ y_dens
+        y_diag, back_diag = Zygote.forward((A, x)->A' \ x, A, x)
+        y_dens, back_dens = Zygote.forward((A, x)->A' \ x, Matrix(A), x)
+        @test y_diag ≈ y_dens
 
-    #     ȳ = randn(rng, sum(Ps))
-    #     Ā_diag, x̄_diag = back_diag(ȳ)
-    #     Ā_dens, x̄_dens = back_dens(ȳ)
+        ȳ = randn(rng, sum(Ps))
+        Ā_diag, x̄_diag = back_diag(ȳ)
+        Ā_dens, x̄_dens = back_dens(ȳ)
 
-    #     @test Matrix(Ā_diag) ≈ Ā_dens
-    #     @test x̄_diag ≈ x̄_dens
-    #     @test Ā_diag isa BlockDiagonal
-    # end
+        @test Matrix(Ā_diag) ≈ Ā_dens
+        @test x̄_diag ≈ x̄_dens
+        @test Ā_diag isa BlockDiagonal
+    end
 
-    # @testset "adjoint" begin
-    #     rng, Ps = MersenneTwister(123456), [4, 5, 6]
-    #     A = block_diagonal([randn(rng, P, P) for P in Ps])
+    @testset "adjoint" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6]
+        A = block_diagonal([randn(rng, P, P) for P in Ps])
 
-    #     @test Matrix(A') == Matrix(A)'
-    #     @test A' isa BlockDiagonal
+        @test Matrix(A') == Matrix(A)'
+        @test A' isa BlockDiagonal
 
-    #     Y, back = Zygote.forward(adjoint, A)
-    #     Y_dens, back_dens = Zygote.forward(adjoint, Matrix(A))
-    #     Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     @test Y == A'
-    #     @test Matrix(first(back(Ȳ))) == first(back_dens(Matrix(Ȳ)))
-    #     @test first(back(Ȳ)) isa BlockDiagonal
-    # end
-    # @testset "transpose" begin
-    #     rng, Ps = MersenneTwister(123456), [4, 5, 6]
-    #     A = block_diagonal([randn(rng, P, P) for P in Ps])
+        Y, back = Zygote.forward(adjoint, A)
+        Y_dens, back_dens = Zygote.forward(adjoint, Matrix(A))
+        Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
+        @test Y == A'
+        @test Matrix(first(back(Ȳ))) == first(back_dens(Matrix(Ȳ)))
+        @test first(back(Ȳ)) isa BlockDiagonal
+    end
+    @testset "transpose" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6]
+        A = block_diagonal([randn(rng, P, P) for P in Ps])
 
-    #     @test Matrix(transpose(A)) == transpose(Matrix(A))
-    #     @test transpose(A) isa BlockDiagonal
+        @test Matrix(transpose(A)) == transpose(Matrix(A))
+        @test transpose(A) isa BlockDiagonal
 
-    #     Y, back = Zygote.forward(transpose, A)
-    #     Y_dens, back_dens = Zygote.forward(transpose, Matrix(A))
-    #     Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     @test Y == transpose(A)
-    #     @test Matrix(first(back(Ȳ))) == first(back_dens(Matrix(Ȳ)))
-    #     @test first(back(Ȳ)) isa BlockDiagonal
-    # end
-    # @testset "UpperTriangular" begin
-    #     rng, Ps = MersenneTwister(123456), [4, 5, 6]
-    #     A = block_diagonal([randn(rng, P, P) for P in Ps])
+        Y, back = Zygote.forward(transpose, A)
+        Y_dens, back_dens = Zygote.forward(transpose, Matrix(A))
+        Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
+        @test Y == transpose(A)
+        @test Matrix(first(back(Ȳ))) == first(back_dens(Matrix(Ȳ)))
+        @test first(back(Ȳ)) isa BlockDiagonal
+    end
+    @testset "UpperTriangular" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6]
+        A = block_diagonal([randn(rng, P, P) for P in Ps])
 
-    #     @test Matrix(UpperTriangular(A)) == UpperTriangular(Matrix(A))
-    #     @test UpperTriangular(A) isa BlockDiagonal
+        @test Matrix(UpperTriangular(A)) == UpperTriangular(Matrix(A))
+        @test UpperTriangular(A) isa BlockDiagonal
 
-    #     B_diag, back_diag = Zygote.forward(UpperTriangular, A)
-    #     B_dens, back_dens = Zygote.forward(UpperTriangular, Matrix(A))
-    #     @test Matrix(B_diag) == B_dens
+        B_diag, back_diag = Zygote.forward(UpperTriangular, A)
+        B_dens, back_dens = Zygote.forward(UpperTriangular, Matrix(A))
+        @test Matrix(B_diag) == B_dens
 
-    #     B̄ = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     Ā_diag, Ā_dens = first(back_diag(B̄)), first(back_dens(Matrix(B̄)))
-    #     @test Ā_diag == Ā_dens
-    #     @test Ā_diag isa BlockDiagonal
-    # end
+        B̄ = block_diagonal([randn(rng, P, P) for P in Ps])
+        Ā_diag, Ā_dens = first(back_diag(B̄)), first(back_dens(Matrix(B̄)))
+        @test Ā_diag == Ā_dens
+        @test Ā_diag isa BlockDiagonal
+    end
     @testset "Symmetric" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
@@ -264,49 +238,45 @@ end
         S_diag, back_diag = Zygote.forward(Symmetric, A)
         S_dens, back_dens = Zygote.forward(Symmetric, Matrix(A))
         @test S_diag ≈ S_dens
-       
-        Ā_diag, Ā_dens = first(back_diag(S̄)), first(back_dens(S̄))
-        @test Ā_diag ≈ Ā_dens
+    end
+    @testset "tr_At_A" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6]
+        A = block_diagonal([randn(rng, P, P) for P in Ps])
+
+        @test tr_At_A(A) ≈ tr_At_A(Matrix(A))
+
+        b_diag, back_diag = Zygote.forward(tr_At_A, A)
+        b_dens, back_dens = Zygote.forward(tr_At_A, Matrix(A))
+        @test b_diag ≈ b_dens
+
+        b̄ = randn(rng)
+        Ā_diag, Ā_dens = first(back_diag(b̄)), first(back_dens(b̄))
+        @test Matrix(Ā_diag) ≈ Ā_dens
         @test Ā_diag isa BlockDiagonal
     end
-    # @testset "tr_At_A" begin
-    #     rng, Ps = MersenneTwister(123456), [4, 5, 6]
-    #     A = block_diagonal([randn(rng, P, P) for P in Ps])
+    @testset "BlockDiagonal * BlockDiagonal" begin
+        rng, Ps = MersenneTwister(123456), [4, 5, 6]
+        A = block_diagonal([randn(rng, P, P) for P in Ps])
+        B = block_diagonal([randn(rng, P, P) for P in Ps])
 
-    #     @test tr_At_A(A) ≈ tr_At_A(Matrix(A))
+        @test Matrix(A * B) ≈ Matrix(A) * Matrix(B)
+        @test A * B isa BlockDiagonal
 
-    #     b_diag, back_diag = Zygote.forward(tr_At_A, A)
-    #     b_dens, back_dens = Zygote.forward(tr_At_A, Matrix(A))
-    #     @test b_diag ≈ b_dens
+        Y_diag, back_diag = Zygote.forward(*, A, B)
+        Y_dens, back_dens = Zygote.forward(*, Matrix(A), Matrix(B))
 
-    #     b̄ = randn(rng)
-    #     Ā_diag, Ā_dens = first(back_diag(b̄)), first(back_dens(b̄))
-    #     @test Matrix(Ā_diag) ≈ Ā_dens
-    #     @test Ā_diag isa BlockDiagonal
-    # end
-    # @testset "BlockDiagonal * BlockDiagonal" begin
-    #     rng, Ps = MersenneTwister(123456), [4, 5, 6]
-    #     A = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     B = block_diagonal([randn(rng, P, P) for P in Ps])
+        Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
+        @test Y_diag == A * B
 
-    #     @test Matrix(A * B) ≈ Matrix(A) * Matrix(B)
-    #     @test A * B isa BlockDiagonal
+        Ā_diag, B̄_diag = back_diag(Ȳ)
+        Ā_dens, B̄_dens = back_dens(Matrix(Ȳ))
 
-    #     Y_diag, back_diag = Zygote.forward(*, A, B)
-    #     Y_dens, back_dens = Zygote.forward(*, Matrix(A), Matrix(B))
+        @test Matrix(Ā_diag) ≈ Ā_dens
+        @test Matrix(B̄_diag) ≈ B̄_dens
 
-    #     Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     @test Y_diag == A * B
-
-    #     Ā_diag, B̄_diag = back_diag(Ȳ)
-    #     Ā_dens, B̄_dens = back_dens(Matrix(Ȳ))
-
-    #     @test Matrix(Ā_diag) ≈ Ā_dens
-    #     @test Matrix(B̄_diag) ≈ B̄_dens
-
-    #     @test Ā_diag isa BlockDiagonal
-    #     @test B̄_diag isa BlockDiagonal
-    # end
+        @test Ā_diag isa BlockDiagonal
+        @test B̄_diag isa BlockDiagonal
+    end
     @testset "BlockDiagonal * Matrix" begin
         rng, Ps, Q = MersenneTwister(123456), [4, 5, 6], 11
         A = block_diagonal([randn(rng, P, P) for P in Ps])
@@ -378,52 +348,52 @@ end
         @test Ā_diag isa BlockDiagonal
         @test blocksizes(Ā_diag) == blocksizes(A)
     end
-    # @testset "TriangularBlockDiagonal under BlockDiagonal" begin
-    #     # Stuff isn't triangular anymore, but this should really just work...
-    #     rng, Ps = MersenneTwister(123456), [4, 5]
-    #     U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
-    #     X = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     @test U \ X ≈ UpperTriangular(Matrix(U)) \ Matrix(X)
+    @testset "TriangularBlockDiagonal under BlockDiagonal" begin
+        # Stuff isn't triangular anymore, but this should really just work...
+        rng, Ps = MersenneTwister(123456), [4, 5]
+        U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
+        X = block_diagonal([randn(rng, P, P) for P in Ps])
+        @test U \ X ≈ UpperTriangular(Matrix(U)) \ Matrix(X)
 
-    #     A_diag, back_diag = Zygote.forward(\, U, X)
-    #     A_dens, back_dens = Zygote.forward(\, Matrix(U), Matrix(X))
+        A_diag, back_diag = Zygote.forward(\, U, X)
+        A_dens, back_dens = Zygote.forward(\, Matrix(U), Matrix(X))
 
-    #     Ā = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     Ū_diag, X̄_diag = back_diag(Ā)
-    #     Ū_dens, X̄_dens = back_dens(Ā)
+        Ā = block_diagonal([randn(rng, P, P) for P in Ps])
+        Ū_diag, X̄_diag = back_diag(Ā)
+        Ū_dens, X̄_dens = back_dens(Ā)
 
-    #     # Correctness testing
-    #     @test Matrix(A_diag) ≈ Matrix(A_dens)
-    #     @test Matrix(Ū_diag) ≈ Matrix(Ū_dens)
-    #     @test Matrix(X̄_diag) ≈ Matrix(X̄_dens)
+        # Correctness testing
+        @test Matrix(A_diag) ≈ Matrix(A_dens)
+        @test Matrix(Ū_diag) ≈ Matrix(Ū_dens)
+        @test Matrix(X̄_diag) ≈ Matrix(X̄_dens)
 
-    #     # Correct type (i.e. efficiency) testing
-    #     @test A_diag isa BlockDiagonal
-    #     @test Ū_diag isa BlockDiagonal
-    #     @test X̄_diag isa BlockDiagonal
-    # end
-    # @testset "adjoint(TriangularBlockDiagonal) under BlockDiagonal" begin
-    #     # Legacy test. Should really be doing exactly the same as the block above.
-    #     rng, Ps = MersenneTwister(123456), [4, 5]
-    #     U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
-    #     X = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     @test U' \ X ≈ UpperTriangular(Matrix(U))' \ Matrix(X)
+        # Correct type (i.e. efficiency) testing
+        @test A_diag isa BlockDiagonal
+        @test Ū_diag isa BlockDiagonal
+        @test X̄_diag isa BlockDiagonal
+    end
+    @testset "adjoint(TriangularBlockDiagonal) under BlockDiagonal" begin
+        # Legacy test. Should really be doing exactly the same as the block above.
+        rng, Ps = MersenneTwister(123456), [4, 5]
+        U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
+        X = block_diagonal([randn(rng, P, P) for P in Ps])
+        @test U' \ X ≈ UpperTriangular(Matrix(U))' \ Matrix(X)
 
-    #     A_diag, back_diag = Zygote.forward((U, X)->U' \ X, U, X)
-    #     A_dens, back_dens = Zygote.forward((U, X)->U' \ X, Matrix(U), Matrix(X))
+        A_diag, back_diag = Zygote.forward((U, X)->U' \ X, U, X)
+        A_dens, back_dens = Zygote.forward((U, X)->U' \ X, Matrix(U), Matrix(X))
 
-    #     Ā = block_diagonal([randn(rng, P, P) for P in Ps])
-    #     Ū_diag, X̄_diag = back_diag(Ā)
-    #     Ū_dens, X̄_dens = back_dens(Matrix(Ā))
+        Ā = block_diagonal([randn(rng, P, P) for P in Ps])
+        Ū_diag, X̄_diag = back_diag(Ā)
+        Ū_dens, X̄_dens = back_dens(Matrix(Ā))
 
-    #     # Correctness testing
-    #     @test Matrix(A_diag) ≈ Matrix(A_dens)
-    #     @test Matrix(Ū_diag) ≈ Matrix(Ū_dens)
-    #     @test Matrix(X̄_diag) ≈ Matrix(X̄_dens)
+        # Correctness testing
+        @test Matrix(A_diag) ≈ Matrix(A_dens)
+        @test Matrix(Ū_diag) ≈ Matrix(Ū_dens)
+        @test Matrix(X̄_diag) ≈ Matrix(X̄_dens)
 
-    #     # Correct type (i.e. efficiency) testing
-    #     @test A_diag isa BlockDiagonal
-    #     @test Ū_diag isa BlockDiagonal
-    #     @test X̄_diag isa BlockDiagonal
-    # end
+        # Correct type (i.e. efficiency) testing
+        @test A_diag isa BlockDiagonal
+        @test Ū_diag isa BlockDiagonal
+        @test X̄_diag isa BlockDiagonal
+    end
 end
