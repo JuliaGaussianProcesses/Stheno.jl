@@ -1,4 +1,4 @@
-using Random, LinearAlgebra, BlockArrays, FillArrays
+using Random, LinearAlgebra, BlockArrays
 using BlockArrays: cumulsizes, _BlockArray, BlockSizes
 
 @testset "dense" begin

@@ -1,4 +1,4 @@
-using Random, FillArrays
+using Random
 using Stheno: OneMean, EQ, PPC, ApproxCondMean, ApproxCondKernel, ApproxCondCrossKernel,
     CustomMean
 

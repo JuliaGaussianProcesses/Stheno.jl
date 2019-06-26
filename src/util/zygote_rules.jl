@@ -1,12 +1,8 @@
 using Zygote, IRTools, Random, ToeplitzMatrices
-using Zygote: @adjoint, _forward, literal_getproperty
+using Zygote: @adjoint, literal_getproperty
 import Zygote: accum
 
-using Base.Iterators: Zip
-
 import Distances: pairwise, colwise
-import FillArrays: Fill, AbstractFill, getindex_value, Zeros, Ones
-import Base.Broadcast: broadcasted, materialize
 
 @nograd MersenneTwister, propertynames
 

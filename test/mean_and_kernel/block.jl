@@ -1,6 +1,5 @@
 using Stheno: ZeroMean, OneMean, ZeroKernel, BlockMean, BlockKernel, BlockData,
     BlockCrossKernel, map, pw, EQ, CustomMean
-using FillArrays
 
 @testset "block" begin
     @testset "BlockMean" begin
@@ -12,7 +11,7 @@ using FillArrays
         # Unary elementwise.
         @test ew(m, BlockData([x1, x2])) == vcat(ew(m1, x1), ew(m2, x2))
         adjoint_test(
-            (x1, x2)->ew(BlockMean(m1, m2), BlockData([x1, x2])),
+            (x1, x2)->ew(BlockMean([m1, m2]), BlockData([x1, x2])),
             randn(rng, N + N′),
             x1, x2,
         )
@@ -121,7 +120,7 @@ using FillArrays
 
         # Unary pairwise.
         row1 = hcat(pw(k11, x0), pw(k12, x0, x0′))
-        row2 = hcat(Zeros(N2, N1), pw(k22, x0′))
+        row2 = hcat(zeros(N2, N1), pw(k22, x0′))
         @test pw(k, D0) == vcat(row1, row2)
 
         # Consistency tests.

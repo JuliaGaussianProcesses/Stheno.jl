@@ -1,63 +1,13 @@
-using FDM, Zygote, Distances, Random, LinearAlgebra, FillArrays, ToeplitzMatrices, StatsFuns
+using FDM, Zygote, Distances, Random, LinearAlgebra, ToeplitzMatrices, StatsFuns
 using Base.Broadcast: broadcast_shape
 
 @testset "zygote_rules" begin
-    @testset "FillArrays" begin
-        rng, M, N = MersenneTwister(123456), 7, 11
-        x, y = randn(rng), randn(rng)
-        @test Zygote.gradient(x->sum(Fill(x, N)), x)[1] == N
-        @test Zygote.gradient(x->sum(Fill(x, N, 3, 4)), x)[1] == N * 3 * 4
-        @test Zygote.gradient((x, y)->sum(Fill(x, N)), x, y) == (N, nothing)
-
-        let
-            out, back = Zygote.forward(sum, Fill(x, N))
-            @test back(nothing) isa Nothing
-        end
-
-        z = randn(rng, N)
-        adjoint_test(x->Fill(x, N), z, x)
-        adjoint_test(x->Fill(x, N), Fill(y, N), x)
-
-        # Test unary broadcasting gradients.
-        out, back = Zygote.forward(x->exp.(x), Fill(x, N))
-        @test out isa Fill
-        @test out == Fill(exp(x), N)
-        @test back(Ones(N))[1] isa Fill
-        @test back(Ones(N))[1] == Ones(N) .* exp(x)
-        @test back(ones(N))[1] isa Vector
-        @test back(ones(N))[1] == ones(N) .* exp(x)
-        adjoint_test(x->exp.(Fill(3x, N)), ones(N), x)
-
-        @testset "broadcast + and *" begin
-            for sx in [(M, N), (M, 1), (1, N), (1, 1)]
-                for sy in [(M, N), (M, 1), (1, N), (1, 1)]
-                    z = randn(rng, broadcast_shape(sx, sy))
-
-                    # Addition
-                    adjoint_test((x, y)->Fill(x, sx...) .+ Fill(x, sy...), z, x, y)
-                    adjoint_test((x, y)->Fill(x, sx...) .+ Ones(sy...), z, x, y)
-                    adjoint_test((x, y)->Fill(x, sx...) .+ Zeros(sy...), z, x, y)
-                    adjoint_test((x, y)->Ones(sx...) .+ Fill(y, sy...), z, x, y)
-                    adjoint_test((x, y)->Zeros(sx...) .+ Fill(y, sy...), z, x, y)
-
-                    # Multiplication
-                    adjoint_test((x, y)->Fill(x, sx...) .* Fill(x, sy...), z, x, y)
-                    adjoint_test((x, y)->Fill(x, sx...) .* Ones(sy...), z, x, y)
-                    adjoint_test((x, y)->Fill(x, sx...) .* Zeros(sy...), z, x, y)
-                    adjoint_test((x, y)->Ones(sx...) .* Fill(y, sy...), z, x, y)
-                    adjoint_test((x, y)->Zeros(sx...) .* Fill(y, sy...), z, x, y)
-                end
-            end
-        end
-    end
-
     @testset "Cholesky (ctor)" begin
         rng, N = MersenneTwister(123456), 2
         A, uplo, info = randn(rng, N, N), :U, 0
         _, back = Zygote.forward(Cholesky, A, uplo, info)
         @test back((factors=A, uplo=nothing, info=nothing)) == (A, nothing, nothing)
     end
-
     @testset "Cholesky (getproperty)" begin
         rng, N = MersenneTwister(123456), 5
         A = randn(rng, N, N)
@@ -79,7 +29,6 @@ using Base.Broadcast: broadcast_shape
         adjoint_test(A->Cholesky(A, :L, 0).U, randn(rng, N, N), A)
         adjoint_test(A->Cholesky(A, :L, 0).L, randn(rng, N, N), A)
     end
-
     @testset "cholesky (Matrix)" begin
         rng, N = MersenneTwister(123456), 3
         A = randn(rng, N, N)
@@ -91,7 +40,6 @@ using Base.Broadcast: broadcast_shape
         adjoint_test(A->cholesky(A' * A + 1e-3I).U, randn(rng, N, N), A)
         adjoint_test(A->cholesky(A' * A + 1e-3I).L, randn(rng, N, N), A)
     end
-
     @testset "cholesky (SymmetricToeplitz)" begin
         rng, N = MersenneTwister(123456), 10
         x = pairwise(eq(), range(-3.0, stop=3.0, length=N))[:, 1]
@@ -104,20 +52,17 @@ using Base.Broadcast: broadcast_shape
             atol=1e-6,
         )
     end
-
     @testset "Diagonal" begin
         rng, N = MersenneTwister(123456), 11
         adjoint_test(Diagonal, rand(rng, N, N), randn(rng, N))
         adjoint_test(x->Diagonal(x).diag, randn(rng, N), randn(rng, N))
     end
-
     @testset "fill" begin
         rng, N, M, P = MersenneTwister(123456), 11, 6, 5
         adjoint_test(x->fill(x, N), randn(rng, N), randn(rng))
         adjoint_test(x->fill(x, N, M), randn(rng, N, M), randn(rng))
         adjoint_test(x->fill(x, N, M, P), randn(rng, N, M, P), randn(rng))
     end
-
     @testset "xlogx" begin
         rng = MersenneTwister(123456)
         # adjoint_test(xlogx, randn(rng), -5.0)
@@ -125,7 +70,6 @@ using Base.Broadcast: broadcast_shape
         adjoint_test(xlogx, randn(rng), 1.0; fdm=forward_fdm(5, 1))
         adjoint_test(xlogx, randn(rng), 2.45)
     end
-
     @testset "logistic" begin
         rng = MersenneTwister(123456)
         adjoint_test(logistic, randn(rng), -5.0)
@@ -136,7 +80,6 @@ using Base.Broadcast: broadcast_shape
         adjoint_test(logistic, randn(rng), 1.0)
         adjoint_test(logistic, randn(rng), 5.0)
     end
-
     @testset "logit" begin
         rng = MersenneTwister(123456)
         adjoint_test(logit, randn(rng), 0.1; fdm=forward_fdm(5, 1), atol=1e-7, rtol=1e-7)
@@ -145,7 +88,6 @@ using Base.Broadcast: broadcast_shape
         adjoint_test(logit, randn(rng), 0.7)
         adjoint_test(logit, randn(rng), 0.9; fdm=backward_fdm(5, 1), atol=1e-7, rtol=1e-7)
     end
-
     @testset "log1psq" begin
         rng = MersenneTwister(123456)
         @testset "Float64" begin
@@ -162,7 +104,6 @@ using Base.Broadcast: broadcast_shape
             end
         end
     end
-
     function test_log1pexp(T, rng, tol, xs)
         for x in xs
             adjoint_test(log1pexp, randn(rng, T), x;
@@ -172,7 +113,6 @@ using Base.Broadcast: broadcast_shape
             )
         end
     end
-
     @testset "log1pexp" begin
         @testset "Float64" begin
             @testset "x ∈ (-∞, 18.0)" begin
@@ -209,7 +149,6 @@ using Base.Broadcast: broadcast_shape
             # end
         end
     end
-
     @testset "logsumexp" begin
         rng = MersenneTwister(123456)
         @testset "Float64" begin

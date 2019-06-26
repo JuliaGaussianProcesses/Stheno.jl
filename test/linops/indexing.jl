@@ -23,18 +23,11 @@ using Stheno: GPC
         @test mean(fx) == ew(mean(f), x)
         @test cov(fx) == pairwise(kernel(f), x) + Diagonal(a)
     end
-    @testset "Fill-valued noise" begin
-        rng, N = MersenneTwister(123456), 11
-        f, x, a = GP(eq(), GPC()), randn(rng, N), Fill(exp(randn(rng)), N)
-        fx = f(x, a)
-        @test mean(fx) == ew(mean(f), x)
-        @test cov(fx) == pairwise(kernel(f), x) + Diagonal(a)
-    end
     @testset "Real-valued noise" begin
         rng, N = MersenneTwister(123456), 13
         f, x, σ² = GP(eq(), GPC()), randn(rng, N), exp(randn(rng))
         fx = f(x, σ²)
         @test mean(fx) == ew(mean(f), x)
-        @test cov(fx) == pairwise(kernel(f), x) + Diagonal(Fill(σ², N))
+        @test cov(fx) == pairwise(kernel(f), x) + Diagonal(fill(σ², N))
     end
 end

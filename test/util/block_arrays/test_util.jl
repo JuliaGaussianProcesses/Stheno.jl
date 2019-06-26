@@ -1,4 +1,4 @@
-using Random, LinearAlgebra, BlockArrays, FillArrays
+using Random, LinearAlgebra, BlockArrays
 using BlockArrays: _BlockArray
 
 function dense_BlockMatrix_BlockVector_mul_tests(rng, X, y)

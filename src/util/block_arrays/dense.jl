@@ -1,9 +1,6 @@
 # This file contains a number of additions to BlockArrays.jl. These are completely
 # independent of Stheno.jl, and will (hopefully) move over to BlockArrays.jl at some point.
 
-using FillArrays, LinearAlgebra, BlockArrays
-using FillArrays: Fill, getindex_value
-
 using BlockArrays: cumulsizes, blocksizes, blocksizes, BlockSizes
 
 import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
@@ -177,9 +174,9 @@ are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
 #     D = BlockMatrix{T, V}(undef_blocks, blocksizes(A, 1), blocksizes(A, 2))
 #     backs = Vector{Any}(undef, nblocks(A, 2))
 
-#     # Do an initial pass to fill each of the blocks with Zeros. This is cheap.
+#     # Do an initial pass to fill each of the blocks with zeros. This is cheap.
 #     for q in 1:nblocks(U, 2), p in 1:nblocks(U, 1)
-#         U[Block(p, q)] = Zeros{T}(blocksize(A, (p, q))...)
+#         U[Block(p, q)] = zeros{T}(blocksize(A, (p, q))...)
 #     end
 
 #     # Fill out the upper triangle with the Cholesky.

@@ -104,8 +104,6 @@ end
 # # Construct an approximate posterior distribution.
 # |(g::GP, c::Titsias) = g | (c.u←c.m′u) + project(kernel(c.u.f, g), c.γ, c.u.x)
 
-# # FillArrays.Zeros(x::BlockVector) = BlockVector(Zeros.(x.blocks))
-
 # |(g::Tuple{Vararg{AbstractGP}}, c::Titsias) = deconstruct(BlockGP([g...]) | c)
 # function |(g::BlockGP, c::Titsias)
 #     return BlockGP(g.fs .| Ref(c))

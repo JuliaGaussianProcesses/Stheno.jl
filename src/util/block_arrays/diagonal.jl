@@ -13,7 +13,7 @@ function block_diagonal(vs::AbstractVector{<:AbstractMatrix})
 end
 
 function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T}
-    return Zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
+    return zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
 end
 
 
@@ -167,26 +167,18 @@ end
 # cholesky
 #
 
-# Strip unhelpful wrappers to ensure that ldiv! is efficient.
-strip_block(X::UpperTriangular) = X
-strip_block(X::UpperTriangular{T, <:Diagonal{T}} where {T}) = X.data
-
 function cholesky(A::BlockDiagonal{<:Real})
-    Cs = map(A->strip_block(cholesky(A).U), diag(A.blocks))
+    Cs = map(A->cholesky(A).U, diag(A.blocks))
     return Cholesky(block_diagonal(Cs), :U, 0)
 end
-@adjoint function cholesky(A::BlockDiagonal{T, <:Matrix{T}} where {T<:Real})
+@adjoint function cholesky(A::BlockDiagonal{<:Real})
     Cs_backs = map(A->Zygote.forward(A->cholesky(A).U, A), diag(A.blocks))
     Cs, backs = first.(Cs_backs), last.(Cs_backs)
     function back(Ū::BlockDiagonal)
+        @show typeof(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs))
         return (block_diagonal(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs)),)
     end
     return Cholesky(block_diagonal(Cs), :U, 0), Δ->back(Δ.factors)
-end
-
-function cholesky(A::Symmetric{T, <:BlockDiagonal{T}} where {T<:Real})
-    Cs = [strip_block(cholesky(Symmetric(A)).U) for A in diag(A.data.blocks)]
-    return Cholesky(_BlockArray(Diagonal(Cs), A.data.block_sizes), :U, 0)
 end
 
 function logdet(C::Cholesky{T, <:BlockDiagonal{T}} where {T<:Real})

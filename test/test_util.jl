@@ -1,7 +1,6 @@
 using BlockArrays, LinearAlgebra, FDM, Zygote, Random
 using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, ew, pw, BlockData, blocks
 using Stheno: block_diagonal
-using FillArrays: AbstractFill, getindex_value
 using LinearAlgebra: AbstractTriangular
 using FDM: j′vp
 import FDM: to_vec
@@ -33,7 +32,6 @@ function to_vec(x::ColsAreObs{<:Real})
     return x_vec, x_vec -> ColsAreObs(back(x_vec))
 end
 to_vec(x::BlockArray) = vec(Array(x)), x_->BlockArray(reshape(x_, size(x)), blocksizes(x))
-to_vec(x::AbstractFill) = vec(Array(x)), x->error("No backwards defined")
 function to_vec(x::BlockData)
     x_vecs, x_backs = zip(map(to_vec, blocks(x))...)
     sz = cumsum([map(length, x_vecs)...])

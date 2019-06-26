@@ -523,6 +523,8 @@ version = "0.8.3"
 
 [[Zygote]]
 deps = ["DiffRules", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics"]
-path = "/home/wct23/.julia/dev/Zygote"
+git-tree-sha1 = "80dd202fa69cbc06be895216fe4745f21c85d266"
+repo-rev = "master"
+repo-url = "https://github.com/FluxML/Zygote.jl.git"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
 version = "0.3.1"

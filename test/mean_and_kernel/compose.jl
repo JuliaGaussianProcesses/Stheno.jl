@@ -12,7 +12,6 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         @test ew(ν, x) == map(exp, ew(μ, x))
         mean_function_tests(ν, x)
 
-        # Ensure FillArray functionality works as intended, particularly with Zygote.
         differentiable_mean_function_tests(UnaryMean(exp, ZeroMean()), ȳ, x)
         differentiable_mean_function_tests(UnaryMean(exp, OneMean()), ȳ, x)
     end
@@ -32,7 +31,6 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         differentiable_mean_function_tests(ν1, ȳ, x)
         differentiable_mean_function_tests(ν2, ȳ, x)
 
-        # Ensure FillArray functionality works as intended, particularly with Zygote.
         differentiable_mean_function_tests(BinaryMean(+, ZeroMean(), OneMean()), ȳ, x)
         differentiable_mean_function_tests(BinaryMean(+, μ1, OneMean()), ȳ, x)
         differentiable_mean_function_tests(BinaryMean(*, ZeroMean(), μ2), ȳ, x)
@@ -55,7 +53,6 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         @test ew(ν, x0) == ew(k, x0) .+ ew(k, x0)
         @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
 
-        # Self-consistency testing with FillArrays
         let
             k = BinaryKernel(+, ZeroKernel(), OneKernel())
             differentiable_kernel_tests(rng, k, x0, x1, x2)
@@ -63,15 +60,15 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         differentiable_kernel_tests(rng, BinaryKernel(*, ZeroKernel(), EQ()), x0, x1, x2)
         differentiable_kernel_tests(rng, BinaryKernel(+, EQ(), OneKernel()), x0, x1, x2)
 
-        # Some compositions of stationary kernels are stationary.
-        stationary_kernel_tests(
-            ν,
-            range(-5.0, step=1, length=N),
-            range(-4.0, step=1, length=N),
-            range(-5.0, step=2, length=N),
-            range(-3.0, step=1, length=N′),
-            range(-2.0, step=2, length=N′),
-        )
+        # # Some compositions of stationary kernels are stationary.
+        # stationary_kernel_tests(
+        #     ν,
+        #     range(-5.0, step=1, length=N),
+        #     range(-4.0, step=1, length=N),
+        #     range(-5.0, step=2, length=N),
+        #     range(-3.0, step=1, length=N′),
+        #     range(-2.0, step=2, length=N′),
+        # )
     end
 
     @testset "BinaryCrossKernel" begin
@@ -91,7 +88,6 @@ using Stheno: EQ, Exp, Linear, Noise, PerEQ
         @test ew(ν, x0) == ew(k, x0) .+ ew(k, x0)
         @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
 
-        # Self-consistency testing with FillArrays
         let
             k = BinaryCrossKernel(+, ZeroKernel(), OneKernel())
             differentiable_cross_kernel_tests(rng, k, x0, x1, x2)
