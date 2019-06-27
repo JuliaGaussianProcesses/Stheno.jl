@@ -1,5 +1,5 @@
 function merge(fs::Tuple{Vararg{FiniteGP}})
-    block_gp = BlockGP([map(f->f.f, fs)...])
+    block_gp = cross([map(f->f.f, fs)...])
     block_x = BlockData([map(f->f.x, fs)...])
     block_Σy = block_diagonal([map(f->f.Σy, fs)...])
     return FiniteGP(block_gp, block_x, block_Σy)
@@ -34,10 +34,10 @@ function k_pp′(h::GP, ::typeof(|), g::GP, f::GP, cache::CondCache)
         kernel(h, g) : CondCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
 end
 
-# # Block stuff
-# |(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))
-# |(g::GP, c::Tuple{Vararg{Observation}}) = g | merge(c)
-# |(g::Tuple{Vararg{GP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
-# function |(g::Tuple{Vararg{GP}}, c::Tuple{Vararg{Observation}})
-#     return deconstruct(BlockGP([g...]) | merge(c))
-# end
+# Multi-arg stuff
+|(g::GP, c::Tuple{Vararg{Observation}}) = g | merge(c)
+
+|(g::Tuple{Vararg{GP}}, c::Tuple{Vararg{Observation}}) = map(g_ -> g_ | c, g)
+
+|(g::Tuple{Vararg{GP}}, c::Observation) = g | (c,)
+
