@@ -98,19 +98,19 @@ _transform(ϕ) = ϕ
 
 
 """
-    Scale{T<:Real}
+    Stretch{T<:Real}
 
-Scale all elements of the inputs by `l`.
+Stretch all elements of the inputs by `l`.
 """
-struct Scale{T<:Real}
+struct Stretch{T<:Real}
     l::T
 end
-(s::Scale)(x) = s.l * x
-broadcasted(s::Scale, x::StepRangeLen) = s.l .* x
-broadcasted(s::Scale, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
+(s::Stretch)(x) = s.l * x
+broadcasted(s::Stretch, x::StepRangeLen) = s.l .* x
+broadcasted(s::Stretch, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
 
-_transform(ϕ::Real) = Scale(ϕ)
-_transform(ϕ::Scale) = ϕ
+_transform(ϕ::Real) = Stretch(ϕ)
+_transform(ϕ::Stretch) = ϕ
 
 
 """
@@ -129,28 +129,28 @@ _transform(ϕ::LinearTransform) = ϕ
 
 
 """
-    PickDims{Tidx}
+    Select{Tidx}
 
 Use inside an input transformation meanfunction / crosskernel to improve peformance.
 """
-struct PickDims{Tidx}
+struct Select{Tidx}
     idx::Tidx
 end
-(f::PickDims)(x) = x[f.idx]
-broadcasted(f::PickDims, x::ColsAreObs) = ColsAreObs(x.X[f.idx, :])
-broadcasted(f::PickDims{<:Integer}, x::ColsAreObs) = x.X[f.idx, :]
+(f::Select)(x) = x[f.idx]
+broadcasted(f::Select, x::ColsAreObs) = ColsAreObs(x.X[f.idx, :])
+broadcasted(f::Select{<:Integer}, x::ColsAreObs) = x.X[f.idx, :]
 
-function broadcasted(f::PickDims, x::AbstractVector{<:CartesianIndex})
+function broadcasted(f::Select, x::AbstractVector{<:CartesianIndex})
     out = Matrix{Int}(undef, length(f.idx), length(x))
     for i in f.idx, n in eachindex(x)
         out[i, n] = x[n][i]
     end
     return ColsAreObs(out)
 end
-@adjoint function broadcasted(f::PickDims, x::AV{<:CartesianIndex})
+@adjoint function broadcasted(f::Select, x::AV{<:CartesianIndex})
     return broadcasted(f, x), Δ->(nothing, nothing)
 end
-function broadcasted(f::PickDims{<:Integer}, x::AV{<:CartesianIndex})
+function broadcasted(f::Select{<:Integer}, x::AV{<:CartesianIndex})
     out = Matrix{Int}(undef, length(x))
     for n in eachindex(x)
         out[n] = x[n][f.idx]

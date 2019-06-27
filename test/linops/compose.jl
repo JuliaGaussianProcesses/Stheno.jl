@@ -1,4 +1,4 @@
-using Stheno: GPC, Scale, LinearTransform
+using Stheno: GPC, Stretch, LinearTransform
 
 @testset "compose" begin
     rng, N, N′, gpc = MersenneTwister(123456), 7, 5, GPC()
