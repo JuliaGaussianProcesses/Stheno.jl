@@ -9,6 +9,8 @@ Stheno is designed to make doing non-standard things with Gaussian processes str
 
 ## A Couple of Examples
 
+We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here are a couple of examples to get you started.
+
 First, a note for statistics / ML people who aren't too familiar with Julia: the first execution of the examples below will take a while as Julia has to compile the code. On subsequent runs (e.g. if you were repeatedly evaluating the `logpdf` for kernel parameter learning) it will progress _much_ faster.
 
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
