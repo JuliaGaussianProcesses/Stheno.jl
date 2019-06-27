@@ -75,3 +75,56 @@ using Stheno: GPC
         )
     end
 end
+
+# # θ = Dict(:l1=>0.5, :l2=>2.3);
+# x, z = collect(range(-5.0, 5.0; length=512)), collect(range(-5.0, 5.0; length=128));
+# y = rand(GP(sin, eq(), GPC())(x, 0.1));
+
+# foo_logpdf = (x, y) -> begin
+#     gpc = GPC()
+#     f = GP(sin, eq(), gpc)
+#     return logpdf(f(x, 0.1), y)
+# end
+
+# foo_elbo = (x, y, z) -> begin
+#     f = GP(0, eq(), GPC())
+#     return elbo(f(x, 0.1), y, f(z, 0.001))
+# end
+
+# @benchmark foo_logpdf($x,  $y)
+# @benchmark Zygote.forward(foo_logpdf, $x, $y)
+
+# let
+#     z, back = Zygote.forward(foo_logpdf, x, y)
+#     @benchmark $back($(randn()))
+# end
+
+# let
+#     foo = function(x, y)
+#         fx = GP(0, eq(), GPC())(x, 0.1)
+#         C = cholesky(Symmetric(cov(fx)))
+#         return logdet(C) + Xt_invA_X(C, y)
+#     end
+#     display(@benchmark Zygote.forward($foo, $x, $y)) 
+#     z_pw, back_pw = Zygote.forward(foo, x, y)
+#     @benchmark $back_pw(randn())
+# end
+
+
+# @benchmark foo_elbo($x, $y, $z)
+# @benchmark Zygote.forward(foo_elbo, $x, $y, $z)
+
+# let
+#     L, back = Zygote.forward(foo_elbo, x, y, z)
+#     @benchmark $back($L)
+# end
+
+
+# θ->begin
+#     gpc = GPC()
+#     f1 = GP(sin, eq(l=θ[:l1]), gpc)
+#     f2 = GP(cos, eq(l=θ[:l2]), gpc)
+#     f3 = f1 + f2
+#     return f3, f3
+# end,
+# 13, 11,

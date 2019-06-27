@@ -8,18 +8,18 @@ export mean, cov, marginals, rand, logpdf, elbo
 
 The finite-dimensional projection of the GP `f` at `x`.
 """
-struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribution
+struct FiniteGP{Tf<:GP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribution
     f::Tf
     x::Tx 
     Σy::TΣy
-    function FiniteGP(f::Tf, x::Tx, Σy::TΣy) where {Tf<:AbstractGP, Tx<:AV, TΣy}
+    function FiniteGP(f::Tf, x::Tx, Σy::TΣy) where {Tf<:GP, Tx<:AV, TΣy}
         @assert length(x) == size(Σy, 1)
         return new{Tf, Tx, TΣy}(f, x, Σy)
     end
 end
-FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
-FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, fill(σ², length(x)))
-FiniteGP(f::AbstractGP, x::AV) = FiniteGP(f, x, 0)
+FiniteGP(f::GP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
+FiniteGP(f::GP, x::AV, σ²::Real) = FiniteGP(f, x, fill(σ², length(x)))
+FiniteGP(f::GP, x::AV) = FiniteGP(f, x, 0)
 
 length(f::FiniteGP) = length(f.x)
 
@@ -91,14 +91,13 @@ function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
         sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
         tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
 end
-elbo(f::FiniteGP, y::AV{<:Real}, u::Vector{<:FiniteGP}) = elbo(f, y, finites_to_block(u))
 
 function consistency_check(f, y, u)
     @assert length(f) == length(y)
 end
 Zygote.@nograd consistency_check
 
-import Base: \
+import Base: \ 
 \(A::AbstractMatrix, B::Diagonal) = A \ Matrix(B)
 
 \(A::Union{LowerTriangular, UpperTriangular}, B::Diagonal) = A \ Matrix(B)
@@ -118,16 +117,29 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky)
     return tr(chol_Σy \ pw(kernel(f.f), f.x))
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
-    return tr_At_A(chol_Σy.U' \ cholesky(Symmetric(_get_kernel_block_diag(f, cumulsizes(Σy, 1)))).U')
+    C = cholesky(Symmetric(_get_kernel_block_diag(f, cumulsizes(Σy, 1))))
+    return tr_At_A(chol_Σy.U' \ C.U')
 end
 
 function _get_kernel_block_diag(f::FiniteGP, cs)
-    k, xs = kernel(f.f), [f.x[cs[n]:cs[n+1]-1] for n in 1:length(cs)-1]
-    return block_diagonal([pw(k, x) + 1e-9I for x in xs])
-    # return block_diagonal(
-    #     [pw(kernel(f.f), f.x[cs[n]:cs[n+1]-1]) + 1e-9I for n in 1:length(cs)-1],
-    # )
+    k = kernel(f.f)
+    ids = map(n->cs[n]:cs[n+1]-1, 1:length(cs)-1)
+    xs = map(id->f.x[id], ids)
+    Σs = map(x->pw(k, x), xs)
+    return block_diagonal(Σs)
 end
+
+function _get_kernel_block_diag(f::FiniteGP{<:GP{<:BlockMean, <:BlockKernel}, <:BlockData}, cs)
+    k = kernel(f.f)
+    ids = map(n->cs[n]:cs[n+1]-1, 1:length(cs)-1)
+    @assert _test_block_consistency(ids, f)
+    xs = blocks(f.x)
+    Σs = map(n->pw(k.ks[n], xs[n]), 1:length(xs))
+    return block_diagonal(Σs)
+end
+
+_test_block_consistency(ids, f) = length.(ids) == length.(blocks(f.x))
+Zygote.@nograd _test_block_consistency
 
 # """
 #     elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP, mε::AV{<:Real}, Λε::AM{<:Real})
@@ -140,46 +152,22 @@ end
 #     # do stuff.
 # end
 
+import Base: |, merge
+export ←, |
 
-#
-# `logpdf` and `rand` for collections of processes #
-#
+"""
+    Observation
 
-# function rand(rng::AbstractRNG, f::BlockGP, N::Int)
-#     M = BlockArray(undef_blocks, AbstractMatrix{Float64}, length.(f.fs), [N])
-#     μ = mean(f)
-#     for b in eachindex(f.fs)
-#         setblock!(M, getblock(μ, b) * ones(1, N), b, 1)
-#     end
-#     return M + chol(cov(f))' * BlockMatrix(randn.(Ref(rng), length.(f.fs), N))
-# end
-# rand(f::BlockGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
-
-# function rand(rng::AbstractRNG, f::BlockGP)
-#     return mean(f) + chol(cov(f))' * BlockVector(randn.(Ref(rng), length.(f.fs)))
-# end
-# rand(f::BlockGP) = rand(Random.GLOBAL_RNG, f)
-
-# # Convenience methods for invoking `logpdf` and `rand` with multiple processes.
-# logpdf(fs::AV{<:AbstractGP}, ys::AV{<:AV{<:Real}}) = logpdf(BlockGP(fs), BlockVector(ys))
-
-function finites_to_block(fs::AV{<:FiniteGP})
-    Σys = map(f->f.Σy, fs)
-    sizes = map(Σy->size(Σy, 1), Σys)
-    return FiniteGP(
-        BlockGP(map(f->f.f, fs)),
-        BlockData(map(f->f.x, fs)),
-        Matrix(_BlockArray(Diagonal(Σys), sizes, sizes)),
-    )
+Represents fixing a paricular (finite) GP to have a particular (vector) value.
+"""
+struct Observation{Tf<:FiniteGP, Ty<:Vector}
+    f::Tf
+    y::Ty
 end
 
-function rand(rng::AbstractRNG, fs::AV{<:FiniteGP}, N::Int)
-    Y = rand(rng, finites_to_block(fs), N)
-    sz = cumsum(map(length, fs))
-    return [Y[sz[n]-length(fs[n])+1:sz[n], :] for n in eachindex(fs)]
-end
-rand(rng::AbstractRNG, fs::AV{<:FiniteGP}) = vec.(rand(rng, fs, 1))
-rand(fs::AV{<:FiniteGP}, N::Int) = rand(Random.GLOBAL_RNG, fs, N)
-rand(fs::AV{<:FiniteGP}) = vec.(rand(Random.GLOBAL_RNG, fs))
+const Obs = Observation
+export Obs
 
-logpdf(fs::AV{<:FiniteGP}, ys::AV{<:AV{<:Real}}) = logpdf(finites_to_block(fs), vcat(ys...))
+←(f, y) = Observation(f, y)
+get_f(c::Observation) = c.f
+get_y(c::Observation) = c.y

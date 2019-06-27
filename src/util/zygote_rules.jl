@@ -11,6 +11,8 @@ function accum(D::Diagonal{T}, B::AbstractMatrix) where {T}
     A[diagind(A)] .= D.diag
     return accum(A, B)
 end
+accum(A::AbstractMatrix, D::Diagonal) = accum(D, A)
+accum(A::Diagonal, B::Diagonal) = Diagonal(accum(diag(A), diag(B)))
 
 @adjoint function sqeuclidean(x::AbstractVector, y::AbstractVector)
     δ = x .- y

@@ -8,7 +8,6 @@ module Stheno
     using LinearAlgebra: AbstractTriangular
     using Zygote: @adjoint, @nograd, @showgrad, hook
     using BlockArrays: _BlockArray
-    using InteractiveUtils
     import LinearAlgebra: cholesky, cross
 
     const AV{T} = AbstractVector{T}

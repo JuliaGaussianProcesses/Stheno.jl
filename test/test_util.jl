@@ -66,11 +66,17 @@ function fd_isapprox(x_ad::Tuple, x_fd::Tuple, rtol, atol)
     return all(map((x, x′)->fd_isapprox(x, x′, rtol, atol), x_ad, x_fd))
 end
 function fd_isapprox(x_ad::Dict, x_fd::Dict, rtol, atol)
-    iters = zip(values(x_ad), values(x_fd))
-    return all([fd_isapprox(v_ad, v_fd, rtol, atol) for (v_ad, v_fd) in iters])
+    return all([fd_isapprox(get(()->nothing, x_ad, key), x_fd[key], rtol, atol) for
+        key in keys(x_fd)])
 end
 
-function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=FDM.Central(5, 1))
+function adjoint_test(
+    f, ȳ, x...;
+    rtol=_rtol,
+    atol=_atol,
+    fdm=FDM.Central(5, 1),
+    print_results=false,
+)
 
     # Compute forwards-pass and j′vp.
     y, back = Zygote.forward(f, x...)
@@ -84,7 +90,7 @@ function adjoint_test(f, ȳ, x...; rtol=_rtol, atol=_atol, fdm=FDM.Central(5, 1
     @test y ≈ f(x...)
 
     # Check that ad and fd adjoints (approximately) agree.
-    # print_adjoints(adj_ad, adj_fd, rtol, atol)
+    print_results && print_adjoints(adj_ad, adj_fd, rtol, atol)
     @test fd_isapprox(adj_ad, adj_fd, rtol, atol)
 end
 

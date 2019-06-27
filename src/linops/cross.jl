@@ -35,7 +35,13 @@ _kernels(fs1, fs2) = kernel.(fs1, fs2)
 @adjoint function _kernels(fs1, fs2)
     ys_and_backs = broadcast((f1, f2)->Zygote.forward(kernel, f1, f2), fs1, fs2)
     ys, backs = first.(ys_and_backs), last.(ys_and_backs)
-    return ys, function(Δ)
+    function back(Δ::Diagonal{T}) where {T}
+        back_mat = Matrix{Union{T, Nothing}}(undef, size(Δ))
+        fill!(back_mat, nothing)
+        back_mat[diagind(Δ)] = diag(Δ)
+        return back(back_mat)
+    end
+    function back(Δ)
         Δ_fs1_fs2 = broadcast((back, δ)->back(δ), backs, Δ)
 
         Δ_fs1, Δ_fs2 = first.(Δ_fs1_fs2), last.(Δ_fs1_fs2)
@@ -58,4 +64,67 @@ _kernels(fs1, fs2) = kernel.(fs1, fs2)
 
         return δ_1, reshape(δ_2, 1, :)
     end
+    return ys, back
 end
+
+
+
+#
+# Util for multi-process versions of `rand`, `logpdf`, and `elbo`.
+#
+
+function finites_to_block(fs::AV{<:FiniteGP})
+    return FiniteGP(
+        cross(map(f->f.f, fs)),
+        BlockData(map(f->f.x, fs)),
+        make_block_noise(map(f->f.Σy, fs)),
+    )
+end
+
+make_block_noise(Σys::Vector{<:Diagonal}) = Diagonal(Vector(BlockVector(diag.(Σys))))
+make_block_noise(Σys::Vector) = block_diagonal(Σys)
+
+function _get_indices(fs)
+    sz = cumsum(map(length, fs))
+    return [sz[n] - length(fs[n]) + 1:sz[n] for n in eachindex(fs)]
+end
+Zygote.@nograd _get_indices
+
+
+#
+# multi-process `rand`
+#
+
+function rand(rng::AbstractRNG, fs::AV{<:FiniteGP}, N::Int)
+    Y = rand(rng, finites_to_block(fs), N)
+    idx = _get_indices(fs)
+    return map(n->Y[idx[n], :], eachindex(fs))
+end
+rand(rng::AbstractRNG, fs::AV{<:FiniteGP}) = vec.(rand(rng, fs, 1))
+rand(fs::AV{<:FiniteGP}, N::Int) = rand(Random.GLOBAL_RNG, fs, N)
+rand(fs::AV{<:FiniteGP}) = vec.(rand(Random.GLOBAL_RNG, fs))
+
+
+#
+# multi-process `logpdf`
+#
+
+function logpdf(fs::AV{<:FiniteGP}, ys::Vector{<:AV{<:Real}})
+    return logpdf(finites_to_block(fs), vcat(ys...))
+end
+logpdf(fs::Vector{<:Observation}) = logpdf(get_f.(fs), get_y.(fs))
+
+
+#
+# multi-process `elbo`
+#
+
+function elbo(fs::Vector{<:FiniteGP}, ys::Vector{<:AV{<:Real}}, us::Vector{<:FiniteGP})
+    return elbo(finites_to_block(fs), Vector(BlockVector(ys)), finites_to_block(us))
+end
+
+function elbo(fs::Vector{<:FiniteGP}, ys::Vector{<:AV{<:Real}}, u::FiniteGP)
+    return elbo(finites_to_block(fs), Vector(BlockVector(ys)), u)
+end
+
+elbo(f::FiniteGP, y::AV{<:Real}, us::Vector{<:FiniteGP}) = elbo(f, y, finites_to_block(us))

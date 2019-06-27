@@ -10,15 +10,6 @@ function +(fa::GP, fb::GP)
     return GP(fa.gpc, +, fa, fb)
 end
 
-"""
-    +(fa::AbstractGP, fb::AbstractGP)
-
-Same as above, but for a collection of GPs.
-"""
-# +(fa::BlockGP, fb::BlockGP) = BlockGP(fa.fs .+ fb.fs)
-# +(fa::BlockGP, fb::GP) = BlockGP(fa.fs .+ Ref(fb))
-# +(fa::GP, fb::BlockGP) = BlockGP(Ref(fa) .+ fb.fs)
-
 μ_p′(::typeof(+), fa, fb) = mean(fa) + mean(fb)
 function k_p′(::typeof(+), fa, fb)
     return kernel(fa) + kernel(fb) + kernel(fa, fb) + kernel(fb, fa)

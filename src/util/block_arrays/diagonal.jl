@@ -13,7 +13,7 @@ function block_diagonal(vs::AbstractVector{<:AbstractMatrix})
 end
 
 function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T}
-    return zeros{T}(size(D.diag[r], 1), size(D.diag[c], 2))
+    return zeros(T, size(D.diag[r], 1), size(D.diag[c], 2))
 end
 
 
@@ -175,7 +175,7 @@ end
     Cs_backs = map(A->Zygote.forward(A->cholesky(A).U, A), diag(A.blocks))
     Cs, backs = first.(Cs_backs), last.(Cs_backs)
     function back(Ū::BlockDiagonal)
-        @show typeof(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs))
+        # @show typeof(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs))
         return (block_diagonal(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs)),)
     end
     return Cholesky(block_diagonal(Cs), :U, 0), Δ->back(Δ.factors)

@@ -1,6 +1,4 @@
-using LinearAlgebra, GPUArrays
-using Base.Broadcast: DefaultArrayStyle
-using GPUArrays: GPUVector
+using LinearAlgebra
 
 import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
 import Base: +, *, ==, size, eachindex, print, eltype, zero
@@ -127,21 +125,21 @@ pw(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 # Optimised adjoints. These really do count in terms of performance (I think).
 @adjoint function ew(::EQ, x::AV{<:Real}, x′::AV{<:Real})
-    s = materialize(ew(EQ(), x, x′))
+    s = ew(EQ(), x, x′)
     return s, function(Δ)
         x̄′ = (x .- x′) .* Δ .* s
         return nothing, -x̄′, x̄′
     end
 end
 @adjoint function pw(::EQ, x::AV{<:Real}, x′::AV{<:Real})
-    s = materialize(pw(EQ(), x, x′))
+    s = pw(EQ(), x, x′)
     return s, function(Δ)
         x̄′ = Δ .* (x .- x′') .* s
         return nothing, -reshape(sum(x̄′; dims=2), :), reshape(sum(x̄′; dims=1), :)
     end
 end
 @adjoint function pw(::EQ, x::AV{<:Real})
-    s = materialize(pw(EQ(), x))
+    s = pw(EQ(), x)
     return s, function(Δ)
         x̄_tmp = Δ .* (x .- x') .* s
         return nothing, reshape(sum(x̄_tmp; dims=1), :) - reshape(sum(x̄_tmp; dims=2), :)

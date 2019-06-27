@@ -17,6 +17,7 @@ const ABM{T} = AbstractBlockMatrix{T}
 
 const BlockCholesky{T, V} = Cholesky{T, <:BlockMatrix{T, V}}
 
+const BlockArrayAdjoint = NamedTuple{(:blocks, :block_sizes)}
 
 
 ####################################### Various util #######################################

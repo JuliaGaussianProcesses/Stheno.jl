@@ -1,23 +1,3 @@
-import Base: |, merge
-export ←, |
-
-"""
-    Observation
-
-Represents fixing a paricular (finite) GP to have a particular (vector) value.
-"""
-struct Observation{Tf<:FiniteGP, Ty<:Vector}
-    f::Tf
-    y::Ty
-end
-
-const Obs = Observation
-export Obs
-
-←(f, y) = Observation(f, y)
-get_f(c::Observation) = c.f
-get_y(c::Observation) = c.y
-
 function merge(fs::Tuple{Vararg{FiniteGP}})
     block_gp = BlockGP([map(f->f.f, fs)...])
     block_x = BlockData([map(f->f.x, fs)...])
@@ -30,7 +10,7 @@ function merge(c::Tuple{Vararg{Observation}})
 end
 
 """
-    |(g::AbstractGP, c::Observation)
+    |(g::GP, c::Observation)
 
 Condition `g` on observation `c`.
 """
@@ -39,25 +19,25 @@ function |(g::GP, c::Observation)
     return GP(g.gpc, |, g, f, CondCache(kernel(f), mean(f), x, y, Σy))
 end
 
-function μ_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+function μ_p′(::typeof(|), g::GP, f::GP, cache::CondCache)
     return iszero(kernel(f, g)) ? mean(g) : CondMean(cache, mean(g), kernel(f, g))
 end
-function k_p′(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+function k_p′(::typeof(|), g::GP, f::GP, cache::CondCache)
     return iszero(kernel(f, g)) ? kernel(g) : CondKernel(cache, kernel(f, g), kernel(g))
 end
-function k_p′p(::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache, h::AbstractGP)
+function k_p′p(::typeof(|), g::GP, f::GP, cache::CondCache, h::GP)
     return iszero(kernel(f, g)) || iszero(kernel(f, h)) ?
         kernel(g, h) : CondCrossKernel(cache, kernel(f, g), kernel(f, h), kernel(g, h))
 end
-function k_pp′(h::AbstractGP, ::typeof(|), g::AbstractGP, f::AbstractGP, cache::CondCache)
+function k_pp′(h::GP, ::typeof(|), g::GP, f::GP, cache::CondCache)
     return iszero(kernel(f, g)) || iszero(kernel(f, h)) ?
         kernel(h, g) : CondCrossKernel(cache, kernel(f, h), kernel(f, g), kernel(h, g))
 end
 
 # # Block stuff
 # |(g::BlockGP, c::Observation) = BlockGP(g.fs .| Ref(c))
-# |(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)
-# |(g::Tuple{Vararg{AbstractGP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
-# function |(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}})
+# |(g::GP, c::Tuple{Vararg{Observation}}) = g | merge(c)
+# |(g::Tuple{Vararg{GP}}, c::Observation) = deconstruct(BlockGP([g...]) | c)
+# function |(g::Tuple{Vararg{GP}}, c::Tuple{Vararg{Observation}})
 #     return deconstruct(BlockGP([g...]) | merge(c))
 # end

@@ -1,7 +1,5 @@
 export GP, mean, kernel
 
-abstract type AbstractGP end
-
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
 mutable struct GPC
     n::Int
@@ -11,12 +9,12 @@ end
 @nograd GPC
 
 """
-    GP{Tμ<:MeanFunction, Tk<:CrossKernel} <: AbstractGP
+    GP{Tμ<:MeanFunction, Tk<:CrossKernel}
 
 A Gaussian Process (GP) object. Either constructed using an Affine Transformation of
 existing GPs or by providing a mean function `μ`, a kernel `k`, and a `GPC` `gpc`.
 """
-struct GP{Tμ<:MeanFunction, Tk<:CrossKernel} <: AbstractGP
+struct GP{Tμ<:MeanFunction, Tk<:CrossKernel}
     args::Any
     μ::Tμ
     k::Tk
@@ -52,10 +50,10 @@ mean(f::GP) = f.μ
 
 """
     kernel(f::Union{Real, Function})
-    kernel(f::AbstractGP)
-    kernel(f::Union{Real, Function}, g::AbstractGP)
-    kernel(f::AbstractGP, g::Union{Real, Function})
-    kernel(fa::AbstractGP, fb::AbstractGP)
+    kernel(f::GP)
+    kernel(f::Union{Real, Function}, g::GP)
+    kernel(f::GP, g::Union{Real, Function})
+    kernel(fa::GP, fb::GP)
 
 Get the cross-kernel between `GP`s `fa` and `fb`, and . If either argument is deterministic
 then the zero-kernel is returned. Also, `kernel(f) === kernel(f, f)`.
