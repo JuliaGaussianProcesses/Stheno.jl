@@ -1,139 +1,129 @@
-using BlockArrays, LinearAlgebra
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, blocks, pairwise, LazyPDMat
+using BlockArrays, LinearAlgebra, FDM, Zygote, Random
+using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, ew, pw, BlockData, blocks
+using Stheno: block_diagonal
+using LinearAlgebra: AbstractTriangular
+using FDM: j′vp
+import FDM: to_vec
 
-"""
-    unary_map_tests(f, X::AbstractVector)
+const _rtol = 1e-10
+const _atol = 1e-10
 
-Consistency tests intended for use with `MeanFunction`s.
-"""
-function unary_map_tests(f, X::AbstractVector)
-    @test map(f, X) isa AbstractVector
-    @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ [f(x) for x in X]
-    @test map(f, X) ≈ Stheno._map_fallback(f, X)
-end
-function unary_map_tests(f, X::BlockData)
-    @test map(f, X) isa AbstractBlockVector
-    @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ BlockVector([map(f, x) for x in blocks(X)])
-end
+_to_psd(A::Matrix{<:Real}) = A * A' + I
+_to_psd(a::Vector{<:Real}) = softplus.(a) .+ 1
+_to_psd(σ::Real) = softplus(σ) + 1
+_to_psd(As::Vector{<:Matrix{<:Real}}) = block_diagonal(_to_psd.(As))
 
-"""
-    binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
+Base.length(::Nothing) = 0
 
-Consistency tests intended for use with `CrossKernel`s.
-"""
-function binary_map_tests(f, X::AbstractVector, X′::AbstractVector)
-    @test map(f, X, X′) isa AbstractVector
-    @test length(map(f, X, X′)) == length(X)
-    @test map(f, X, X′) ≈ [f(x, x′) for (x, x′) in zip(X, X′)]
-    @test map(f, X, X′) ≈ Stheno._map_fallback(f, X, X′)
-end
-function binary_map_tests(f, XB::BlockData, XB′::BlockData)
-    @test map(f, XB, XB′) isa AbstractBlockVector
-    @test length(map(f, XB, XB′)) == length(XB)
-    @test map(f, XB, XB′) ≈
-        BlockVector([map(f, X, X′) for (X, X′) in zip(blocks(XB), blocks(XB′))])
+function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
+    @show typeof(adjoint_ad), typeof(adjoint_fd)
+    adjoint_ad, adjoint_fd = to_vec(adjoint_ad)[1], to_vec(adjoint_fd)[1]
+    println("atol is $atol, rtol is $rtol")
+    println("ad, fd, abs, rel")
+    abs_err = abs.(adjoint_ad .- adjoint_fd)
+    rel_err = abs_err ./ adjoint_ad
+    display([adjoint_ad adjoint_fd abs_err rel_err])
+    println()
 end
 
-"""
-    binary_map_tests(f, X::AbstractVector)
-
-Consistency tests intended for use with `Kernel`s.
-"""
-function binary_map_tests(f, X::AbstractVector)
-    @test map(f, X) isa AbstractVector
-    @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ map(f, X, X)
+# AbstractArrays.
+function to_vec(x::ColsAreObs{<:Real})
+    x_vec, back = to_vec(x.X)
+    return x_vec, x_vec -> ColsAreObs(back(x_vec))
 end
-function binary_map_tests(f, X::BlockData)
-    @test map(f, X) isa AbstractBlockVector
-    @test length(map(f, X)) == length(X)
-    @test map(f, X) ≈ map(f, X, X)
+to_vec(x::BlockArray) = vec(Array(x)), x_->BlockArray(reshape(x_, size(x)), blocksizes(x))
+function to_vec(x::BlockData)
+    x_vecs, x_backs = zip(map(to_vec, blocks(x))...)
+    sz = cumsum([map(length, x_vecs)...])
+    return vcat(x_vecs...), function(v)
+        return BlockData([x_backs[n](v[sz[n]-length(blocks(x)[n])+1:sz[n]])
+            for n in 1:length(blocks(x))])
+    end
 end
-
-"""
-    pairwise_tests(f, X::ADS, X′::ADS)
-
-Consistency tests intended for use with `CrossKernel`s.
-"""
-function pairwise_tests(f, X::AbstractVector, X′::AbstractVector)
-    N, N′ = length(X), length(X′)
-    @test pairwise(f, X, X′) isa AbstractMatrix
-    @test size(pairwise(f, X, X′)) == (N, N′)
-    @test pairwise(f, X, X′) ≈ reshape([f(x, x′) for (x, x′) in Iterators.product(X, X′)], N, N′)
-    @test pairwise(f, X, X′) ≈ Stheno._pairwise_fallback(f, X, X′)
-end
-function pairwise_tests(f, X::BlockData, X′::BlockData)
-    N, N′ = length(X), length(X′)
-    @test pairwise(f, X, X′) isa AbstractBlockMatrix
-    @test size(pairwise(f, X, X′)) == (N, N′)
-    @test pairwise(f, X, X′) ==
-        BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X′)])
+function to_vec(X::T) where T<:Union{Adjoint,Transpose}
+    U = T.name.wrapper
+    return vec(Matrix(X)), x_vec->U(permutedims(reshape(x_vec, size(X))))
 end
 
-"""
-    pairwise_tests(f, X::ADS)
+Base.zero(d::Dict) = Dict([(key, zero(val)) for (key, val) in d])
+Base.zero(x::Array) = zero.(x)
 
-Consistency tests intended for use with `Kernel`s.
-"""
-function pairwise_tests(f, X::AbstractVector; rtol=eps())
-    @test pairwise(f, X) isa LazyPDMat{T, <:AbstractMatrix{T}} where T
-    @test size(pairwise(f, X)) == (length(X), length(X))
-    @test isapprox(pairwise(f, X), pairwise(f, X, X); rtol=rtol)
+# My version of isapprox
+function fd_isapprox(x_ad::Nothing, x_fd, rtol, atol)
+    return fd_isapprox(x_fd, zero(x_fd), rtol, atol)
 end
-function pairwise_tests(f, X::BlockData; rtol=eps())
-    @test pairwise(f, X) isa LazyPDMat{T, <:Symmetric{T, <:AbstractBlockMatrix{T}}} where T
-    @test size(pairwise(f, X)) == (length(X), length(X))
-    @test pairwise(f, X) ==
-        BlockMatrix([pairwise(f, x, x′) for x in blocks(X), x′ in blocks(X)])
+function fd_isapprox(x_ad::AbstractArray, x_fd::AbstractArray, rtol, atol)
+    return all(fd_isapprox.(x_ad, x_fd, rtol, atol))
+end
+function fd_isapprox(x_ad::Real, x_fd::Real, rtol, atol)
+    return isapprox(x_ad, x_fd; rtol=rtol, atol=atol)
+end
+function fd_isapprox(x_ad::NamedTuple, x_fd, rtol, atol)
+    f = (x_ad, x_fd)->fd_isapprox(x_ad, x_fd, rtol, atol)
+    return all([f(getfield(x_ad, key), getfield(x_fd, key)) for key in keys(x_ad)])
+end
+function fd_isapprox(x_ad::Tuple, x_fd::Tuple, rtol, atol)
+    return all(map((x, x′)->fd_isapprox(x, x′, rtol, atol), x_ad, x_fd))
+end
+function fd_isapprox(x_ad::Dict, x_fd::Dict, rtol, atol)
+    return all([fd_isapprox(get(()->nothing, x_ad, key), x_fd[key], rtol, atol) for
+        key in keys(x_fd)])
 end
 
-"""
-    mean_function_tests(μ::MeanFunction, X::AbstractVector)
+function adjoint_test(
+    f, ȳ, x...;
+    rtol=_rtol,
+    atol=_atol,
+    fdm=FDM.Central(5, 1),
+    print_results=false,
+)
 
-Tests that any mean function `μ` should be able to pass.
-"""
-function mean_function_tests(μ::MeanFunction, X::AbstractVector)
-    __mean_function_tests(μ, X)
-    mean_function_tests(μ, BlockData([X]))
-    mean_function_tests(μ, BlockData([X, X]))
-end
-function mean_function_tests(μ::MeanFunction, X::BlockData)
-    __mean_function_tests(μ, X)
-end
-function __mean_function_tests(μ::MeanFunction, X::AbstractVector)
+    # Compute forwards-pass and j′vp.
+    y, back = Zygote.forward(f, x...)
+    adj_ad = back(ȳ)
+    adj_fd = j′vp(fdm, f, ȳ, x...)
 
-    # Test compulsory interface passes.
-    @test !(μ(X[1]) isa Nothing)
+    # If unary, pull out first thing from ad.
+    adj_ad = length(x) == 1 ? first(adj_ad) : adj_ad
 
-    @test hasmethod(eachindex, Tuple{typeof(μ)})
+    # Check that forwards-pass agrees with plain forwards-pass.
+    @test y ≈ f(x...)
 
-    # Test optional interface.
-    unary_map_tests(μ, X)
+    # Check that ad and fd adjoints (approximately) agree.
+    print_results && print_adjoints(adj_ad, adj_fd, rtol, atol)
+    @test fd_isapprox(adj_ad, adj_fd, rtol, atol)
 end
 
 """
-    cross_kernel_tests(k::CrossKernel, X::AbstractVector, X′::AbstractVector)
+    mean_function_tests(m::MeanFunction, X::AbstractVector)
 
-Tests that any kernel `k` should be able to pass. Requires that `length(X0) == length(X1)`
-and `length(X0) ≠ length(X2)`.
+Test _very_ basic consistency properties of the mean function `m`.
 """
-function cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
-    __cross_kernel_tests(k, X0, X1, X2)
-    cross_kernel_tests(k, BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2]))
+function mean_function_tests(m::MeanFunction, x::AbstractVector)
+    @test ew(m, x) isa AbstractVector
+    @test length(ew(m, x)) == length(x)
 end
-function cross_kernel_tests(k::CrossKernel, X0::BlockData, X1::BlockData, X2::BlockData)
-    __cross_kernel_tests(k, X0, X1, X2)
-end
-function __cross_kernel_tests(k::CrossKernel, X0::AV, X1::AV, X2::AV)
-    @assert length(X0) == length(X1)
-    @assert length(X0) ≠ length(X2)
 
-    @test hasmethod(eachindex, Tuple{typeof(k), Int})
+"""
+    cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV)
 
-    binary_map_tests(k, X0, X1)
-    pairwise_tests(k, X0, X2)
+Tests that any cross kernel `k` should be able to pass. Requires that
+`length(x0) == length(x1)` and `length(x0) ≠ length(x2)`.
+"""
+function cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
+    @assert length(x0) == length(x1)
+    @assert length(x0) ≠ length(x2)
+
+    # Check that elementwise basically works.
+    @test ew(k, x0, x1) isa AbstractVector
+    @test length(ew(k, x0, x1)) == length(x0)
+
+    # Check that pairwise basically works.
+    @test pw(k, x0, x2) isa AbstractMatrix
+    @test size(pw(k, x0, x2)) == (length(x0), length(x2))
+
+    # Check that elementwise is consistent with pairwise.
+    @test ew(k, x0, x1) ≈ diag(pw(k, x0, x1)) atol=atol
 end
 
 """
@@ -142,36 +132,233 @@ end
 Tests that any kernel `k` should be able to pass. Requires that `length(X0) == length(X1)`
 and `length(X0) ≠ length(X2)`.
 """
-function kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
-    __kernel_tests(k, X0, X1, X2, rtol)
-    kernel_tests(k, BlockData([X0, X0]), BlockData([X1, X1]), BlockData([X2]), rtol)
+function kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
+    @assert length(x0) == length(x1)
+    @assert length(x0) ≠ length(x2)
+
+    # Check that all of the binary methods work as expected.
+    cross_kernel_tests(k, x0, x1, x2)
+
+    # Check additional binary elementwise properties for kernels.
+    @test ew(k, x0, x1) ≈ ew(k, x1, x0)
+    @test pw(k, x0, x2) ≈ pw(k, x2, x0)' atol=atol
+
+    # Check that unary elementwise basically works.
+    @test ew(k, x0) isa AbstractVector
+    @test length(ew(k, x0)) == length(x0)
+
+    # Check that unary pairwise basically works.
+    @test pw(k, x0) isa AbstractMatrix
+    @test size(pw(k, x0)) == (length(x0), length(x0))
+    @test pw(k, x0) ≈ pw(k, x0)' atol=atol
+
+    # Check that unary elementwise is consistent with unary pairwise.
+    @test ew(k, x0) ≈ diag(pw(k, x0)) atol=atol
+
+    # Check that unary pairwise produces a positive definite matrix (approximately).
+    @test all(eigvals(Matrix(pw(k, x0))) .> -atol)
+
+    # Check that unary elementwise / pairwise are consistent with the binary versions.
+    @test ew(k, x0) ≈ ew(k, x0, x0) atol=atol
+    @test pw(k, x0) ≈ pw(k, x0, x0) atol=atol
 end
-function kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
-    __kernel_tests(k, X0, X1, X2, rtol)
+
+"""
+    stationary_kernel_tests(k::Kernel, x0::StepRangeLen, x1::StepRangeLen, x2::StepRangeLen)
+
+Additional tests for stationary kernels. Should be run in addition to `kernel_tests`.
+"""
+function stationary_kernel_tests(
+    k::Kernel,
+    x0::StepRangeLen,
+    x1::StepRangeLen,
+    x2::StepRangeLen,
+    x3::StepRangeLen,
+    x4::StepRangeLen,
+)
+    # Check that useful inputs have been provided.
+    @assert length(x0) == length(x1)
+    @assert length(x0) == length(x2)
+    @assert step(x0) == step(x1)
+    @assert step(x0) ≠ step(x2)
+
+    @assert length(x3) ≠ length(x0)
+    @assert step(x0) == step(x3)
+
+    @assert length(x4) ≠ length(x0)
+    @assert step(x4) ≠ length(x0)
+
+    # Unary elementwise.
+    @test ew(k, x0) == ew(k, collect(x0))
+
+    # Binary elementwise.
+    @test ew(k, x0, x1) == ew(k, collect(x0), collect(x1))
+    @test ew(k, x0, x2) == ew(k, collect(x0), collect(x2))
+
+    # Unary pairwise.
+    @test pw(k, x0) isa SymmetricToeplitz
+    @test pw(k, x0) == pw(k, collect(x0))
+
+    # Binary pairwise.
+    @test pw(k, x0, x3) isa Toeplitz
+    @test pw(k, x0, x3) == pw(k, collect(x0), collect(x3))
+    @test !isa(pw(k, x0, x4), Toeplitz)
+    @test pw(k, x0, x4) == pw(k, collect(x0), collect(x4))
 end
-function __kernel_tests(k::Kernel, X0::AV, X1::AV, X2::AV, rtol::Real=eps())
-    @assert length(X0) == length(X1)
-    @assert length(X0) ≠ length(X2)
 
-    @test hasmethod(eachindex, Tuple{typeof(k)})
+"""
+    differentiable_mean_function_tests(m::MeanFunction, ȳ::AV, x::AV)
 
-    # Generic tests.
-    cross_kernel_tests(k, X0, X1, X2)
-    binary_map_tests(k, X0)
-    pairwise_tests(k, X0; rtol=rtol)
+Ensure that the gradient w.r.t. the inputs of `MeanFunction` `m` are approximately correct.
+"""
+function differentiable_mean_function_tests(
+    m::MeanFunction,
+    ȳ::AbstractVector{<:Real},
+    x::AbstractVector{<:Real};
+    rtol=_rtol,
+    atol=_atol,
+)
+    # Run forward tests.
+    mean_function_tests(m, x)
 
-    # Kernels should be symmetric for same arguments.
-    @test pairwise(k, X0) isa LazyPDMat
-    @test pairwise(k, X0) ≈ pairwise(k, X0)'
+    # Check adjoint.
+    @assert length(ȳ) == length(x)
+    adjoint_test(x->ew(m, x), ȳ, x; rtol=rtol, atol=atol)
+end
+function differentiable_mean_function_tests(
+    m::MeanFunction,
+    ȳ::AbstractVector{<:Real},
+    x::ColsAreObs{<:Real};
+    rtol=_rtol,
+    atol=_atol,
+)
+    # Run forward tests.
+    mean_function_tests(m, x)
 
-    # k(x, x′) == k(x′, x)
-    @test map(k, X0, X1) ≈ map(k, X1, X0)
-    @test pairwise(k, X0, X2) ≈ pairwise(k, X2, X0)'
+    @assert length(ȳ) == length(x)
+    adjoint_test(X->ew(m, ColsAreObs(X)), ȳ, x.X; rtol=rtol, atol=atol)  
+end
+function differentiable_mean_function_tests(
+    rng::AbstractRNG,
+    m::MeanFunction,
+    x::AV;
+    rtol=_rtol,
+    atol=_atol,
+)
+    return differentiable_mean_function_tests(
+        m,
+        randn(rng, length(x)),
+        x;
+        rtol=rtol,
+        atol=atol,
+    )
+end
 
-    # Should be (approximately) positive definite.
-    @test all(eigvals(Matrix(pairwise(k, X0))) .> -1e-9)
+"""
+    differentiable_cross_kernel_tests(
+        k::CrossKernel,
+        ȳ::AbstractVector{<:Real},
+        Ȳ::AbstractMatrix{<:Real},
+        x0::AbstractVector,
+        x1::AbstractVector,
+        x2::AbstractVector,
+    )
 
-    # length should equal length of first side.
-    @test length(k) == size(k, 1)
-    @test size(k, 1) == size(k, 2)
+Ensure that the adjoint w.r.t. the inputs of a `CrossKernel` which is supposed to be
+differentiable are approximately correct.
+"""
+function differentiable_cross_kernel_tests(
+    k::CrossKernel,
+    ȳ::AbstractVector{<:Real},
+    Ȳ::AbstractMatrix{<:Real},
+    x0::AbstractVector,
+    x1::AbstractVector,
+    x2::AbstractVector;
+    rtol=_rtol,
+    atol=_atol,
+)
+    # Run forwards-pass cross kernel tests.
+    cross_kernel_tests(k, x0, x1, x2)
+
+    # Ensure that the inputs are as required.
+    @assert length(ȳ) == length(x0)
+    @assert length(ȳ) == length(x1)
+    @assert size(Ȳ) == (length(x0), length(x2))
+
+    # Binary elementwise.
+    adjoint_test((x, x′)->ew(k, x, x′), ȳ, x0, x1; rtol=rtol, atol=atol)
+
+    # Binary pairwise.
+    adjoint_test((x, x′)->pw(k, x, x′), Ȳ, x0, x2; rtol=rtol, atol=atol)
+end
+function differentiable_cross_kernel_tests(
+    rng::AbstractRNG,
+    k::CrossKernel,
+    x0::AV,
+    x1::AV,
+    x2::AV;
+    rtol=_rtol,
+    atol=_atol,
+)
+    ȳ, Ȳ = randn(rng, length(x0)), randn(rng, length(x0), length(x2))
+    return differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
+end
+
+"""
+    differentiable_kernel_tests(
+        k::CrossKernel,
+        ȳ::AbstractVector{<:Real},
+        Ȳ::AbstractMatrix{<:Real},
+        Ȳ_sq::AbstractMatrix{<:Real},
+        x0::AbstractVector,
+        x1::AbstractVector,
+        x2::AbstractVector,
+    )
+
+A superset of the tests provided by `differentiable_cross_kernel_tests` designed to test
+kernels (which provide unary, in addition to binary, methods for `elementwise` and
+`pairwise`.)
+"""
+function differentiable_kernel_tests(
+    k::CrossKernel,
+    ȳ::AbstractVector{<:Real},
+    Ȳ::AbstractMatrix{<:Real},
+    Ȳ_sq::AbstractMatrix{<:Real},
+    x0::AbstractVector,
+    x1::AbstractVector,
+    x2::AbstractVector;
+    rtol=_rtol,
+    atol=_atol,
+)
+    # Run the forwards-pass kernel tests.
+    kernel_tests(k, x0, x1, x2)
+
+    # Ensure that the inputs are as required.
+    @assert length(ȳ) == length(x0)
+    @assert length(ȳ) == length(x1)
+    @assert size(Ȳ) == (length(x0), length(x2))
+    @assert size(Ȳ_sq, 1) == size(Ȳ_sq, 2)
+    @assert size(Ȳ_sq, 1) == length(x0)
+
+    # Run the CrossKernel tests.
+    differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
+
+    # Unary elementwise tests.
+    adjoint_test(x->ew(k, x), ȳ, x0; rtol=rtol, atol=atol)
+
+    # Unary pairwise test.
+    adjoint_test(x->pw(k, x), Ȳ_sq, x0; rtol=rtol, atol=atol)
+end
+function differentiable_kernel_tests(
+    rng::AbstractRNG,
+    k::CrossKernel,
+    x0::AV,
+    x1::AV,
+    x2::AV;
+    rtol=_rtol,
+    atol=_atol,
+)
+    N, N′ = length(x0), length(x2)
+    ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
+    return differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, x0, x1, x2; rtol=rtol, atol=atol)
 end

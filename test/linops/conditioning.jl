@@ -1,149 +1,105 @@
-using Stheno: get_f, get_y, Observation, merge
-using BlockArrays
+using Stheno: get_f, get_y, Observation, merge, GPC
+using BlockArrays, LinearAlgebra
+
+function abs_rel_errs(x, y)
+    δ = abs.(vec(x) .- vec(y))
+    return [δ δ ./ vec(y)]
+end
 
 @testset "conditioning" begin
+    @testset "Observation" begin
+        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+        X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        y, y′ = randn(rng, N), randn(rng, N′)
+        f = GP(1, eq(), GPC())
 
-# Test Observation functionality.
-let
-    rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-    X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-    y, y′ = randn(rng, N), randn(rng, N′)
-    f = GP(ConstantMean(1), EQ(), GPC())
+        fX, fX′ = f(X), f(X′)
+        c1, c2 = fX←y, fX′←y′
+        @test Observation(fX, y) == c1
+        @test get_f(c1) === fX && get_f(c2) === fX′
+        @test get_y(c1) === y && get_y(c2) === y′
 
-    fX, fX′ = f(X), f(X′)
-    c1, c2 = fX←y, fX′←y′
-    @test Observation(fX, y) == c1
-    @test get_f(c1) === fX && get_f(c2) === fX′
-    @test get_y(c1) === y && get_y(c2) === y′
+        # c = merge((c1, c2))
+        # @test get_y(c) == BlockVector([y, y′])
+    end
+    @testset "condition once" begin
+        rng, N, N′, D = MersenneTwister(123456), 10, 3, 2
+        x = collect(range(-3.0, stop=3.0, length=N))
+        f = GP(1, eq(), GPC())
+        y = rand(rng, f(x))
 
-    c = merge((c1, c2))
-    @test get_y(c) == BlockVector([y, y′])
-    @test get_f(c).fs == [fX, fX′]
-end
+        # Test mechanics for finite conditioned process with single conditioning.
+        f′ = f | (f(x, 1e-9)←y)
+        @test maximum(abs.(rand(rng, f′(x, 1e-9)) - y)) < 1e-3
+        @test maximum(abs.(mean(f′(x)) - y)) < 1e-3
+        @test all(abs.(cov(f′(x))) .< 1e-6)
+    end
+    @testset "condition repeatedly" begin
+        rng, N, N′ = MersenneTwister(123456), 5, 7
+        xx′ = collect(range(-3.0, stop=3.0, length=N+N′))
+        idx = randperm(rng, length(xx′))[1:N]
+        idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
+        x, x′ = xx′[idx_1], xx′[idx_2]
 
-let
-    rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-    X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-    y = randn(rng, N)
+        f = GP(1, eq(), GPC())
+        y = rand(rng, f(xx′))
+        y1, y2 = y[idx_1], y[idx_2]
 
-    # Test mechanics for finite conditioned process with single conditioning.
-    f = GP(ConstantMean(1), EQ(), GPC())
-    f′ = f | (f(X) ← y)
-    @test length(f′) == Inf
-    @test length(rand(rng, f′(X))) == N
-    @test maximum(abs.(rand(rng, f′(X)) - y)) < 1e-3
-    @test maximum(abs.(mean_vec(f′(X)) - y)) < 1e-3
-    @test all(abs.(cov(f′(X))) .< 1e-6)
-end
+        # Construct posterior using one conditioning operation.
+        f′ = f | (f(xx′, 0.1) ← y)
 
-# Some tests for self-consistency in the posterior when singly and multiply conditioning.
-let
-    rng, N, N′, D = MersenneTwister(123456), 1, 2, 2
-    X_, X′_ = randn(rng, D, N), randn(rng, D, N′)
-    X, X′, Z = ColsAreObs(X_), ColsAreObs(X′_), ColsAreObs(randn(rng, D, N + N′))
-    μ, k, XX′ = ConstantMean(1.0), EQ(), ColsAreObs(hcat(X_, X′_))
-    f = GP(μ, k, GPC())
-    y = rand(rng, f(XX′))
+        # Construct posterior using two conditioning operations.
+        f′1 = f | (f(x, 0.1) ← y1)
+        f′2 = f′1 | (f′1(x′, 0.1) ← y2)
 
-    # Construct full posterior
-    f′X = f(X) | (f(XX′) ← y)
-    f′X′ = f(X′) | (f(XX′) ← y)
-    f′XX′ = f(XX′) | (f(XX′) ← y)
-    f′ = f | (f(XX′) ← y)
+        # Check that conditioning twice yields the same answer.
+        @test mean(f′(xx′)) ≈ mean(f′2(xx′))
+        @test cov(f′(xx′)) ≈ cov(f′2(xx′))
+        @test cov(f′(x), f′(x′)) ≈ cov(f′2(x), f′2(x′))
+    end
+    @testset "Standardised Tests" begin
+        rng, N, P, Q = MersenneTwister(123456), 11, 13, 7
+        x_obs, A_obs = collect(range(-5.0, 5.0; length=N)), randn(rng, N, N)
+        y_obs = rand(rng, GP(sin, eq(l=0.5), GPC())(x_obs, _to_psd(A_obs)))
+        standard_1D_tests(
+            MersenneTwister(123456),
+            Dict(:x=>x_obs, :y=>y_obs, :A=>A_obs),
+            θ->begin
+                f = GP(sin, eq(), GPC())
+                f′ = f | (f(θ[:x], _to_psd(θ[:A]))←θ[:y])
+                return f′, f′
+            end,
+            P, Q,
+        )
+    end
+    # @testset "BlockGP" begin
+    #     rng, N, N′, σ² = MersenneTwister(123456), 3, 7, 1.0
+    #     xx′ = collect(range(-3.0, stop=3.0, length=N+N′))
+    #     xp = collect(range(-4.0, stop=4.0, length=N+N′+10))
+    #     xp′ = collect(range(-4.0, stop=4.0, length=N+N′+11))
+    #     f = GP(sin, eq(), GPC())
+    #     yy′ = rand(rng, f(xx′, σ²))
 
-    # Check that each method is self-consistent.
-    Σ′XX′ = cov(f′XX′)
-    @test Σ′XX′ ≈ cov(f′(XX′))
-    @test Σ′XX′[1:N, 1:N] ≈ cov(f′X)[1:N, 1:N]
-    @test Σ′XX′[N+1:N+N′, N+1:N+N′] ≈ cov(f′X′)[1:N′, 1:N′]
-    # @test maximum(abs.(Σ′XX′[1:N, N+1:N+N′] - xcov(f′X, f′X′, 1:N, 1:N′))) < 1e-12
-    # @test maximum(abs.(Σ′XX′[N+1:N+N′, 1:N] - xcov(f′X′, f′X, 1:N′, 1:N))) < 1e-12
+    #     # Chop up into blocks.
+    #     idx = randperm(rng, length(xx′))[1:N]
+    #     idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
+    #     x, x′ = xx′[idx_1], xx′[idx_2]
+    #     y, y′ = yy′[idx_1], yy′[idx_2]
 
-    # Test that conditioning works for BlockGPs.
-    fb, Xb = BlockGP([f, f]), BlockData([X, X′])
-    Zb = BlockData([Z, Z])
-    fb′ = fb | (fb(Xb)←BlockArray(y, [N, N′]))
-    @test mean_vec(fb′(Zb)) ≈ mean_vec(f′(Zb))
-    @test maximum(abs.(cov(fb′(Zb)) - cov(f′(Zb)))) < 1e-6
+    #     f′ = f | (f(xx′, σ²)←yy′)
+    #     fb′ = f | (BlockGP([f, f])(BlockData([x, x′]), σ²)←vcat(y, y′))
+    #     fmc′ = f | (f(x, σ²)←y, f(x′, σ²)←y′)
 
-    f′b = f | (fb(Xb)←BlockArray(y, [N, N′]))
-    @test mean_vec(f′b(X)) ≈ mean_vec(f′X)
-    @test maximum(abs.(cov(f′b(Zb)) - cov(f′(Zb)))) < 1e-6
+    #     @test mean(f′(xp)) ≈ mean(fb′(xp))
+    #     @test mean(f′(xp)) ≈ mean(fmc′(xp))
 
-    # Test sugar for multiple-conditioning.
-    @test mean_vec(fb′(Zb)) ≈ mean_vec((f | (f(X)←y[1:N], f(X′)←y[N+1:end]))(Zb))
-    @test maximum(abs.(cov(fb′(Zb)) - cov((f | (f(X)←y[1:N], f(X′)←y[N+1:end]))(Zb)))) < 1e-6
+    #     @test cov(f′(xp)) ≈ cov(fb′(xp))
+    #     @test cov(f′(xp)) ≈ cov(fmc′(xp))
 
-    yX = rand(rng, f(X))
-    f′X, f′X′ = (f(X), f(X′)) | (f(X)←yX)
-    f′X1, f′X′1 = f(X) | (f(X)←yX), f(X′) | (f(X)←yX)
-    @test mean_vec(f′X) ≈ mean_vec(f′X1)
-    @test mean_vec(f′X′) ≈ mean_vec(f′X′1)
-    @test maximum(abs.(cov(f′X) - cov(f′X1))) < 1e-6
-    @test maximum(abs.(cov(f′X′) - cov(f′X′1))) < 1e-6
+    #     @test cov(f′(xp), f′(xp)) ≈ cov(fb′(xp), fb′(xp))
+    #     @test cov(f′(xp), f′(xp)) ≈ cov(fmc′(xp), fmc′(xp))
 
-    yX, yX′ = y[1:N], y[N+1:end]
-    f′X, f′X′ = (f(X), f(X′)) | (f(X)←yX, f(X′)←yX′)
-    f′X1, f′X′1 = f(X) | (f(X)←yX, f(X′)←yX′), f(X′) | (f(X)←yX, f(X′)←yX′)
-    @test mean_vec(f′X) ≈ mean_vec(f′X1)
-    @test mean_vec(f′X′) ≈ mean_vec(f′X′1)
-    @test maximum(abs.(cov(f′X) - cov(f′X1))) < 1e-6
-    @test maximum(abs.(cov(f′X′) - cov(f′X′1))) < 1e-6
-end
-
-# Test Titsias implementation by checking that it (approximately) recovers exact inference
-# when M = N and Z = X.
-let
-    rng, N, N′, D, σ² = MersenneTwister(123456), 2, 3, 5, 1e-1
-    X_, X′_ = randn(rng, D, N), randn(rng, D, N′)
-    X, X′, Z = ColsAreObs(X_), ColsAreObs(X′_), ColsAreObs(randn(rng, D, N + N′))
-    μ, k, XX′ = ConstantMean(1.0), EQ(), ColsAreObs(hcat(X_, X′_))
-
-    # Construct toy problem.
-    gpc = GPC()
-    f = GP(μ, k, gpc)
-    y = f + GP(Noise(σ²), gpc)
-    ŷ = rand(rng, y(XX′))
-
-    # Compute exact posterior.
-    f′XX′ = f(XX′) | (y(XX′)←ŷ)
-
-    # Compute approximate posterior suff. stats.
-    μᵤ, Σᵤᵤ = Stheno.optimal_q(f(XX′), ŷ, f(XX′), sqrt(σ²))
-
-    # Check that exact and approx. posteriors are close in this case.
-    @test isapprox(μᵤ, mean_vec(f′XX′); rtol=1e-4)
-    @test isapprox(Σᵤᵤ, cov(f′XX′); rtol=1e-4)
-
-    # Compute conditioner and exact posterior compute at test points.
-    conditioner = Stheno.Titsias(f(XX′), μᵤ, Σᵤᵤ)
-    f′Z = f(Z) | (y(XX′)←ŷ)
-    f′Z_approx = f(Z) | conditioner
-
-    # Check that exact and approximate posteriors match up.
-    @test isapprox(mean_vec(f′Z), mean_vec(f′Z_approx); rtol=1e-4)
-    @test isapprox(cov(f′Z), cov(f′Z_approx); rtol=1e-4)
-
-
-    # Check that Titsias with BlockGP works the same as Titsias with regular GP.
-    ŷX, ŷX′ = ŷ[1:N], ŷ[N+1:end]
-
-    fb, ŷb = BlockGP([f(X), f(X′)]), BlockVector([ŷX, ŷX′])
-    μb, Σb = Stheno.optimal_q(fb, ŷb, fb, sqrt(σ²))
-
-    @test μb isa BlockVector
-    @test Σb isa LazyPDMat
-    @test Stheno.unbox(Σb) isa Symmetric
-    @test Stheno.unbox(Stheno.unbox(Σb)) isa AbstractBlockMatrix
-    @test μb ≈ μᵤ
-    @test Σb ≈ Σᵤᵤ
-
-    # Test that conditioning is indifferent to choice of Blocks.
-    conditioner_blocked = Stheno.Titsias(fb, μb, Σb)
-    f′Zb = f(BlockData([Z])) | conditioner_blocked
-
-    @test isapprox(mean_vec(f′Z), mean_vec(f′Zb); rtol=1e-4)
-    @test isapprox(cov(f′Z), cov(f′Zb); rtol=1e-4)
-end
-
+    #     @test cov(f′(xp), f′(xp′)) ≈ cov(fb′(xp), fb′(xp′))
+    #     @test cov(f′(xp), f′(xp′)) ≈ cov(fmc′(xp), fmc′(xp′))
+    # end
 end

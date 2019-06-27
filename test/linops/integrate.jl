@@ -4,7 +4,7 @@
 #     let f = GP(ZeroMean(), EQ(), GPC())
 #         v = ∫(StandardNormal(), f)
 #         @test mean(v)(1) == 0.0
-#         @test mean_vector(v) == [0.0]
+#         @test meantor(v) == [0.0]
 #         @test kernel(v)(1, 1) == 1 / sqrt(3)
 #         @test kernel(v, f)(1, 5.0) == kernel(f, v)(5.0, 1)
 #         @test kernel(v, f)(1, 0.0) == 1 / sqrt(2)

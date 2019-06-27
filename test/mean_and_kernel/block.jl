@@ -1,105 +1,132 @@
-using Stheno: BlockMean, BlockCrossKernel, BlockKernel, ConstantMean, ZeroMean
-using Stheno: FiniteMean, FiniteKernel, FiniteCrossKernel, map, pairwise
-using FillArrays
+using Stheno: ZeroMean, OneMean, ZeroKernel, BlockMean, BlockKernel, BlockData,
+    BlockCrossKernel, map, pw, EQ, CustomMean
 
 @testset "block" begin
-
-    # Test BlockMean.
-    let
+    @testset "BlockMean" begin
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x1, x2 = randn(rng, N), randn(rng, N′)
-        X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        μ1, μ2 = ConstantMean(1.0), ZeroMean{Float64}()
-        μ, Dx, DX = BlockMean([μ1, μ2]), BlockData([x1, x2]), BlockData([X1, X2])
+        m1, m2 = ZeroMean(), CustomMean(sin)
+        m = BlockMean([m1, m2])
 
-        @test μ == BlockMean(μ1, μ2)
-        @test length(μ) == Inf
-        @test map(μ, DX) == vcat(map(μ1, X1), map(μ2, X2))
-        @test map(μ, Dx) == vcat(map(μ1, x1), map(μ2, x2))
+        # Unary elementwise.
+        @test ew(m, BlockData([x1, x2])) == vcat(ew(m1, x1), ew(m2, x2))
+        adjoint_test(
+            (x1, x2)->ew(BlockMean([m1, m2]), BlockData([x1, x2])),
+            randn(rng, N + N′),
+            x1, x2,
+        )
 
-        # mean_function_tests(μ, BlockData([X1, X2]))
-        # mean_function_tests(μ, BlockData([x1, x2]))
-        # unary_map_tests(μ, BlockData([X1, X2]))
-
-        # Tests for finite case.
-        μ1f, μ2f = FiniteMean(μ1, X1), FiniteMean(μ2, X2)
-        cat_μ = BlockMean([μ1f, μ2f])
-        @test eachindex(cat_μ) == BlockData([eachindex(μ1f), eachindex(μ2f)])
-        @test AbstractVector(cat_μ) ==
-            BlockVector([AbstractVector(μ1f), AbstractVector(μ2f)])
+        # Consistency tests.
+        mean_function_tests(m, BlockData([x1, x2]))
+        differentiable_mean_function_tests(m, randn(rng, N + N′), BlockData([x1, x2]))
     end
+    @testset "BlockCrossKernel" begin
+        @testset "block-block" begin
+            rng, N1, N2, N1′, N2′, D = MersenneTwister(123456), 5, 6, 2, 7, 8
+            X0, X0′ = randn(rng, N1), randn(rng, N2)
+            X1, X1′ = randn(rng, N1′), randn(rng, N2′)
+            X2, X2′ = randn(rng, N1), randn(rng, N2)
+            k11, k12, k21, k22 =  EQ(), ZeroKernel(), ZeroKernel(), EQ()
+            k = BlockCrossKernel([k11 k12; k21 k22])
 
-    # Test BlockCrossKernel.
-    let
-        rng, N1, N2, N1′, N2′, D = MersenneTwister(123456), 5, 6, 2, 7, 8
-        X0, X0′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
-        X1, X1′ = ColsAreObs(randn(rng, D, N1′)), ColsAreObs(randn(rng, D, N2′))
-        X2, X2′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
-        k11, k12, k21, k22 =  EQ(), ZeroKernel{Float64}(), ZeroKernel{Float64}(), EQ()
-        k = BlockCrossKernel([k11 k12; k21 k22])
+            D, D′ = BlockData([X0, X0′]), BlockData([X2, X2′])
 
-        @test k == k
+            # Binary elementwise.
+            @test ew(k, D, D′) == vcat(ew(k11, X0, X2), ew(k22, X0′, X2′))
+            adjoint_test(
+                (x0, x0′, x2, x2′)->ew(k, BlockData([x0, x0′]), BlockData([x2, x2′])),
+                randn(rng, N1 + N2),
+                X0, X0′, X2, X2′,
+            )
 
-        @test size(k) == (Inf, Inf)
-        @test size(k, 1) == Inf
-        @test size(k, 2) == Inf
+            # Binary pairwise.
+            D, D′ = BlockData([X0, X1]), BlockData([X0′, X1′])
+            row1 = hcat(pw(k11, X0, X0′), pw(k12, X0, X1′))
+            row2 = hcat(pw(k21, X1, X0′), pw(k22, X1, X1′))
+            K = vcat(row1, row2)
+            @test pw(k, D, D′) == K
+            adjoint_test(
+                (x0, x0′, x1, x1′)->pw(k, BlockData([x0, x1]), BlockData([x0′, x1′])),
+                randn(rng, N1 + N1′, N2 + N2′),
+                X0, X0′, X1, X1′,
+            )
 
-        row1 = hcat(pairwise(k11, X0, X0′), pairwise(k12, X0, X1′))
-        row2 = hcat(pairwise(k21, X1, X0′), pairwise(k22, X1, X1′))
-        @test pairwise(k, BlockData([X0, X1]), BlockData([X0′, X1′])) == vcat(row1, row2)
+            # Consistency tests.
+            ȳ, Ȳ = randn(rng, N1 + N2), randn(rng, N1 + N2, N1′ + N2′)
+            D0, D1, D2 = BlockData([X0, X0′]), BlockData([X2, X2′]), BlockData([X1, X1′])
+            differentiable_cross_kernel_tests(k, ȳ, Ȳ, D0, D1, D2)
+        end
+        @testset "block-single" begin
+            rng, N1, N2, N1′ = MersenneTwister(123456), 3, 5, 7
+            x0, x0′ = randn(rng, N1), randn(rng, N2)
+            x1, x1′ = randn(rng, N1), randn(rng, N2)
+            x2 = randn(rng, N1′)
 
-        # cross_kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
+            k11, k21 = EQ(), EQ()
+            k = BlockCrossKernel([k11; k21])
 
-        # Tests for finite case.
-        k11f, k12f = FiniteCrossKernel(k11, X1, X1), FiniteCrossKernel(k12, X1, X0)
-        k21f, k22f = FiniteCrossKernel(k21, X0, X1), FiniteCrossKernel(k22, X0, X0)
-        kf = BlockCrossKernel([k11f k12f; k21f k22f])
-        @test eachindex(kf, 1) == BlockData([eachindex(k11f, 1), eachindex(k22f, 1)])
-        @test eachindex(kf, 2) == BlockData([eachindex(k11f, 2), eachindex(k22f, 2)])
-        @test AbstractMatrix(kf) isa BlockMatrix
-        @test AbstractMatrix(kf) ==
-            BlockMatrix(reshape(AbstractMatrix.([k11f, k21f, k12f, k22f]), 2, 2))
+            # Test binary pairwise for block and non-block rhs argument.
+            @test pw(k, BlockData([x0, x0′]), BlockData([x2])) ==
+                pw(k, BlockData([x0, x0′]), x2)
+            adjoint_test(
+                (x0, x0′, x2)->pw(k, BlockData([x0, x0′]), x2),
+                randn(rng, N1 + N2, N1′),
+                x0, x0′, x2,
+            )
+        end
+        @testset "single-block" begin
+            rng, N1, N2, N1′, N2′ = MersenneTwister(123456), 3, 5, 7, 9
+            x0 = randn(rng, N1)
+            x1, x1′ = randn(rng, N1), randn(rng, N2)
+            x2, x2′ = randn(rng, N1′), randn(rng, N2′)
+
+            k11, k12 = EQ(), EQ()
+            k = BlockCrossKernel(reshape([k11 k12], 1, :))
+
+            # Test binary pairwise for block and non-block lhs argument.
+            @test pw(k, BlockData([x0]), BlockData([x2, x2′])) ==
+                pw(k, x0, BlockData([x2, x2′]))
+            adjoint_test(
+                (x0, x2, x2′)->pw(k, x0, BlockData([x2, x2′])),
+                randn(rng, N1, N1′ + N2′),
+                x0, x2, x2′,
+            )
+        end
     end
-
-    # Test BlockKernel.
-    let
+    @testset "BlockKernel" begin
         rng, N1, N2, N1′, N2′, D = MersenneTwister(123456), 5, 6, 3, 4, 2
-        X0, X0′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
-        X1, X1′ = ColsAreObs(randn(rng, D, N1′)), ColsAreObs(randn(rng, D, N2′))
-        X2, X2′ = ColsAreObs(randn(rng, D, N1)), ColsAreObs(randn(rng, D, N2))
+        x0, x0′ = randn(rng, N1), randn(rng, N2)
+        x1, x1′ = randn(rng, N1′), randn(rng, N2′)
+        x2, x2′ = randn(rng, N1), randn(rng, N2)
+        D0, D1, D2 = BlockData([x0, x0′]), BlockData([x1, x1′]), BlockData([x2, x2′])
 
         # Construct BlockKernel.
-        k11, k22, k12 = EQ(), EQ(), ZeroKernel{Float64}()
-        ks_off = Matrix{Stheno.CrossKernel}(undef, 2, 2)
-        ks_off[1, 2] = k12
-        k = BlockKernel([k11, k22], ks_off)
+        k11, k12, k21, k22 =  EQ(), ZeroKernel(), ZeroKernel(), EQ()
+        k = BlockKernel([k11 k12; k21 k22])
 
-        @test size(k) == (Inf, Inf)
-        @test size(k, 1) == Inf
-        @test size(k, 2) == Inf
+        # Binary elementwise.
+        @test ew(k, D0, D2) == vcat(ew(k11, x0, x2), ew(k22, x0′, x2′))
 
-        row1 = hcat(pairwise(k11, X0), pairwise(k12, X0, X0′))
-        row2 = hcat(Zeros{Float64}(N2, N1), pairwise(k22, X0′))
-        @test pairwise(k, BlockData([X0, X0′])) == vcat(row1, row2)
+        # Binary pairwise.
+        D, D′ = BlockData([x0, x1]), BlockData([x0′, x1′])
+        K = vcat(
+            hcat(pw(k11, x0, x0′), pw(k12, x0, x1′)),
+            hcat(pw(k21, x1, x0′), pw(k22, x1, x1′)),
+        )
+        @test pw(k, D, D′) == K
 
-        # Compute xcov for BlockKernel with infinite kernels.
-        manual = vcat(hcat(pairwise(k11, X1, X1′), pairwise(k12, X1, X2′)),
-                      hcat(pairwise(k12, X2, X1′), pairwise(k22, X2, X2′)),)
-        @test pairwise(k, BlockData([X1, X2]), BlockData([X1′, X2′])) == manual
+        # Unary elementwise.
+        @test ew(k, D0) == vcat(ew(k11, x0), ew(k22, x0′))
 
-        # kernel_tests(k, [X0, X0′], [X2, X2′], [X1, X1′])
+        # Unary pairwise.
+        row1 = hcat(pw(k11, x0), pw(k12, x0, x0′))
+        row2 = hcat(zeros(N2, N1), pw(k22, x0′))
+        @test pw(k, D0) == vcat(row1, row2)
 
-        # Tests for finite case.
-        k11f, k22f = FiniteKernel(k11, X0), FiniteKernel(k22, X1)
-        k12f = FiniteCrossKernel(k12, X0, X1)
-        ks_off_f = Matrix{Stheno.CrossKernel}(undef, 2, 2)
-        ks_off_f[1, 2] = k12f
-        k = BlockKernel([k11f, k22f], ks_off_f)
-
-        @test eachindex(k) == BlockData([eachindex(k11f), eachindex(k22f)])
-        Σ11, Σ21 = AbstractMatrix(k11f), AbstractMatrix(k12f)'
-        Σ12, Σ22 = AbstractMatrix(k12f), AbstractMatrix(k22f)
-        @test AbstractMatrix(k) ==
-            BlockMatrix(reshape([Σ11, Σ21, Σ12, Σ22], 2, 2))
+        # Consistency tests.
+        ȳ = randn(rng, N1 + N2)
+        Ȳ = randn(rng, N1 + N2, N1′ + N2′)
+        Ȳ_sq = randn(rng, N1 + N2, N1 + N2)
+        differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, D0, D2, D1)
     end
 end

@@ -1,10 +1,7 @@
-import Base: size, eachindex, getindex, view, ==, eltype, convert
+import Base: size, eachindex, getindex, view, ==, eltype, convert, zero, getproperty
 import Distances: pairwise
-export ColsAreObs, BlockData
-
-
-
-################################## Basic matrix data type ##################################
+import Zygote: literal_getproperty, accum
+export ColsAreObs
 
 """
     ColsAreObs{T, TX<:AbstractMatrix}
@@ -16,13 +13,29 @@ struct ColsAreObs{T, TX<:AbstractMatrix{T}} <: AbstractVector{Vector{T}}
     ColsAreObs(X::TX) where {T, TX<:AbstractMatrix{T}} = new{T, TX}(X)
 end
 
-@inline ==(D1::ColsAreObs, D2::ColsAreObs) = D1.X == D2.X
-@inline size(D::ColsAreObs) = (size(D.X, 2),)
-@inline getindex(D::ColsAreObs, n::Int) = D.X[:, n]
-@inline getindex(D::ColsAreObs, n) = ColsAreObs(D.X[:, n])
-@inline view(D::ColsAreObs, n::Int) = view(D.X, :, n)
-@inline view(D::ColsAreObs, n) = ColsAreObs(view(D.X, :, n))
-@inline eltype(D::ColsAreObs{T}) where T = Vector{T}
+@adjoint function ColsAreObs(X::AbstractMatrix)
+    back(Δ::NamedTuple) = (Δ.X,)
+    back(Δ::AbstractMatrix) = (Δ,)
+    function back(Δ::AbstractVector{<:AbstractVector{<:Real}})
+        println("argh in slow method!")
+        X̄ = zero(X)
+        for n in eachindex(Δ)
+            X̄[:, n] .+= Δ[n]
+        end
+        return (X̄,)
+    end
+    return ColsAreObs(X), back
+end
+
+==(D1::ColsAreObs, D2::ColsAreObs) = D1.X == D2.X
+size(D::ColsAreObs) = (size(D.X, 2),)
+getindex(D::ColsAreObs, n::Int) = D.X[:, n]
+getindex(D::ColsAreObs, n::CartesianIndex{1}) = getindex(D, n[1])
+getindex(D::ColsAreObs, n) = ColsAreObs(D.X[:, n])
+view(D::ColsAreObs, n::Int) = view(D.X, :, n)
+view(D::ColsAreObs, n) = ColsAreObs(view(D.X, :, n))
+eltype(D::ColsAreObs{T}) where T = Vector{T}
+zero(D::ColsAreObs) = ColsAreObs(zero(D.X))
 
 
 
@@ -36,12 +49,13 @@ A strictly ordered collection of `AbstractVector`s, representing a ragged array 
 struct BlockData{T, V<:AbstractVector{<:T}} <: AbstractVector{T}
     X::Vector{V}
 end
-BlockData(X::Vector{V}) where {T, V<:AbstractVector{T}} = BlockData{T, V}(X)
+# @adjoint BlockData()
+# BlockData(X::Vector{V}) where {T, V<:AbstractVector{T}} = BlockData{T, V}(X)
 BlockData(X::Vector{AbstractVector}) = BlockData{Any, AbstractVector}(X)
-@inline ==(D1::BlockData, D2::BlockData) = D1.X == D2.X
-@inline size(D::BlockData) = (sum(length, D.X),)
+==(D1::BlockData, D2::BlockData) = D1.X == D2.X
+size(D::BlockData) = (sum(length, D.X),)
 
-@inline blocks(X::BlockData) = X.X
+blocks(X::BlockData) = X.X
 function getindex(D::BlockData, n::Int)
     b = 1
     while n > length(D.X[b])
@@ -54,13 +68,11 @@ function getindex(D::BlockData, n::BlockVector{<:Integer})
     @assert eachindex(D) == n
     return D
 end
-@inline view(D::BlockData, b::Int, n) = view(D.X[b], n)
-@inline eltype(D::BlockData{T}) where T = T
+view(D::BlockData, b::Int, n) = view(D.X[b], n)
+eltype(D::BlockData{T}) where T = T
 function eachindex(D::BlockData)
     lengths = map(length, blocks(D))
-    # return 1:sum(length, blocks(D))
     return BlockArray(1:sum(lengths), lengths)
-    # return BlockData(lengths)
 end
 
 convert(::Type{BlockData}, x::BlockData) = x
