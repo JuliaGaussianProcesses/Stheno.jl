@@ -15,45 +15,53 @@ First, a note for statistics / ML people who aren't too familiar with Julia: the
 
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
-using Stheno, Random
+using Stheno, Random, Statistics
 using Stheno: @model
 
-# Explicitly set pseudo-randomness for reproducibility.
-rng = MersenneTwister(123456)
-
-# Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 @model function model()
-    f₁ = GP(randn(rng), eq())
+    f₁ = GP(randn(), eq())
     f₂ = GP(eq())
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
 end
-f₁, f₂, f₃ = model()
+
+# Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
+# at which to measure `f` using `y2`.
+rng, N₁, N₃ = MersenneTwister(123546), 10, 11;
+X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
+f₁, f₂, f₃ = model();
 
 # Generate some toy observations of `f₁` and `f₃`.
-X₁, X₃ = sort(rand(rng, 10) * 10), sort(rand(rng, 11) * 10)
-ŷ₁, ŷ₃ = rand(rng, [f₁(X₁), f₃(X₃)])
+ŷ₁, ŷ₃ = rand(rng, [f₁(X₁), f₃(X₃)]);
 
 # Compute the posterior processes.
-(f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁)←ŷ₁, f₃(X₃)←ŷ₃)
+(f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁)←ŷ₁, f₃(X₃)←ŷ₃);
 
-# Sample jointly from the posterior processes and compute posterior marginals.
-Xp = range(-2.5, stop=12.5, length=500)
-f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp, 1e-9), f₂′(Xp, 1e-9), f₃′(Xp, 1e-9)], 25)
+# Define some plotting stuff.
+Np, S = 500, 25;
+Xp = range(-2.5, stop=12.5, length=Np);
 
-μf₁′, σf₁′ = marginals(f₁′(Xp))
-μf₂′, σf₂′ = marginals(f₂′(Xp))
-μf₃′, σf₃′ = marginals(f₃′(Xp))
+# Sample jointly from the posterior over each process.
+f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp, 1e-9), f₂′(Xp, 1e-9), f₃′(Xp, 1e-9)], S);
 
+# Compute posterior marginal distributions.
+ms1 = marginals(f₁′(Xp));
+ms2 = marginals(f₂′(Xp));
+ms3 = marginals(f₃′(Xp));
+
+# Pull out the posterior marginal means and standard deviations.
+μf₁′, σf₁′ = mean.(ms1), std.(ms1);
+μf₂′, σf₂′ = mean.(ms2), std.(ms2);
+μf₃′, σf₃′ = mean.(ms3), std.(ms3);
 ```
-![Alternate Text](examples/toy/process_decomposition.png)
+[Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.jl)
 
 In the above figure, we have visualised the posterior distribution of all of the processes. Bold lines are posterior means, and shaded areas are three posterior standard deviations from these means. Thin lines are samples from the posterior processes.
 
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
 ```julia
-using Stheno, Random
+using Stheno, Random, Statistics
 using Stheno: @model
 
 # Explicitly set pseudo-randomness for reproducibility.
@@ -61,36 +69,43 @@ rng = MersenneTwister(123456)
 
 @model function model()
 
-    # A smooth latent function.
+    # Define a smooth latent process that we wish to infer.
     f = GP(eq())
 
-    # Two noisy processes.
+    # Define the two noise processes described.
     noise1 = GP(x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)), noise(α=1e-2))
     noise2 = GP(3.5, noise(α=1e-1))
 
-    # Noise-corrupted versions of `f`.
-    y₁ = f + noise1
-    y₂ = f + noise2
+    # Define the processes that we get to observe.
+    y1 = f + noise1
+    y2 = f + noise2
 
-    return f, noise1, noise2, y₁, y₂
+    return f, noise1, noise2, y1, y2
 end
-f, noise1, noise2, y₁, y₂ = model()
+f, noise₁, noise₂, y₁, y₂ = model();
 
-# Generate some toy observations of `y₁` and `y₂`.
-X₁, X₂ = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10)
-ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)])
+# Generate some toy observations of `y1` and `y2`.
+X₁, X₂ = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10);
+ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)]);
 
 # Compute the posterior processes.
-(f′, y₁′, y₂′) = (f, y₁, y₂) | (y₁(X₁)←ŷ₁, y₂(X₂)←ŷ₂)
+(f′, y₁′, y₂′) = (f, y₁, y₂) | (y₁(X₁)←ŷ₁, y₂(X₂)←ŷ₂);
 
 # Sample jointly from the posterior processes and compute posterior marginals.
-Xp = range(-2.5, stop=12.5, length=500)
-f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp, 1e-9), y₁′(Xp, 1e-9), y₂′(Xp, 1e-9)], 100)
-μf′, σf′ = marginals(f′(Xp))
-μy₁′, σy₁′ = marginals(y₁′(Xp))
-μy₂′, σy₂′ = marginals(y₂′(Xp))
+Xp = range(-2.5, stop=12.5, length=500);
+f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp, 1e-9), y₁′(Xp, 1e-9), y₂′(Xp, 1e-9)], 100);
+
+# Compute posterior marginal distributions.
+ms1 = marginals(f′(Xp));
+ms2 = marginals(y₁′(Xp));
+ms3 = marginals(y₂′(Xp));
+
+# Pull out the posterior marginal means and standard deviations.
+μf′, σf′ = mean.(ms1), std.(ms1);
+μy₁′, σy₁′ = mean.(ms2), std.(ms2);
+μy₂′, σy₂′ = mean.(ms3), std.(ms3);
 ```
-![Alternate Text](examples/toy/simple_sensor_fusion.png)
+[Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.jl)
 
 As before, we visualise the posterior distribution through its marginal statistics and joint samples. Note that the posterior samples over the unobserved process are (unsurprisingly) smooth, whereas the posterior samples over the noisy processes still look uncorrelated and noise-like.
 
