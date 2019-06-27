@@ -30,11 +30,11 @@ Stretch all inputs by amount `l`.
 stretch(f::GP, l::Real) = f ∘ Stretch(l)
 
 """
-    stretch(f::GP, A::AbstractMatrix)
+    stretch(f::GP, A::AbstractVector)
 
 Stretch each input to `f` by the amount specified in `a`. 
 """
-stretch(f::GP, a::AbstractMatrix) = stretch(f, Diagonal(a))
+stretch(f::GP, a::AbstractVector) = stretch(f, Diagonal(a))
 
 """
     stretch(f::GP, A::AbstractMatrix)
