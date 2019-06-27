@@ -1,9 +1,9 @@
 using LinearAlgebra
-import LinearAlgebra: AbstractMatrix
-import Base: +, *, ==, size, eachindex, print
-import Distances: pairwise
-export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, WienerVelocity,
-    Exponential, ConstantKernel, isstationary, ZeroKernel
+
+import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
+import Base: +, *, ==, size, eachindex, print, eltype, zero
+import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
+import Base.Broadcast: broadcast_shape
 
 
 ############################# Define CrossKernels and Kernels ##############################
@@ -11,113 +11,28 @@ export CrossKernel, Kernel, cov, xcov, EQ, RQ, Linear, Poly, Noise, Wiener, Wien
 abstract type CrossKernel end
 abstract type Kernel <: CrossKernel end
 
-@inline isstationary(::Type{<:CrossKernel}) = false
-@inline isstationary(x::CrossKernel) = isstationary(typeof(x))
-
-# Some fallback definitions.
-size(::CrossKernel, N::Int) = (N ∈ (1, 2)) ? Inf : 1
-size(k::CrossKernel) = (size(k, 1), size(k, 2))
-
-eachindex(k::Kernel, N::Int) = eachindex(k)
-size(k::Kernel) = (length(k), length(k))
-size(k::Kernel, dim::Int) = size(k)[dim]
-length(k::Kernel) = Inf
-
-"""
-    AbstractMatrix(k::Kernel)
-
-Convert `k` into an `AbstractMatrix`, if such a representation exists.
-"""
-function AbstractMatrix(k::Kernel)
-    @assert isfinite(size(k, 1))
-    return pairwise(k, eachindex(k, 1))
-end
-
-"""
-    AbstractMatrix(k::CrossKernel)
-
-Convert `k` into an `AbstractMatrix`, if such a representation exists.
-"""
-function AbstractMatrix(k::CrossKernel)
-    @assert isfinite(size(k, 1))
-    @assert isfinite(size(k, 2))
-    return pairwise(k, eachindex(k, 1), eachindex(k, 2))
-end
 
 
+################################ Util. for Toeplitz matrices ###############################
 
-###################### `map` and `pairwise` fallback implementations #######################
-
-# Unary map / _map
-_map_fallback(k::CrossKernel, X::AV) = [k(x, x) for x in X]
-_map_fallback(k::Kernel, X::AV) = [k(x) for x in X]
-_map(k::CrossKernel, X::AV) = _map_fallback(k, X)
-map(k::CrossKernel, X::BlockData) = BlockVector([map(k, x) for x in blocks(X)])
-map(k::CrossKernel, X::AV) = _map(k, X)
-
-
-# Binary map / _map
-_map_fallback(k::CrossKernel, X::AV, X′::AV) = [k(x, x′) for (x, x′) in zip(X, X′)]
-_map(k::CrossKernel, X::AV, X′::AV) = _map_fallback(k, X, X′)
-function map(k::CrossKernel, X::BlockData, X′::BlockData)
-    return BlockVector([map(k, x, x′) for (x, x′) in zip(blocks(X), blocks(X′))])
-end
-map(k::CrossKernel, X::AV, X′::AV) = _map(k, X, X′)
-
-
-# Unary pairwise / _pairwise
-_pairwise(k::Kernel, X::AV) = _pairwise(k, X, X)
-pairwise(k::Kernel, X::AV) = LazyPDMat(_pairwise(k, X))
-function pairwise(k::Kernel, X::BlockData)
-    Σ = BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X)])
-    return LazyPDMat(Symmetric(Σ))
-end
-pairwise(k::CrossKernel, X::BlockData) = pairwise(k, X, X)
-pairwise(k::CrossKernel, X::AV) = _pairwise(k, X)
-
-
-# Binary pairwise / _pairwise
-function _pairwise_fallback(k::CrossKernel, X::AV, X′::AV)
-    return [k(X[p], X′[q]) for p in eachindex(X), q in eachindex(X′)]
-end
-_pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise_fallback(k, X, X′)
-_pairwise(k::CrossKernel, X::AV) = _pairwise(k, X, X)
-
-pairwise(k::CrossKernel, X::AV, X′::AV) = _pairwise(k, X, X′)
-function pairwise(k::CrossKernel, X::BlockData, X′::BlockData)
-    return BlockMatrix([pairwise(k, x, x′) for x in blocks(X), x′ in blocks(X′)])
-end
-pairwise(k::CrossKernel, X::BlockData, X′::AV) = pairwise(k, X, BlockData([X′]))
-pairwise(k::CrossKernel, X::AV, X′::BlockData) = pairwise(k, BlockData([X]), X′)
-
-
-# Sugar for `eachindex` things.
-for op in [:map, :pairwise]
-    @eval begin
-        $op(k::CrossKernel, ::Colon) = $op(k, eachindex(k))
-        $op(k::CrossKernel, ::Colon, ::Colon) = $op(k, :)
-        $op(k::CrossKernel, ::Colon, X′::AV) = $op(k, eachindex(k, 1), X′)
-        $op(k::CrossKernel, X::AV, ::Colon) = $op(k, X, eachindex(k, 2))
-    end
-end
-
-
-# Optimisation for Toeplitz covariance matrices.
-function pairwise(k::Kernel, x::StepRangeLen{<:Real})
-    if isstationary(k)
-        return LazyPDMat(SymmetricToeplitz(map(k, x, Fill(x[1], length(x)))))
+function toep_pw(k::CrossKernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
+    if x.step == x′.step
+        return Toeplitz(ew(k, x, fill(x′[1], length(x))), ew(k, fill(x[1], length(x′)), x′))
     else
-        return LazyPDMat(_pairwise(k, x))
+        return pw(k, collect(x), collect(x′))
     end
 end
-function pairwise(k::CrossKernel, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real})
-    if isstationary(k) && x.step == x′.step
-        return Toeplitz(
-            map(k, x, Fill(x′[1], length(x))),
-            map(k, Fill(x[1], length(x′)), x′),
+
+toep_pw(k::Kernel, x::StepRangeLen) = SymmetricToeplitz(ew(k, x, fill(x[1], length(x))))
+
+function toep_map(k::Kernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
+    if x.step == x′.step
+        return fill(
+            ew(k, collect(x[1:1]), collect(x′[1:1]))[1],
+            broadcast_shape(size(x), size(x′)),
         )
     else
-        return _pairwise(k, x, x′)
+        return ew(k, collect(x), collect(x′))
     end
 end
 
@@ -125,10 +40,6 @@ end
 
 ################################ Define some basic kernels #################################
 
-# An error that Kernels may throw if `eachindex` is undefined.
-function eachindex_err(::T) where T<:Kernel
-    throw(ArgumentError("`eachindex` undefined for kernel of type $T."))
-end
 
 """
     ZeroKernel <: Kernel
@@ -136,77 +47,181 @@ end
 A rank 0 `Kernel` that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
-(::ZeroKernel{T})(x, x′) where T = zero(T)
-(::ZeroKernel{T})(x) where T = zero(T)
-isstationary(::Type{<:ZeroKernel}) = true
-@inline _map(::ZeroKernel{T}, X::AV, X′::AV) where T = Zeros{T}(length(X))
-@inline function _pairwise(::ZeroKernel{T}, X::AV, X′::AV) where T
-    return Zeros{T}(length(X), length(X′))
-end
-@inline ==(::ZeroKernel{<:Any}, ::ZeroKernel{<:Any}) = true
-@inline eachindex(k::ZeroKernel) = eachindex_err(k)
+ZeroKernel() = ZeroKernel{Float64}()
+eltype(::ZeroKernel{T}) where {T} = T
+zero(::CrossKernel) = ZeroKernel()
 
-const ZK = ZeroKernel{Float64}
-zero(k::Kernel) = length(k) < Inf ? FiniteZeroKernel(eachindex(k)) : ZK()
+# Binary methods.
+ew(k::ZeroKernel, x::AV, x′::AV) = zeros(eltype(k), broadcast_shape(size(x), size(x′)))
+pw(k::ZeroKernel, x::AV, x′::AV) = zeros(eltype(k), length(x), length(x′))
+
+# Unary methods.
+ew(k::ZeroKernel, x::AV) = zeros(eltype(k), length(x))
+pw(k::ZeroKernel, x::AV) = zeros(eltype(k), length(x), length(x))
+
 
 """
-    ConstantKernel{T<:Real} <: Kernel
+    OneKernel{T<:Real} <: Kernel
 
 A rank 1 constant `Kernel`. Useful for consistency when creating composite Kernels,
 but (almost certainly) shouldn't be used as a base `Kernel`.
 """
-struct ConstantKernel{T<:Real} <: Kernel
+struct OneKernel{T<:Real} <: Kernel end
+OneKernel() = OneKernel{Float64}()
+eltype(k::OneKernel{T}) where {T} = T
+
+# Binary methods.
+ew(k::OneKernel, x::AV, x′::AV) = ones(eltype(k), broadcast_shape(size(x), size(x′)))
+pw(k::OneKernel, x::AV, x′::AV) = ones(eltype(k), length(x), length(x′))
+
+# Unary methods.
+ew(k::OneKernel, x::AV) = ones(eltype(k), length(x))
+pw(k::OneKernel, x::AV) = ones(eltype(k), length(x), length(x))
+
+
+"""
+    ConstKernel{T} <: Kernel
+
+A rank 1 kernel that returns the same value `c` everywhere.
+"""
+struct ConstKernel{T} <: Kernel
     c::T
 end
-(k::ConstantKernel)(x::T, x′::T) where T = k.c
-(k::ConstantKernel)(x) = k.c
-isstationary(::Type{<:ConstantKernel}) = true
-_map(k::ConstantKernel, X::AV, ::AV) = Fill(k.c, length(X))
-_pairwise(k::ConstantKernel, X::AV, X′::AV) = Fill(k.c, length(X), length(X′))
-==(k::ConstantKernel, k′::ConstantKernel) = k.c == k′.c
-@inline eachindex(k::ConstantKernel) = eachindex_err(k)
 
-# ConstantKernel-specific optimisations.
-+(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c + k′.c)
-*(k::ConstantKernel, k′::ConstantKernel) = ConstantKernel(k.c * k′.c)
+# A hack to make this work with Zygote, which can't handle parametrised function calls.
+const_kernel(c, x, x′) = c
+
+# Binary methods.
+ew(k::ConstKernel, x::AV, x′::AV) = fill(k.c, broadcast_shape(size(x), size(x′))...)
+pw(k::ConstKernel, x::AV, x′::AV) = fill(k.c, length(x), length(x′))
+
+# Unary methods.
+ew(k::ConstKernel, x::AV) = fill(k.c, length(x))
+pw(k::ConstKernel, x::AV) = pw(k, x, x)
+
 
 """
     EQ <: Kernel
 
-The standardised Exponentiated Quadratic kernel with no free parameters.
+The standardised Exponentiated Quadratic kernel (no free parameters).
 """
 struct EQ <: Kernel end
-isstationary(::Type{<:EQ}) = true
-(::EQ)(x, x′) = exp(-0.5 * sqeuclidean(x, x′))
-(::EQ)(x::Real, x′::Real) = exp(-0.5 * (x - x′)^2)
-(::EQ)(x::T) where T = one(Float64)
-_pairwise(::EQ, X::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X))
-_pairwise(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(-0.5 .* pairwise(SqEuclidean(), X.X, X′.X))
-@inline eachindex(k::EQ) = eachindex_err(k)
 
-"""
-    PerEQ{Tp<:Real}
+# Binary methods.
+ew(::EQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-sqeuclidean.(x, x′) ./ 2)
+pw(::EQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-sqeuclidean.(x, x′') ./ 2)
+ew(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(.-colwise(SqEuclidean(), X.X, X′.X) ./ 2)
+pw(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(.-pw(SqEuclidean(), X.X, X′.X; dims=2) ./ 2)
 
-The usual periodic kernel derived by mapping the input domain onto a circle.
-"""
-struct PerEQ{Tp<:Real} <: Kernel
-    p::Tp
+ew(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+pw(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+
+# Unary methods.
+ew(::EQ, x::AV) = ones(eltype(x), length(x))
+pw(::EQ, x::AV{<:Real}) = pw(EQ(), x, x)
+ew(::EQ, X::ColsAreObs) = ones(eltype(X.X), length(X))
+pw(::EQ, X::ColsAreObs) = exp.(.-pw(SqEuclidean(), X.X; dims=2) ./ 2)
+pw(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+
+# Optimised adjoints. These really do count in terms of performance (I think).
+@adjoint function ew(::EQ, x::AV{<:Real}, x′::AV{<:Real})
+    s = ew(EQ(), x, x′)
+    return s, function(Δ)
+        x̄′ = (x .- x′) .* Δ .* s
+        return nothing, -x̄′, x̄′
+    end
 end
-isstationary(::Type{<:PerEQ}) = true
-(k::PerEQ)(x::Real, x′::Real) = exp(-2 * sin(π * abs(x - x′) / k.p)^2)
-(k::PerEQ)(x::Real) = one(typeof(x))
-@inline eachindex(k::PerEQ) = eachindex_err(k)
+@adjoint function pw(::EQ, x::AV{<:Real}, x′::AV{<:Real})
+    s = pw(EQ(), x, x′)
+    return s, function(Δ)
+        x̄′ = Δ .* (x .- x′') .* s
+        return nothing, -reshape(sum(x̄′; dims=2), :), reshape(sum(x̄′; dims=1), :)
+    end
+end
+@adjoint function pw(::EQ, x::AV{<:Real})
+    s = pw(EQ(), x)
+    return s, function(Δ)
+        x̄_tmp = Δ .* (x .- x') .* s
+        return nothing, reshape(sum(x̄_tmp; dims=1), :) - reshape(sum(x̄_tmp; dims=2), :)
+    end
+end
+
 
 """
-    Exponential <: Kernel
+    PerEQ
+
+The usual periodic kernel derived by mapping the input domain onto the unit circle.
+"""
+struct PerEQ <: Kernel end
+
+# Binary methods.
+ew(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-2 .* sin.(π .* abs.(x .- x′)).^2)
+pw(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-2 .* sin.(π .* abs.(x .- x′')).^2)
+ew(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+pw(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+
+# Unary methods.
+ew(::PerEQ, x::AV{<:Real}) = ones(eltype(x), length(x))
+pw(k::PerEQ, x::AV{<:Real}) = pw(k, x, x)
+pw(k::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+
+
+"""
+    Exp <: Kernel
 
 The standardised Exponential kernel.
 """
-struct Exponential <: Kernel end
-isstationary(::Type{<:Exponential}) = true
-(::Exponential)(x::Real, x′::Real) = exp(-abs(x - x′))
-(::Exponential)(x) = one(Float64)
-@inline eachindex(k::Exponential) = eachindex_err(k)
+struct Exp <: Kernel end
+
+# Binary methods
+ew(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′))
+pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′'))
+ew(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
+pw(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
+
+# Unary methods
+ew(::Exp, x::AV{<:Real}) = ones(eltype(x), length(x))
+pw(k::Exp, x::AV{<:Real}) = pw(k, x, x)
+pw(k::Exp, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+
+
+"""
+    Linear{T<:Real} <: Kernel
+
+The standardised linear kernel / dot-product kernel.
+"""
+struct Linear <: Kernel end
+
+# Binary methods
+ew(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′
+pw(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′'
+ew(k::Linear, x::ColsAreObs, x′::ColsAreObs) = reshape(sum(x.X .* x′.X; dims=1), :)
+pw(k::Linear, x::ColsAreObs, x′::ColsAreObs) = x.X' * x′.X
+
+# Unary methods
+ew(k::Linear, x::AV{<:Real}) = x.^2
+pw(k::Linear, x::AV{<:Real}) = x .* x'
+ew(k::Linear, x::ColsAreObs) = reshape(sum(abs2.(x.X); dims=1), :)
+pw(k::Linear, x::ColsAreObs) = x.X' * x.X
+
+
+"""
+    Noise{T<:Real} <: Kernel
+
+The standardised aleatoric white-noise kernel. Isn't really a kernel, but never mind...
+"""
+struct Noise{T<:Real} <: Kernel end
+Noise() = Noise{Int}()
+eltype(k::Noise{T}) where {T} = T
+
+# Binary methods.
+ew(k::Noise, x::AV, x′::AV) = zeros(eltype(k), broadcast_shape(size(x), size(x′))...)
+pw(k::Noise, x::AV, x′::AV) = zeros(eltype(k), length(x), length(x′))
+
+# Unary methods.
+ew(k::Noise, x::AV) = ones(eltype(k), length(x))
+pw(k::Noise, x::AV) = diagm(0=>ones(eltype(k), length(x)))
+
 
 # """
 #     RQ{T<:Real} <: Kernel
@@ -218,34 +233,7 @@ isstationary(::Type{<:Exponential}) = true
 #     α::T
 # end
 # @inline (k::RQ)(x::Real, y::Real) = (1 + 0.5 * abs2(x - y) / k.α)^(-k.α)
-# ==(a::RQ, b::RQ) = a.α == b.α
-# isstationary(::Type{<:RQ}) = true
-# show(io::IO, k::RQ) = show(io, "RQ($(k.α))")
 
-"""
-    Linear{T<:Real} <: Kernel
-
-Standardised linear kernel. `Linear(c)` creates a `Linear` `Kernel{NonStationary}` whose
-intercept is `c`.
-"""
-struct Linear{T<:Union{Real, Vector{<:Real}}} <: Kernel
-    c::T
-end
-==(a::Linear, b::Linear) = a.c == b.c
-(k::Linear)(x, x′) = dot(x .- k.c, x′ .- k.c)
-(k::Linear)(x) = sum(abs2, x .- k.c)
-@inline eachindex(k::Linear) = eachindex_err(k)
-
-@inline _pairwise(k::Linear, x::AV) = _pairwise(k, ColsAreObs(x'))
-@inline function _pairwise(k::Linear, x::AV, x′::AV)
-    return _pairwise(k, ColsAreObs(x'), ColsAreObs(x′'))
-end
-
-function _pairwise(k::Linear, D::ColsAreObs)
-    Δ = D.X .- k.c
-    return Δ' * Δ
-end
-_pairwise(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X .- k.c)
 
 # """
 #     Poly{Tσ<:Real} <: Kernel
@@ -257,30 +245,7 @@ _pairwise(k::Linear, X::ColsAreObs, X′::ColsAreObs) = (X.X .- k.c)' * (X′.X 
 #     σ::Tσ
 # end
 # @inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
-# show(io::IO, k::Poly) = show(io, "Poly($(k.p))")
 
-"""
-    Noise{T<:Real} <: Kernel
-
-A white-noise kernel with a single scalar parameter.
-"""
-struct Noise{T<:Real} <: Kernel
-    σ²::T
-end
-isstationary(::Type{<:Noise}) = true
-==(a::Noise, b::Noise) = a.σ² == b.σ²
-(k::Noise)(x, x′) = x === x′ || x == x′ ? k.σ² : zero(k.σ²)
-(k::Noise)(x) = k.σ²
-_pairwise(k::Noise, X::AV) = Diagonal(Fill(k.σ², length(X)))
-function _pairwise(k::Noise, X::AV, X′::AV)
-    if X === X′
-        return _pairwise(k, X)
-    else
-        return [view(X, p) == view(X′, q) ? k.σ² : 0
-            for p in eachindex(X), q in eachindex(X′)]
-    end
-end
-@inline eachindex(k::Noise) = eachindex_err(k)
 
 # """
 #     Wiener <: Kernel
@@ -290,7 +255,7 @@ end
 # struct Wiener <: Kernel end
 # @inline (::Wiener)(x::Real, x′::Real) = min(x, x′)
 # cov(::Wiener, X::AM, X′::AM) =
-# show(io::IO, ::Wiener) = show(io, "Wiener")
+
 
 # """
 #     WienerVelocity <: Kernel
@@ -300,66 +265,3 @@ end
 # struct WienerVelocity <: Kernel end
 # @inline (::WienerVelocity)(x::Real, x′::Real) =
 #     min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
-# show(io::IO, ::WienerVelocity) = show(io, "WienerVelocity")
-
-
-
-"""
-    EmpiricalKernel <: Kernel
-
-A finite-dimensional kernel defined in terms of a PSD matrix `Σ`.
-"""
-struct EmpiricalKernel{T<:LazyPDMat} <: Kernel
-    Σ::T
-end
-@inline (k::EmpiricalKernel)(q::Int, q′::Int) = k.Σ[q, q′]
-@inline (k::EmpiricalKernel)(q::Int) = k.Σ[q, q]
-@inline length(k::EmpiricalKernel) = size(k.Σ, 1)
-eachindex(k::EmpiricalKernel) = eachindex(k.Σ, 1)
-
-function _pairwise(k::EmpiricalKernel, X::AV)
-    if X == eachindex(k)
-        return k.Σ
-    else
-        return k.Σ[X, X]
-    end
-end
-
-function _pairwise(k::EmpiricalKernel, X::AV, X′::AV)
-    if X == eachindex(k) && X′ == eachindex(k)
-        return k.Σ
-    else
-        return k.Σ[X, X′]
-    end
-end
-AbstractMatrix(k::EmpiricalKernel) = k.Σ
-
-+(x::ZeroKernel, x′::ZeroKernel) = zero(x)
-function +(k::CrossKernel, k′::CrossKernel)
-    @assert size(k) == size(k′)
-    if iszero(k)
-        return k′
-    elseif iszero(k′)
-        return k
-    else
-        return CompositeCrossKernel(+, k, k′)
-    end
-end
-function +(k::Kernel, k′::Kernel)
-    @assert size(k) == size(k′)
-    if iszero(k)
-        return k′
-    elseif iszero(k′)
-        return k
-    else
-        return CompositeKernel(+, k, k′)
-    end
-end
-function *(k::Kernel, k′::Kernel)
-    @assert size(k) == size(k′)
-    return iszero(k) || iszero(k′) ? zero(k) : CompositeKernel(*, k, k′)
-end
-function *(k::CrossKernel, k′::CrossKernel)
-    @assert size(k) == size(k′)
-    return iszero(k) || iszero(k′) ? zero(k) : CompositeCrossKernel(*, k, k′)
-end

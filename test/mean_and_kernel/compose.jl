@@ -1,184 +1,149 @@
-using Stheno: CompositeMean, CompositeKernel, CompositeCrossKernel, ConstantMean,
-    ZeroMean, LhsCross, RhsCross, OuterCross, OuterKernel, MeanFunction, Kernel,
-    EmpiricalMean, pairwise
+using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, OneMean,
+    LhsCross, RhsCross, OuterCross, OuterKernel, pairwise, CustomMean, ZeroMean,
+    ZeroKernel, OneKernel, pw
+using Stheno: EQ, Exp, Linear, Noise, PerEQ
 
 @testset "compose" begin
 
-    # Test CompositeMean.
-    let
-        rng, N, D = MersenneTwister(123456), 100, 2
-        μ1, μ2 = EmpiricalMean(randn(rng, N)), EmpiricalMean(randn(rng, N))
-        X = eachindex(μ1)
-        ν1, ν2 = CompositeMean(+, μ1, μ2), CompositeMean(*, μ1, μ2)
-        @test ν1(X[1]) == μ1(X[1]) + μ2(X[1])
-        @test ν2(X[3]) == μ1(X[3]) .* μ2(X[3])
-        @test length(ν1) == N && length(ν2) == N
-        @test eachindex(ν1) == eachindex(X)
+    @testset "UnaryMean" begin
+        rng, N = MersenneTwister(123456), 100
+        μ, f, ȳ, x = CustomMean(sin), exp, randn(rng, N), randn(rng, N)
+        ν = UnaryMean(f, μ)
+        @test ew(ν, x) == map(exp, ew(μ, x))
+        mean_function_tests(ν, x)
 
-        mean_function_tests(ν1, X)
-        mean_function_tests(ν2, X)
-        mean_function_tests(ν1, BlockData([X, X]))
-        mean_function_tests(ν2, BlockData([X, X]))
-
-        @test map(ν1, :) == μ1.μ .+ μ2.μ
-        @test map(ν2, :) == μ1.μ .* μ2.μ
+        differentiable_mean_function_tests(UnaryMean(exp, ZeroMean()), ȳ, x)
+        differentiable_mean_function_tests(UnaryMean(exp, OneMean()), ȳ, x)
     end
 
-    # Test CompositeKernel and CompositeCrossKernel.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+    @testset "BinaryMean" begin
+        rng, N = MersenneTwister(123456), 100
+        μ1, μ2 = CustomMean(sin), CustomMean(cos)
+        f, ȳ, x = exp, randn(rng, N), randn(rng, N)
+        ν1, ν2 = BinaryMean(+, μ1, μ2), BinaryMean(*, μ1, μ2)
 
-        # Define base kernels and do composition.
-        k1, k2 = EQ(), Linear(randn(rng))
-        ν1, ν2 = CompositeKernel(+, k1, k2), CompositeCrossKernel(*, k1, k2)
-        @test ν1(X0[1], X1[2]) == k1(X0[1], X1[2]) + k2(X0[1], X1[2])
-        @test ν2(X0[1], X1[2]) == k1(X0[1], X1[2]) .* k2(X0[1], X1[2])
-        @test size(ν1, 1) == Inf && size(ν1, 2) == Inf
-        @test size(ν2, 1) == Inf && size(ν2, 2) == Inf
-        @test !isstationary(ν1) && !isstationary(ν2)
-        @test isstationary(CompositeKernel(+, k1, k1)) == true
+        let
+            m1, m2 = ew(μ1, x), ew(μ2, x)
+            @test ew(ν1, x) == m1 .+ m2
+            @test ew(ν2, x) == m1 .* m2
+        end
 
-        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
+        differentiable_mean_function_tests(ν1, ȳ, x)
+        differentiable_mean_function_tests(ν2, ȳ, x)
 
-        cross_kernel_tests(ν2, x0, x1, x2)
-        cross_kernel_tests(ν2, X0, X1, X2)
-        cross_kernel_tests(ν2, xb0, xb1, xb2)
-        cross_kernel_tests(ν2, XB0, XB1, XB2)
-
-        kernel_tests(ν1, x0, x1, x2)
-        kernel_tests(ν1, X0, X1, X2)
-        kernel_tests(ν1, xb0, xb1, xb2)
-        kernel_tests(ν1, XB0, XB1, XB2)
+        differentiable_mean_function_tests(BinaryMean(+, ZeroMean(), OneMean()), ȳ, x)
+        differentiable_mean_function_tests(BinaryMean(+, μ1, OneMean()), ȳ, x)
+        differentiable_mean_function_tests(BinaryMean(*, ZeroMean(), μ2), ȳ, x)
     end
 
-    # Test LhsCross functionality.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+    @testset "BinaryKernel" begin
+        rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
-        f, k = x->sum(abs2, x), EQ()
+        k = EQ()
+        ν = BinaryKernel(+, k, k)
+
+        # Self-consistency testing.
+        kernel_tests(ν, x0, x1, x2)
+
+        # Absolute correctness testing.
+        @test ew(ν, x0, x1) == ew(k, x0, x1) .+ ew(k, x0, x1)
+        @test pairwise(ν, x0, x2) == pairwise(k, x0, x2) .+ pairwise(k, x0, x2)
+
+        @test ew(ν, x0) == ew(k, x0) .+ ew(k, x0)
+        @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
+
+        let
+            k = BinaryKernel(+, ZeroKernel(), OneKernel())
+            differentiable_kernel_tests(rng, k, x0, x1, x2)
+        end
+        differentiable_kernel_tests(rng, BinaryKernel(*, ZeroKernel(), EQ()), x0, x1, x2)
+        differentiable_kernel_tests(rng, BinaryKernel(+, EQ(), OneKernel()), x0, x1, x2)
+
+        # # Some compositions of stationary kernels are stationary.
+        # stationary_kernel_tests(
+        #     ν,
+        #     range(-5.0, step=1, length=N),
+        #     range(-4.0, step=1, length=N),
+        #     range(-5.0, step=2, length=N),
+        #     range(-3.0, step=1, length=N′),
+        #     range(-2.0, step=2, length=N′),
+        # )
+    end
+
+    @testset "BinaryCrossKernel" begin
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+
+        k = EQ()
+        ν = BinaryCrossKernel(+, k, k)
+
+        # Self-consistency testing.
+        differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
+
+        # Absolute correctness testing.
+        @test ew(ν, x0, x1) == ew(k, x0, x1) .+ ew(k, x0, x1)
+        @test pairwise(ν, x0, x2) == pairwise(k, x0, x2) .+ pairwise(k, x0, x2)
+
+        @test ew(ν, x0) == ew(k, x0) .+ ew(k, x0)
+        @test pairwise(ν, x0) == pairwise(k, x0) .+ pairwise(k, x0)
+
+        let
+            k = BinaryCrossKernel(+, ZeroKernel(), OneKernel())
+            differentiable_cross_kernel_tests(rng, k, x0, x1, x2)
+        end
+        let
+            k = BinaryCrossKernel(*, ZeroKernel(), EQ())
+            differentiable_cross_kernel_tests(rng, k, x0, x1, x2)
+        end
+        let
+            k = BinaryCrossKernel(+, EQ(), OneKernel())
+            differentiable_cross_kernel_tests(rng, k, x0, x1, x2)
+        end
+    end
+
+    @testset "LhsCross" begin
+        rng, N, N′ = MersenneTwister(123456), 5, 6
+        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+
+        f, k = CustomMean(abs2), EQ()
         ν = LhsCross(f, k)
 
-        @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2])
-        @test size(ν, 1) == Inf && size(ν, 2) == Inf
+        @test pw(ν, x0, x1) == ew(f, x0) .* pw(k, x0, x1)
 
-        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
-        cross_kernel_tests(ν, x0, x1, x2)
-        cross_kernel_tests(ν, X0, X1, X2)
-        cross_kernel_tests(ν, xb0, xb1, xb2)
-        cross_kernel_tests(ν, XB0, XB1, XB2)
+        differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
-    # Test RhsCross functionality.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+    @testset "RhsCross" begin
+        rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
-        f, k = x->sum(abs2, x), EQ()
+        k, f = EQ(), CustomMean(abs2)
         ν = RhsCross(k, f)
 
-        @test ν(X0[1], X0[2]) == k(X0[1], X0[2]) * f(X0[2])
-        @test size(ν, 1) == Inf && size(ν, 2) == Inf
-
-        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
-        cross_kernel_tests(ν, x0, x1, x2)
-        cross_kernel_tests(ν, X0, X1, X2)
-        cross_kernel_tests(ν, xb0, xb1, xb2)
-        cross_kernel_tests(ν, XB0, XB1, XB2)
+        @test pw(ν, x0, x1) == pw(k, x0, x1) .* ew(f, x1)'
+        differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
-    # Test OuterCross.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+    @testset "OuterCross" begin
+        rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
-        f, k = x->sum(abs2, x), EQ()
+        k, f = EQ(), CustomMean(abs2)
         ν = OuterCross(f, k)
 
-        @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2]) * f(X0[2])
-        @test size(ν, 1) == Inf && size(ν, 2) == Inf
-
-        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
-        cross_kernel_tests(ν, x0, x1, x2)
-        cross_kernel_tests(ν, X0, X1, X2)
-        cross_kernel_tests(ν, xb0, xb1, xb2)
-        cross_kernel_tests(ν, XB0, XB1, XB2)
+        @test pw(ν, x0, x1) == ew(f, x0) .* pw(k, x0, x1) .* ew(f, x1)'
+        differentiable_cross_kernel_tests(rng, ν, x0, x1, x2)
     end
 
-    # Test OuterKernel.
-    let
-        rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
+    @testset "OuterKernel" begin
+        rng, N, N′ = MersenneTwister(123456), 5, 6
         x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
-        X0, X1, X2 = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
 
-        f, k = x->sum(abs2, x), EQ()
+        k, f = EQ(), CustomMean(abs2)
         ν = OuterKernel(f, k)
 
-        @test ν(X0[1], X0[2]) == f(X0[1]) * k(X0[1], X0[2]) * f(X0[2])
-        @test size(ν, 1) == Inf && size(ν, 2) == Inf
-
-        xb0, xb1, xb2 = BlockData([x0, x1]), BlockData([x1, x0]), BlockData([x2, x2])
-        XB0, XB1, XB2 = BlockData([X0, X1]), BlockData([X1, X0]), BlockData([X2, X2])
-        kernel_tests(ν, x0, x1, x2)
-        kernel_tests(ν, X0, X1, X2)
-        cross_kernel_tests(ν, xb0, xb1, xb2)
-        cross_kernel_tests(ν, XB0, XB1, XB2)
-    end
-
-    # Test mean function composition.
-    let
-        rng, N, D = MersenneTwister(123456), 5, 2
-        X, s = ColsAreObs(randn(rng, D, N)), randn(rng)
-        μ, μ′ = ConstantMean(randn(rng)), CustomMean(x->sum(s .* x))
-
-        # Test conversion and promotion.
-        c = randn(rng)
-        @test convert(MeanFunction, c) == ConstantMean(c)
-        @test promote_rule(ConstantMean, Real) == MeanFunction
-        @test promote(ConstantMean(c), c) == (ConstantMean(c), ConstantMean(c))
-
-        # Test addition.
-        @test μ + μ′ == CompositeMean(+, μ, μ′)
-        @test map(μ + μ′, X) == map(μ, X) + map(μ′, X)
-        @test map(μ + 5, X) == map(μ, X) .+ 5
-        @test 2.34 + μ′ == CompositeMean(+, ConstantMean(2.34), μ′)
-
-        # Test multiplication.
-        @test μ * μ′ == CompositeMean(*, μ, μ′)
-        @test map(μ * μ′, X) == map(μ, X) .* map(μ′, X)
-        @test map(μ * 4.32, X) == 4.32 .* map(μ, X)
-        @test 4.23 * μ′ == CompositeMean(*, ConstantMean(4.23), μ′)
-    end
-
-    # Test kernel composition.
-    let
-        rng, N, D = MersenneTwister(123456), 5, 2
-        X, s = ColsAreObs(randn(rng, N, D)), randn(rng)
-        k, k′ = EQ(), Linear(1)
-
-        # Test conversion and promotion.
-        @test convert(Kernel, s) == ConstantKernel(s)
-        @test promote_rule(typeof(k), typeof(s)) == Kernel
-        @test promote(k, s) == (k, ConstantKernel(s))
-        @test promote(s, k) == (ConstantKernel(s), k)
-
-        # Test addition.
-        @test k + k′ == CompositeKernel(+, k, k′)
-        @test k + s == CompositeKernel(+, k, ConstantKernel(s))
-        @test s + k′ == CompositeKernel(+, ConstantKernel(s), k′)
-
-        # Test multiplication.
-        @test k * k′ == CompositeKernel(*, k, k′)
-        @test k′ * s == CompositeKernel(*, k′, ConstantKernel(s))
-        @test s * k == CompositeKernel(*, ConstantKernel(s), k)
+        @test pw(ν, x0, x1) == ew(f, x0) .* pw(k, x0, x1) .* ew(f, x1)'
+        differentiable_kernel_tests(rng, ν, x0, x1, x2)
     end
 end

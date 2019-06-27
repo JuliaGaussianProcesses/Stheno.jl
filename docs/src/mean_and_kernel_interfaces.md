@@ -102,9 +102,9 @@ For `f, g <: AbstractGaussianProcess`, we require the following methods:
 | `f == g` | Equality. Defaults to checking mean and kernel are equal |
 | `length(f)` | Defaults to length of `length(mean(f))` |
 | `eachindex(f)` | Defaults to `eachindex(mean(f))` |
-| `mean_vec(f)` | Vector representation of `mean(f)`. Defaults to `AbstractVector(mean(f))`|
+| `mean(f)` | Vector representation of `mean(f)`. Defaults to `AbstractVector(mean(f))`|
 | `cov(f)` | Covariance matrix of `f`. Defaults to `AbstractMatrix(kernel(f))` |
-| `xcov(f, g)` | Cross-covariance matrix between `f` and `g`. Defaults to `AbstractMatrix(kernel(f, g))` |
+| `cov(f, g)` | Cross-covariance matrix between `f` and `g`. Defaults to `AbstractMatrix(kernel(f, g))` |
 | `marginal_cov(f)` | Equivalent to `diag(cov(f))`, but fast |
 
-Note that `eachindex`, `mean_vec`, `cov`, `xcov`, and `marginal_cov` should all fail if the dimensionality of `f` (or `g` if applicable) is not finite.
+Note that `eachindex`, `mean`, `cov`, `cov`, and `marginal_cov` should all fail if the dimensionality of `f` (or `g` if applicable) is not finite.

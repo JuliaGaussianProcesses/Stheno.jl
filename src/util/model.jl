@@ -1,4 +1,4 @@
-using MacroTools: postwalk, splitdef, combinedef, @capture
+using MacroTools: postwalk, splitdef, combinedef, @capture, prewalk
 
 macro model(expr)
 
@@ -7,8 +7,8 @@ macro model(expr)
 
     # Transform provided expression to use a GPC with each GP.
     foo[:body] = Expr(:block,
-        :(gpc = GPC()),
-        postwalk(x->@capture(x, GP(xs__)) ? :(GP($(xs...), gpc)) : x, foo[:body]),
+        :(gpc = Stheno.GPC()),
+        prewalk(x->@capture(x, GP(xs__)) ? :(GP($(xs...), gpc)) : x, foo[:body]),
     )
 
     # Recombine into function expression.
