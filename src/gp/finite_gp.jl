@@ -1,7 +1,7 @@
 import Base: rand, length
 import Distributions: logpdf, ContinuousMultivariateDistribution
 
-export mean, cov, marginals, rand, logpdf, elbo
+export mean, std, cov, marginals, rand, logpdf, elbo
 
 """
     FiniteGP{Tf, Tx}

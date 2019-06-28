@@ -44,8 +44,8 @@ Multiple the inputs to `f` by `A`.
 stretch(f::GP, A::AbstractMatrix) = f ∘ LinearTransform(A)
 
 """
-    periodic(f::GP, p::Real)
+    periodic(g::GP, f::Real)
 
-Produce a GP with period `p`.
+Produce a GP with period `f`.
 """
-periodic(f::GP, p::Real) = f ∘ Periodic(p)
+periodic(g::GP, f::Real) = g ∘ Periodic(f)

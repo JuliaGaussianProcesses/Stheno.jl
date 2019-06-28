@@ -75,26 +75,24 @@ pw(k::ITCross, x::AV, x′::AV) = pw(k.k, k.f.(x), k.f′.(x′))
 
 Applies the input-transform `ϕ` to `f`.
 """
-transform(μ::MeanFunction, ϕ) = ITMean(μ, _transform(ϕ))
+transform(μ::MeanFunction, ϕ) = ITMean(μ, ϕ)
 
 transform(μ::MeanFunction, ::typeof(identity)) = μ
 transform(μ::ZeroMean, ϕ) = μ
 transform(μ::ZeroMean, ::typeof(identity)) = μ
 
-transform(k::Kernel, ϕ) = ITKernel(k, _transform(ϕ))
+transform(k::Kernel, ϕ) = ITKernel(k, ϕ)
 transform(k::Kernel, ::typeof(identity)) = k
 transform(k::ZeroKernel, ϕ) = k
 transform(k::ZeroKernel, ::typeof(identity)) = k
 
-transform(k::CrossKernel, ϕ, ::Val{1}) = LhsITCross(k, _transform(ϕ))
-transform(k::CrossKernel, ϕ, ::Val{2}) = RhsITCross(k, _transform(ϕ))
+transform(k::CrossKernel, ϕ, ::Val{1}) = LhsITCross(k, ϕ)
+transform(k::CrossKernel, ϕ, ::Val{2}) = RhsITCross(k, ϕ)
 
 transform(k::ZeroKernel, ϕ, ::Val{1}) = k
 transform(k::ZeroKernel, ϕ, ::Val{2}) = k
 
-transform(k::CrossKernel, ϕ, ϕ′) = ITCross(k, _transform(ϕ), _transform(ϕ′))
-
-_transform(ϕ) = ϕ
+transform(k::CrossKernel, ϕ, ϕ′) = ITCross(k, ϕ, ϕ′)
 
 
 """
@@ -109,8 +107,7 @@ end
 broadcasted(s::Stretch, x::StepRangeLen) = s.l .* x
 broadcasted(s::Stretch, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
 
-_transform(ϕ::Real) = Stretch(ϕ)
-_transform(ϕ::Stretch) = ϕ
+stretch(f::Union{MeanFunction, Kernel, CrossKernel}, l::Real) = transform(f, Stretch(l))
 
 
 """
@@ -124,8 +121,12 @@ end
 (l::LinearTransform)(x::AbstractVector) = l.A * x
 broadcasted(l::LinearTransform, x::ColsAreObs) = ColsAreObs(l.A * x.X)
 
-_transform(ϕ::AbstractMatrix{<:Real}) = LinearTransform(A)
-_transform(ϕ::LinearTransform) = ϕ
+function stretch(f::Union{MeanFunction, Kernel, CrossKernel}, A::AbstractMatrix)
+    return transform(f, LinearTransform(A))
+end
+function stretch(f::Union{MeanFunction, Kernel, CrossKernel}, A::AbstractVector)
+    return stretch(f, Diagonal(A))
+end
 
 
 """
@@ -158,6 +159,8 @@ function broadcasted(f::Select{<:Integer}, x::AV{<:CartesianIndex})
     return out
 end
 
+select(f::Union{MeanFunction, Kernel, CrossKernel}, idx) = transform(f, Select(idx))
+
 
 """
     Periodic{Tf<:Real}
@@ -171,3 +174,10 @@ end
 function broadcasted(p::Periodic, x::AbstractVector{<:Real})
     return ColsAreObs(vcat(cos.((2π * p.f) .* x)', sin.((2π * p.f) .* x)'))
 end
+
+"""
+    periodic(g::Union{MeanFunction, Kernel, CrossKernel}, f::Real)
+
+Make `g` periodic with frequency `f`.
+"""
+periodic(g::Union{MeanFunction, Kernel, CrossKernel}, f::Real) = transform(g, Periodic(f))

@@ -15,7 +15,7 @@ k_p′p(::typeof(*), f::MeanFunction, g::GP, f_p::GP) = f * kernel(g, f_p)
 *(f::Function, g::GP) = CustomMean(f) * g
 
 """
-    *(g::GP)
+    *(g::GP, f)
 
 Multiplication of a GP `g` from the right by a number or function.
 """
