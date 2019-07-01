@@ -6,6 +6,7 @@ Stheno is designed to make doing non-standard things with Gaussian processes str
 
 [We also have a Python version of the package](https://github.com/wesselb/stheno)
 
+Please open issues liberally -- if there's anything that's unclear or doesn't work, we would very much like to know about it.
 
 ## A Couple of Examples
 
