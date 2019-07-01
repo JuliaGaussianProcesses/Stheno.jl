@@ -55,6 +55,8 @@ ms3 = marginals(f₃′(Xp));
 μf₂′, σf₂′ = mean.(ms2), std.(ms2);
 μf₃′, σf₃′ = mean.(ms3), std.(ms3);
 ```
+![](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.png)
+
 [Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.jl)
 
 In the above figure, we have visualised the posterior distribution of all of the processes. Bold lines are posterior means, and shaded areas are three posterior standard deviations from these means. Thin lines are samples from the posterior processes.
@@ -106,6 +108,8 @@ ms3 = marginals(y₂′(Xp));
 μy₁′, σy₁′ = mean.(ms2), std.(ms2);
 μy₂′, σy₂′ = mean.(ms3), std.(ms3);
 ```
+![](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.png)
+
 [Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.jl)
 
 As before, we visualise the posterior distribution through its marginal statistics and joint samples. Note that the posterior samples over the unobserved process are (unsurprisingly) smooth, whereas the posterior samples over the noisy processes still look uncorrelated and noise-like.
