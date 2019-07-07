@@ -8,6 +8,8 @@ Stheno is designed to make doing non-standard things with Gaussian processes str
 
 Please open issues liberally -- if there's anything that's unclear or doesn't work, we would very much like to know about it.
 
+__Installation__ - `] add Stheno#master` for the time being.
+
 ## A Couple of Examples
 
 We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here are a couple of examples to get you started.
