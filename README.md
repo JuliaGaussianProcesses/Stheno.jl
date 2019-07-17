@@ -31,7 +31,7 @@ end
 # Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
 # at which to measure `f` using `y2`.
 rng, N₁, N₃ = MersenneTwister(123546), 10, 11;
-X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
+X₁, X₃ = rand(rng, N₁) * 10, rand(rng, N₃) * 10;
 f₁, f₂, f₃ = model();
 
 # Generate some toy observations of `f₁` and `f₃`.
