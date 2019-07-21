@@ -8,11 +8,11 @@ Stheno is designed to make doing non-standard things with Gaussian processes str
 
 Please open issues liberally -- if there's anything that's unclear or doesn't work, we would very much like to know about it.
 
+__Installation__ - `] add Stheno#master` for the time being.
+
 ## A Couple of Examples
 
 We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here are a couple of examples to get you started.
-
-First, a note for statistics / ML people who aren't too familiar with Julia: the first execution of the examples below will take a while as Julia has to compile the code. On subsequent runs (e.g. if you were repeatedly evaluating the `logpdf` for kernel parameter learning) it will progress _much_ faster.
 
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
@@ -29,7 +29,7 @@ end
 # Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
 # at which to measure `f` using `y2`.
 rng, N₁, N₃ = MersenneTwister(123546), 10, 11;
-X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
+X₁, X₃ = rand(rng, N₁) * 10, rand(rng, N₃) * 10;
 f₁, f₂, f₃ = model();
 
 # Generate some toy observations of `f₁` and `f₃`.
