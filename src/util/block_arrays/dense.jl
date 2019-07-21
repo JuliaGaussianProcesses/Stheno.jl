@@ -38,7 +38,7 @@ end
 @adjoint Vector(x::BlockVector) = Vector(x), Δ::Vector->(BlockArray(Δ, blocksizes(x)),)
 @adjoint function Matrix(X::BlockMatrix)
     back(Δ::Matrix) = (BlockArray(Δ, blocksizes(X)),)
-    back(Δ::UpperTriangular{T, <:Matrix{T}} where {T}) = back(Δ.data)
+    back(Δ::UpperTriangular{T, <:Matrix{T}} where {T}) = back(Matrix(Δ))
     return Matrix(X), back
 end
 

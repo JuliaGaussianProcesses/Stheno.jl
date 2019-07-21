@@ -10,7 +10,6 @@ struct ITMean{Tμ<:MeanFunction, Tf} <: MeanFunction
 end
 ew(μ::ITMean, X::AV) = ew(μ.μ, μ.f.(X))
 
-
 """
     ITKernel{Tk<:Kernel, Tf} <: Kernel
 

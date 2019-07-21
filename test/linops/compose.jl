@@ -25,7 +25,7 @@ using Stheno: GPC, Stretch, LinearTransform
             Dict(:l=>0.5, :σ=>2.3),
             θ->begin
                 f = θ[:σ] * GP(sin, eq(l=θ[:l]), GPC())
-                return f ∘ 0.5, f
+                return stretch(f, 0.5), f
             end,
             N, N′,
         )

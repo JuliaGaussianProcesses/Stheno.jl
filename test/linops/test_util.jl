@@ -27,60 +27,60 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
     # mean / cov tests
     #
 
-    # # Check that we can differentiate through evaluation of the mean vector.
-    # adjoint_test(
-    #     (θ, x, A)->mean(g(θ, x, A)),
-    #     randn(rng, length(x)), θ, x, A;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check that we can differentiate through evaluation of the mean vector.
+    adjoint_test(
+        (θ, x, A)->mean(g(θ, x, A)),
+        randn(rng, length(x)), θ, x, A;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # # Check that we can differentiate through evaluation of the covariance matrix.
-    # adjoint_test(
-    #     (θ, x, A)->cov(g(θ, x, A)),
-    #     randn(rng, length(x), length(x)), θ, x, A;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check that we can differentiate through evaluation of the covariance matrix.
+    adjoint_test(
+        (θ, x, A)->cov(g(θ, x, A)),
+        randn(rng, length(x), length(x)), θ, x, A;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # adjoint_test(
-    #     (θ, x, A, z, B)->cov(h(θ, x, A, z, B)...),
-    #     randn(rng, length(x), length(z)), θ, x, A, z, B;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    adjoint_test(
+        (θ, x, A, z, B)->cov(h(θ, x, A, z, B)...),
+        randn(rng, length(x), length(z)), θ, x, A, z, B;
+        rtol=1e-4, atol=1e-4,
+    )
 
 
-    # #
-    # # rand / logpdf / elbo tests
-    # #
+    #
+    # rand / logpdf / elbo tests
+    #
 
-    # # Check that the gradient w.r.t. the samples is correct (single-sample).
-    # adjoint_test(
-    #     (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A)),
-    #     randn(rng, length(x)), θ, x, A;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check that the gradient w.r.t. the samples is correct (single-sample).
+    adjoint_test(
+        (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A)),
+        randn(rng, length(x)), θ, x, A;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # # Check that the gradient w.r.t. the samples is correct (multi-sample).
-    # adjoint_test(
-    #     (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A), 11),
-    #     randn(rng, length(x), 11), θ, x, A;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check that the gradient w.r.t. the samples is correct (multi-sample).
+    adjoint_test(
+        (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A), 11),
+        randn(rng, length(x), 11), θ, x, A;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # # Check adjoints for logpdf.
-    # adjoint_test(
-    #     (θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A, y;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check adjoints for logpdf.
+    adjoint_test(
+        (θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A, y;
+        rtol=1e-4, atol=1e-4,
+    )
 
-    # # Check adjoint for elbo.
-    # adjoint_test(
-    #     (ϴ, x, A, y, z, B)->begin
-    #         fx, uz = h(θ, x, A, z, B)
-    #         return elbo(fx, y, uz)
-    #     end,
-    #     randn(rng), θ, x, A, y, z, B;
-    #     rtol=1e-4, atol=1e-4,
-    # )
+    # Check adjoint for elbo.
+    adjoint_test(
+        (ϴ, x, A, y, z, B)->begin
+            fx, uz = h(θ, x, A, z, B)
+            return elbo(fx, y, uz)
+        end,
+        randn(rng), θ, x, A, y, z, B;
+        rtol=1e-4, atol=1e-4,
+    )
 
 
     #

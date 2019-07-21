@@ -55,7 +55,7 @@ using Stheno: GPC
                 f3 = f1 + f2
                 return f3, f3
             end,
-            13, 11,
+            5, 3,
         )
     end
     @testset "Standardised Tests (correlated sum)" begin
