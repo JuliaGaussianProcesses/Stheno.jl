@@ -176,12 +176,16 @@ struct Exp <: Kernel end
 # Binary methods
 ew(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′))
 pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′'))
+ew(k::Exp, x::ColsAreObs, x′::ColsAreObs) = exp.(.-colwise(Euclidean(), x.X, x′.X))
+pw(k::Exp, x::ColsAreObs, x′::ColsAreObs) = exp.(.-pairwise(Euclidean(), x.X, x′.X; dims=2))
 ew(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
 pw(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods
 ew(::Exp, x::AV{<:Real}) = ones(eltype(x), length(x))
+ew(::Exp, x::ColsAreObs{T}) where {T} = ones(T, length(x))
 pw(k::Exp, x::AV{<:Real}) = pw(k, x, x)
+pw(k::Exp, x::ColsAreObs) = exp.(.-pairwise(Euclidean(), x.X; dims=2))
 pw(k::Exp, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 
