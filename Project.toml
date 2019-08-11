@@ -17,14 +17,14 @@ ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
-FDM = ">= 0.6.1"
 FillArrays = ">= 0.4.0"
+FiniteDifferences = ">= 0.7.0"
 ToeplitzMatrices = "^0.4.2"
 julia = ">=1.1.1"
 
 [extras]
-FDM = "e25cca7e-83ef-51fa-be6c-dfe2a3123128"
+FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["FDM", "Test"]
+test = ["FiniteDifferences", "Test"]

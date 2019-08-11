@@ -37,9 +37,9 @@ version = "0.9.1"
 
 [[CSTParser]]
 deps = ["Tokenize"]
-git-tree-sha1 = "0ff80f68f55fcde2ed98d7b24d7abaf20727f3f8"
+git-tree-sha1 = "c69698c3d4a7255bc1b4bc2afc09f59db910243b"
 uuid = "00ebfdb7-1f24-5e51-bd34-a7502290713f"
-version = "0.6.1"
+version = "0.6.2"
 
 [[CommonSubexpressions]]
 deps = ["Test"]
@@ -121,6 +121,12 @@ repo-url = "https://github.com/JuliaArrays/FillArrays.jl.git"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
 version = "0.6.3"
 
+[[FiniteDifferences]]
+deps = ["LinearAlgebra", "Printf"]
+git-tree-sha1 = "9c35e38c34464726c039962691505c9063a7d441"
+uuid = "26cc04aa-876d-5657-8c51-4c34ba976000"
+version = "0.7.0"
+
 [[ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "InteractiveUtils", "LinearAlgebra", "NaNMath", "Random", "SparseArrays", "SpecialFunctions", "StaticArrays", "Test"]
 git-tree-sha1 = "4c4d727f1b7e0092134fabfab6396b8945c1ea5b"
@@ -197,9 +203,9 @@ version = "1.1.0"
 
 [[PDMats]]
 deps = ["Arpack", "LinearAlgebra", "SparseArrays", "SuiteSparse", "Test"]
-git-tree-sha1 = "8b68513175b2dc4023a564cb0e917ce90e74fd69"
+git-tree-sha1 = "f99548922adf8dd5df2f02ab0063944201a12ed8"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.9.7"
+version = "0.9.8"
 
 [[Parsers]]
 deps = ["Dates", "Test"]
