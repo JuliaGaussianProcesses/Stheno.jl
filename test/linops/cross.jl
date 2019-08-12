@@ -55,7 +55,7 @@ using Stheno: BlockData, GPC, cross
                 f3 = cross([f1, f2])
                 return f3, f3
             end,
-            13, 11,
+            7, 3,
         )
     end
     # @testset "finites_to_block" begin
