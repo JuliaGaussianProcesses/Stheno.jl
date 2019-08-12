@@ -37,8 +37,8 @@ end
     end
 end
 
-@adjoint function pairwise(s::SqEuclidean, X::AbstractMatrix)
-    D = pairwise(s, X)
+@adjoint function pairwise(s::SqEuclidean, X::AbstractMatrix; dims=2)
+    D = pairwise(s, X; dims=dims)
     return D, function(Δ)
         d1, d2 = Diagonal(vec(sum(Δ; dims=1))), Diagonal(vec(sum(Δ; dims=2)))
         return (nothing, X * (2 .* (d1 .+ d2 .- Δ .- Δ')))

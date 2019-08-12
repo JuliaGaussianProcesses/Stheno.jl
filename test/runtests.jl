@@ -19,16 +19,16 @@ include("test_util.jl")
     @testset "mean_and_kernel" begin
         include(joinpath("mean_and_kernel", "mean.jl"))
         include(joinpath("mean_and_kernel", "kernel.jl"))
-        include(joinpath("mean_and_kernel", "compose.jl"))
-        include(joinpath("mean_and_kernel", "block.jl"))
-        include(joinpath("mean_and_kernel", "input_transform.jl"))
-        # include(joinpath("mean_and_kernel", "derivative.jl")) # These tests currenly fail because Zygote.
-        @testset "conditioning" begin
-            include(joinpath("mean_and_kernel", "conditioning", "exact.jl"))
-            include(joinpath("mean_and_kernel", "conditioning", "titsias.jl"))
-        end
-        include(joinpath("mean_and_kernel", "algebra.jl"))
-        include(joinpath("mean_and_kernel", "util.jl"))
+        # include(joinpath("mean_and_kernel", "compose.jl"))
+        # include(joinpath("mean_and_kernel", "block.jl"))
+        # include(joinpath("mean_and_kernel", "input_transform.jl"))
+        # # include(joinpath("mean_and_kernel", "derivative.jl")) # These tests currenly fail because Zygote.
+        # @testset "conditioning" begin
+        #     include(joinpath("mean_and_kernel", "conditioning", "exact.jl"))
+        #     include(joinpath("mean_and_kernel", "conditioning", "titsias.jl"))
+        # end
+        # include(joinpath("mean_and_kernel", "algebra.jl"))
+        # include(joinpath("mean_and_kernel", "util.jl"))
     end
 
     @testset "gp" begin

@@ -65,7 +65,7 @@ using Base.Broadcast: broadcast_shape
     @testset "pairwise(::Euclidean, X; dims=2)" begin
         rng, D, P = MersenneTwister(123456), 2, 3
         X, D̄ = randn(rng, D, P), randn(rng, P, P)
-        adjoint_test(X->pairwise(Euclidean(), X), D̄, X; print_results=true)
+        adjoint_test(X->pairwise(Euclidean(), X), D̄, X)
     end
     @testset "Diagonal" begin
         rng, N = MersenneTwister(123456), 11
