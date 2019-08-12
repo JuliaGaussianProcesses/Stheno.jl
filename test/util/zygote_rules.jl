@@ -1,4 +1,4 @@
-using FDM, Zygote, Distances, Random, LinearAlgebra, ToeplitzMatrices, StatsFuns
+using FiniteDifferences, Zygote, Distances, Random, LinearAlgebra, ToeplitzMatrices, StatsFuns
 using Base.Broadcast: broadcast_shape
 
 @testset "zygote_rules" begin
@@ -122,7 +122,7 @@ using Base.Broadcast: broadcast_shape
     function test_log1pexp(T, rng, tol, xs)
         for x in xs
             adjoint_test(log1pexp, randn(rng, T), x;
-                fdm=FDM.Central(5, 1; eps=eps(T), adapt=2),
+                fdm=FiniteDifferences.Central(5, 1; eps=eps(T), adapt=2),
                 rtol=tol,
                 atol=tol,
             )

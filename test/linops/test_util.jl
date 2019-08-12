@@ -48,90 +48,90 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
     )
 
 
-    #
-    # rand / logpdf / elbo tests
-    #
+    # #
+    # # rand / logpdf / elbo tests
+    # #
 
-    # Check that the gradient w.r.t. the samples is correct (single-sample).
-    adjoint_test(
-        (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A)),
-        randn(rng, length(x)), θ, x, A;
-        rtol=1e-4, atol=1e-4,
-    )
+    # # Check that the gradient w.r.t. the samples is correct (single-sample).
+    # adjoint_test(
+    #     (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A)),
+    #     randn(rng, length(x)), θ, x, A;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 
-    # Check that the gradient w.r.t. the samples is correct (multi-sample).
-    adjoint_test(
-        (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A), 11),
-        randn(rng, length(x), 11), θ, x, A;
-        rtol=1e-4, atol=1e-4,
-    )
+    # # Check that the gradient w.r.t. the samples is correct (multi-sample).
+    # adjoint_test(
+    #     (θ, x, A)->rand(MersenneTwister(123456), g(θ, x, A), 11),
+    #     randn(rng, length(x), 11), θ, x, A;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 
-    # Check adjoints for logpdf.
-    adjoint_test(
-        (θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A, y;
-        rtol=1e-4, atol=1e-4,
-    )
+    # # Check adjoints for logpdf.
+    # adjoint_test(
+    #     (θ, x, A, y)->logpdf(g(θ, x, A), y), randn(rng), θ, x, A, y;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 
-    # Check adjoint for elbo.
-    adjoint_test(
-        (ϴ, x, A, y, z, B)->begin
-            fx, uz = h(θ, x, A, z, B)
-            return elbo(fx, y, uz)
-        end,
-        randn(rng), θ, x, A, y, z, B;
-        rtol=1e-4, atol=1e-4,
-    )
+    # # Check adjoint for elbo.
+    # adjoint_test(
+    #     (ϴ, x, A, y, z, B)->begin
+    #         fx, uz = h(θ, x, A, z, B)
+    #         return elbo(fx, y, uz)
+    #     end,
+    #     randn(rng), θ, x, A, y, z, B;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 
 
-    #
-    # multi-process rand / logpdf / elbo tests - this stuff won't work for anything if
-    # cross-related functionality doesn't work properly
-    #
+    # #
+    # # multi-process rand / logpdf / elbo tests - this stuff won't work for anything if
+    # # cross-related functionality doesn't work properly
+    # #
 
-    adjoint_test(
-        (θ, x, A) -> begin
-            _g = g(θ, x, A)
-            return rand(MersenneTwister(123456), [_g, _g])
-        end,
-        [randn(rng, length(x)), randn(rng, length(x))], θ, x, A;
-        rtol=1e-4, atol=1e-4,
-    )
+    # adjoint_test(
+    #     (θ, x, A) -> begin
+    #         _g = g(θ, x, A)
+    #         return rand(MersenneTwister(123456), [_g, _g])
+    #     end,
+    #     [randn(rng, length(x)), randn(rng, length(x))], θ, x, A;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 
-    adjoint_test(
-        (θ, x, A) -> begin
-            _g = g(θ, x, A)
-            return rand(MersenneTwister(123456), [_g, _g], 11)
-        end,
-        [randn(rng, length(x), 11), randn(rng, length(x), 11)], θ, x, A;
-        rtol=1e-4, atol=1e-4,
-    )
+    # adjoint_test(
+    #     (θ, x, A) -> begin
+    #         _g = g(θ, x, A)
+    #         return rand(MersenneTwister(123456), [_g, _g], 11)
+    #     end,
+    #     [randn(rng, length(x), 11), randn(rng, length(x), 11)], θ, x, A;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 
-    adjoint_test(
-        (θ, x, A, y) -> begin
-            _g = g(θ, x, A)
-            return logpdf([_g, _g], [y, y])
-        end,
-        randn(rng), θ, x, A, y;
-        rtol=1e-4, atol=1e-4,
-    )
+    # adjoint_test(
+    #     (θ, x, A, y) -> begin
+    #         _g = g(θ, x, A)
+    #         return logpdf([_g, _g], [y, y])
+    #     end,
+    #     randn(rng), θ, x, A, y;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 
-    adjoint_test(
-        (θ, x, A, y) -> begin
-            _g = g(θ, x, A)
-            return logpdf([_g ← y, _g ← y])
-        end,
-        randn(rng), θ, x, A, y;
-        rtol=1e-4, atol=1e-4,
-    )
+    # adjoint_test(
+    #     (θ, x, A, y) -> begin
+    #         _g = g(θ, x, A)
+    #         return logpdf([_g ← y, _g ← y])
+    #     end,
+    #     randn(rng), θ, x, A, y;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 
-    adjoint_test(
-        (ϴ, x, A, y, z, B)->begin
-            fx, uz = h(θ, x, A, z, B)
-            return elbo([fx, fx], [y, y], [uz, uz])
-        end,
-        randn(rng), θ, x, A, y, z, B;
-        rtol=1e-4, atol=1e-4,
-    )
+    # adjoint_test(
+    #     (ϴ, x, A, y, z, B)->begin
+    #         fx, uz = h(θ, x, A, z, B)
+    #         return elbo([fx, fx], [y, y], [uz, uz])
+    #     end,
+    #     randn(rng), θ, x, A, y, z, B;
+    #     rtol=1e-4, atol=1e-4,
+    # )
 end
 
 inputs(k::Kernel, N::Int) = collect(range(-5.0, 5.0; length=N))

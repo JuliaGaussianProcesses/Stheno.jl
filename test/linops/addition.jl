@@ -71,7 +71,7 @@ using Stheno: GPC
                 f5 = f3 + f4
                 return f5, f5
             end,
-            13, 11,
+            5, 3,
         )
     end
 end
