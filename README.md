@@ -8,7 +8,7 @@ Stheno is designed to make doing non-standard things with Gaussian processes str
 
 Please open issues liberally -- if there's anything that's unclear or doesn't work, we would very much like to know about it.
 
-__Installation__ - `] add Stheno#master` for the time being.
+__Installation__ - `] add Stheno`.
 
 ## A Couple of Examples
 
