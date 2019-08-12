@@ -1,9 +1,9 @@
-using BlockArrays, LinearAlgebra, FDM, Zygote, Random
+using BlockArrays, LinearAlgebra, FiniteDifferences, Zygote, Random
 using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, ew, pw, BlockData, blocks
 using Stheno: block_diagonal
 using LinearAlgebra: AbstractTriangular
-using FDM: j′vp
-import FDM: to_vec
+using FiniteDifferences: j′vp
+import FiniteDifferences: to_vec
 
 const _rtol = 1e-10
 const _atol = 1e-10
@@ -74,7 +74,7 @@ function adjoint_test(
     f, ȳ, x...;
     rtol=_rtol,
     atol=_atol,
-    fdm=FDM.Central(5, 1),
+    fdm=FiniteDifferences.Central(5, 1),
     print_results=false,
 )
 

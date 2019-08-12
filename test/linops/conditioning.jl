@@ -58,7 +58,7 @@ end
         @test cov(f′(x), f′(x′)) ≈ cov(f′2(x), f′2(x′))
     end
     @testset "Standardised Tests" begin
-        rng, N, P, Q = MersenneTwister(123456), 11, 13, 7
+        rng, N, P, Q = MersenneTwister(123456), 11, 5, 3
         x_obs, A_obs = collect(range(-5.0, 5.0; length=N)), randn(rng, N, N)
         y_obs = rand(rng, GP(sin, eq(l=0.5), GPC())(x_obs, _to_psd(A_obs)))
         standard_1D_tests(

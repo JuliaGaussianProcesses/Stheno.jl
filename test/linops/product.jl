@@ -3,7 +3,7 @@ using Stheno: GPC
 @testset "product" begin
 
     @testset "multiply by constant" begin
-        rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
+        rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         g1, c, c′ = GP(1, eq(), GPC()), -4.3, 2.1
         g2, g2′ = c * g1, g1 * c′
@@ -53,7 +53,7 @@ using Stheno: GPC
         end
     end
     @testset "multiply by function" begin
-        rng, N, N′, D = MersenneTwister(123456), 10, 11, 2
+        rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         g1, f, f′ = GP(1, eq(), GPC()), x->sum(sin, x), x->sum(cos, x)
         g2, g2′ = f * g1, g1 * f′

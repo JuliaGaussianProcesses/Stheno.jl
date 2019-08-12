@@ -1,7 +1,7 @@
 using Stheno: GPC, Stretch, LinearTransform
 
 @testset "compose" begin
-    rng, N, N′, gpc = MersenneTwister(123456), 7, 5, GPC()
+    rng, N, N′, gpc = MersenneTwister(123456), 5, 3, GPC()
     x, x′ = randn(rng, N), randn(rng, N′)
     f, g, h = GP(sin, eq(), gpc), cos, GP(exp, linear(), gpc)
     fg = f ∘ g

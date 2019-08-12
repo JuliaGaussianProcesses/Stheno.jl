@@ -1,4 +1,4 @@
-using FDM, Flux, Distances, Random, LinearAlgebra
+using FiniteDifferences, Flux, Distances, Random, LinearAlgebra
 
 @testset "flux_rules" begin
 
@@ -10,11 +10,11 @@ let
 
     # Check first argument of binary pairwise.
     f = X->sum(pairwise(SqEuclidean(), X, Y))
-    @test all(Flux.gradient(f, X)[1] .- FDM.grad(fdm, f, X) .< 1e-8)
+    @test all(Flux.gradient(f, X)[1] .- FiniteDifferences.grad(fdm, f, X) .< 1e-8)
 
     # Check second argument of binary pairwise.
     f = Y->sum(pairwise(SqEuclidean(), X, Y))
-    @test all(Flux.gradient(f, Y)[1] .- FDM.grad(fdm, f, Y) .< 1e-8)
+    @test all(Flux.gradient(f, Y)[1] .- FiniteDifferences.grad(fdm, f, Y) .< 1e-8)
 
     # Check unary pairwise.
     @test Flux.gradient(X->sum(pairwise(SqEuclidean(), X)), X)[1] ≈
@@ -29,11 +29,11 @@ let
 
     # Check first argument of binary pairwise.
     f = x->sum(pairwise(SqEuclidean(), x, y))
-    @test all(Flux.gradient(f, x)[1] .- FDM.grad(fdm, f, x) .< 1e-8)
+    @test all(Flux.gradient(f, x)[1] .- FiniteDifferences.grad(fdm, f, x) .< 1e-8)
 
     # Check second argument of binary pairwise.
     f = y->sum(pairwise(SqEuclidean(), x, y))
-    @test all(Flux.gradient(f, y)[1] .- FDM.grad(fdm, f, y) .< 1e-8)
+    @test all(Flux.gradient(f, y)[1] .- FiniteDifferences.grad(fdm, f, y) .< 1e-8)
 
     # Check unary pairwise.
     @test Flux.gradient(x->sum(pairwise(SqEuclidean(), x)), x)[1] ≈
@@ -50,37 +50,37 @@ let
 
     # Check first argument sensitivity in matrix case.
     f = X->sum(X \ Y)
-    @test all(Flux.gradient(f, X)[1] .- FDM.grad(fdm, f, X) .< 1e-8)
+    @test all(Flux.gradient(f, X)[1] .- FiniteDifferences.grad(fdm, f, X) .< 1e-8)
 
     # Check second argument sensitivity in matrix case.
     f = Y->sum(X \ Y)
-    @test all(Flux.gradient(f, Y)[1] .- FDM.grad(fdm, f, Y) .< 1e-8)
+    @test all(Flux.gradient(f, Y)[1] .- FiniteDifferences.grad(fdm, f, Y) .< 1e-8)
 
     # Check first argument sensitivity in vector case.
     f = X->sum(X \ y)
-    @test all(Flux.gradient(f, X)[1] .- FDM.grad(fdm, f, X) .< 1e-8)
+    @test all(Flux.gradient(f, X)[1] .- FiniteDifferences.grad(fdm, f, X) .< 1e-8)
 
     # Check second argument sensitivity in vector case.
     f = y->sum(X \ y)
-    @test all(Flux.gradient(f, y)[1] .- FDM.grad(fdm, f, y) .< 1e-8)
+    @test all(Flux.gradient(f, y)[1] .- FiniteDifferences.grad(fdm, f, y) .< 1e-8)
 
     # /
 
     # Check first argumeant sensitivity in matrix case.
     f = X->sum(Y' / X)
-    @test all(Flux.gradient(f, X)[1] .- FDM.grad(fdm, f, X) .< 1e-8)
+    @test all(Flux.gradient(f, X)[1] .- FiniteDifferences.grad(fdm, f, X) .< 1e-8)
 
     # Check second argument sensitivity in matrix case.
     f = Y->sum(Y' / X)
-    @test all(Flux.gradient(f, Y)[1] .- FDM.grad(fdm, f, Y) .< 1e-8)
+    @test all(Flux.gradient(f, Y)[1] .- FiniteDifferences.grad(fdm, f, Y) .< 1e-8)
 
     # Check first argument sensitivity in vector case.
     f = X->sum(y' / X)
-    @test all(Flux.gradient(f, X)[1] .- FDM.grad(fdm, f, X) .< 1e-8)
+    @test all(Flux.gradient(f, X)[1] .- FiniteDifferences.grad(fdm, f, X) .< 1e-8)
 
     # Check second argument sensitivity in vector case.
     f = y->sum(y' / X)
-    @test all(Flux.gradient(f, y)[1] .- FDM.grad(fdm, f, y) .< 1e-8)
+    @test all(Flux.gradient(f, y)[1] .- FiniteDifferences.grad(fdm, f, y) .< 1e-8)
 end
 
 # Check that Symmetric works as expected.
@@ -90,7 +90,7 @@ let
     A = randn(rng, P, P)
 
     f = A->sum(Symmetric(A))
-    @test all(Flux.gradient(f, A)[1] .- FDM.grad(fdm, f, A) .< 1e-8)
+    @test all(Flux.gradient(f, A)[1] .- FiniteDifferences.grad(fdm, f, A) .< 1e-8)
 end
 
 # Check that `diag` behaves sensibly.
@@ -100,7 +100,7 @@ let
     A = randn(rng, P, P)
 
     f = A->sum(diag(A))
-    @test all(Flux.gradient(f, A)[1] .- FDM.grad(fdm, f, A) .< 1e-8)
+    @test all(Flux.gradient(f, A)[1] .- FiniteDifferences.grad(fdm, f, A) .< 1e-8)
 end
 
 # Check that addition of matrices and uniform scalings works as hoped.
@@ -110,7 +110,7 @@ let
     A = randn(rng, P, P)
 
     f = A->sum(A + 5I)
-    @test all(Flux.gradient(f, A)[1] .- FDM.grad(fdm, f, A) .< 1e-8)
+    @test all(Flux.gradient(f, A)[1] .- FiniteDifferences.grad(fdm, f, A) .< 1e-8)
 end
 
 end # testset
