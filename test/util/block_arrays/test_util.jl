@@ -58,7 +58,7 @@ end
 @testset "fdm stuff" begin
     rng, Ps, Qs = MersenneTwister(123456), [5, 4], [3, 2, 1]
     X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
-    vec_X, from_vec = FDM.to_vec(X)
+    vec_X, from_vec = FiniteDifferences.to_vec(X)
     @test vec_X isa Vector
     @test from_vec(vec_X) == X
 end
