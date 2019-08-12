@@ -41,6 +41,7 @@ end
 ################################ Define some basic kernels #################################
 
 
+
 """
     ZeroKernel <: Kernel
 
@@ -58,6 +59,7 @@ pw(k::ZeroKernel, x::AV, x′::AV) = zeros(eltype(k), length(x), length(x′))
 # Unary methods.
 ew(k::ZeroKernel, x::AV) = zeros(eltype(k), length(x))
 pw(k::ZeroKernel, x::AV) = zeros(eltype(k), length(x), length(x))
+
 
 
 """
@@ -79,6 +81,7 @@ ew(k::OneKernel, x::AV) = ones(eltype(k), length(x))
 pw(k::OneKernel, x::AV) = ones(eltype(k), length(x), length(x))
 
 
+
 """
     ConstKernel{T} <: Kernel
 
@@ -98,6 +101,7 @@ pw(k::ConstKernel, x::AV, x′::AV) = fill(k.c, length(x), length(x′))
 # Unary methods.
 ew(k::ConstKernel, x::AV) = fill(k.c, length(x))
 pw(k::ConstKernel, x::AV) = pw(k, x, x)
+
 
 
 """
@@ -147,6 +151,7 @@ end
 end
 
 
+
 """
     PerEQ
 
@@ -166,6 +171,7 @@ pw(k::PerEQ, x::AV{<:Real}) = pw(k, x, x)
 pw(k::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 
+
 """
     Exp <: Kernel
 
@@ -176,13 +182,112 @@ struct Exp <: Kernel end
 # Binary methods
 ew(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′))
 pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′'))
+ew(k::Exp, x::ColsAreObs, x′::ColsAreObs) = exp.(.-colwise(Euclidean(), x.X, x′.X))
+pw(k::Exp, x::ColsAreObs, x′::ColsAreObs) = exp.(.-pairwise(Euclidean(), x.X, x′.X; dims=2))
 ew(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
 pw(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods
 ew(::Exp, x::AV{<:Real}) = ones(eltype(x), length(x))
+ew(::Exp, x::ColsAreObs{T}) where {T} = ones(T, length(x))
 pw(k::Exp, x::AV{<:Real}) = pw(k, x, x)
+pw(k::Exp, x::ColsAreObs) = exp.(.-pairwise(Euclidean(), x.X; dims=2))
 pw(k::Exp, x::StepRangeLen{<:Real}) = toep_pw(k, x)
+
+
+
+"""
+    Matern12
+
+Equivalent to the Exponential kernel.
+"""
+const Matern12 = Exp
+
+
+
+"""
+    Matern32 <: Kernel
+
+The Matern kernel with ν = 3 / 2
+"""
+struct Matern32 <: Kernel end
+
+function _matern32(d)
+    d = sqrt(3) * d
+    return (1 + d) * exp(-d)
+end
+
+# Binary methods
+ew(::Matern32, x::AV{<:Real}, x′::AV{<:Real}) = _matern32.(abs.(x .- x′))
+pw(::Matern32, x::AV{<:Real}, x′::AV{<:Real}) = _matern32.(abs.(x .- x′'))
+ew(k::Matern32, x::ColsAreObs, x′::ColsAreObs) = _matern32.(colwise(Euclidean(), x.X, x′.X))
+function pw(k::Matern32, x::ColsAreObs, x′::ColsAreObs)
+    return _matern32.(pairwise(Euclidean(), x.X, x′.X; dims=2))
+end
+
+# Unary methods
+ew(::Matern32, x::AV{<:Real}) = ones(eltype(x), length(x))
+pw(k::Matern32, x::AV{<:Real}) = pw(k, x, x)
+ew(::Matern32, x::ColsAreObs{T}) where {T<:Real} = ones(T, length(x))
+pw(::Matern32, x::ColsAreObs) = _matern32.(pairwise(Euclidean(), x.X; dims=2))
+
+
+
+"""
+    Matern52 <: Kernel
+
+The Matern kernel with ν = 5 / 2
+"""
+struct Matern52 <: Kernel end
+
+function _matern52(d)
+    d = sqrt(5) * d
+    return (1 + d + d^2 / 3) * exp(-d)
+end
+
+# Binary methods
+ew(::Matern52, x::AV{<:Real}, x′::AV{<:Real}) = _matern52.(abs.(x .- x′))
+pw(::Matern52, x::AV{<:Real}, x′::AV{<:Real}) = _matern52.(abs.(x .- x′'))
+ew(k::Matern52, x::ColsAreObs, x′::ColsAreObs) = _matern52.(colwise(Euclidean(), x.X, x′.X))
+function pw(k::Matern52, x::ColsAreObs, x′::ColsAreObs)
+    return _matern52.(pairwise(Euclidean(), x.X, x′.X; dims=2))
+end
+
+# Unary methods
+ew(::Matern52, x::AV{<:Real}) = ones(eltype(x), length(x))
+pw(k::Matern52, x::AV{<:Real}) = pw(k, x, x)
+ew(::Matern52, x::ColsAreObs{T}) where {T<:Real} = ones(T, length(x))
+pw(::Matern52, x::ColsAreObs) = _matern52.(pairwise(Euclidean(), x.X; dims=2))
+
+
+
+"""
+    RQ <: Kernel
+
+The standardised Rational Quadratic, with kurtosis `α`.
+"""
+struct RQ{Tα<:Real} <: Kernel
+    α::Tα
+end
+
+_rq(d, α) = (1 + d / (2α))^(-α)
+
+# Binary methods
+ew(k::RQ, x::AV{<:Real}, x′::AV{<:Real}) = _rq.(sqeuclidean.(x, x′), k.α)
+pw(k::RQ, x::AV{<:Real}, x′::AV{<:Real}) = _rq.(sqeuclidean.(x, x′'), k.α)
+function ew(k::RQ, x::ColsAreObs, x′::ColsAreObs)
+    return _rq.(colwise(SqEuclidean(), x.X, x′.X), k.α)
+end
+function pw(k::RQ, x::ColsAreObs, x′::ColsAreObs)
+    return _rq.(pairwise(SqEuclidean(), x.X, x′.X; dims=2), k.α)
+end
+
+# Unary methods
+ew(k::RQ, x::AV{<:Real}) = ones(eltype(x), length(x))
+pw(k::RQ, x::AV{<:Real}) = pw(k, x, x)
+ew(k::RQ, x::ColsAreObs{T}) where {T<:Real} = ones(T, length(x))
+pw(k::RQ, x::ColsAreObs) = _rq.(pairwise(SqEuclidean(), x.X; dims=2), k.α)
+
 
 
 """
@@ -205,6 +310,7 @@ ew(k::Linear, x::ColsAreObs) = reshape(sum(abs2.(x.X); dims=1), :)
 pw(k::Linear, x::ColsAreObs) = x.X' * x.X
 
 
+
 """
     Noise{T<:Real} <: Kernel
 
@@ -222,17 +328,6 @@ pw(k::Noise, x::AV, x′::AV) = zeros(eltype(k), length(x), length(x′))
 ew(k::Noise, x::AV) = ones(eltype(k), length(x))
 pw(k::Noise, x::AV) = diagm(0=>ones(eltype(k), length(x)))
 
-
-# """
-#     RQ{T<:Real} <: Kernel
-
-# The standardised Rational Quadratic. `RQ(α)` creates an `RQ` `Kernel{Stationary}` whose
-# kurtosis is `α`.
-# """
-# struct RQ{T<:Real} <: Kernel
-#     α::T
-# end
-# @inline (k::RQ)(x::Real, y::Real) = (1 + 0.5 * abs2(x - y) / k.α)^(-k.α)
 
 
 # """

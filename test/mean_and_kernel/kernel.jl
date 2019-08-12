@@ -1,5 +1,5 @@
 using Stheno: CrossKernel, ZeroKernel, OneKernel, ConstKernel, CustomMean, pw
-using Stheno: EQ, Exp, Linear, Noise, PerEQ
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ
 using LinearAlgebra
 
 @testset "kernel" begin
@@ -36,17 +36,40 @@ using LinearAlgebra
         @testset "EQ" begin
             differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-            # stationary_kernel_tests(EQ(), x0_r, x1_r, x2_r, x3_r, x4_r)
         end
 
         @testset "PerEQ" begin
             differentiable_kernel_tests(PerEQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
-            # stationary_kernel_tests(PerEQ(), x0_r, x1_r, x2_r, x3_r, x4_r)
         end
 
         @testset "Exp" begin
             differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, x0 .+ 1, x1, x2)
-            # stationary_kernel_tests(Exp(), x0_r, x1_r, x2_r, x3_r, x4_r)
+            differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
+
+        @testset "Matern32" begin
+            differentiable_kernel_tests(Matern32(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Matern32(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
+
+        @testset "Matern52" begin
+            differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
+
+        @testset "RQ" begin
+            @testset "α=1.0" begin
+                differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @testset "α=1.5" begin
+                differentiable_kernel_tests(RQ(1.5), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(RQ(1.5), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @testset "α=100.0" begin
+                differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
         end
 
         @testset "Linear" begin
