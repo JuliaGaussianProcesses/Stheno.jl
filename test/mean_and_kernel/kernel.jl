@@ -20,82 +20,82 @@ using LinearAlgebra
 
         ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
 
-        # @testset "ZeroKernel" begin
-        #     differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-        #     differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-        # end
+        @testset "ZeroKernel" begin
+            differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
 
-        # @testset "OneKernel" begin
-        #     differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-        #     differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-        # end
+        @testset "OneKernel" begin
+            differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
 
-        # @testset "ConstKernel" begin
-        #     @test ew(ConstKernel(5), x0) == 5 .* ones(length(x0))
-        #     differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-        #     differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-        # end
+        @testset "ConstKernel" begin
+            @test ew(ConstKernel(5), x0) == 5 .* ones(length(x0))
+            differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
 
-        # @testset "EQ" begin
-        #     differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-        #     differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-        # end
+        @testset "EQ" begin
+            differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
 
-        # @testset "PerEQ" begin
-        #     differentiable_kernel_tests(PerEQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
-        # end
+        @testset "PerEQ" begin
+            differentiable_kernel_tests(PerEQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
+        end
 
-        # @testset "Exp" begin
-        #     differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, x0 .+ 1, x1, x2)
-        #     differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-        # end
+        @testset "Exp" begin
+            differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, x0 .+ 1, x1, x2)
+            differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
 
-        # @testset "Matern32" begin
-        #     differentiable_kernel_tests(Matern32(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-        #     differentiable_kernel_tests(Matern32(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-        # end
+        @testset "Matern32" begin
+            differentiable_kernel_tests(Matern32(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Matern32(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
 
-        # @testset "Matern52" begin
-        #     differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-        #     differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-        # end
+        @testset "Matern52" begin
+            differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
 
         @testset "RQ" begin
-            # @testset "α=1.0" begin
-            #     differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-            #     differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-            # end
-            # @testset "α=1.5" begin
-            #     differentiable_kernel_tests(RQ(1.5), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-            #     differentiable_kernel_tests(RQ(1.5), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-            # end
-            # @testset "α=100.0" begin
-            #     differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-            #     differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-            # end
+            @testset "α=1.0" begin
+                differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @testset "α=1.5" begin
+                differentiable_kernel_tests(RQ(1.5), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(RQ(1.5), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @testset "α=100.0" begin
+                differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
             @testset "single-input" begin
                 adjoint_test((α, x, x′)->ew(RQ(α), x, x′), ȳ, 1.5, x0, x1; print_results=true)
                 adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, x0, x2)
                 adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, x0)
                 adjoint_test((α, x)->pw(RQ(α), x), Ȳ_sq, 1.5, x0)
             end
-            # @testset "multi-input" begin
-            #     adjoint_test((α, x, x′)->ew(RQ(α), x, x′), ȳ, 1.5, X0, X1)
-            #     adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, X0, X2)
-            #     adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, X0)
-            #     adjoint_test((α, x)->pw(RQ(α), x), Ȳ_sq, 1.5, X0)
-            # end
+            @testset "multi-input" begin
+                adjoint_test((α, x, x′)->ew(RQ(α), x, x′), ȳ, 1.5, X0, X1)
+                adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, X0, X2)
+                adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, X0)
+                adjoint_test((α, x)->pw(RQ(α), x), Ȳ_sq, 1.5, X0)
+            end
         end
 
-        # @testset "Linear" begin
-        #     differentiable_kernel_tests(Linear(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-        #     differentiable_kernel_tests(Linear(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-        # end
+        @testset "Linear" begin
+            differentiable_kernel_tests(Linear(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Linear(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
 
-        # @testset "Noise" begin
-        #     @test pw(Noise(), x0, x0) == zeros(length(x0), length(x0))
-        #     @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
-        # end
+        @testset "Noise" begin
+            @test pw(Noise(), x0, x0) == zeros(length(x0), length(x0))
+            @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
+        end
     end
 
     @testset "(is)zero" begin
