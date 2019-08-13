@@ -6,20 +6,20 @@ export mean, std, cov, marginals, rand, logpdf, elbo
 """
     FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy}
 
-The finite-dimensional projection of the GP `f` at `x`.
+The finite-dimensional projection of the AbstractGP `f` at `x`.
 """
 struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribution
     f::Tf
     x::Tx 
     Σy::TΣy
-    function FiniteGP(f::Tf, x::Tx, Σy::TΣy) where {Tf<:GP, Tx<:AV, TΣy}
+    function FiniteGP(f::Tf, x::Tx, Σy::TΣy) where {Tf<:AbstractGP, Tx<:AV, TΣy}
         @assert length(x) == size(Σy, 1)
         return new{Tf, Tx, TΣy}(f, x, Σy)
     end
 end
-FiniteGP(f::GP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
-FiniteGP(f::GP, x::AV, σ²::Real) = FiniteGP(f, x, fill(σ², length(x)))
-FiniteGP(f::GP, x::AV) = FiniteGP(f, x, 0)
+FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
+FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, fill(σ², length(x)))
+FiniteGP(f::AbstractGP, x::AV) = FiniteGP(f, x, 0)
 
 length(f::FiniteGP) = length(f.x)
 
@@ -35,21 +35,21 @@ mean(f::FiniteGP) = mean_vector(f.f, f.x)
 
 The covariance matrix of `f`.
 """
-cov(f::FiniteGP) = cov_mat(f.f, f.x) + f.Σy
+cov(f::FiniteGP) = cov(f.f, f.x) + f.Σy
 
 """
     cov(f::FiniteGP, g::FiniteGP)
 
 The cross-covariance between `f` and `g`.
 """
-cov(f::FiniteGP, g::FiniteGP) = xcov_mat(f.f, g.f, f.x, g.x)
+cov(f::FiniteGP, g::FiniteGP) = xcov(f.f, g.f, f.x, g.x)
 
 """
     marginals(f::FiniteGP)
 
 Sugar, returns a vector of Normal distributions representing the marginals of `f`.
 """
-marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(cov_mat_diag(f.f, f.x) .+ diag(f.Σy)))
+marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(cov_diag(f.f, f.x) .+ diag(f.Σy)))
 
 """
     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)

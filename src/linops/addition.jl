@@ -9,49 +9,61 @@ function +(fa::AbstractGP, fb::AbstractGP)
     @assert fa.gpc === fb.gpc
     return CompositeGP((+, fa, fb), fa.gpc)
 end
+-(fa::AbstractGP, fb::AbstractGP) = fa + (-b)
 
-const add_args = Tuple{AbstractGP, AbstractGP}
+#
+# Add two GPs
+#
 
-mean_vector((fa, fb)::add_args, x::AV) = mean_vector(fa, x) .+ mean_vector(fb, x)
-function cov_mat((fa, fb)::add_args, x::AV)
-    return cov_mat(fa, x) .+ cov_mat(fb, x) .+ xcov_mat(fa, fb, x) .+ xcov_mat(fb, fa, x)
+const add_args = Tuple{typeof(+), AbstractGP, AbstractGP}
+
+mean_vector((_, fa, fb)::add_args, x::AV) = mean_vector(fa, x) .+ mean_vector(fb, x)
+
+function cov((_, fa, fb)::add_args, x::AV)
+    return cov(fa, x) .+ cov(fb, x) .+ xcov(fa, fb, x) .+ xcov(fb, fa, x)
 end
-function cov_mat((fa, fb)::add_args, x::AV, x′::AV)
-    C_a, C_b = cov_mat(fa, x, x′), cov_mat(fb, x, x′)
-    return C_a .+ C_b .+ xcov_mat(fa, fb, x, x′) .+ xcov_mat(fb, fa, x, x′)
+
+function cov((_, fa, fb)::add_args, x::AV, x′::AV)
+    return cov(fa, x, x′) .+ cov(fb, x, x′) .+ xcov(fa, fb, x, x′) .+ xcov(fb, fa, x, x′)
 end
-function diag_cov_mat((fa, fb)::add_args, x::AV)
-    C_a, C_b = cov_mat_diag(fa, x), cov_mat_diag(fb, x)
-    return C_a .+ C_b .+ cov_mat_diag(fa, fb, x) .+ cov_mat_diag(fb, fa, x)
+
+function cov_diag((_, fa, fb)::add_args, x::AV)
+    return cov_diag(fa, x) .+ cov_diag(fb, x) .+ cov_diag(fa, fb, x) .+ cov_diag(fb, fa, x)
 end
-# NEED TO BE ABLE TO GET THE DIAGONAL OF AN XCOV APPARENTLY!
 
-
-
-μ_p′(::typeof(+), fa, fb) = mean(fa) + mean(fb)
-function k_p′(::typeof(+), fa, fb)
-    return kernel(fa) + kernel(fb) + kernel(fa, fb) + kernel(fb, fa)
-    # k_out = kernel(fa) + kernel(fb) + kernel(fa, fb) + kernel(fb, fa)
-    # if k_out isa CompositeCrossKernel
-    #     return CompositeKernel(+, k_out.x...)
-    # else
-    #     return k_out
-    # end
+function xcov((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
+    return xcov(fa, f′, x, x′) .+ xcov(fb, f′, x, x′)
 end
-k_pp′(fp::GP, ::typeof(+), fa, fb) = kernel(fp, fa) + kernel(fp, fb)
-k_p′p(::typeof(+), fa, fb, fp::GP) = kernel(fa, fp) + kernel(fb, fp)
+function xcov(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
+    return xcov(f, fa, x, x′) .+ xcov(f, fb, x, x′)
+end
 
-"""
-    +(c, f::GP)
-    +(f::GP, c)
+function xcov_diag((_, fa, fb)::add_args, f′::AbstractGP, x::AV)
+    return xcov_diag(fa, f′, x) .+ xcov_diag(fb, f′, x)
+end
+function xcov_diag(f::AbstractGP, (_, fa, fb)::add_args, x::AV)
+    return xcov_diag(f, fa, x) .+ xcov_diag(f, fb, x)
+end
 
-Adding a deterministic quantity to a GP just shifts the mean.
-"""
-+(c, f::GP) = GP(c, ZeroKernel(), f.gpc) + f
-+(f::GP, c) = f + GP(c, ZeroKernel(), f.gpc)
+#
+# Add a constant or known function to a GP -- just shifts the mean
+#
 
-# Define negation in terms of other operations.
--(f::GP) = -1 * f
--(f::GP, c) = f + (-c)
--(c, f::GP) = c + (-f)
--(f::GP, g::GP) = f + (-g)
++(b, f::AbstractGP) = CompositeGP((+, b, f), f.gpc)
++(f::AbstractGP, b) = b + f
+-(b::Real, f::AbstractGP) = b + (-f)
+-(f::AbstractGP, b::Real) = f + (-b)
+
+const add_known{T} = Tuple{T, AbstractGP}
+
+mean_vector((_, b, f)::add_known, x::AV) = b.(x) .+ mean_vector(f, x)
+
+cov((_, b, f)::add_known, x::AV) = cov(f, x)
+cov((_, b, f)::add_known, x::AV, x′::AV) = cov(f, x, x′)
+cov_diag((_, b, f)::add_known, x::AV) = cov_diag(f, x)
+
+xcov((_, b, f)::add_known, f′::AbstractGP, x::AV, x′::AV) = xcov(f, f′, x, x′)
+xcov(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = xcov(f, f′, x, x′)
+
+xcov_diag((_, b, f)::add_known, f′::AbstractGP, x::AV) = xcov_diag(f, f′, x)
+xcov_diag(f::AbstractGP, (_, b, f′)::add_known, x::AV) = xcov_diag(f, f′, x)

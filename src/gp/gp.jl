@@ -2,8 +2,6 @@ export GP
 
 abstract type AbstractGP end
 
-const AGP = AbstractGP
-
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of GPs.
 mutable struct GPC
     n::Int
@@ -34,14 +32,16 @@ struct GP{Tm<:MeanFunction, Tk<:Kernel} <: AbstractGP
 end
 GP(m::Tm, k::Tk, gpc::GPC) where {Tm<:MeanFunction, Tk<:CrossKernel} = GP{Tm, Tk}(m, k, gpc)
 
+GP(m::Real, k::Kernel, gpc::GPC) = GP(ConstMean(m), k, gpc)
+GP(k::Kernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
+
 mean_vector(f::GP, x::AV) = ew(f.m, x)
-cov_mat(f::GP, x::AV) = pw(f.k, x)
-cov_mat(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
-cov_mat_diag(f::GP, x::AV) = ew(f.k, x)
+cov(f::GP, x::AV) = pw(f.k, x)
+cov(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
+cov_diag(f::GP, x::AV) = ew(f.k, x)
 
 index(f::GP) = f.n
-
-
+independent(f::GP, f′::GP) = (f.gpc === f′.gpc) && (f.n != f′.n)
 
 """
     CompositeGP{Targs}
@@ -61,33 +61,40 @@ end
 CompositeGP(args::Targs, gpc::GPC) where {Targs} = CompositeGP{Targs}(args, gpc)
 
 mean_vector(f::CompositeGP, x::AV) = mean_vector(f.args, x)
-cov_mat(f::CompositeGP, x::AV) = cov_mat(f.args, x)
-cov_mat_diag(f::CompositeGP, x::AV) = cov_mat_diag(f.args, x)
-cov_mat(f::CompositeGP, x::AV, x′::AV) = cov_mat(f.args, x, x′)
-
-index(f::CompositeGP) = f.n
-
-
-
-#
-# Logic to compute the cross-covariance between a pair of Gaussian processes.
-#
+cov(f::CompositeGP, x::AV) = cov(f.args, x)
+cov(f::CompositeGP, x::AV, x′::AV) = cov(f.args, x, x′)
+cov_diag(f::CompositeGP, x::AV) = cov_diag(f.args, x)
 
 is_atomic(f::GP) = true
 is_atomic(f::AbstractGP) = false
 
 # Compute the cross-covariance matrix between `f` at `x` and `f′` at `x′`.
-function xcov_mat(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
+function xcov(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     @assert f.gpc === f′.gpc
     if f.n === f′.n
-        return cov_mat(f, x, x′)
+        return cov(f, x, x′)
     elseif is_atomic(f) && f.n > f′.n || is_atomic(f′) && f′.n > f.n
         return zeros(length(x), length(x′))
     elseif f.n > f′.n
-        return xcov_mat(f.args, f′, x, x′)
+        return xcov(f.args, f′, x, x′)
     else
-        return xcov_mat(f, f′.args, x, x′)
+        return xcov(f, f′.args, x, x′)
     end
 end
 
-xcov_mat(f::AbstractGP, f′::AbstractGP, x::AV) = xcov_mat(f, f′, x, x)
+xcov(f::AbstractGP, f′::AbstractGP, x::AV) = xcov(f, f′, x, x)
+
+function xcov_diag(f::AbstractGP, f′::AbstractGP, x::AV)
+    @assert f.gpc === f′.gpc
+    if f.n === f′.n
+        return cov_diag(f, x)
+    elseif is_atomic(f) && f.n > f′.n || is_atomic(f′) && f′.n > f.n
+        return zeros(length(x))
+    elseif f.n > f′.n
+        return xcov_diag(f.args, f′, x)
+    else
+        return xcov_diag(f, f′.args, x)
+    end
+end
+
+index(f::CompositeGP) = f.n

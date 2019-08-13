@@ -17,12 +17,13 @@ end
     back(Δ::NamedTuple) = (Δ.X,)
     back(Δ::AbstractMatrix) = (Δ,)
     function back(Δ::AbstractVector{<:AbstractVector{<:Real}})
-        println("argh in slow method!")
-        X̄ = zero(X)
-        for n in eachindex(Δ)
-            X̄[:, n] .+= Δ[n]
-        end
-        return (X̄,)
+        throw(error("In slow method"))
+        # println("argh in slow method!")
+        # X̄ = zero(X)
+        # for n in eachindex(Δ)
+        #     X̄[:, n] .+= Δ[n]
+        # end
+        # return (X̄,)
     end
     return ColsAreObs(X), back
 end
@@ -49,8 +50,7 @@ A strictly ordered collection of `AbstractVector`s, representing a ragged array 
 struct BlockData{T, V<:AbstractVector{<:T}} <: AbstractVector{T}
     X::Vector{V}
 end
-# @adjoint BlockData()
-# BlockData(X::Vector{V}) where {T, V<:AbstractVector{T}} = BlockData{T, V}(X)
+
 BlockData(X::Vector{AbstractVector}) = BlockData{Any, AbstractVector}(X)
 ==(D1::BlockData, D2::BlockData) = D1.X == D2.X
 size(D::BlockData) = (sum(length, D.X),)

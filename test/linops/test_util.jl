@@ -1,5 +1,5 @@
 using LinearAlgebra
-using Stheno: FiniteGP, BlockKernel
+using Stheno: FiniteGP
 
 """
     check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV)
@@ -134,44 +134,57 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
     # )
 end
 
-inputs(k::Kernel, N::Int) = collect(range(-5.0, 5.0; length=N))
-function inputs(k::BlockKernel, N::Int)
-    if size(k.ks, 1) == 1
-        return BlockData(collect(range(-5.0, 5.0; length=N)))
-    elseif size(k.ks, 1) == 2
-        x = collect(range(-5.0, 5.0; length=N))
-        return BlockData([x[1:div(N, 2)], x[div(N, 2) + 1:end]])
-    else
-        error("Incorrectly-sized block kernel")
-    end
-end
+# inputs(k::Kernel, N::Int) = collect(range(-5.0, 5.0; length=N))
+# function inputs(k::BlockKernel, N::Int)
+#     if size(k.ks, 1) == 1
+#         return BlockData(collect(range(-5.0, 5.0; length=N)))
+#     elseif size(k.ks, 1) == 2
+#         x = collect(range(-5.0, 5.0; length=N))
+#         return BlockData([x[1:div(N, 2)], x[div(N, 2) + 1:end]])
+#     else
+#         error("Incorrectly-sized block kernel")
+#     end
+# end
 
-function standard_1D_dense_test(rng::AbstractRNG, θ, f, N::Int, M::Int)
+function standard_1D_dense_test(rng::AbstractRNG, θ, f, x::AV, z::AV)
     g, u = f(θ)
-    x, z = inputs(kernel(g), N), inputs(kernel(u), M)
+    N, M = length(x), length(z)
     A, B = randn(rng, N, N), randn(rng, M, M)
     y = rand(rng, first(f(θ))(x, _to_psd(A)))
     check_consistency(rng, θ, f, x, y, A, z, B)
 end
 
-function standard_1D_diag_test(rng::AbstractRNG, θ, f, N::Int, M::Int)
+function standard_1D_diag_test(rng::AbstractRNG, θ, f, x::AV, z::AV)
     g, u = f(θ)
-    x, z = inputs(kernel(g), N), inputs(kernel(u), M)
-    a, b = randn(rng, N), randn(rng, M)
+    a, b = randn(rng, length(x)), randn(rng, length(z))
     y = rand(rng, first(f(θ))(x, _to_psd(a)))
     check_consistency(rng, θ, f, x, y, a, z, b)
 end
 
-function standard_1D_isotropic_test(rng::AbstractRNG, θ, f, N::Int, M::Int)
+function standard_1D_isotropic_test(rng::AbstractRNG, θ, f, x::AV, z::AV)
     g, u = f(θ)
-    x, z = inputs(kernel(g), N), inputs(kernel(u), M)
     a, b = randn(rng), randn(rng)
     y = rand(rng, first(f(θ))(x, _to_psd(a)))
     check_consistency(rng, θ, f, x, y, a, z, b)
 end
 
-function standard_1D_tests(rng::AbstractRNG, θ, f, N::Int, M::Int)
-    standard_1D_dense_test(rng, θ, f, N, M)
-    standard_1D_diag_test(rng, θ, f, N, M)
-    standard_1D_isotropic_test(rng, θ, f, N, M)
+function standard_1D_tests(rng::AbstractRNG, θ, f, x::AV, z::AV)
+
+    g, u = f(θ)
+
+    @test cov(g, x) ≈ cov(g, x)'
+    @test minimum(eigvals(cov(g, x))) > -1e-9
+
+    @test cov(g, x, x) ≈ cov(g, x)
+    @test cov(g, x, z) ≈ cov(g, z, x)'
+
+    @test cov_diag(g, x) ≈ diag(cov(g, x))
+
+    @test xcov(g, g, x) ≈ cov(g, x)
+    @test xcov(g, g, x, x) ≈ cov(g, x)
+    @test xcov_diag(g, g, x) ≈ diag(xcov(g, g, x, x))
+
+    standard_1D_dense_test(rng, θ, f, x, z)
+    standard_1D_diag_test(rng, θ, f, x, z)
+    standard_1D_isotropic_test(rng, θ, f, x, z)
 end

@@ -1,11 +1,11 @@
-using Stheno: GPC
+using Stheno: GPC, EQ
 
 @testset "product" begin
 
     @testset "multiply by constant" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        g1, c, c′ = GP(1, eq(), GPC()), -4.3, 2.1
+        g1, c, c′ = GP(1, EQ(), GPC()), -4.3, 2.1
         g2, g2′ = c * g1, g1 * c′
         g3, g3′ = c * g2, g2′ * c′
         g4, g4′ = c * g3, g3′ * c′
@@ -43,19 +43,19 @@ using Stheno: GPC
         @testset "Standardised Tests" begin
             standard_1D_tests(
                 MersenneTwister(123456),
-                Dict(:l=>0.5, :σ=>2.3),
+                Dict(:σ=>2.3),
                 θ->begin
-                    f = GP(sin, eq(l=θ[:l]), GPC())
+                    f = GP(0.5, EQ(), GPC())
                     return θ[:σ] * f, f
                 end,
-                N, N′,
+                X, X′,
             )
         end
     end
     @testset "multiply by function" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        g1, f, f′ = GP(1, eq(), GPC()), x->sum(sin, x), x->sum(cos, x)
+        g1, f, f′ = GP(1, EQ(), GPC()), x->sum(sin, x), x->sum(cos, x)
         g2, g2′ = f * g1, g1 * f′
         g3, g3′ = f * g2, g2′ * f′
         g4, g4′ = f * g3, g3′ * f′
@@ -99,12 +99,13 @@ using Stheno: GPC
         @testset "Standardised Tests" begin
             standard_1D_tests(
                 MersenneTwister(123456),
-                Dict(:l=>0.5, :σ=>2.3),
+                Dict(:σ=>2.3, :c=>1.3),
                 θ->begin
-                    f = GP(sin, eq(l=θ[:l]), GPC())
-                    return cos * f, f
+                    f = GP(θ[:c], EQ(), GPC())
+                    return (x->θ[:σ] * x) * f, f
                 end,
-                N, N′,
+                collect(range(-2.0, 2.0; length=N)),
+                collect(range(-1.5, 2.5; length=N′)),
             )
         end
     end
