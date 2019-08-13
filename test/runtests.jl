@@ -31,10 +31,10 @@ include("test_util.jl")
         # include(joinpath("mean_and_kernel", "util.jl"))
     end
 
-    @testset "gp" begin
-        include(joinpath("gp", "gp.jl"))
-        include(joinpath("gp", "finite_gp.jl"))
-    end
+    # @testset "gp" begin
+    #     include(joinpath("gp", "gp.jl"))
+    #     include(joinpath("gp", "finite_gp.jl"))
+    # end
 
     # @testset "linops" begin
     #     include(joinpath("linops", "test_util.jl"))
