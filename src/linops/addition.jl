@@ -1,14 +1,32 @@
 import Base: +, -
 
 """
-    +(fa::GP, fb::GP)
+    +(fa::AbstractGP, fb::AbstractGP)
 
-Produces a GP `f` satisfying `f(x) = fa(x) + fb(x)`.
+Produces an AbstractGP `f` satisfying `f(x) = fa(x) + fb(x)`.
 """
-function +(fa::GP, fb::GP)
-    @assert fa.gpc == fb.gpc
-    return GP(fa.gpc, +, fa, fb)
+function +(fa::AbstractGP, fb::AbstractGP)
+    @assert fa.gpc === fb.gpc
+    return CompositeGP((+, fa, fb), fa.gpc)
 end
+
+const add_args = Tuple{AbstractGP, AbstractGP}
+
+mean_vector((fa, fb)::add_args, x::AV) = mean_vector(fa, x) .+ mean_vector(fb, x)
+function cov_mat((fa, fb)::add_args, x::AV)
+    return cov_mat(fa, x) .+ cov_mat(fb, x) .+ xcov_mat(fa, fb, x) .+ xcov_mat(fb, fa, x)
+end
+function cov_mat((fa, fb)::add_args, x::AV, x′::AV)
+    C_a, C_b = cov_mat(fa, x, x′), cov_mat(fb, x, x′)
+    return C_a .+ C_b .+ xcov_mat(fa, fb, x, x′) .+ xcov_mat(fb, fa, x, x′)
+end
+function diag_cov_mat((fa, fb)::add_args, x::AV)
+    C_a, C_b = cov_mat_diag(fa, x), cov_mat_diag(fb, x)
+    return C_a .+ C_b .+ cov_mat_diag(fa, fb, x) .+ cov_mat_diag(fb, fa, x)
+end
+# NEED TO BE ABLE TO GET THE DIAGONAL OF AN XCOV APPARENTLY!
+
+
 
 μ_p′(::typeof(+), fa, fb) = mean(fa) + mean(fb)
 function k_p′(::typeof(+), fa, fb)

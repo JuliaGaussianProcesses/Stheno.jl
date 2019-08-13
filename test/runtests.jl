@@ -1,34 +1,29 @@
 using Stheno, Test, Random, BlockArrays, StatsFuns
 using BlockArrays: _BlockArray
 
+# TODO:
+# 1. Refactor out any composition of kernels in favour of affine transformations.
+# 2. Refactor out rand. Implement for basic GPs and affine transformations thereof.
+# 3. Implement product kernel, since that isn't handled well by affine transformations.
+
 include("test_util.jl")
 
 @testset "Stheno" begin
 
-    @testset "util" begin
-        include(joinpath("util", "zygote_rules.jl"))
-        include(joinpath("util", "covariance_matrices.jl"))
-        @testset "block_arrays" begin
-            include(joinpath("util", "block_arrays", "test_util.jl"))
-            include(joinpath("util", "block_arrays", "dense.jl"))
-            include(joinpath("util", "block_arrays", "diagonal.jl"))
-        end
-        include(joinpath("util", "abstract_data_set.jl"))
-    end
+    # @testset "util" begin
+    #     include(joinpath("util", "zygote_rules.jl"))
+    #     include(joinpath("util", "covariance_matrices.jl"))
+    #     @testset "block_arrays" begin
+    #         include(joinpath("util", "block_arrays", "test_util.jl"))
+    #         include(joinpath("util", "block_arrays", "dense.jl"))
+    #         include(joinpath("util", "block_arrays", "diagonal.jl"))
+    #     end
+    #     include(joinpath("util", "abstract_data_set.jl"))
+    # end
 
     @testset "mean_and_kernel" begin
         include(joinpath("mean_and_kernel", "mean.jl"))
         include(joinpath("mean_and_kernel", "kernel.jl"))
-        # include(joinpath("mean_and_kernel", "compose.jl"))
-        # include(joinpath("mean_and_kernel", "block.jl"))
-        # include(joinpath("mean_and_kernel", "input_transform.jl"))
-        # # include(joinpath("mean_and_kernel", "derivative.jl")) # These tests currenly fail because Zygote.
-        # @testset "conditioning" begin
-        #     include(joinpath("mean_and_kernel", "conditioning", "exact.jl"))
-        #     include(joinpath("mean_and_kernel", "conditioning", "titsias.jl"))
-        # end
-        # include(joinpath("mean_and_kernel", "algebra.jl"))
-        # include(joinpath("mean_and_kernel", "util.jl"))
     end
 
     @testset "gp" begin

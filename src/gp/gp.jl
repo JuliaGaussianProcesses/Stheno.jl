@@ -1,6 +1,10 @@
-export GP, mean, kernel
+export GP
 
-# A collection of GPs (GPC == "GP Collection"). Used to keep track of internals.
+abstract type AbstractGP end
+
+const AGP = AbstractGP
+
+# A collection of GPs (GPC == "GP Collection"). Used to keep track of GPs.
 mutable struct GPC
     n::Int
     GPC() = new(0)
@@ -8,69 +12,82 @@ end
 
 @nograd GPC
 
-"""
-    GP{Tμ<:MeanFunction, Tk<:CrossKernel}
+next_index(gpc::GPC) = gpc.n + 1
 
-A Gaussian Process (GP) object. Either constructed using an Affine Transformation of
-existing GPs or by providing a mean function `μ`, a kernel `k`, and a `GPC` `gpc`.
+
+
 """
-struct GP{Tμ<:MeanFunction, Tk<:CrossKernel}
-    args::Any
-    μ::Tμ
+    GP{Tm<:MeanFunction, Tk<:Kernel}
+
+A Gaussian Process (GP) with known mean `m` and kernel `k`, coordinated by `gpc`.
+"""
+struct GP{Tm<:MeanFunction, Tk<:Kernel} <: AbstractGP
+    m::Tm
     k::Tk
     n::Int
     gpc::GPC
-    function GP{Tμ, Tk}(args, μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk<:CrossKernel}
-        gp = new{Tμ, Tk}(args, μ, k, Zygote.dropgrad(gpc.n), Zygote.dropgrad(gpc))
+    function GP{Tm, Tk}(m::Tm, k::Tk, gpc::GPC) where {Tm, Tk}
+        gp = new{Tm, Tk}(m, k, next_index(gpc), gpc)
         gpc.n += 1
         return gp
     end
-    GP{Tμ, Tk}(μ::Tμ, k::Tk, gpc::GPC) where {Tμ, Tk} = GP{Tμ, Tk}((), μ, k, gpc)
 end
-GP(μ::Tμ, k::Tk, gpc::GPC) where {Tμ<:MeanFunction, Tk<:CrossKernel} = GP{Tμ, Tk}(μ, k, gpc)
+GP(m::Tm, k::Tk, gpc::GPC) where {Tm<:MeanFunction, Tk<:CrossKernel} = GP{Tm, Tk}(m, k, gpc)
 
-# GP initialised with a constant mean. Zero and one are specially handled.
-function GP(m::Real, k::CrossKernel, gpc::GPC)
-    if iszero(m)
-        return GP(k, gpc)
-    elseif isone(m)
-        return GP(OneMean(), k, gpc)
-    else
-        return GP(ConstMean(m), k, gpc)
-    end
-end
-GP(m, k::CrossKernel, gpc::GPC) = GP(CustomMean(m), k, gpc)
-GP(k::CrossKernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
-function GP(gpc::GPC, args...)
-    μ, k = μ_p′(args...), k_p′(args...)
-    return GP{typeof(μ), typeof(k)}(args, μ, k, gpc)
-end
+mean_vector(f::GP, x::AV) = ew(f.m, x)
+cov_mat(f::GP, x::AV) = pw(f.k, x)
+cov_mat(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
+cov_mat_diag(f::GP, x::AV) = ew(f.k, x)
 
-mean(f::GP) = f.μ
+index(f::GP) = f.n
+
+
 
 """
-    kernel(f::Union{Real, Function})
-    kernel(f::GP)
-    kernel(f::Union{Real, Function}, g::GP)
-    kernel(f::GP, g::Union{Real, Function})
-    kernel(fa::GP, fb::GP)
+    CompositeGP{Targs}
 
-Get the cross-kernel between `GP`s `fa` and `fb`, and . If either argument is deterministic
-then the zero-kernel is returned. Also, `kernel(f) === kernel(f, f)`.
+A GP derived from other GPs via an affine transformation. Specification given by `args`.
 """
-kernel(f::GP) = f.k
-function kernel(fa::GP, fb::GP)
-    @assert fa.gpc === fb.gpc
-    if fa === fb
-        return kernel(fa)
-    elseif fa.args == () && fa.n > fb.n || fb.args == () && fb.n > fa.n
-        return ZeroKernel()
-    elseif fa.n > fb.n
-        return k_p′p(fa.args..., fb)
-    else
-        return k_pp′(fa, fb.args...)
+struct CompositeGP{Targs} <: AbstractGP
+    args::Targs
+    n::Int
+    gpc::GPC
+    function CompositeGP{Targs}(args::Targs, gpc::GPC) where {Targs}
+        gp = new{Targs}(args, next_index(gpc), gpc)
+        gpc.n += 1
+        return gp
     end
 end
-kernel(::Union{Real, Function}) = ZeroKernel()
-kernel(::Union{Real, Function}, ::GP) = ZeroKernel()
-kernel(::GP, ::Union{Real, Function}) = ZeroKernel()
+CompositeGP(args::Targs, gpc::GPC) where {Targs} = CompositeGP{Targs}(args, gpc)
+
+mean_vector(f::CompositeGP, x::AV) = mean_vector(f.args, x)
+cov_mat(f::CompositeGP, x::AV) = cov_mat(f.args, x)
+cov_mat_diag(f::CompositeGP, x::AV) = cov_mat_diag(f.args, x)
+cov_mat(f::CompositeGP, x::AV, x′::AV) = cov_mat(f.args, x, x′)
+
+index(f::CompositeGP) = f.n
+
+
+
+#
+# Logic to compute the cross-covariance between a pair of Gaussian processes.
+#
+
+is_atomic(f::GP) = true
+is_atomic(f::AbstractGP) = false
+
+# Compute the cross-covariance matrix between `f` at `x` and `f′` at `x′`.
+function xcov_mat(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
+    @assert f.gpc === f′.gpc
+    if f.n === f′.n
+        return cov_mat(f, x, x′)
+    elseif is_atomic(f) && f.n > f′.n || is_atomic(f′) && f′.n > f.n
+        return zeros(length(x), length(x′))
+    elseif f.n > f′.n
+        return xcov_mat(f.args, f′, x, x′)
+    else
+        return xcov_mat(f, f′.args, x, x′)
+    end
+end
+
+xcov_mat(f::AbstractGP, f′::AbstractGP, x::AV) = xcov_mat(f, f′, x, x)

@@ -1,30 +1,29 @@
 import Base: *
 
-"""
-    *(f, g::GP)
+*(f, g::AbstractGP) = CompositeGP((*, f, g), g.gpc)
+*(f::AbstractGP, g) = CompositeGP((*, g, f), f.gpc)
+*(f::AbstractGP, g::AbstractGP) = ArgumentError("Cannot multiply two GPs together.")
 
-Multiplication of a GP `g` from the left by a number or function.
-"""
-*(f::MeanFunction, g::GP) = GP(g.gpc, *, f, g)
-μ_p′(::typeof(*), f::MeanFunction, g::GP) = f * mean(g)
-k_p′(::typeof(*), f::MeanFunction, g::GP) = OuterKernel(f, kernel(g))
-k_pp′(f_p::GP, ::typeof(*), f::MeanFunction, g::GP) = kernel(f_p, g) * f
-k_p′p(::typeof(*), f::MeanFunction, g::GP, f_p::GP) = f * kernel(g, f_p)
+const prod_args{Tf} = Tuple{typeof(*), Tf, <:AbstractGP}
 
-*(f::Real, g::GP) = ConstMean(f) * g
-*(f::Function, g::GP) = CustomMean(f) * g
+mean_vector((_, σ, g)::prod_args, x::AV) = σ.(x) .* mean_vector(g, x)
+mean_vector((_, σ, g)::prod_args{<:Real}, x::AV) = σ .* mean_vector(g, x)
 
-"""
-    *(g::GP, f)
+function cov_mat((_, σ, g)::prod_args, x::AV)
+    σx = σ.(x)
+    return σx .* cov_mat(g, x) .* σx'
+end
+cov_mat((_, σ, g)::prod_args{<:Real}, x::AV) = (σ^2) .* cov_mat(g, x)
 
-Multiplication of a GP `g` from the right by a number or function.
-"""
-*(g::GP, f::MeanFunction) = GP(g.gpc, *, g, f)
-μ_p′(::typeof(*), g::GP, f::MeanFunction) = mean(g) * f
-k_p′(::typeof(*), g::GP, f::MeanFunction) = OuterKernel(f, kernel(g))
-k_pp′(f_p::GP, ::typeof(*), g::GP, f::MeanFunction) = kernel(f_p, g) * f
-k_p′p(::typeof(*), g::GP, f::MeanFunction, f_p::GP) = f * kernel(g, f_p)
+function cov_mat((_, σ, g)::prod_args, x::AV, x′::AV)
+    return σ.(x) .* cov_mat(g, x, x′) .* σ.(x′)'
+end
+cov_mat((_, σ, g)::prod_args{<:Real}, x::AV, x′::AV) = (σ^2) .* cov_mat(g, x, x′)
 
-*(g::GP, f::Real) = g * ConstMean(f)
-*(g::GP, f::Function) = g * CustomMean(f)
-*(g::GP, f) = g * CustomMean(f)
+cov_mat_diag((_, σ, g)::prod_args, x::AV) = σ.(x).^2 .* cov_mat_diag(g, x)
+cov_mat_diag((_, σ, g)::prod_args{<:Real}, x::AV) = (σ^2) .* cov_mat_diag(g, x)
+
+xcov_mat((_, σ, f)::prod_args, f′::AGP, x::AV, x′::AV) = σ.(x) .* xcov_mat(f, f′, x, x′)
+xcov_mat((_, σ, f)::prod_args{<:Real}, f′::AGP, x::AV, x′::AV) = σ .* xcov_mat(f, f′, x, x′)
+xcov_mat(f::AGP, (_, σ, f′)::prod_args, x::AV, x′::AV) = xcov_mat(f, f′, x, x′) .* σ.(x′)
+xcov_mat(f::AGP, (_, σ, f′)::prod_args{<:Real}, x::AV, x′::AV) = xcov_mat(f, f′, x, x′) .* σ

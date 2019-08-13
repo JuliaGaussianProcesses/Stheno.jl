@@ -26,13 +26,7 @@ module Stheno
 
     Zygote.@nograd broadcast_shape
 
-
-    showtype(x) = (@show typeof(x); x)
-    showsize(x) = (@show size(x); x)
-
-
-    # Various bits of utility that aren't inherently GP-related. A lot of this is very
-    # type-piratic.
+    # Various bits of utility that aren't inherently GP-related. Often very type-piratic.
     include(joinpath("util", "zygote_rules.jl"))
     include(joinpath("util", "covariance_matrices.jl"))
     include(joinpath("util", "block_arrays", "dense.jl"))
@@ -46,14 +40,14 @@ module Stheno
     # All mean function and kernel related functionality.
     include(joinpath("mean_and_kernel", "mean.jl"))
     include(joinpath("mean_and_kernel", "kernel.jl"))
-    include(joinpath("mean_and_kernel", "compose.jl"))
-    include(joinpath("mean_and_kernel", "block.jl"))
-    include(joinpath("mean_and_kernel", "input_transform.jl"))
-    # include(joinpath("mean_and_kernel", "derivative.jl"))
-    include(joinpath("mean_and_kernel", "conditioning", "exact.jl"))
-    include(joinpath("mean_and_kernel", "conditioning", "titsias.jl"))
-    include(joinpath("mean_and_kernel", "algebra.jl"))
-    include(joinpath("mean_and_kernel", "util.jl"))
+    # include(joinpath("mean_and_kernel", "compose.jl"))
+    # include(joinpath("mean_and_kernel", "block.jl"))
+    # include(joinpath("mean_and_kernel", "input_transform.jl"))
+    # # include(joinpath("mean_and_kernel", "derivative.jl"))
+    # include(joinpath("mean_and_kernel", "conditioning", "exact.jl"))
+    # include(joinpath("mean_and_kernel", "conditioning", "titsias.jl"))
+    # include(joinpath("mean_and_kernel", "algebra.jl"))
+    # include(joinpath("mean_and_kernel", "util.jl"))
 
     # Basic Gaussian process definitions.
     include(joinpath("gp", "gp.jl"))
@@ -61,14 +55,14 @@ module Stheno
 
     # Affine transformations of GPs.
     include(joinpath("linops", "indexing.jl"))
-    include(joinpath("linops", "cross.jl"))
-    include(joinpath("linops", "conditioning.jl"))
-    include(joinpath("linops", "approximate_conditioning.jl"))
+    # include(joinpath("linops", "cross.jl"))
+    # include(joinpath("linops", "conditioning.jl"))
+    # include(joinpath("linops", "approximate_conditioning.jl"))
     include(joinpath("linops", "product.jl"))
-    include(joinpath("linops", "addition.jl"))
-    include(joinpath("linops", "compose.jl"))
-    # include(joinpath("linops", "gradient.jl"))
-    # # include(joinpath("linops", "integrate.jl"))
+    # include(joinpath("linops", "addition.jl"))
+    # include(joinpath("linops", "compose.jl"))
+    # # include(joinpath("linops", "gradient.jl"))
+    # # # include(joinpath("linops", "integrate.jl"))
 
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))
