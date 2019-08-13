@@ -8,14 +8,13 @@ import Base.Broadcast: broadcast_shape
 
 ############################# Define CrossKernels and Kernels ##############################
 
-abstract type CrossKernel end
-abstract type Kernel <: CrossKernel end
+abstract type Kernel end
 
 
 
 ################################ Util. for Toeplitz matrices ###############################
 
-function toep_pw(k::CrossKernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
+function toep_pw(k::Kernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
     if x.step == x′.step
         return Toeplitz(ew(k, x, fill(x′[1], length(x))), ew(k, fill(x[1], length(x′)), x′))
     else
@@ -50,7 +49,7 @@ A rank 0 `Kernel` that always returns zero.
 struct ZeroKernel{T<:Real} <: Kernel end
 ZeroKernel() = ZeroKernel{Float64}()
 eltype(::ZeroKernel{T}) where {T} = T
-zero(::CrossKernel) = ZeroKernel()
+zero(::Kernel) = ZeroKernel()
 
 # Binary methods.
 ew(k::ZeroKernel, x::AV, x′::AV) = zeros(eltype(k), broadcast_shape(size(x), size(x′)))

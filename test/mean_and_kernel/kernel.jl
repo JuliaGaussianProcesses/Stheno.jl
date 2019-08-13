@@ -1,4 +1,4 @@
-using Stheno: CrossKernel, ZeroKernel, OneKernel, ConstKernel, CustomMean, pw
+using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ
 using LinearAlgebra
 

@@ -1,10 +1,10 @@
-using Stheno: GPC
+using Stheno: GPC, EQ, Exp
 
 @testset "addition" begin
     @testset "Correlated GPs" begin
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
-        f1, f2 = GP(1, eq(), gpc), GP(2, linear(), gpc)
+        f1, f2 = GP(1, EQ(), gpc), GP(2, Exp(), gpc)
         f3 = f1 + f2
         f4 = f1 + f3
         f5 = f3 + f4
@@ -26,7 +26,7 @@ using Stheno: GPC
     @testset "Verify mean / kernel numerically" begin
         rng, N, D = MersenneTwister(123456), 5, 6, 2
         X = ColsAreObs(randn(rng, D, N))
-        c, f = randn(rng), GP(5, eq(), GPC())
+        c, f = randn(rng), GP(5, EQ(), GPC())
 
         @test mean((f + c)(X)) == mean(f(X)) .+ c
         @test mean((f + c)(X)) == c .+ mean(f(X))
@@ -50,12 +50,13 @@ using Stheno: GPC
             Dict(:l1=>0.5, :l2=>2.3),
             θ->begin
                 gpc = GPC()
-                f1 = GP(sin, eq(l=θ[:l1]), gpc)
-                f2 = GP(cos, eq(l=θ[:l2]), gpc)
+                f1 = θ[:l1] * GP(sin, EQ(), gpc)
+                f2 = θ[:l2] * GP(cos, EQ(), gpc)
                 f3 = f1 + f2
                 return f3, f3
             end,
-            5, 3,
+            collect(range(-1.5, 1.5; length=5)),
+            collect(range(-1.0, 0.5; length=3)),
         )
     end
     @testset "Standardised Tests (correlated sum)" begin
@@ -64,14 +65,15 @@ using Stheno: GPC
             Dict(:l1=>0.5, :l2=>2.3),
             θ->begin
                 gpc = GPC()
-                f1 = GP(sin, eq(l=θ[:l1]), gpc)
-                f2 = GP(cos, eq(l=θ[:l2]), gpc)
+                f1 = θ[:l1] * GP(sin, EQ(), gpc)
+                f2 = θ[:l2] * GP(cos, EQ(), gpc)
                 f3 = f1 + f2
                 f4 = f1 + f3
                 f5 = f3 + f4
                 return f5, f5
             end,
-            5, 3,
+            collect(range(-1.5, 1.5; length=5)),
+            collect(range(-1.0, 0.5; length=3)),
         )
     end
 end

@@ -30,8 +30,9 @@ struct GP{Tm<:MeanFunction, Tk<:Kernel} <: AbstractGP
         return gp
     end
 end
-GP(m::Tm, k::Tk, gpc::GPC) where {Tm<:MeanFunction, Tk<:CrossKernel} = GP{Tm, Tk}(m, k, gpc)
+GP(m::Tm, k::Tk, gpc::GPC) where {Tm<:MeanFunction, Tk<:Kernel} = GP{Tm, Tk}(m, k, gpc)
 
+GP(f, k::Kernel, gpc::GPC) = GP(CustomMean(f), k, gpc)
 GP(m::Real, k::Kernel, gpc::GPC) = GP(ConstMean(m), k, gpc)
 GP(k::Kernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
 

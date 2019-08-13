@@ -11,7 +11,7 @@ end
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         y, y′ = randn(rng, N), randn(rng, N′)
-        f = GP(1, eq(), GPC())
+        f = GP(1, EQ(), GPC())
 
         fX, fX′ = f(X), f(X′)
         c1, c2 = fX←y, fX′←y′
@@ -25,7 +25,7 @@ end
     @testset "condition once" begin
         rng, N, N′, D = MersenneTwister(123456), 10, 3, 2
         x = collect(range(-3.0, stop=3.0, length=N))
-        f = GP(1, eq(), GPC())
+        f = GP(1, EQ(), GPC())
         y = rand(rng, f(x))
 
         # Test mechanics for finite conditioned process with single conditioning.
@@ -41,7 +41,7 @@ end
         idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
         x, x′ = xx′[idx_1], xx′[idx_2]
 
-        f = GP(1, eq(), GPC())
+        f = GP(1, EQ(), GPC())
         y = rand(rng, f(xx′))
         y1, y2 = y[idx_1], y[idx_2]
 
@@ -60,16 +60,17 @@ end
     @testset "Standardised Tests" begin
         rng, N, P, Q = MersenneTwister(123456), 11, 5, 3
         x_obs, A_obs = collect(range(-5.0, 5.0; length=N)), randn(rng, N, N)
-        y_obs = rand(rng, GP(sin, eq(l=0.5), GPC())(x_obs, _to_psd(A_obs)))
+        y_obs = rand(rng, GP(sin, EQ(), GPC())(x_obs, _to_psd(A_obs)))
         standard_1D_tests(
             MersenneTwister(123456),
             Dict(:x=>x_obs, :y=>y_obs, :A=>A_obs),
             θ->begin
-                f = GP(sin, eq(), GPC())
+                f = GP(sin, EQ(), GPC())
                 f′ = f | (f(θ[:x], _to_psd(θ[:A]))←θ[:y])
                 return f′, f′
             end,
-            P, Q,
+            collect(range(-4.5, 4.5; length=P)),
+            collect(range(-4.0, 5.0; length=Q)),
         )
     end
     # @testset "BlockGP" begin
@@ -77,7 +78,7 @@ end
     #     xx′ = collect(range(-3.0, stop=3.0, length=N+N′))
     #     xp = collect(range(-4.0, stop=4.0, length=N+N′+10))
     #     xp′ = collect(range(-4.0, stop=4.0, length=N+N′+11))
-    #     f = GP(sin, eq(), GPC())
+    #     f = GP(sin, EQ(), GPC())
     #     yy′ = rand(rng, f(xx′, σ²))
 
     #     # Chop up into blocks.

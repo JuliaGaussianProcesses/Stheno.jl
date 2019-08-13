@@ -28,7 +28,7 @@ function cov((_, fa, fb)::add_args, x::AV, x′::AV)
 end
 
 function cov_diag((_, fa, fb)::add_args, x::AV)
-    return cov_diag(fa, x) .+ cov_diag(fb, x) .+ cov_diag(fa, fb, x) .+ cov_diag(fb, fa, x)
+    return +(cov_diag(fa, x), cov_diag(fb, x), xcov_diag(fa, fb, x), xcov_diag(fb, fa, x))
 end
 
 function xcov((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
@@ -54,9 +54,10 @@ end
 -(b::Real, f::AbstractGP) = b + (-f)
 -(f::AbstractGP, b::Real) = f + (-b)
 
-const add_known{T} = Tuple{T, AbstractGP}
+const add_known{T} = Tuple{typeof(+), T, AbstractGP}
 
 mean_vector((_, b, f)::add_known, x::AV) = b.(x) .+ mean_vector(f, x)
+mean_vector((_, b, f)::add_known{<:Real}, x::AV) = b .+ mean_vector(f, x)
 
 cov((_, b, f)::add_known, x::AV) = cov(f, x)
 cov((_, b, f)::add_known, x::AV, x′::AV) = cov(f, x, x′)

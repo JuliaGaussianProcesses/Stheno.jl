@@ -1,5 +1,5 @@
 using BlockArrays, LinearAlgebra, FiniteDifferences, Zygote, Random
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, ew, pw, BlockData, blocks
+using Stheno: MeanFunction, Kernel, AV, pairwise, ew, pw, BlockData, blocks
 using Stheno: block_diagonal
 using LinearAlgebra: AbstractTriangular
 using FiniteDifferences: j′vp
@@ -105,12 +105,12 @@ function mean_function_tests(m::MeanFunction, x::AbstractVector)
 end
 
 """
-    cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV)
+    cross_kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV)
 
 Tests that any cross kernel `k` should be able to pass. Requires that
 `length(x0) == length(x1)` and `length(x0) ≠ length(x2)`.
 """
-function cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
+function cross_kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     @assert length(x0) == length(x1)
     @assert length(x0) ≠ length(x2)
 
@@ -256,7 +256,7 @@ end
 
 """
     differentiable_cross_kernel_tests(
-        k::CrossKernel,
+        k::Kernel,
         ȳ::AbstractVector{<:Real},
         Ȳ::AbstractMatrix{<:Real},
         x0::AbstractVector,
@@ -264,11 +264,11 @@ end
         x2::AbstractVector,
     )
 
-Ensure that the adjoint w.r.t. the inputs of a `CrossKernel` which is supposed to be
+Ensure that the adjoint w.r.t. the inputs of a `Kernel` which is supposed to be
 differentiable are approximately correct.
 """
 function differentiable_cross_kernel_tests(
-    k::CrossKernel,
+    k::Kernel,
     ȳ::AbstractVector{<:Real},
     Ȳ::AbstractMatrix{<:Real},
     x0::AbstractVector,
@@ -293,7 +293,7 @@ function differentiable_cross_kernel_tests(
 end
 function differentiable_cross_kernel_tests(
     rng::AbstractRNG,
-    k::CrossKernel,
+    k::Kernel,
     x0::AV,
     x1::AV,
     x2::AV;
@@ -306,7 +306,7 @@ end
 
 """
     differentiable_kernel_tests(
-        k::CrossKernel,
+        k::Kernel,
         ȳ::AbstractVector{<:Real},
         Ȳ::AbstractMatrix{<:Real},
         Ȳ_sq::AbstractMatrix{<:Real},
@@ -320,7 +320,7 @@ kernels (which provide unary, in addition to binary, methods for `elementwise` a
 `pairwise`.)
 """
 function differentiable_kernel_tests(
-    k::CrossKernel,
+    k::Kernel,
     ȳ::AbstractVector{<:Real},
     Ȳ::AbstractMatrix{<:Real},
     Ȳ_sq::AbstractMatrix{<:Real},
@@ -340,7 +340,7 @@ function differentiable_kernel_tests(
     @assert size(Ȳ_sq, 1) == size(Ȳ_sq, 2)
     @assert size(Ȳ_sq, 1) == length(x0)
 
-    # Run the CrossKernel tests.
+    # Run the Kernel tests.
     differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
 
     # Unary elementwise tests.
@@ -351,7 +351,7 @@ function differentiable_kernel_tests(
 end
 function differentiable_kernel_tests(
     rng::AbstractRNG,
-    k::CrossKernel,
+    k::Kernel,
     x0::AV,
     x1::AV,
     x2::AV;
