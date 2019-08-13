@@ -6,7 +6,6 @@ using LinearAlgebra
 
     @testset "base kernels" begin
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        # x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
         x0 = collect(range(-2.0, 2.0; length=N)) .+ 1e-3 .* randn(rng, N)
         x1 = collect(range(-1.7, 2.3; length=N)) .+ 1e-3 .* randn(rng, N)
         x2 = collect(range(-1.7, 3.3; length=N′)) .+ 1e-3 .* randn(rng, N′)
