@@ -6,7 +6,9 @@ using LinearAlgebra
 
     @testset "base kernels" begin
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        x0, x1, x2 = randn(rng, N), randn(rng, N), randn(rng, N′)
+        x0 = collect(range(-2.0, 2.0; length=N)) .+ 1e-3 .* randn(rng, N)
+        x1 = collect(range(-1.7, 2.3; length=N)) .+ 1e-3 .* randn(rng, N)
+        x2 = collect(range(-1.7, 3.3; length=N′)) .+ 1e-3 .* randn(rng, N′)
         x0_r, x1_r = range(-5.0, step=1, length=N), range(-4.0, step=1, length=N)
         x2_r, x3_r = range(-5.0, step=2, length=N), range(-3.0, step=1, length=N′)
         x4_r = range(-2.0, step=2, length=N′)
@@ -70,6 +72,18 @@ using LinearAlgebra
                 differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
                 differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
+            @testset "single-input" begin
+                adjoint_test((α, x, x′)->ew(RQ(α), x, x′), ȳ, 1.5, x0, x1; print_results=true)
+                adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, x0, x2)
+                adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, x0)
+                adjoint_test((α, x)->pw(RQ(α), x), Ȳ_sq, 1.5, x0)
+            end
+            @testset "multi-input" begin
+                adjoint_test((α, x, x′)->ew(RQ(α), x, x′), ȳ, 1.5, X0, X1)
+                adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, X0, X2)
+                adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, X0)
+                adjoint_test((α, x)->pw(RQ(α), x), Ȳ_sq, 1.5, X0)
+            end
         end
 
         @testset "Linear" begin
@@ -89,15 +103,6 @@ using LinearAlgebra
         @test iszero(ZeroKernel()) == true
         @test iszero(EQ()) == false
     end
-
-    # # Tests for Rational Quadratic (RQ) kernel.
-    # @test isstationary(RQ)
-    # @test RQ(1.0)(1.0, 1.0) == 1
-    # @test RQ(100.0)(1.0, 1000.0) ≈ 0
-    # @test RQ(1.0) == RQ(1.0)
-    # @test RQ(1.0) == RQ(1)
-    # @test RQ(1.0) != RQ(5.0)
-    # @test RQ(1000.0) != EQ()
 
     # # Tests for Polynomial kernel.
     # @test !isstationary(Poly)
