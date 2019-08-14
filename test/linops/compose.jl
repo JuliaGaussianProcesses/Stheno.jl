@@ -1,9 +1,9 @@
-using Stheno: GPC, Stretch, LinearTransform
+using Stheno: GPC, EQ, Exp
 
 @testset "compose" begin
     rng, N, N′, gpc = MersenneTwister(123456), 5, 3, GPC()
     x, x′ = randn(rng, N), randn(rng, N′)
-    f, g, h = GP(sin, eq(), gpc), cos, GP(exp, linear(), gpc)
+    f, g, h = GP(sin, EQ(), gpc), cos, GP(exp, Exp(), gpc)
     fg = f ∘ g
 
     # Check marginals statistics inductively.
@@ -22,12 +22,13 @@ using Stheno: GPC, Stretch, LinearTransform
     @testset "Standardised Tests" begin
         standard_1D_tests(
             MersenneTwister(123456),
-            Dict(:l=>0.5, :σ=>2.3),
+            Dict(:σ=>0.5),
             θ->begin
-                f = θ[:σ] * GP(sin, eq(l=θ[:l]), GPC())
+                f = θ[:σ] * GP(sin, EQ(), GPC())
                 return stretch(f, 0.5), f
             end,
-            N, N′,
+            collect(range(-2.0, 2.0; length=N)),
+            collect(range(-1.5, 2.2; length=N′)),
         )
     end
 end
