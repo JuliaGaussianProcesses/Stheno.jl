@@ -9,6 +9,7 @@ module Stheno
     using Zygote: @adjoint, @nograd, @showgrad, hook
     using BlockArrays: _BlockArray
     import LinearAlgebra: cholesky, cross
+    import Distributions: sample
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
@@ -40,14 +41,6 @@ module Stheno
     # All mean function and kernel related functionality.
     include(joinpath("mean_and_kernel", "mean.jl"))
     include(joinpath("mean_and_kernel", "kernel.jl"))
-    # include(joinpath("mean_and_kernel", "compose.jl"))
-    # include(joinpath("mean_and_kernel", "block.jl"))
-    # include(joinpath("mean_and_kernel", "input_transform.jl"))
-    # # include(joinpath("mean_and_kernel", "derivative.jl"))
-    # include(joinpath("mean_and_kernel", "conditioning", "exact.jl"))
-    # include(joinpath("mean_and_kernel", "conditioning", "titsias.jl"))
-    # include(joinpath("mean_and_kernel", "algebra.jl"))
-    # include(joinpath("mean_and_kernel", "util.jl"))
 
     # Basic Gaussian process definitions.
     include(joinpath("gp", "gp.jl"))

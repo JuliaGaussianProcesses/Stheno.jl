@@ -42,7 +42,12 @@ cov(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
 cov_diag(f::GP, x::AV) = ew(f.k, x)
 
 index(f::GP) = f.n
-independent(f::GP, f′::GP) = (f.gpc === f′.gpc) && (f.n != f′.n)
+
+function sample(rng::AbstractRNG, f::GP, x::AV, S::Int)
+    return mean_vector(f, x) .+ cholesky(cov(f, x)).U' \ randn(rng, length(x), S)
+end
+
+
 
 """
     CompositeGP{Targs}
@@ -99,3 +104,5 @@ function xcov_diag(f::AbstractGP, f′::AbstractGP, x::AV)
 end
 
 index(f::CompositeGP) = f.n
+
+sample(rng::AbstractRNG, f::CompositeGP, x::AV, S::Int) = sample(rng, f.args, x, S)

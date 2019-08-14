@@ -53,6 +53,11 @@ function xcov_diag(f::AbstractGP, args::cross_args, x::BlockData)
     return diag(xcov(f, args, x))
 end
 
+function sample(rng::AbstractRNG, (_, fs)::cross_args, x::BlockData, S::Int)
+    blk = map((f, blk)->sample(rng, f, x, S), fs, blocks(x))
+    return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
+end
+
 
 #
 # Helper for pw.

@@ -54,12 +54,9 @@ marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(cov_diag(f.f, f.x) .+ diag(f.Σy
 """
     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
 
-Obtain `N` independent samples from the GP `f` using `rng`.
+Obtain `N` independent samples from the marginals `f` using `rng`.
 """
-function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
-    μ, C = mean(f), cholesky(Symmetric(cov(f)))
-    return μ .+ C.U' * randn(rng, length(μ), N)
-end
+rand(rng::AbstractRNG, f::FiniteGP, N::Int) = sample(rng, f.f, f.x, N)
 rand(f::FiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
 rand(f::FiniteGP) = vec(rand(f, 1))

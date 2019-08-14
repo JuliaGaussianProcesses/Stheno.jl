@@ -42,7 +42,7 @@ using Base.Broadcast: broadcast_shape
     end
     @testset "cholesky (SymmetricToeplitz)" begin
         rng, N = MersenneTwister(123456), 10
-        x = pairwise(eq(), range(-3.0, stop=3.0, length=N))[:, 1]
+        x = pairwise(EQ(), range(-3.0, stop=3.0, length=N))[:, 1]
         x[1] += 1 # ensure positive definite-ness under minor perturbations.
         adjoint_test(
             x->cholesky(SymmetricToeplitz(x)).U,

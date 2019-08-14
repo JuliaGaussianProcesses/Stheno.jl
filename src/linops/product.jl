@@ -29,6 +29,10 @@ xcov(f::AbstractGP, (_, σ, f′)::prod_args, x::AV, x′::AV) = xcov(f, f′, x
 xcov_diag((_, σ, f)::prod_args, f′::AbstractGP, x::AV) = σ.(x) .* xcov_diag(f, f′, x)
 xcov_diag(f::AbstractGP, (_, σ, f′)::prod_args, x::AV) = xcov_diag(f, f′, x) .* σ.(x)
 
+function sample(rng::AbstractRNG, (_, σ, g)::prod_args, x::AV, S::Int)
+    return σ.(x) .* sample(rng, g, x, S)
+end
+
 #
 # Scale by a constant
 #
@@ -45,6 +49,7 @@ xcov(f::AbstractGP, (_, σ, f′)::prod_args{<:Real}, x::AV, x′::AV) = xcov(f,
 xcov_diag((_, σ, f)::prod_args{<:Real}, f′::AbstractGP, x::AV) = σ .* xcov_diag(f, f′, x)
 xcov_diag(f::AbstractGP, (_, σ, f′)::prod_args{<:Real}, x::AV) = xcov_diag(f, f′, x) .* σ
 
+sample(rng::AbstractRNG, (_, σ, g)::prod_args, x::AV, S::Int) = σ .* sample(rng, g, x, S)
 
 # Use multiplication to define the negation of a GP
 -(f::AbstractGP) = (-1) * f

@@ -44,6 +44,12 @@ function xcov_diag(f::AbstractGP, (_, g, C, _, fx)::cond_data, x::AV)
     return xcov_diag(f, g, x) - diag_Xt_invA_Y(cov(fx, f(x)), C, cov(fx, g(x)))
 end
 
+function sample(rng::AbstractRNG, (_, g, C, _, fx)::cond_data, x::AV, S::Int)
+    X = sample(rng, g, x, S)
+    Y = mean(fx) .+ C.U \ randn(rng, length(fx), S)
+    return X .+ cov(fx, g(x))' * (C \ (y .- Y))
+end
+
 function merge(fs::Tuple{Vararg{FiniteGP}})
     block_gp = cross([map(f->f.f, fs)...])
     block_x = BlockData([map(f->f.x, fs)...])
