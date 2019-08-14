@@ -55,7 +55,7 @@ module Stheno
 
     # Affine transformations of GPs.
     include(joinpath("linops", "indexing.jl"))
-    # include(joinpath("linops", "cross.jl"))
+    include(joinpath("linops", "cross.jl"))
     include(joinpath("linops", "conditioning.jl"))
     # include(joinpath("linops", "approximate_conditioning.jl"))
     include(joinpath("linops", "product.jl"))
