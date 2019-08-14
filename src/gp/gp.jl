@@ -44,7 +44,7 @@ cov_diag(f::GP, x::AV) = ew(f.k, x)
 index(f::GP) = f.n
 
 function sample(rng::AbstractRNG, f::GP, x::AV, S::Int)
-    return mean_vector(f, x) .+ cholesky(cov(f, x)).U' \ randn(rng, length(x), S)
+    return mean_vector(f, x) .+ cholesky(cov(f, x)).U' * randn(rng, length(x), S)
 end
 
 

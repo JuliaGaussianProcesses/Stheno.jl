@@ -56,7 +56,9 @@ marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(cov_diag(f.f, f.x) .+ diag(f.Σy
 
 Obtain `N` independent samples from the marginals `f` using `rng`.
 """
-rand(rng::AbstractRNG, f::FiniteGP, N::Int) = sample(rng, f.f, f.x, N)
+function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
+    return sample(rng, f.f, f.x, N) + cholesky(f.Σy).U' * randn(rng, length(f), N)
+end
 rand(f::FiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
 rand(f::FiniteGP) = vec(rand(f, 1))
@@ -105,14 +107,12 @@ import Base: \
 # to compute the entirety of Cf, which is bad, but for particular structured Σy one requires
 # only a subset of the elements. Σy isa UniformScaling is version usually considered.
 function tr_Cf_invΣy(f::FiniteGP, Σy::UniformScaling, chol_Σy::Cholesky)
-    return sum(ew(kernel(f.f), f.x)) / Σy.λ
+    return sum(cov_diag(f.f, f.x)) / Σy.λ
 end
 function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
-    return sum(ew(kernel(f.f), f.x) ./ diag(Σy))
+    return sum(cov_diag(f.f, f.x) ./ diag(Σy))
 end
-function tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky)
-    return tr(chol_Σy \ pw(kernel(f.f), f.x))
-end
+tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky) = tr(chol_Σy \ cov(f))
 # function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
 #     C = cholesky(Symmetric(_get_kernel_block_diag(f, cumulsizes(Σy, 1))))
 #     return tr_At_A(chol_Σy.U' \ C.U')
