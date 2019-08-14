@@ -92,7 +92,9 @@ using LinearAlgebra
         end
 
         @testset "Noise" begin
+            @test ew(Noise(), x0, x0) == zeros(length(x0))
             @test pw(Noise(), x0, x0) == zeros(length(x0), length(x0))
+            @test ew(Noise(), x0) == ones(length(x0))
             @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
         end
 

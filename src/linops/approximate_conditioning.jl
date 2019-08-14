@@ -19,55 +19,136 @@ function optimal_q(cs::Tuple{Vararg{Observation}}, us::Tuple{Vararg{FiniteGP}})
 end
 
 
+# PPGP = "Pseudo-Point GP". Weird internal thing. Please don't use.
+struct PPGP{Tm<:AV{<:Real}, TΛ<:Cholesky{<:Real}} <: AbstractGP
+    m::Tm
+    Λ::TΛ
+    gpc::GPC
+end
+
 
 """
-    PseudoPoints
+    ApproxObs(u::AbstractGP, z::AV, m::AV{<:Real}, Λ::AM{<:Real}, U::AM)
 
-Some pseudo-points. Really need to improve the documentation here...
+Construct approximate observations of `u` at `z`, with mean and cov. `m` and `Λ`
 """
-struct PseudoPoints{Tf_q<:GP, Tc<:PseudoPointCache}
-    f_q::Tf_q
-    c::Tc
+struct ApproxObs{Tu<:AbstractGP, Tû<:PPGP, Tz<:AV, TU<:AM, Tα<:AV}
+    u::Tu
+    û::Tû
+    z::Tz
+    U::TU
+    α::Tα
 end
 
-function PseudoPoints(c::Observation, u::FiniteGP)
-    m_ε, Λ_ε, U = optimal_q(c.f, c.y, u)
-    return PseudoPoints(u.f, PseudoPointCache(u.x, U, m_ε, Λ_ε))
+function ApproxObs(u::AbstractGP, z::AV, m::AV, Λ::Cholesky, U::AM)
+    return ApproxObs(u, PPGP(m, Λ, u.gpc), z, U, U \ m)
 end
 
-PseudoPoints(cs::Tuple{Vararg{Observation}}, u::FiniteGP) = PseudoPoints(merge(cs), u)
-PseudoPoints(c::Observation, us::Tuple{Vararg{FiniteGP}}) = PseudoPoints(c, merge(us))
-function PseudoPoints(cs::Tuple{Vararg{Observation}}, us::Tuple{Vararg{FiniteGP}})
-    return PseudoPoints(merge(cs), merge(us))
+
+"""
+    |(f::AbstractGP, ỹ::ApproxObs)
+
+Condition `f` on approximate observations `ỹ`.
+"""
+|(f::AbstractGP, ỹ::ApproxObs) = CompositeGP((|, f, ỹ), f.gpc)
+
+const approx_cond = Tuple{typeof(|), AbstractGP, ApproxObs}
+
+mean_vector((_, f, ỹ)::approx_cond, x::AV) = mean(f(x)) + cov(f(x), ỹ.u(ỹ.z)) * ỹ.α
+
+function cov((_, f, ỹ)::approx_cond, x::AV)
+    u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
+    Ax = U' \ cov(u(z), f(x))
+    return cov(f(x)) - Ax' * Ax + Xt_invA_X(Λ, Ax)
 end
 
-|(f::GP, u::PseudoPoints) = GP(f.gpc, |, f, u)
-
-function μ_p′(::typeof(|), f::GP, u::PseudoPoints)
-    return ApproxCondMean(u.c, mean(f), kernel(u.f_q, f))
+function cov((_, f, ỹ)::approx_cond, x::AV, x′::AV)
+    u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
+    Ax = U' \ cov(u(z), f(x))
+    Ax′ = U' \ cov(u(z), f(x′))
+    return cov(f(x), f(x′)) - Ax' * Ax′ + Xt_invA_Y(Ax, Λ, Ax′)
 end
 
-function k_p′(::typeof(|), f::GP, u::PseudoPoints)
-    return ApproxCondKernel(u.c, kernel(u.f_q, f), kernel(f))
+function cov_diag((_, f, ỹ)::approx_cond, x::AV)
+    u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
+    Ax = U' \ cov(u(z), f(x))
+    Ax′ = U' \ cov(u(z), f(x′))
+    return cov_diag(f(x)) - diag_At_A(Ax) + diag_Xt_invA_X(Ax, Λ, Ax′)
 end
 
-function k_p′p(::typeof(|), f::GP, u::PseudoPoints, fp::GP)
-    if fp.args[1] isa typeof(|) && fp.args[3] === u
-        f′ = fp.args[2]
-        return ApproxCondCrossKernel(u.c, kernel(u.f_q, f), kernel(u.f_q, f′), kernel(f, f′))
-    else
-        error("Unsupported cross-covariance.")
-    end
+function xcov((_, f, ỹ)::approx_cond, f′::PPGP, x::AV, x′::AV)
+    throw(error("Not implemented"))
 end
 
-function k_pp′(fp::GP, ::typeof(|) , f::GP, u::PseudoPoints)
-    if fp.args[1] isa typeof(|) && fp.args[3] === u
-        f′ = fp.args[2]
-        return ApproxCondCrossKernel(u.c, kernel(u.f_q, f′), kernel(u.f_q, f), kernel(f′, f))
-    else
-        error("Unsupported cross-covariance")
-    end
+function xcov((_, f, ỹ)::approx_cond, f′::AbstractGP, x::AV, x′::AV)
+    throw(error("Not implemented"))
 end
+function xcov(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV, x′::AV)
+    throw(error("Not implemented"))
+end
+
+function xcov_diag((_, f, ỹ)::approx_cond, f′::AbstractGP, x::AV)
+    throw(error("Not implemented"))
+end
+function xcov_diag(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV)
+    throw(error("Not implemented"))
+end
+
+function sample(rng::AbstractRNG, (_, f, ỹ)::approx_cond, x::AV, S::Int)
+    throw(error("Not implemented"))
+end
+
+
+
+
+# """
+#     PseudoPoints
+
+# Some pseudo-points. Really need to improve the documentation here...
+# """
+# struct PseudoPoints{Tf_q<:GP, Tc<:PseudoPointCache}
+#     f_q::Tf_q
+#     c::Tc
+# end
+
+# function PseudoPoints(c::Observation, u::FiniteGP)
+#     m_ε, Λ_ε, U = optimal_q(c.f, c.y, u)
+#     return PseudoPoints(u.f, PseudoPointCache(u.x, U, m_ε, Λ_ε))
+# end
+
+# PseudoPoints(cs::Tuple{Vararg{Observation}}, u::FiniteGP) = PseudoPoints(merge(cs), u)
+# PseudoPoints(c::Observation, us::Tuple{Vararg{FiniteGP}}) = PseudoPoints(c, merge(us))
+# function PseudoPoints(cs::Tuple{Vararg{Observation}}, us::Tuple{Vararg{FiniteGP}})
+#     return PseudoPoints(merge(cs), merge(us))
+# end
+
+# |(f::GP, u::PseudoPoints) = GP(f.gpc, |, f, u)
+
+# function μ_p′(::typeof(|), f::GP, u::PseudoPoints)
+#     return ApproxCondMean(u.c, mean(f), kernel(u.f_q, f))
+# end
+
+# function k_p′(::typeof(|), f::GP, u::PseudoPoints)
+#     return ApproxCondKernel(u.c, kernel(u.f_q, f), kernel(f))
+# end
+
+# function k_p′p(::typeof(|), f::GP, u::PseudoPoints, fp::GP)
+#     if fp.args[1] isa typeof(|) && fp.args[3] === u
+#         f′ = fp.args[2]
+#         return ApproxCondCrossKernel(u.c, kernel(u.f_q, f), kernel(u.f_q, f′), kernel(f, f′))
+#     else
+#         error("Unsupported cross-covariance.")
+#     end
+# end
+
+# function k_pp′(fp::GP, ::typeof(|) , f::GP, u::PseudoPoints)
+#     if fp.args[1] isa typeof(|) && fp.args[3] === u
+#         f′ = fp.args[2]
+#         return ApproxCondCrossKernel(u.c, kernel(u.f_q, f′), kernel(u.f_q, f), kernel(f′, f))
+#     else
+#         error("Unsupported cross-covariance")
+#     end
+# end
 
 
 

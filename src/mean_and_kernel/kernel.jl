@@ -1,45 +1,9 @@
-using LinearAlgebra
-
-import LinearAlgebra: AbstractMatrix, AdjOrTransAbsVec, AdjointAbsVec
-import Base: +, *, ==, size, eachindex, print, eltype, zero
-import Distances: pairwise, colwise, sqeuclidean, SqEuclidean
-import Base.Broadcast: broadcast_shape
-
-
-############################# Define CrossKernels and Kernels ##############################
+import Base: *, eltype, zero
+import Distances: pairwise, colwise
+using Distances: sqeuclidean, SqEuclidean, Euclidean
+using Base.Broadcast: broadcast_shape
 
 abstract type Kernel end
-
-
-
-################################ Util. for Toeplitz matrices ###############################
-
-function toep_pw(k::Kernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
-    if x.step == x′.step
-        return Toeplitz(ew(k, x, fill(x′[1], length(x))), ew(k, fill(x[1], length(x′)), x′))
-    else
-        return pw(k, collect(x), collect(x′))
-    end
-end
-
-toep_pw(k::Kernel, x::StepRangeLen) = SymmetricToeplitz(ew(k, x, fill(x[1], length(x))))
-
-function toep_map(k::Kernel, x::StepRangeLen{T}, x′::StepRangeLen{V}) where {T, V}
-    if x.step == x′.step
-        return fill(
-            ew(k, collect(x[1:1]), collect(x′[1:1]))[1],
-            broadcast_shape(size(x), size(x′)),
-        )
-    else
-        return ew(k, collect(x), collect(x′))
-    end
-end
-
-
-
-################################ Define some basic kernels #################################
-
-
 
 """
     ZeroKernel <: Kernel

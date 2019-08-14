@@ -22,14 +22,20 @@ function mean_vector((_, fs)::cross_args, x::BlockData)
     return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
 end
 
-function cov((_, fs)::cross_args, x::BlockData)
-    Cs = xcov.(fs, reshape(fs, 1, :), blocks(x), reshape(blocks(x), 1, :))
-    return Matrix(_BlockArray(Cs, _get_block_sizes(Cs)...))
-end
+cov(args::cross_args, x::BlockData) = cov(args, x, x)
 
 function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
-    Cs = xcov.(fs, reshape(fs, 1, :), blocks(x), reshape(blocks(x′), 1, :))
-    return Matrix(_BlockArray(Cs, _get_block_sizes(Cs)...))
+    # blks, blks′ = blocks(x), blocks(x′)
+    # Cs = Matrix{Base.RefValue{Matrix{Float64}}}(undef, length(blks), length(blks′))
+    # for (p, blk) in enumerate(blks), (q, blk′) in enumerate(blks′)
+    #     Cs[p, q] = xcov(fs[p], fs[q], )
+    # end
+    # Cs = xcov.(fs, reshape(fs, 1, :), blocks(x), reshape(blocks(x′), 1, :))
+    # return Matrix(_BlockArray(Cs, _get_block_sizes(Cs)...))
+
+    Cs = map((f, blk)->xcov(f, (cross, fs), blk, x′), fs, blocks(x))
+    @show size(Cs), size.(Cs)
+    return Matrix(_BlockArray(reshape(Cs, :, 1), _get_block_sizes(Cs)..., [length(x′)]))
 end
 
 function cov_diag((_, fs)::cross_args, x::BlockData)
@@ -54,19 +60,19 @@ function xcov_diag(f::AbstractGP, args::cross_args, x::BlockData)
 end
 
 function sample(rng::AbstractRNG, (_, fs)::cross_args, x::BlockData, S::Int)
-    blk = map((f, blk)->sample(rng, f, x, S), fs, blocks(x))
-    return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
+    blks = map((f, blk)->sample(rng, f, blk, S), fs, blocks(x))
+    return Matrix(_BlockArray(reshape(blks, :, 1), _get_block_sizes(blks)..., [S]))
 end
 
 
 #
-# Helper for pw.
+# Helper for cov.
 #
 
-# function _xcov(fs, f′s, x_blks, x′_blks)
-#     blks = pw.(ks, x_blks, x′_blks)
-#     return _BlockArray(blks, _get_block_sizes(blks)...)
-# end
+function _cov(fs, f′s, x_blks, x′_blks)
+    blks = pw.(ks, x_blks, x′_blks)
+    return _BlockArray(blks, _get_block_sizes(blks)...)
+end
 # @adjoint function _pw(ks, x_blks, x′_blks)
 #     blk_backs = broadcast((k, x, x′)->Zygote.forward(pw, k, x, x′), ks, x_blks, x′_blks)
 #     blks, backs = first.(blk_backs), last.(blk_backs)
