@@ -1,5 +1,5 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Product
 using LinearAlgebra
 
 @testset "kernel" begin
@@ -94,6 +94,11 @@ using LinearAlgebra
         @testset "Noise" begin
             @test pw(Noise(), x0, x0) == zeros(length(x0), length(x0))
             @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
+        end
+
+        @testset "Product" begin
+            differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
     end
 

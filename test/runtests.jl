@@ -4,9 +4,6 @@ using BlockArrays: _BlockArray
 using Stheno: ew, pw, mean_vector, cov, cov_diag, xcov, xcov_diag
 using Stheno: EQ
 
-# TODO:
-# 3. Implement product kernel, since that isn't handled well by affine transformations.
-
 include("test_util.jl")
 
 @testset "Stheno" begin
@@ -24,23 +21,22 @@ include("test_util.jl")
 
     # @testset "mean_and_kernel" begin
     #     include(joinpath("mean_and_kernel", "mean.jl"))
-    #     include(joinpath("mean_and_kernel", "kernel.jl"))
+        include(joinpath("mean_and_kernel", "kernel.jl"))
     # end
 
     @testset "gp" begin
         # include(joinpath("gp", "gp.jl"))
-        include(joinpath("gp", "finite_gp.jl"))
+        # include(joinpath("gp", "finite_gp.jl"))
     end
 
-    # @testset "linops" begin
-    #     include(joinpath("linops", "test_util.jl"))
-    #     include(joinpath("linops", "indexing.jl"))
-    #     # include(joinpath("linops", "cross.jl"))
-    #     include(joinpath("linops", "conditioning.jl"))
-    #     include(joinpath("linops", "product.jl"))
-    #     include(joinpath("linops", "addition.jl"))
-    #     include(joinpath("linops", "compose.jl"))
-    #     # include(joinpath("linops", "approximate_conditioning.jl"))
-    #     # include(joinpath("linops", "integrate.jl"))
-    # end
+    @testset "linops" begin
+        # include(joinpath("linops", "test_util.jl"))
+        # include(joinpath("linops", "indexing.jl"))
+        # # include(joinpath("linops", "cross.jl"))
+        # include(joinpath("linops", "conditioning.jl"))
+        # include(joinpath("linops", "product.jl"))
+        # include(joinpath("linops", "addition.jl"))
+        # include(joinpath("linops", "compose.jl"))
+        # include(joinpath("linops", "approximate_conditioning.jl"))
+    end
 end

@@ -329,6 +329,28 @@ pw(k::Noise, x::AV) = diagm(0=>ones(eltype(k), length(x)))
 
 
 
+"""
+    Product{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
+
+Represents the product of two kernels `kl` and `kr` st. `k(x, x′) = kl(x, x′) kr(x, x′)`.
+"""
+struct Product{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
+    kl::Tkl
+    kr::Tkr
+end
+
+*(kl::Kernel, kr::Kernel) = Product(kl, kr)
+
+# Binary methods
+ew(k::Product, x::AV, x′::AV) = ew(k.kl, x, x′) .* ew(k.kr, x, x′)
+pw(k::Product, x::AV, x′::AV) = pw(k.kl, x, x′) .* pw(k.kr, x, x′)
+
+# Unary methods
+ew(k::Product, x::AV) = ew(k.kl, x) .* ew(k.kr, x)
+pw(k::Product, x::AV) = pw(k.kl, x) .* pw(k.kr, x)
+
+
+
 # """
 #     Poly{Tσ<:Real} <: Kernel
 
