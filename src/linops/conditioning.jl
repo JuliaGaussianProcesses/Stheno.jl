@@ -44,13 +44,6 @@ function xcov_diag(f::AbstractGP, (_, g, C, _, fx, _)::cond_data, x::AV)
     return xcov_diag(f, g, x) - diag_Xt_invA_Y(cov(fx, f(x)), C, cov(fx, g(x)))
 end
 
-function sample(rng::AbstractRNG, (_, g, C, _, fx, y)::cond_data, x::AV, S::Int)
-    XY = sample(rng, cross([g, fx.f]), BlockData([x, fx.x]), S)
-    X = XY[1:length(x), :]
-    Y = XY[length(x)+1:end, :] + cholesky(fx.Σy).U' * randn(rng, length(y), S)
-    return X + cov(fx, g(x))' * (C \ (y .- Y))
-end
-
 function merge(fs::Tuple{Vararg{FiniteGP}})
     block_gp = cross([map(f->f.f, fs)...])
     block_x = BlockData([map(f->f.x, fs)...])

@@ -50,10 +50,6 @@ function xcov_diag(f::AbstractGP, args::cross_args, x::BlockData)
     return diag(xcov(f, args, x))
 end
 
-function sample(rng::AbstractRNG, (_, fs)::cross_args, x::BlockData, S::Int)
-    blks = map((f, blk)->sample(rng, f, blk, S), fs, blocks(x))
-    return Matrix(_BlockArray(reshape(blks, :, 1), _get_block_sizes(blks)..., [S]))
-end
 
 
 #

@@ -45,9 +45,6 @@ function xcov_diag(f::AbstractGP, (_, fa, fb)::add_args, x::AV)
     return xcov_diag(f, fa, x) .+ xcov_diag(f, fb, x)
 end
 
-function sample(rng::AbstractRNG, (_, fa, fb)::add_args, x::AV, S::Int)
-    return sample(rng, fa, x, S) + sample(rng, fb, x, S)
-end
 
 #
 # Add a constant or known function to a GP -- just shifts the mean
@@ -72,11 +69,3 @@ xcov(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = xcov(f, f′, x,
 
 xcov_diag((_, b, f)::add_known, f′::AbstractGP, x::AV) = xcov_diag(f, f′, x)
 xcov_diag(f::AbstractGP, (_, b, f′)::add_known, x::AV) = xcov_diag(f, f′, x)
-
-function sample(rng::AbstractRNG, (_, b, f)::add_known, x::AV, S::Int)
-    return b.(x) + sample(rng, f, x, S)
-end
-
-function sample(rng::AbstractRNG, (_, b, f)::add_known{<:Real}, x::AV, S::Int)
-    return b .+ sample(rng, f, x, S)
-end

@@ -9,7 +9,6 @@ module Stheno
     using Zygote: @adjoint, @nograd, @showgrad, hook
     using BlockArrays: _BlockArray
     import LinearAlgebra: cholesky, cross
-    import Distributions: sample
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}

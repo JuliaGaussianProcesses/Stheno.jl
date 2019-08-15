@@ -21,8 +21,6 @@ cov_diag((_, f, g)::comp_args, x::AV) = cov_diag(f, g.(x))
 xcov((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = xcov(f, f′, g.(x), x′)
 xcov(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = xcov(f, f′, x, g.(x′))
 
-sample(rng::AbstractRNG, (_, f, g)::comp_args, x::AV, S::Int) = sample(rng, f, g.(x), S)
-
 
 
 """

@@ -94,10 +94,6 @@ function xcov_diag(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV)
     throw(error("Not implemented"))
 end
 
-function sample(rng::AbstractRNG, (_, f, ỹ)::approx_cond, x::AV, S::Int)
-    throw(error("Not implemented"))
-end
-
 
 
 
