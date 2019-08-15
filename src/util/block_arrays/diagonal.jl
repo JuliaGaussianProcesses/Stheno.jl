@@ -110,6 +110,7 @@ end
 
 function *(A::BlockDiagonal{<:Real}, B::Matrix{<:Real})
     A_blks, B_blks = A.blocks.diag, BlockArray(B, blocksizes(A, 1), [size(B, 2)]).blocks
+    @show typeof(A_blks), typeof(B_blks)
     return Matrix(BlockMatrix(reshape([a * b for (a, b) in zip(A_blks, B_blks)], :, 1)))
 end
 function *(A::BlockDiagonal{<:Real}, x::Vector{<:Real})

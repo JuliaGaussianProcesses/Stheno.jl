@@ -3,12 +3,6 @@ import Distributions: logpdf, ContinuousMultivariateDistribution
 
 export mean, std, cov, marginals, rand, logpdf, elbo
 
-struct ZeroCov{T} <: AbstractMatrix{T}
-    N::Int
-end
-
-size(z::ZeroCov) = (z.N, z.N)
-
 """
     FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy}
 
@@ -21,7 +15,7 @@ struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribut
 end
 FiniteGP(f::AbstractGP, x::AV, σ²::AV{<:Real}) = FiniteGP(f, x, Diagonal(σ²))
 FiniteGP(f::AbstractGP, x::AV, σ²::Real) = FiniteGP(f, x, fill(σ², length(x)))
-FiniteGP(f::AbstractGP, x::AV) = FiniteGP(f, x, ZeroCov{Float64}(length(x)))
+FiniteGP(f::AbstractGP, x::AV) = FiniteGP(f, x, 1e-18)
 
 length(f::FiniteGP) = length(f.x)
 
@@ -38,7 +32,6 @@ mean(f::FiniteGP) = mean_vector(f.f, f.x)
 The covariance matrix of `f`.
 """
 cov(f::FiniteGP) = cov(f.f, f.x) + f.Σy
-cov(f::FiniteGP{<:AbstractGP, <:AV, <:ZeroCov}) = cov(f.f, f.x)
 
 """
     cov(f::FiniteGP, g::FiniteGP)
@@ -53,9 +46,6 @@ cov(f::FiniteGP, g::FiniteGP) = xcov(f.f, g.f, f.x, g.x)
 Sugar, returns a vector of Normal distributions representing the marginals of `f`.
 """
 marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(cov_diag(f.f, f.x) .+ diag(f.Σy)))
-function marginals(f::FiniteGP{<:AbstractGP, <:AV, <:ZeroCov})
-    return Normal.(mean(f), sqrt.(cov_diag(f.f, f.x)))
-end
 
 """
     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
@@ -63,13 +53,7 @@ end
 Obtain `N` independent samples from the marginals `f` using `rng`.
 """
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
-    a = sample(rng, f.f, f.x, N)
-    b = cholesky(f.Σy).U' * randn(rng, length(f), N)
-    @show size(a), size(b)
-    return a + b
-end
-function rand(rng::AbstractRNG, f::FiniteGP{<:AbstractGP, <:AV, <:ZeroCov}, N::Int)
-    return sample(rng, f.f, f.x, N)
+    return sample(rng, f.f, f.x, N) + cholesky(f.Σy).U' * randn(rng, length(f), N)
 end
 rand(f::FiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
