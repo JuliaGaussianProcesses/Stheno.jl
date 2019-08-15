@@ -34,7 +34,6 @@ module Stheno
     include(joinpath("util", "block_arrays", "diagonal.jl"))
     include(joinpath("util", "block_arrays", "triangular.jl"))
     include(joinpath("util", "abstract_data_set.jl"))
-    include(joinpath("util", "toeplitz.jl"))
     include(joinpath("util", "fillarrays.jl"))
     include(joinpath("util", "proper_type_piracy.jl"))
 

@@ -164,49 +164,6 @@ function kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
 end
 
 """
-    stationary_kernel_tests(k::Kernel, x0::StepRangeLen, x1::StepRangeLen, x2::StepRangeLen)
-
-Additional tests for stationary kernels. Should be run in addition to `kernel_tests`.
-"""
-function stationary_kernel_tests(
-    k::Kernel,
-    x0::StepRangeLen,
-    x1::StepRangeLen,
-    x2::StepRangeLen,
-    x3::StepRangeLen,
-    x4::StepRangeLen,
-)
-    # Check that useful inputs have been provided.
-    @assert length(x0) == length(x1)
-    @assert length(x0) == length(x2)
-    @assert step(x0) == step(x1)
-    @assert step(x0) ≠ step(x2)
-
-    @assert length(x3) ≠ length(x0)
-    @assert step(x0) == step(x3)
-
-    @assert length(x4) ≠ length(x0)
-    @assert step(x4) ≠ length(x0)
-
-    # Unary elementwise.
-    @test ew(k, x0) == ew(k, collect(x0))
-
-    # Binary elementwise.
-    @test ew(k, x0, x1) == ew(k, collect(x0), collect(x1))
-    @test ew(k, x0, x2) == ew(k, collect(x0), collect(x2))
-
-    # Unary pairwise.
-    @test pw(k, x0) isa SymmetricToeplitz
-    @test pw(k, x0) == pw(k, collect(x0))
-
-    # Binary pairwise.
-    @test pw(k, x0, x3) isa Toeplitz
-    @test pw(k, x0, x3) == pw(k, collect(x0), collect(x3))
-    @test !isa(pw(k, x0, x4), Toeplitz)
-    @test pw(k, x0, x4) == pw(k, collect(x0), collect(x4))
-end
-
-"""
     differentiable_mean_function_tests(m::MeanFunction, ȳ::AV, x::AV)
 
 Ensure that the gradient w.r.t. the inputs of `MeanFunction` `m` are approximately correct.

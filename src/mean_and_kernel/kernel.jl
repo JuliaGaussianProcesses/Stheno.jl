@@ -54,9 +54,6 @@ struct ConstKernel{T} <: Kernel
     c::T
 end
 
-# A hack to make this work with Zygote, which can't handle parametrised function calls.
-const_kernel(c, x, x′) = c
-
 # Binary methods.
 ew(k::ConstKernel, x::AV, x′::AV) = fill(k.c, broadcast_shape(size(x), size(x′))...)
 pw(k::ConstKernel, x::AV, x′::AV) = fill(k.c, length(x), length(x′))
@@ -80,15 +77,11 @@ pw(::EQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-sqeuclidean.(x, x′') ./ 2)
 ew(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(.-colwise(SqEuclidean(), X.X, X′.X) ./ 2)
 pw(::EQ, X::ColsAreObs, X′::ColsAreObs) = exp.(.-pw(SqEuclidean(), X.X, X′.X; dims=2) ./ 2)
 
-ew(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
-pw(k::EQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
-
 # Unary methods.
 ew(::EQ, x::AV) = ones(eltype(x), length(x))
 pw(::EQ, x::AV{<:Real}) = pw(EQ(), x, x)
 ew(::EQ, X::ColsAreObs) = ones(eltype(X.X), length(X))
 pw(::EQ, X::ColsAreObs) = exp.(.-pw(SqEuclidean(), X.X; dims=2) ./ 2)
-pw(k::EQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 # Optimised adjoints. These really do count in terms of performance (I think).
 @adjoint function ew(::EQ, x::AV{<:Real}, x′::AV{<:Real})
@@ -125,13 +118,10 @@ struct PerEQ <: Kernel end
 # Binary methods.
 ew(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-2 .* sin.(π .* abs.(x .- x′)).^2)
 pw(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-2 .* sin.(π .* abs.(x .- x′')).^2)
-ew(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
-pw(k::PerEQ, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods.
 ew(::PerEQ, x::AV{<:Real}) = ones(eltype(x), length(x))
 pw(k::PerEQ, x::AV{<:Real}) = pw(k, x, x)
-pw(k::PerEQ, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 
 
@@ -147,15 +137,12 @@ ew(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′))
 pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′'))
 ew(k::Exp, x::ColsAreObs, x′::ColsAreObs) = exp.(.-colwise(Euclidean(), x.X, x′.X))
 pw(k::Exp, x::ColsAreObs, x′::ColsAreObs) = exp.(.-pairwise(Euclidean(), x.X, x′.X; dims=2))
-ew(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_map(k, x, x′)
-pw(k::Exp, x::StepRangeLen{<:Real}, x′::StepRangeLen{<:Real}) = toep_pw(k, x, x′)
 
 # Unary methods
 ew(::Exp, x::AV{<:Real}) = ones(eltype(x), length(x))
 ew(::Exp, x::ColsAreObs{T}) where {T} = ones(T, length(x))
 pw(k::Exp, x::AV{<:Real}) = pw(k, x, x)
 pw(k::Exp, x::ColsAreObs) = exp.(.-pairwise(Euclidean(), x.X; dims=2))
-pw(k::Exp, x::StepRangeLen{<:Real}) = toep_pw(k, x)
 
 
 

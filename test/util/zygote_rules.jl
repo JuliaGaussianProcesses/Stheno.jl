@@ -1,4 +1,4 @@
-using FiniteDifferences, Zygote, Distances, Random, LinearAlgebra, ToeplitzMatrices, StatsFuns
+using FiniteDifferences, Zygote, Distances, Random, LinearAlgebra, StatsFuns
 using Base.Broadcast: broadcast_shape
 
 @testset "zygote_rules" begin
@@ -39,18 +39,6 @@ using Base.Broadcast: broadcast_shape
         adjoint_test(A->logdet(cholesky(A' * A + 1e-3I)), randn(rng), A)
         adjoint_test(A->cholesky(A' * A + 1e-3I).U, randn(rng, N, N), A)
         adjoint_test(A->cholesky(A' * A + 1e-3I).L, randn(rng, N, N), A)
-    end
-    @testset "cholesky (SymmetricToeplitz)" begin
-        rng, N = MersenneTwister(123456), 10
-        x = pairwise(EQ(), range(-3.0, stop=3.0, length=N))[:, 1]
-        x[1] += 1 # ensure positive definite-ness under minor perturbations.
-        adjoint_test(
-            x->cholesky(SymmetricToeplitz(x)).U,
-            randn(rng, N, N),
-            x;
-            rtol=1e-6,
-            atol=1e-6,
-        )
     end
     @testset "colwise(::Euclidean, X, Y; dims=2)" begin
         rng, D, P = MersenneTwister(123456), 2, 3

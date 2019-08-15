@@ -25,17 +25,8 @@ end
 cov(args::cross_args, x::BlockData) = cov(args, x, x)
 
 function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
-    # blks, blks′ = blocks(x), blocks(x′)
-    # Cs = Matrix{Base.RefValue{Matrix{Float64}}}(undef, length(blks), length(blks′))
-    # for (p, blk) in enumerate(blks), (q, blk′) in enumerate(blks′)
-    #     Cs[p, q] = xcov(fs[p], fs[q], )
-    # end
-    # Cs = xcov.(fs, reshape(fs, 1, :), blocks(x), reshape(blocks(x′), 1, :))
-    # return Matrix(_BlockArray(Cs, _get_block_sizes(Cs)...))
-
-    Cs = map((f, blk)->xcov(f, (cross, fs), blk, x′), fs, blocks(x))
-    @show size(Cs), size.(Cs)
-    return Matrix(_BlockArray(reshape(Cs, :, 1), _get_block_sizes(Cs)..., [length(x′)]))
+    Cs = reshape(map((f, blk)->xcov(f, (cross, fs), blk, x′), fs, blocks(x)), :, 1)
+    return Matrix(_BlockArray(reshape(Cs, :, 1), _get_block_sizes(Cs)...))
 end
 
 function cov_diag((_, fs)::cross_args, x::BlockData)
@@ -63,50 +54,6 @@ function sample(rng::AbstractRNG, (_, fs)::cross_args, x::BlockData, S::Int)
     blks = map((f, blk)->sample(rng, f, blk, S), fs, blocks(x))
     return Matrix(_BlockArray(reshape(blks, :, 1), _get_block_sizes(blks)..., [S]))
 end
-
-
-#
-# Helper for cov.
-#
-
-function _cov(fs, f′s, x_blks, x′_blks)
-    blks = pw.(ks, x_blks, x′_blks)
-    return _BlockArray(blks, _get_block_sizes(blks)...)
-end
-# @adjoint function _pw(ks, x_blks, x′_blks)
-#     blk_backs = broadcast((k, x, x′)->Zygote.forward(pw, k, x, x′), ks, x_blks, x′_blks)
-#     blks, backs = first.(blk_backs), last.(blk_backs)
-#     Y = _BlockArray(blks, _get_block_sizes(blks)...)
-
-#     function back(Δ::BlockMatrix)
-
-#         Δ_k_x_x′ = broadcast((back, blk)->back(blk), backs, Δ.blocks)
-#         Δ_ks, Δ_x, Δ_x′ = first.(Δ_k_x_x′), getindex.(Δ_k_x_x′, 2), getindex.(Δ_k_x_x′, 3)
-
-#         # Reduce over appropriate dimensions manually because sum doesn't work... :S
-#         δ_x = Vector{Any}(undef, length(x_blks))
-#         δ_x′ = Vector{Any}(undef, length(x′_blks))
-
-#         for p in 1:length(x_blks)
-#             δ_x[p] = Δ_x[p, 1]
-#             for q in 2:length(x′_blks)
-#                 δ_x[p] = Zygote.accum(δ_x[p], Δ_x[p, q])
-#             end
-#         end
-
-#         for q in 1:length(x′_blks)
-#             δ_x′[q] = Δ_x′[1, q]
-#             for p in 2:length(x_blks)
-#                 δ_x′[q] = Zygote.accum(δ_x′[q], Δ_x′[p, q])
-#             end
-#         end
-
-#         return Δ_ks, δ_x, permutedims(δ_x′)
-#     end
-#     return Y, back
-# end
-
-
 
 
 #
