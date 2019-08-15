@@ -41,8 +41,6 @@ cov(f::GP, x::AV) = pw(f.k, x)
 cov(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
 cov_diag(f::GP, x::AV) = ew(f.k, x)
 
-index(f::GP) = f.n
-
 function sample(rng::AbstractRNG, f::GP, x::AV, S::Int)
     return mean_vector(f, x) .+ cholesky(cov(f, x)).U' * randn(rng, length(x), S)
 end
@@ -71,15 +69,12 @@ cov(f::CompositeGP, x::AV) = cov(f.args, x)
 cov(f::CompositeGP, x::AV, x′::AV) = cov(f.args, x, x′)
 cov_diag(f::CompositeGP, x::AV) = cov_diag(f.args, x)
 
-is_atomic(f::GP) = true
-is_atomic(f::AbstractGP) = false
-
 # Compute the cross-covariance matrix between `f` at `x` and `f′` at `x′`.
 function xcov(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     @assert f.gpc === f′.gpc
     if f.n === f′.n
         return cov(f, x, x′)
-    elseif is_atomic(f) && f.n > f′.n || is_atomic(f′) && f′.n > f.n
+    elseif f isa GP && f.n > f′.n || f′ isa GP && f′.n > f.n
         return zeros(length(x), length(x′))
     elseif f.n > f′.n
         return xcov(f.args, f′, x, x′)
@@ -94,7 +89,7 @@ function xcov_diag(f::AbstractGP, f′::AbstractGP, x::AV)
     @assert f.gpc === f′.gpc
     if f.n === f′.n
         return cov_diag(f, x)
-    elseif is_atomic(f) && f.n > f′.n || is_atomic(f′) && f′.n > f.n
+    elseif f isa GP && f.n > f′.n || f′ isa GP && f′.n > f.n
         return zeros(length(x))
     elseif f.n > f′.n
         return xcov_diag(f.args, f′, x)
@@ -102,7 +97,5 @@ function xcov_diag(f::AbstractGP, f′::AbstractGP, x::AV)
         return xcov_diag(f, f′.args, x)
     end
 end
-
-index(f::CompositeGP) = f.n
 
 sample(rng::AbstractRNG, f::CompositeGP, x::AV, S::Int) = sample(rng, f.args, x, S)

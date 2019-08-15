@@ -18,12 +18,6 @@ end
     back(Δ::AbstractMatrix) = (Δ,)
     function back(Δ::AbstractVector{<:AbstractVector{<:Real}})
         throw(error("In slow method"))
-        # println("argh in slow method!")
-        # X̄ = zero(X)
-        # for n in eachindex(Δ)
-        #     X̄[:, n] .+= Δ[n]
-        # end
-        # return (X̄,)
     end
     return ColsAreObs(X), back
 end
@@ -74,6 +68,3 @@ function eachindex(D::BlockData)
     lengths = map(length, blocks(D))
     return BlockArray(1:sum(lengths), lengths)
 end
-
-convert(::Type{BlockData}, x::BlockData) = x
-convert(::Type{BlockData}, x::AbstractVector) = BlockData([x])

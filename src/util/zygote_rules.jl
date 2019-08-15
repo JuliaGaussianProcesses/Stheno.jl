@@ -14,26 +14,10 @@ end
 accum(A::AbstractMatrix, D::Diagonal) = accum(D, A)
 accum(A::Diagonal, B::Diagonal) = Diagonal(accum(diag(A), diag(B)))
 
-@adjoint function sqeuclidean(x::AbstractVector, y::AbstractVector)
-    δ = x .- y
-    return sum(abs2, δ), function(Δ::Real)
-        x̄ = (2 * Δ) .* δ
-        return x̄, -x̄
-    end
-end
-
 @adjoint function colwise(s::SqEuclidean, x::AbstractMatrix, y::AbstractMatrix)
     return colwise(s, x, y), function (Δ::AbstractVector)
         x̄ = 2 .* Δ' .* (x .- y)
         return nothing, x̄, -x̄
-    end
-end
-
-@adjoint function pairwise(s::SqEuclidean, x::AbstractMatrix, y::AbstractMatrix)
-    return pairwise(s, x, y), function(Δ)
-        x̄ = 2 .* (x * Diagonal(vec(sum(Δ; dims=2))) .- y * Δ')
-        ȳ = 2 .* (y * Diagonal(vec(sum(Δ; dims=1))) .- x * Δ)
-        return nothing, x̄, ȳ
     end
 end
 
@@ -77,7 +61,3 @@ end
         error("@adjoint not implemented for :factors. (I couldn't make it work...)")
     end
 end
-
-using Base: Generator
-
-@adjoint Generator(f, iter) = Generator(f, iter), Δ::NamedTuple{(:f, :iter)}->(Δ.f, Δ.iter)
