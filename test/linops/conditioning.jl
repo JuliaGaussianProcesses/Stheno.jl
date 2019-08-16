@@ -73,7 +73,7 @@ end
             collect(range(-4.0, 5.0; length=Q)),
         )
     end
-    @testset "BlockGP" begin
+    @testset "Conditioning with cross" begin
         rng, N, N′, σ² = MersenneTwister(123456), 3, 7, 1.0
         xx′ = collect(range(-3.0, stop=3.0, length=N+N′))
         xp = collect(range(-4.0, stop=4.0, length=N+N′+10))

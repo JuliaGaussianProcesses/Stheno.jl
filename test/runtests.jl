@@ -39,17 +39,15 @@ include("test_util.jl")
     # end
     # println("testing gp took $(time() - a)s")
 
-    println("testing linops")
-    a = time()
-    @testset "linops" begin
+    println("linops:")
+    @time @testset "linops" begin
         include(joinpath("linops", "test_util.jl"))
         include(joinpath("linops", "indexing.jl"))
-        # include(joinpath("linops", "cross.jl"))
+        include(joinpath("linops", "cross.jl"))
         include(joinpath("linops", "conditioning.jl"))
-        # include(joinpath("linops", "product.jl"))
-        # include(joinpath("linops", "addition.jl"))
-        # include(joinpath("linops", "compose.jl"))
+        include(joinpath("linops", "product.jl"))
+        include(joinpath("linops", "addition.jl"))
+        include(joinpath("linops", "compose.jl"))
         # include(joinpath("linops", "approximate_conditioning.jl"))
     end
-    println("testing linops took $(time() - a)s")
 end
