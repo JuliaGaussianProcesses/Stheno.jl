@@ -38,7 +38,7 @@ cov(f::FiniteGP) = cov(f.f, f.x) + f.Σy
 
 The cross-covariance between `f` and `g`.
 """
-cov(f::FiniteGP, g::FiniteGP) = xcov(f.f, g.f, f.x, g.x)
+cov(f::FiniteGP, g::FiniteGP) = cov(f.f, g.f, f.x, g.x)
 
 """
     marginals(f::FiniteGP)

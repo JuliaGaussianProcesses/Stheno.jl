@@ -37,9 +37,27 @@ GP(m::Real, k::Kernel, gpc::GPC) = GP(ConstMean(m), k, gpc)
 GP(k::Kernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
 
 mean_vector(f::GP, x::AV) = ew(f.m, x)
+
 cov(f::GP, x::AV) = pw(f.k, x)
-cov(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
 cov_diag(f::GP, x::AV) = ew(f.k, x)
+
+cov(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
+cov_diag(f::GP, x::AV, x′::AV) = ew(f.k, x, x′)
+
+function cov(f::GP, f′::GP, x::AV, x′::AV)
+    if f === f′
+        return cov(f, x, x′)
+    else
+        return zeros(length(x), length(x′))
+    end
+end
+function cov_diag(f::GP, f′::GP, x::AV, x′::AV)
+    if f === f′
+        return cov_diag(f, x, x′)
+    else
+        return zeros(length(x))
+    end
+end
 
 
 
@@ -61,35 +79,34 @@ end
 CompositeGP(args::Targs, gpc::GPC) where {Targs} = CompositeGP{Targs}(args, gpc)
 
 mean_vector(f::CompositeGP, x::AV) = mean_vector(f.args, x)
+
 cov(f::CompositeGP, x::AV) = cov(f.args, x)
-cov(f::CompositeGP, x::AV, x′::AV) = cov(f.args, x, x′)
 cov_diag(f::CompositeGP, x::AV) = cov_diag(f.args, x)
 
-# Compute the cross-covariance matrix between `f` at `x` and `f′` at `x′`.
-function xcov(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
+cov(f::CompositeGP, x::AV, x′::AV) = cov(f.args, x, x′)
+cov_diag(f::CompositeGP, x::AV, x′::AV) = cov(f.args, x, x′)
+
+function cov(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     @assert f.gpc === f′.gpc
     if f.n === f′.n
-        return cov(f, x, x′)
+        return cov(f.args, x, x′)
     elseif f isa GP && f.n > f′.n || f′ isa GP && f′.n > f.n
         return zeros(length(x), length(x′))
-    elseif f.n > f′.n
-        return xcov(f.args, f′, x, x′)
+    elseif f.n >= f′.n
+        return cov(f.args, f′, x, x′)
     else
-        return xcov(f, f′.args, x, x′)
+        return cov(f, f′.args, x, x′)
     end
 end
-
-xcov(f::AbstractGP, f′::AbstractGP, x::AV) = xcov(f, f′, x, x)
-
-function xcov_diag(f::AbstractGP, f′::AbstractGP, x::AV)
+function cov_diag(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     @assert f.gpc === f′.gpc
     if f.n === f′.n
-        return cov_diag(f, x)
+        return cov_diag(f.args, x, x′)
     elseif f isa GP && f.n > f′.n || f′ isa GP && f′.n > f.n
         return zeros(length(x))
-    elseif f.n > f′.n
-        return xcov_diag(f.args, f′, x)
+    elseif f.n >= f′.n
+        return cov_diag(f.args, f′, x, x′)
     else
-        return xcov_diag(f, f′.args, x)
+        return cov_diag(f, f′.args, x, x′)
     end
 end

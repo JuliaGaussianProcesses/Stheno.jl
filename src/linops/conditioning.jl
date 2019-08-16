@@ -13,35 +13,43 @@ end
 const cond_data = Tuple{typeof(|), AbstractGP, Cholesky, AV{<:Real}, FiniteGP, AV{<:Real}}
 
 function mean_vector((_, g, _, α, fx, _)::cond_data, x::AV)
-    return mean(g(x)) + cov(g(x), fx) * α
+    return mean_vector(g, x) + cov(g, fx.f, x, fx.x) * α
 end
 
 function cov((_, g, C_ff, _, fx, _)::cond_data, x::AV)
-    return cov(g(x)) - Xt_invA_X(C_ff, cov(fx, g(x)))
+    return cov(g, x) - Xt_invA_X(C_ff, cov(fx.f, g, fx.x, x))
+end
+function cov_diag((_, g, C, _, fx, _)::cond_data, x::AV)
+    return cov_diag(g, x) - diag_Xt_invA_X(C, cov(fx.f, g, fx.x, x))
 end
 
 function cov((_, g, C_ff, _, fx, _)::cond_data, x::AV, x′::AV)
-    return cov(g(x), g(x′)) - Xt_invA_Y(cov(fx, g(x)), C_ff, cov(fx, g(x′)))
+    X, Y = cov(fx.f, g, fx.x, x), cov(fx.f, g, fx.x, x′)
+    return cov(g, x, x′) - Xt_invA_Y(X, C_ff, Y)
+end
+function cov_diag((_, g, C_ff, _, fx, _)::cond_data, x::AV, x′::AV)
+    X, Y = cov(fx.f, g, fx.x, x), cov(fx.f, g, fx.x, x′)
+    return cov_diag(g, x, x′) - diag_Xt_invA_Y(X, C_ff, Y)
 end
 
-function cov_diag((_, g, C, _, fx, _)::cond_data, x::AV)
-    return cov_diag(g, x) - diag_Xt_invA_X(C, cov(fx, g(x)))
+function cov((_, g, C, _, fx, _)::cond_data, f′::AbstractGP, x::AV, x′::AV)
+    X, Y = cov(fx.f, g, fx.x, x), cov(fx.f, f′, fx.x, x′)
+    return cov(g, f′, x, x′) - Xt_invA_Y(X, C, Y)
 end
 
-function xcov((_, g, C, _, fx, _)::cond_data, f′::AbstractGP, x::AV, x′::AV)
-    return cov(g(x), f′(x)) - Xt_invA_Y(cov(fx, g(x)), C, cov(fx, f′(x′)))
+function cov(f::AbstractGP, (_, g, C, _, fx, _)::cond_data, x::AV, x′::AV)
+    X, Y = cov(fx.f, f, fx.x, x), cov(fx.f, g, fx.x, x′)
+    return cov(f, g, x, x′) - Xt_invA_Y(X, C, Y)
 end
 
-function xcov(f::AbstractGP, (_, g, C, _, fx, _)::cond_data, x::AV, x′::AV)
-    return cov(f(x), g(x′)) - Xt_invA_Y(cov(fx, f(x), C, cov(fx, g(x′))))
+function cov_diag((_, g, C, _, fx, _)::cond_data, f′::AbstractGP, x::AV, x′::AV)
+    X, Y = cov(fx.f, g, fx.x, x), cov(fx.f, f′, fx.x, x′)
+    return cov_diag(g, f′, x, x′) - diag_Xt_invA_Y(X, C, Y)
 end
 
-function xcov_diag((_, g, C, _, fx, _)::cond_data, f′::AbstractGP, x::AV)
-    return xcov_diag(g, f′, x) - diag_Xt_invA_Y(cov(fx, g(x), C, cov(fx, f′(x′))))
-end
-
-function xcov_diag(f::AbstractGP, (_, g, C, _, fx, _)::cond_data, x::AV)
-    return xcov_diag(f, g, x) - diag_Xt_invA_Y(cov(fx, f(x)), C, cov(fx, g(x)))
+function cov_diag(f::AbstractGP, (_, g, C, _, fx, _)::cond_data, x::AV, x′::AV)
+    X, Y = cov(fx.f, f, fx.x, x), cov(fx.f, g, fx.x, x)
+    return cov_diag(f, g, x, x′) - diag_Xt_invA_Y(X, C, Y)
 end
 
 function merge(fs::Tuple{Vararg{FiniteGP}})

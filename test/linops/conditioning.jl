@@ -57,7 +57,15 @@ end
         @test cov(f′(xx′)) ≈ cov(f′2(xx′))
         @test cov(f′(x), f′(x′)) ≈ cov(f′2(x), f′2(x′))
     end
-    @testset "Standardised Tests" begin
+    @testset "Consistency Tests" begin
+        rng, N, P, Q = MersenneTwister(123456), 11, 5, 3
+        f = GP(sin, EQ(), GPC())
+        x = collect(range(-1.0, 1.0; length=N))
+        y = randn(rng, N)
+        f′ = f | (f(x) ← y)
+        
+    end
+    @testset "Diff Tests" begin
         rng, N, P, Q = MersenneTwister(123456), 11, 5, 3
         x_obs, A_obs = collect(range(-5.0, 5.0; length=N)), randn(rng, N, N)
         y_obs = rand(rng, GP(sin, EQ(), GPC())(x_obs, _to_psd(A_obs)))

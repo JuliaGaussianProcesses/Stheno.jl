@@ -1,7 +1,7 @@
 using Stheno, Test, Random, BlockArrays, StatsFuns
 using BlockArrays: _BlockArray
 
-using Stheno: ew, pw, mean_vector, cov, cov_diag, xcov, xcov_diag
+using Stheno: ew, pw, mean_vector, cov, cov_diag
 using Stheno: EQ
 
 include("test_util.jl")
@@ -45,9 +45,9 @@ include("test_util.jl")
         include(joinpath("linops", "indexing.jl"))
         include(joinpath("linops", "cross.jl"))
         include(joinpath("linops", "conditioning.jl"))
-        include(joinpath("linops", "product.jl"))
-        include(joinpath("linops", "addition.jl"))
-        include(joinpath("linops", "compose.jl"))
+        # include(joinpath("linops", "product.jl"))
+        # include(joinpath("linops", "addition.jl"))
+        # include(joinpath("linops", "compose.jl"))
         # include(joinpath("linops", "approximate_conditioning.jl"))
     end
 end

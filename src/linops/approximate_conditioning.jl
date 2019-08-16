@@ -62,12 +62,12 @@ function cov((_, f, ỹ)::approx_cond, x::AV)
     return cov(f(x)) - Ax' * Ax + Xt_invA_X(Λ, Ax)
 end
 
-function cov((_, f, ỹ)::approx_cond, x::AV, x′::AV)
-    u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
-    Ax = U' \ cov(u(z), f(x))
-    Ax′ = U' \ cov(u(z), f(x′))
-    return cov(f(x), f(x′)) - Ax' * Ax′ + Xt_invA_Y(Ax, Λ, Ax′)
-end
+# function cov((_, f, ỹ)::approx_cond, x::AV, x′::AV)
+#     u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
+#     Ax = U' \ cov(u(z), f(x))
+#     Ax′ = U' \ cov(u(z), f(x′))
+#     return cov(f(x), f(x′)) - Ax' * Ax′ + Xt_invA_Y(Ax, Λ, Ax′)
+# end
 
 function cov_diag((_, f, ỹ)::approx_cond, x::AV)
     u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
@@ -76,21 +76,21 @@ function cov_diag((_, f, ỹ)::approx_cond, x::AV)
     return cov_diag(f(x)) - diag_At_A(Ax) + diag_Xt_invA_X(Ax, Λ, Ax′)
 end
 
-function xcov((_, f, ỹ)::approx_cond, f′::PPGP, x::AV, x′::AV)
+function cov((_, f, ỹ)::approx_cond, f′::PPGP, x::AV, x′::AV)
     throw(error("Not implemented"))
 end
 
-function xcov((_, f, ỹ)::approx_cond, f′::AbstractGP, x::AV, x′::AV)
+function cov((_, f, ỹ)::approx_cond, f′::AbstractGP, x::AV, x′::AV)
     throw(error("Not implemented"))
 end
-function xcov(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV, x′::AV)
+function cov(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV, x′::AV)
     throw(error("Not implemented"))
 end
 
-function xcov_diag((_, f, ỹ)::approx_cond, f′::AbstractGP, x::AV)
+function cov_diag((_, f, ỹ)::approx_cond, f′::AbstractGP, x::AV, x′::AV)
     throw(error("Not implemented"))
 end
-function xcov_diag(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV)
+function cov_diag(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV, x′::AV)
     throw(error("Not implemented"))
 end
 

@@ -22,10 +22,8 @@ function mean_vector((_, fs)::cross_args, x::BlockData)
     return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
 end
 
-cov(args::cross_args, x::BlockData) = cov(args, x, x)
-
-function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
-    Cs = reshape(map((f, blk)->xcov(f, (cross, fs), blk, x′), fs, blocks(x)), :, 1)
+function cov((_, fs)::cross_args, x::BlockData)
+    Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x), fs, blocks(x)), :, 1)
     return Matrix(_BlockArray(reshape(Cs, :, 1), _get_block_sizes(Cs)...))
 end
 
@@ -34,20 +32,30 @@ function cov_diag((_, fs)::cross_args, x::BlockData)
     return Vector(_BlockArray(cs, _get_block_sizes(cs)...))
 end
 
-function xcov((_, fs)::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
-    Cs = reshape(map((f, x)->xcov(f, f′, x, x′), fs, blocks(x)), :, 1)
+function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
+    Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x′), fs, blocks(x)), :, 1)
+    return Matrix(_BlockArray(reshape(Cs, :, 1), _get_block_sizes(Cs)...))
+end
+
+function cov_diag((_, fs)::cross_args, x::BlockData, x′::BlockData)
+    cs = map(cov_diag, fs, blocks(x), blocks(x′))
+    return Vector(_BlockArray(cs, _get_block_sizes(cs)...))
+end
+
+function cov((_, fs)::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
+    Cs = reshape(map((f, x)->cov(f, f′, x, x′), fs, blocks(x)), :, 1)
     return Matrix(_BlockArray(Cs, _get_block_sizes(Cs)...))
 end
-function xcov(f::AbstractGP, (_, fs)::cross_args, x::AV, x′::BlockData)
-    Cs = reshape(map((f′, x′)->xcov(f, f′, x, x′), fs, blocks(x′)), 1, :)
+function cov(f::AbstractGP, (_, fs)::cross_args, x::AV, x′::BlockData)
+    Cs = reshape(map((f′, x′)->cov(f, f′, x, x′), fs, blocks(x′)), 1, :)
     return Matrix(_BlockArray(Cs, _get_block_sizes(Cs)...))
 end
 
-function xcov_diag(args::cross_args, f′::AbstractGP, x::BlockData)
-    return diag(xcov(args, f′, x))
+function cov_diag(args::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
+    return diag(cov(args, f′, x, x′))
 end
-function xcov_diag(f::AbstractGP, args::cross_args, x::BlockData)
-    return diag(xcov(f, args, x))
+function cov_diag(f::AbstractGP, args::cross_args, x::AV, x′::BlockData)
+    return diag(cov(f, args, x, x′))
 end
 
 

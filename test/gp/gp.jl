@@ -40,11 +40,9 @@ using Stheno: EQ, Exp
         @test mean_vector(f1, x) == ew(m1, x)
         @test mean_vector(f2, x) == ew(m2, x)
 
-        @test xcov(f1, f2, x, x′) == zeros(N, N′)
-        @test xcov(f1, f2, x) == zeros(N, N)
-        @test xcov_diag(f1, f2, x) == zeros(N)
+        @test cov(f1, f2, x, x′) == zeros(N, N′)
+        @test cov_diag(f1, x) == zeros(N)
 
-        @test xcov(f1, f1, x, x′) ≈ cov(f1, x, x′)
-        @test xcov(f1, f1, x′, x) ≈ xcov(f1, f1, x, x′)'
+        @test cov(f1, f1, x′, x) ≈ cov(f1, f1, x, x′)'
     end
 end

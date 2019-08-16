@@ -46,21 +46,32 @@ using Stheno: BlockData, GPC, cross
         @test cov(f5(x5), f3(x3)) == cov(f2(x2), f3(x3))
     end
     @testset "Standardised Tests" begin
-        x1, x2 = collect(range(-2.0, 2.0; length=5)), collect(range(1.2, 1.5; length=4))
-        z1, z2 = collect(range(-1.5, 0.75; length=3)), collect(range(0.89, 2.0; length=4))
-        standard_1D_tests(
-            MersenneTwister(123456),
-            Dict(:l1=>0.5, :l2=>2.3),
-            θ->begin
-                gpc = GPC()
-                f1 = θ[:l1] * GP(sin, EQ(), gpc)
-                f2 = θ[:l2] * GP(cos, EQ(), gpc)
-                f3 = cross([f1, f2])
-                return f3, f3
-            end,
-            BlockData([x1, x2]),
-            BlockData([z1, z2]),
-        )
+        rng, P, Q = MersenneTwister(123456), 3, 5
+        x0_1, x0_2 = collect(range(-1.0, 1.0; length=P)), collect(range(2.0, 4.0; length=P))
+        x1_1, x1_2 = randn(rng, Q), randn(rng, Q)
+        x0, x1 = BlockData([x0_1, x0_2]), BlockData([x1_1, x1_2])
+        x2, x3 = randn(rng, P), randn(2P)
+
+        gpc = GPC()
+        f1, f2 = GP(sin, EQ(), gpc), GP(cos, EQ(), gpc)
+        f3 = cross([f1, f2])
+        abstractgp_interface_tests(f3, f1, x0, x1, x2, x3)
+
+        # x1, x2 = collect(range(-2.0, 2.0; length=5)), collect(range(1.2, 1.5; length=4))
+        # z1, z2 = collect(range(-1.5, 0.75; length=3)), collect(range(0.89, 2.0; length=4))
+        # standard_1D_tests(
+        #     MersenneTwister(123456),
+        #     Dict(:l1=>0.5, :l2=>2.3),
+        #     θ->begin
+        #         gpc = GPC()
+        #         f1 = θ[:l1] * GP(sin, EQ(), gpc)
+        #         f2 = θ[:l2] * GP(cos, EQ(), gpc)
+        #         f3 = cross([f1, f2])
+        #         return f3, f3
+        #     end,
+        #     BlockData([x1, x2]),
+        #     BlockData([z1, z2]),
+        # )
     end
     @testset "finites_to_block" begin
         rng, P, Q = MersenneTwister(123456), 3, 5

@@ -20,29 +20,32 @@ const add_args = Tuple{typeof(+), AbstractGP, AbstractGP}
 mean_vector((_, fa, fb)::add_args, x::AV) = mean_vector(fa, x) .+ mean_vector(fb, x)
 
 function cov((_, fa, fb)::add_args, x::AV)
-    return cov(fa, x) .+ cov(fb, x) .+ xcov(fa, fb, x) .+ xcov(fb, fa, x)
+    return cov(fa, x) .+ cov(fb, x) .+ cov(fa, fb, x) .+ cov(fb, fa, x)
 end
 
-function cov((_, fa, fb)::add_args, x::AV, x′::AV)
-    return cov(fa, x, x′) .+ cov(fb, x, x′) .+ xcov(fa, fb, x, x′) .+ xcov(fb, fa, x, x′)
-end
+# function cov((_, fa, fb)::add_args, x::AV, x′::AV)
+#     return cov(fa, x, x′) .+ cov(fb, x, x′) .+ cov(fa, fb, x, x′) .+ cov(fb, fa, x, x′)
+# end
 
 function cov_diag((_, fa, fb)::add_args, x::AV)
-    return +(cov_diag(fa, x), cov_diag(fb, x), xcov_diag(fa, fb, x), xcov_diag(fb, fa, x))
+    return +(
+        cov_diag(fa, x), cov_diag(fb, x),
+        cov_diag(fa, fb, x, x), cov_diag(fb, fa, x, x),
+    )
 end
 
-function xcov((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
-    return xcov(fa, f′, x, x′) .+ xcov(fb, f′, x, x′)
+function cov((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
+    return cov(fa, f′, x, x′) .+ cov(fb, f′, x, x′)
 end
-function xcov(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
-    return xcov(f, fa, x, x′) .+ xcov(f, fb, x, x′)
+function cov(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
+    return cov(f, fa, x, x′) .+ cov(f, fb, x, x′)
 end
 
-function xcov_diag((_, fa, fb)::add_args, f′::AbstractGP, x::AV)
-    return xcov_diag(fa, f′, x) .+ xcov_diag(fb, f′, x)
+function cov_diag((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
+    return cov_diag(fa, f′, x, x′) .+ cov_diag(fb, f′, x, x′)
 end
-function xcov_diag(f::AbstractGP, (_, fa, fb)::add_args, x::AV)
-    return xcov_diag(f, fa, x) .+ xcov_diag(f, fb, x)
+function cov_diag(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
+    return cov_diag(f, fa, x, x′) .+ cov_diag(f, fb, x, x′)
 end
 
 
@@ -61,11 +64,11 @@ mean_vector((_, b, f)::add_known, x::AV) = b.(x) .+ mean_vector(f, x)
 mean_vector((_, b, f)::add_known{<:Real}, x::AV) = b .+ mean_vector(f, x)
 
 cov((_, b, f)::add_known, x::AV) = cov(f, x)
-cov((_, b, f)::add_known, x::AV, x′::AV) = cov(f, x, x′)
+# cov((_, b, f)::add_known, x::AV, x′::AV) = cov(f, x, x′)
 cov_diag((_, b, f)::add_known, x::AV) = cov_diag(f, x)
 
-xcov((_, b, f)::add_known, f′::AbstractGP, x::AV, x′::AV) = xcov(f, f′, x, x′)
-xcov(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = xcov(f, f′, x, x′)
+cov((_, b, f)::add_known, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, x, x′)
+cov(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = cov(f, f′, x, x′)
 
-xcov_diag((_, b, f)::add_known, f′::AbstractGP, x::AV) = xcov_diag(f, f′, x)
-xcov_diag(f::AbstractGP, (_, b, f′)::add_known, x::AV) = xcov_diag(f, f′, x)
+cov_diag((_, b, f)::add_known, f′::AbstractGP, x::AV, x′::AV) = cov_diag(f, f′, x, x′)
+cov_diag(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = cov_diag(f, f′, x, x′)

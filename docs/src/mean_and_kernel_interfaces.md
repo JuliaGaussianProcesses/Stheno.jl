@@ -16,15 +16,25 @@ The `AbstractGP` interface enables one to compute quantities required when worki
 |:--------------------- |:---------------------- |
 | `mean_vector(f, x)` | The mean vector of `f` at inputs `x` |
 | `cov(f, x)` | covariance matrix of `f` at inputs `x` |
-| `cov(f, x, x′)` | cross-covariance matrix between `f` at `x` and `f` at `x′` |
-| `cov_diag(f, x)` | `diag(cov(f, x))` (computed efficiently) |
-| `xcov(f, f′, x, x′)` | cross-covariance matrix between `f` at `x` and `f′` at `x′` |
-| `xcov(f, f′, x)` | cross-covariance matrix between `f` at `x` and `f′` at `x` |
-| `xcov_diag(f, f′, x, x′)` | `diag(xcov(f, f′, x, x′))`, where `length(x) == length(x′)` |
-| `xcov_diag(f, f′, x)` | `diag(xcov(f, f′, x))` (computed efficiently) |
+| `cov(f, x, x′)` | covariance matrix between `f` at `x` and `x′` |
+| `cov(f, f′, x, x′)` | cross-covariance matrix between `f` at `x` and `f′` at `x′` |
+
+It should always hold that `cov(f, x) ≈ cov(f, f, x, x)`, but in some important cases `cov(f, x)` will be significantly faster.
+
 
 `GP` and `CompositGP` are concrete subtypes of `AbstractGP`, and can be found [here](https://github.com/willtebbutt/Stheno.jl/blob/master/src/gp/gp.jl)
 
+### diag methods
+
+It is crucial for pseudo-point methods, and for the computation of marginal statistics at a reasonable scale, to be able to compute the diagonal of a given covariance matrix in linear time in the size of its inputs. This in turn necessitates that the diagonal of a given cross-covariance matrix can also be computed efficiently as the evaluation of covariance matrices often rely on the evaluation of cross-covariance matrices. As such, we have the following functions:
+
+| Function | Brief description |
+|:--------------------- |:---------------------- |
+| `cov_diag(f, x)` | `diag(cov(f, x))` |
+| `cov_diag(f, x, x′)` | `diag(cov(f, x, x′))` |
+| `cov_diag(f, f′, x, x′)` | `diag(cov(f, f′, x, x′))` |
+
+The second and third rows of the table only make sense when `length(x) == length(x′)` of course.
 
 
 ## GP
