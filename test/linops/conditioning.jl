@@ -19,8 +19,8 @@ end
         @test get_f(c1) === fX && get_f(c2) === fX′
         @test get_y(c1) === y && get_y(c2) === y′
 
-        # c = merge((c1, c2))
-        # @test get_y(c) == BlockVector([y, y′])
+        c = merge((c1, c2))
+        @test get_y(c) == BlockVector([y, y′])
     end
     @testset "condition once" begin
         rng, N, N′, D = MersenneTwister(123456), 10, 3, 2
@@ -73,34 +73,34 @@ end
             collect(range(-4.0, 5.0; length=Q)),
         )
     end
-    # @testset "BlockGP" begin
-    #     rng, N, N′, σ² = MersenneTwister(123456), 3, 7, 1.0
-    #     xx′ = collect(range(-3.0, stop=3.0, length=N+N′))
-    #     xp = collect(range(-4.0, stop=4.0, length=N+N′+10))
-    #     xp′ = collect(range(-4.0, stop=4.0, length=N+N′+11))
-    #     f = GP(sin, EQ(), GPC())
-    #     yy′ = rand(rng, f(xx′, σ²))
+    @testset "BlockGP" begin
+        rng, N, N′, σ² = MersenneTwister(123456), 3, 7, 1.0
+        xx′ = collect(range(-3.0, stop=3.0, length=N+N′))
+        xp = collect(range(-4.0, stop=4.0, length=N+N′+10))
+        xp′ = collect(range(-4.0, stop=4.0, length=N+N′+11))
+        f = GP(sin, EQ(), GPC())
+        yy′ = rand(rng, f(xx′, σ²))
 
-    #     # Chop up into blocks.
-    #     idx = randperm(rng, length(xx′))[1:N]
-    #     idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
-    #     x, x′ = xx′[idx_1], xx′[idx_2]
-    #     y, y′ = yy′[idx_1], yy′[idx_2]
+        # Chop up into blocks.
+        idx = randperm(rng, length(xx′))[1:N]
+        idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
+        x, x′ = xx′[idx_1], xx′[idx_2]
+        y, y′ = yy′[idx_1], yy′[idx_2]
 
-    #     f′ = f | (f(xx′, σ²)←yy′)
-    #     fb′ = f | (BlockGP([f, f])(BlockData([x, x′]), σ²)←vcat(y, y′))
-    #     fmc′ = f | (f(x, σ²)←y, f(x′, σ²)←y′)
+        f′ = f | (f(xx′, σ²)←yy′)
+        fb′ = f | (cross([f, f])(BlockData([x, x′]), σ²)←vcat(y, y′))
+        fmc′ = f | (f(x, σ²)←y, f(x′, σ²)←y′)
 
-    #     @test mean(f′(xp)) ≈ mean(fb′(xp))
-    #     @test mean(f′(xp)) ≈ mean(fmc′(xp))
+        @test mean(f′(xp)) ≈ mean(fb′(xp))
+        @test mean(f′(xp)) ≈ mean(fmc′(xp))
 
-    #     @test cov(f′(xp)) ≈ cov(fb′(xp))
-    #     @test cov(f′(xp)) ≈ cov(fmc′(xp))
+        @test cov(f′(xp)) ≈ cov(fb′(xp))
+        @test cov(f′(xp)) ≈ cov(fmc′(xp))
 
-    #     @test cov(f′(xp), f′(xp)) ≈ cov(fb′(xp), fb′(xp))
-    #     @test cov(f′(xp), f′(xp)) ≈ cov(fmc′(xp), fmc′(xp))
+        @test cov(f′(xp), f′(xp)) ≈ cov(fb′(xp), fb′(xp))
+        @test cov(f′(xp), f′(xp)) ≈ cov(fmc′(xp), fmc′(xp))
 
-    #     @test cov(f′(xp), f′(xp′)) ≈ cov(fb′(xp), fb′(xp′))
-    #     @test cov(f′(xp), f′(xp′)) ≈ cov(fmc′(xp), fmc′(xp′))
-    # end
+        @test cov(f′(xp), f′(xp′)) ≈ cov(fb′(xp), fb′(xp′))
+        @test cov(f′(xp), f′(xp′)) ≈ cov(fmc′(xp), fmc′(xp′))
+    end
 end
