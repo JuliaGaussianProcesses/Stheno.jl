@@ -45,18 +45,10 @@ cov(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
 cov_diag(f::GP, x::AV, x′::AV) = ew(f.k, x, x′)
 
 function cov(f::GP, f′::GP, x::AV, x′::AV)
-    if f === f′
-        return cov(f, x, x′)
-    else
-        return zeros(length(x), length(x′))
-    end
+    return f === f′ ? cov(f, x, x′) : zeros(length(x), length(x′))
 end
 function cov_diag(f::GP, f′::GP, x::AV, x′::AV)
-    if f === f′
-        return cov_diag(f, x, x′)
-    else
-        return zeros(length(x))
-    end
+    return f === f′ ? cov_diag(f, x, x′) : zeros(length(x))
 end
 
 
