@@ -22,9 +22,16 @@ using Stheno: GPC, EQ, Exp
             @test cov(fa(X), fp(X′)) ≈ cov(fb(X), fa(X′)) + cov(fa(X), fa(X′))
             @test cov(fa(X′), fp(X)) ≈ cov(fb(X′), fa(X)) + cov(fa(X′), fa(X))
         end
+
+        @testset "Consistency Tests" begin
+            P, Q = 4, 3
+            x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
+            abstractgp_interface_tests(f3, f1, x0, x1, x2, x3)
+            abstractgp_interface_tests(f2 - f1, f1, x0, x1, x2, x3)
+        end
     end
     @testset "Verify mean / kernel numerically" begin
-        rng, N, D = MersenneTwister(123456), 5, 6, 2
+        rng, N, D = MersenneTwister(123456), 5, 6
         X = ColsAreObs(randn(rng, D, N))
         c, f = randn(rng), GP(5, EQ(), GPC())
 
@@ -43,6 +50,12 @@ using Stheno: GPC, EQ, Exp
         @test mean((sin + f)(x)) == map(sin, x) + mean(f(x))
         @test cov((f + sin)(x)) == cov(f(x))
         @test cov((sin + f)(x)) == cov(f(x))
+
+        @testset "Consistency Tests" begin
+            P, Q = 5, 3
+            x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
+            abstractgp_interface_tests(c + f, f, x0, x1, x2, x3)
+        end
     end
     @testset "Standardised Tests (independent sum)" begin
         standard_1D_tests(

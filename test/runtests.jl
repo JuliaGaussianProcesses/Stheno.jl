@@ -46,8 +46,8 @@ include("test_util.jl")
         include(joinpath("linops", "cross.jl"))
         include(joinpath("linops", "conditioning.jl"))
         include(joinpath("linops", "product.jl"))
-        # include(joinpath("linops", "addition.jl"))
-        # include(joinpath("linops", "compose.jl"))
+        include(joinpath("linops", "addition.jl"))
+        include(joinpath("linops", "compose.jl"))
         # include(joinpath("linops", "approximate_conditioning.jl"))
     end
 end

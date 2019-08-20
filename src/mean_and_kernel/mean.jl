@@ -39,4 +39,4 @@ A wrapper around whatever unary function you fancy.
 struct CustomMean{Tf} <: MeanFunction
     f::Tf
 end
-ew(f::CustomMean, x::AV) = map(f.f, x)
+@noinline ew(f::CustomMean, x::AV) = map(f.f, x)

@@ -14,9 +14,10 @@ const comp_args = Tuple{typeof(∘), AbstractGP, Any}
 mean_vector((_, f, g)::comp_args, x::AV) = mean_vector(f, g.(x))
 
 cov((_, f, g)::comp_args, x::AV) = cov(f, g.(x))
-# cov((_, f, g)::comp_args, x::AV, x′::AV) = cov(f, g.(x), g.(x′))
-
 cov_diag((_, f, g)::comp_args, x::AV) = cov_diag(f, g.(x))
+
+cov((_, f, g)::comp_args, x::AV, x′::AV) = cov(f, g.(x), g.(x′))
+cov_diag((_, f, g)::comp_args, x::AV, x′::AV) = cov_diag(f, g.(x), g.(x′))
 
 cov((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, g.(x), x′)
 cov(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = cov(f, f′, x, g.(x′))
