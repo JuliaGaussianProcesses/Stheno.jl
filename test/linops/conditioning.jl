@@ -63,7 +63,8 @@ end
         x = collect(range(-1.0, 1.0; length=N))
         y = randn(rng, N)
         f′ = f | (f(x) ← y)
-        
+        x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
+        abstractgp_interface_tests(f′, f, x0, x1, x2, x3)
     end
     @testset "Diff Tests" begin
         rng, N, P, Q = MersenneTwister(123456), 11, 5, 3

@@ -363,11 +363,17 @@ function abstractgp_interface_tests(
     @test K_x0_x1 ≈ cov(f, f, x0, x1)
 
     # Check that binary cov_diag conforms to the API and is consistent with binary cov
-    K_x0_x2_diag = cov_diag(f, f′, x0, x3)
-    @test K_x0_x2_diag isa AbstractVector{<:Real}
-    @test length(K_x0_x2_diag) == length(x0)
-    @test K_x0_x2_diag ≈ diag(cov(f, f′, x0, x3)) atol=atol rtol=rtol
-    @test K_x0_x2_diag ≈ cov_diag(f′, f, x3, x0) atol=atol rtol=rtol
+    K_x0_x3_diag = cov_diag(f, f′, x0, x3)
+    @test K_x0_x3_diag isa AbstractVector{<:Real}
+    @test length(K_x0_x3_diag) == length(x0)
+    @test K_x0_x3_diag ≈ diag(cov(f, f′, x0, x3)) atol=atol rtol=rtol
+    @test K_x0_x3_diag ≈ cov_diag(f′, f, x3, x0) atol=atol rtol=rtol
+
+    # Check that unary-binary cov_diag is consistent.
+    K_x0_x0_diag = cov_diag(f, x0, x0)
+    @test K_x0_x0_diag isa AbstractVector{<:Real}
+    @test length(K_x0_x0_diag) == length(x0)
+    @test K_x0_x0_diag ≈ diag(cov(f, x0, x0)) atol=atol rtol=rtol
 
     # Check that unary cov_diag conforms to the API and is consistent with unary cov
     K_x0_diag = cov_diag(f, x0)

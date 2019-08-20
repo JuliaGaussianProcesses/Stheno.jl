@@ -48,7 +48,7 @@ function cov_diag((_, g, C, _, fx, _)::cond_data, f′::AbstractGP, x::AV, x′:
 end
 
 function cov_diag(f::AbstractGP, (_, g, C, _, fx, _)::cond_data, x::AV, x′::AV)
-    X, Y = cov(fx.f, f, fx.x, x), cov(fx.f, g, fx.x, x)
+    X, Y = cov(fx.f, f, fx.x, x), cov(fx.f, g, fx.x, x′)
     return cov_diag(f, g, x, x′) - diag_Xt_invA_Y(X, C, Y)
 end
 

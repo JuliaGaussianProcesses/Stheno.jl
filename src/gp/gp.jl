@@ -84,7 +84,7 @@ cov(f::CompositeGP, x::AV) = cov(f.args, x)
 cov_diag(f::CompositeGP, x::AV) = cov_diag(f.args, x)
 
 cov(f::CompositeGP, x::AV, x′::AV) = cov(f.args, x, x′)
-cov_diag(f::CompositeGP, x::AV, x′::AV) = cov(f.args, x, x′)
+cov_diag(f::CompositeGP, x::AV, x′::AV) = cov_diag(f.args, x, x′)
 
 function cov(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     @assert f.gpc === f′.gpc
