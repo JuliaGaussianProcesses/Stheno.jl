@@ -1,4 +1,4 @@
-import Base: *, eltype, zero
+import Base: *, zero
 import Distances: pairwise, colwise
 using Distances: sqeuclidean, SqEuclidean, Euclidean
 using Base.Broadcast: broadcast_shape
@@ -12,16 +12,15 @@ A rank 0 `Kernel` that always returns zero.
 """
 struct ZeroKernel{T<:Real} <: Kernel end
 ZeroKernel() = ZeroKernel{Float64}()
-eltype(::ZeroKernel{T}) where {T} = T
 zero(::Kernel) = ZeroKernel()
 
 # Binary methods.
-ew(k::ZeroKernel, x::AV, x′::AV) = zeros(eltype(k), broadcast_shape(size(x), size(x′)))
-pw(k::ZeroKernel, x::AV, x′::AV) = zeros(eltype(k), length(x), length(x′))
+ew(k::ZeroKernel{T}, x::AV, x′::AV) where {T} = zeros(T, broadcast_shape(size(x), size(x′)))
+pw(k::ZeroKernel{T}, x::AV, x′::AV) where {T} = zeros(T, length(x), length(x′))
 
 # Unary methods.
-ew(k::ZeroKernel, x::AV) = zeros(eltype(k), length(x))
-pw(k::ZeroKernel, x::AV) = zeros(eltype(k), length(x), length(x))
+ew(k::ZeroKernel{T}, x::AV) where {T} = zeros(T, length(x))
+pw(k::ZeroKernel{T}, x::AV) where {T} = zeros(T, length(x), length(x))
 
 
 
@@ -33,15 +32,14 @@ but (almost certainly) shouldn't be used as a base `Kernel`.
 """
 struct OneKernel{T<:Real} <: Kernel end
 OneKernel() = OneKernel{Float64}()
-eltype(k::OneKernel{T}) where {T} = T
 
 # Binary methods.
-ew(k::OneKernel, x::AV, x′::AV) = ones(eltype(k), broadcast_shape(size(x), size(x′)))
-pw(k::OneKernel, x::AV, x′::AV) = ones(eltype(k), length(x), length(x′))
+ew(k::OneKernel{T}, x::AV, x′::AV) where {T} = ones(T, broadcast_shape(size(x), size(x′)))
+pw(k::OneKernel{T}, x::AV, x′::AV) where {T} = ones(T, length(x), length(x′))
 
 # Unary methods.
-ew(k::OneKernel, x::AV) = ones(eltype(k), length(x))
-pw(k::OneKernel, x::AV) = ones(eltype(k), length(x), length(x))
+ew(k::OneKernel{T}, x::AV) where {T} = ones(T, length(x))
+pw(k::OneKernel{T}, x::AV) where {T} = ones(T, length(x), length(x))
 
 
 
@@ -268,15 +266,14 @@ The standardised aleatoric white-noise kernel. Isn't really a kernel, but never 
 """
 struct Noise{T<:Real} <: Kernel end
 Noise() = Noise{Int}()
-eltype(k::Noise{T}) where {T} = T
 
 # Binary methods.
-ew(k::Noise, x::AV, x′::AV) = zeros(eltype(k), broadcast_shape(size(x), size(x′))...)
-pw(k::Noise, x::AV, x′::AV) = zeros(eltype(k), length(x), length(x′))
+ew(k::Noise{T}, x::AV, x′::AV) where {T} = zeros(T, broadcast_shape(size(x), size(x′))...)
+pw(k::Noise{T}, x::AV, x′::AV) where {T} = zeros(T, length(x), length(x′))
 
 # Unary methods.
-ew(k::Noise, x::AV) = ones(eltype(k), length(x))
-pw(k::Noise, x::AV) = diagm(0=>ones(eltype(k), length(x)))
+ew(k::Noise{T}, x::AV) where {T} = ones(T, length(x))
+pw(k::Noise{T}, x::AV) where {T} = diagm(0=>ones(T, length(x)))
 
 
 

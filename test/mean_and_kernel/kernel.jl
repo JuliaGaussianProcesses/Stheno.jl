@@ -101,6 +101,7 @@ using LinearAlgebra
         @testset "Product" begin
             differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            @test EQ() * Exp() isa Product
         end
     end
 

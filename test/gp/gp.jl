@@ -41,7 +41,7 @@ using Stheno: EQ, Exp
         @test mean_vector(f2, x) == ew(m2, x)
 
         @test cov(f1, f2, x, x′) == zeros(N, N′)
-        @test cov_diag(f1, x) == zeros(N)
+        @test cov_diag(f1, x) == ones(N)
 
         @test cov(f1, f1, x′, x) ≈ cov(f1, f1, x, x′)'
     end

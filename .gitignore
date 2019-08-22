@@ -13,3 +13,4 @@ docs/build/*
 
 coverage
 scratch.jl
+Manifest.toml
