@@ -19,13 +19,27 @@ function optimal_q(cs::Tuple{Vararg{Observation}}, us::Tuple{Vararg{FiniteGP}})
 end
 
 
-# PPGP = "Pseudo-Point GP". Weird internal thing. Please don't use.
-struct PPGP{Tm<:AV{<:Real}, TΛ<:Cholesky{<:Real}} <: AbstractGP
+# PPGP = "Pseudo-Point GP". Weird internal thing. Please don't use, or try to access.
+struct PPGP{Tm<:AV{<:Real}, TΛ<:Cholesky{<:Real}, Tz<:AV} <: AbstractGP
     m::Tm
     Λ::TΛ
+    z::Tz
     gpc::GPC
 end
 
+mean_vector(u::PPGP, z::AV) = z === u.z ? u.m : throw(ArgumentError("Bad z"))
+cov(u::PPGP, z::AV) = z === u.z ? u.Λ : throw(ArgumentError("Bad z"))
+cov(u::PPGP, z::AV, z′::AV) = z === z′ ? cov(u, z) : throw(ArgumentError("Bad z"))
+cov(u::PPGP, u′::PPGP, z::AV, z′::AV) = throw(ArgumentError("Undefined behaviour"))
+
+function cov(u::PPGP, f′::GP, z::AV, x′::AV)
+    @assert u.z === z
+    return zeros{Float64}(undef, length(z), length(x′))
+end
+function cov(f::GP, u′::PPGP, x::AV, z′::AV)
+    @assert u′.z === z′
+    return zeros{Float64}(undef, length(x), length(z′))
+end
 
 """
     ApproxObs(u::AbstractGP, z::AV, m::AV{<:Real}, Λ::AM{<:Real}, U::AM)
@@ -41,7 +55,7 @@ struct ApproxObs{Tu<:AbstractGP, Tû<:PPGP, Tz<:AV, TU<:AM, Tα<:AV}
 end
 
 function ApproxObs(u::AbstractGP, z::AV, m::AV, Λ::Cholesky, U::AM)
-    return ApproxObs(u, PPGP(m, Λ, u.gpc), z, U, U \ m)
+    return ApproxObs(u, PPGP(m, Λ, z, u.gpc), z, U, U \ m)
 end
 
 
@@ -62,12 +76,12 @@ function cov((_, f, ỹ)::approx_cond, x::AV)
     return cov(f(x)) - Ax' * Ax + Xt_invA_X(Λ, Ax)
 end
 
-# function cov((_, f, ỹ)::approx_cond, x::AV, x′::AV)
-#     u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
-#     Ax = U' \ cov(u(z), f(x))
-#     Ax′ = U' \ cov(u(z), f(x′))
-#     return cov(f(x), f(x′)) - Ax' * Ax′ + Xt_invA_Y(Ax, Λ, Ax′)
-# end
+function cov((_, f, ỹ)::approx_cond, x::AV, x′::AV)
+    u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
+    Ax = U' \ cov(u(z), f(x))
+    Ax′ = U' \ cov(u(z), f(x′))
+    return cov(f(x), f(x′)) - Ax' * Ax′ + Xt_invA_Y(Ax, Λ, Ax′)
+end
 
 function cov_diag((_, f, ỹ)::approx_cond, x::AV)
     u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
@@ -76,22 +90,35 @@ function cov_diag((_, f, ỹ)::approx_cond, x::AV)
     return cov_diag(f(x)) - diag_At_A(Ax) + diag_Xt_invA_X(Ax, Λ, Ax′)
 end
 
-function cov((_, f, ỹ)::approx_cond, f′::PPGP, x::AV, x′::AV)
-    throw(error("Not implemented"))
-end
-
 function cov((_, f, ỹ)::approx_cond, f′::AbstractGP, x::AV, x′::AV)
-    throw(error("Not implemented"))
-end
-function cov(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV, x′::AV)
-    throw(error("Not implemented"))
+    u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
+    Ax = U' \ cov(u, f, z, x)
+    Ax′ = U' \ cov(u, f′, z, x′)
+    Kzx′ = cov(ỹ.û, f′, z, x′)
+    if iszero(Kzx′)
+        return cov(f, f′, x, x′) - Ax' * Ax′
+    else
+        return cov(f, f′, x, x′) + Ax' * (Λ \ Matrix(U)) - Ax' * Ax′
+    end
 end
 
-function cov_diag((_, f, ỹ)::approx_cond, f′::AbstractGP, x::AV, x′::AV)
-    throw(error("Not implemented"))
+function cov(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV, x′::AV)
+    u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ
+    Ax = U' \ cov(u, f, z, x)
+    Ax′ = U' \ cov(u, f′, z, x′)
+    Kxz = cov(f, ỹ.û, x, z)
+    if iszero(Kxz)
+        return cov(f, f′, x, x′) - Ax' * Ax′
+    else
+        return cov(f, f′, x, x′) + Matrix(U)' * (Λ \ Ax′) - Ax' * Ax′
+    end
 end
-function cov_diag(f::AbstractGP, (_, f′, ỹ)::approx_cond, x::AV, x′::AV)
-    throw(error("Not implemented"))
+
+function cov_diag(args::approx_cond, f′::AbstractGP, x::AV, x′::AV)
+    return diag(cov(args, f′, x, x′))
+end
+function cov_diag(f::AbstractGP, args::approx_cond, x::AV, x′::AV)
+    return diag(cov(f, args, x, x′))
 end
 
 
