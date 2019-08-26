@@ -62,27 +62,68 @@ using Stheno: GPC, optimal_q, ApproxObs
             @test Λ_ε.U ≈ cholesky(Symmetric(B * (cholesky(Σ) \ B') + I)).U
         end
     end
-    # @testset "optimal_q (multiple conditioning)" begin
-    #     rng, N, N′, σ², gpc = MersenneTwister(123456), 5, 7, 1e-1, GPC()
-    #     xx′ = collect(range(-3.0, stop=3.0; length=N + N′))
-    #     idx = randperm(rng, length(xx′))[1:N]
-    #     idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
-    #     x, x′ = xx′[idx_1], xx′[idx_2]
+    @testset "optimal_q (multiple conditioning)" begin
+        rng, N, N′, σ², gpc = MersenneTwister(123456), 5, 7, 1e-1, GPC()
+        xx′ = collect(range(-3.0, stop=3.0; length=N + N′))
+        idx = randperm(rng, length(xx′))[1:N]
+        idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
+        x, x′ = xx′[idx_1], xx′[idx_2]
 
-    #     f = GP(sin, EQ(), gpc)
-    #     y, y′ = rand(rng, [f(x, σ²), f(x′, σ²)])
+        f = GP(sin, EQ(), gpc)
+        y, y′ = rand(rng, [f(x, σ²), f(x′, σ²)])
 
-    #     # Compute approximate posterior suff. stats.
-    #     m_ε, Λ_ε, U = optimal_q((f(x, σ²)←y, f(x′, σ²)←y′), f(xx′))
-    #     f′ = f | (f(x, σ²) ← y, f(x′, σ²)←y′)
+        # Compute approximate posterior suff. stats.
+        obs = ApproxObs(f(xx′), (f(x, σ²) ← y, f(x′, σ²)←y′))
+        m_ε, Λ_ε, U = obs.û.m, obs.û.Λ, obs.U
+        f′ = f | (f(x, σ²) ← y, f(x′, σ²)←y′)
 
-    #     # Check that exact and approx. posteriors are close in this case.
-    #     @test m_ε ≈ cholesky(cov(f(xx′))).U' \ (mean(f′(xx′)) - mean(f(xx′)))
-    #     @test U ≈ cholesky(cov(f(xx′))).U
-    #     @test Λ_ε.U ≈ cholesky((U' \ cov(f(xx′))) * (U' \ cov(f(xx′)))' ./ σ² + I).U
-    # end
-    @testset "single conditioning" begin
-        rng, N, N′, Nz, σ², gpc = MersenneTwister(123456), 2, 3, 2, 1e-1, GPC()
+        # Check that exact and approx. posteriors are close in this case.
+        @test m_ε ≈ cholesky(cov(f(xx′))).U' \ (mean(f′(xx′)) - mean(f(xx′)))
+        @test U ≈ cholesky(cov(f(xx′))).U
+        @test Λ_ε.U ≈ cholesky((U' \ cov(f(xx′))) * (U' \ cov(f(xx′)))' ./ σ² + I).U
+
+        @testset "multiple cond, multiple pseudo points" begin
+            z, z′ = randn(rng, 3), randn(rng, 2)
+            zz′ = vcat(z, z′)
+            u = ApproxObs(f(zz′), (f(x, σ²)←y, f(x′, σ²)←y′))
+            u′ = ApproxObs((f(z), f(z′)), (f(x, σ²)←y, f(x′, σ²)←y′))
+            @test u.û.m ≈ u′.û.m
+            @test u.û.Λ.U ≈ u′.û.Λ.U
+            @test u.U ≈ u′.U
+        end
+        @testset "single cond, multiple pseudo points" begin
+            z, z′ = randn(rng, 3), randn(rng, 2)
+            zz′ = vcat(z, z′)
+            u = ApproxObs(f(zz′), f(x, σ²)←y)
+            u′ = ApproxObs((f(z), f(z′)), f(x, σ²)←y)
+            @test u.û.m ≈ u′.û.m
+            @test u.û.Λ.U ≈ u′.û.Λ.U
+            @test u.U ≈ u′.U
+        end
+    end
+    @testset "Consistency Tests" begin
+        rng, N, M, σ², gpc = MersenneTwister(123456), 5, 3, 1e-1, GPC()
+        x = collect(range(-3.0, 3.0, length=N))
+        z = randn(rng, M)
+
+        # Generate toy problem.
+        f = GP(sin, EQ(), gpc)
+        y = rand(f(x, σ²))
+
+        # Generate approximate posterior
+        m_ε, Λ_ε, U = optimal_q(f(x, σ²)←y, f(z))
+        ỹ = ApproxObs(f, z, m_ε, Λ_ε, U)
+        f′_approx = f | ỹ
+
+        P, Q = 7, 4
+        x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
+        abstractgp_interface_tests(f′_approx, f, x0, x1, x2, x3)
+
+        @test_throws ArgumentError Stheno.mean_vector(ỹ.û, randn(rng, P))
+        @test_throws ArgumentError cov(ỹ.û, ApproxObs(f, z, m_ε, Λ_ε, U).û, x0, x1)
+    end
+    @testset "accuracy tests" begin
+        rng, N, N′, Nz, σ², gpc = MersenneTwister(123456), 5, 3, 2, 1e-1, GPC()
         x = collect(range(-3.0, 3.0, length=N))
         x′ = collect(range(-3.0, 3.0, length=N′))
         z = x
@@ -93,19 +134,19 @@ using Stheno: GPC, optimal_q, ApproxObs
 
         # Exact conditioning.
         f′ = f | (f(x, σ²)←y)
+        g′ = f | (f(x, σ²)←y)
 
         # Approximate conditioning that should yield (almost) exact results.
         m_ε, Λ_ε, U = optimal_q(f(x, σ²)←y, f(z))
         ỹ = ApproxObs(f, z, m_ε, Λ_ε, U)
-        # pp = PseudoPoints(f(x, σ²)←y, f(z))
         f′_approx = f | ỹ
         g′_approx = f | ỹ
 
         @test mean(f′(x′)) ≈ mean(f′_approx(x′))
         @test cov(f′(x′)) ≈ cov(f′_approx(x′))
         @test cov(f′(x′), f′(x)) ≈ cov(f′_approx(x′), f′_approx(x))
-        @test_broken cov(f′(x′), f′(x)) ≈ cov(f′_approx(x′), g′_approx(x))
-        @test_broken cov(f′(x′), f′(x)) ≈ cov(g′_approx(x′), f′_approx(x))
+        @test cov(f′(x′), g′(x)) ≈ cov(f′_approx(x′), g′_approx(x))
+        @test cov(g′(x′), f′(x)) ≈ cov(g′_approx(x′), f′_approx(x))
 
         @testset "Standardised Tests" begin
             @testset "Dense Obs. Noise" begin

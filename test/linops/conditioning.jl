@@ -65,6 +65,21 @@ end
         f′ = f | (f(x) ← y)
         x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
         abstractgp_interface_tests(f′, f, x0, x1, x2, x3)
+
+        # Multiple things to condition on
+        P′ = 7
+        x′ = randn(rng, P′)
+        y, y′ = rand(rng, [f(x, 1e-9), f(x′, 1e-9)])
+        f′ = f | (f(x, 1e-9)←y, f(x′, 1e-9)←y′)
+        abstractgp_interface_tests(f′, f, x0, x1, x2, x3)
+
+        # Condition multiple things
+        f′, f′′ = (f, f) | (f(x, 1e-9)←y)
+        abstractgp_interface_tests(f′, f′′, x0, x1, x2, x3)
+
+        # Condition multiple things on multiple things
+        f′, f′′ = (f, f) | (f(x, 1e-9)←y, f(x′, 1e-9)←y′)
+        abstractgp_interface_tests(f′, f′′, x0, x1, x2, x3)
     end
     @testset "Diff Tests" begin
         rng, N, P, Q = MersenneTwister(123456), 11, 5, 3
