@@ -6,6 +6,6 @@ makedocs(
     sitename = "Stheno.jl",
     pages = [
         "Home" => "index.md",
-        "Interfaces" => "mean_and_kernel_interfaces.md",
+        "Internals" => "internals.md",
     ],
 )

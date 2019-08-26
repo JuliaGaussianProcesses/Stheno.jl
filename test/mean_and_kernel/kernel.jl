@@ -1,5 +1,5 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Product
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Product, stretch
 using LinearAlgebra
 
 @testset "kernel" begin
@@ -102,6 +102,22 @@ using LinearAlgebra
             differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             @test EQ() * Exp() isa Product
+        end
+
+        @testset "Stretched" begin
+            @testset "Scalar a" begin
+                k = stretch(EQ(), 0.1)
+                differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-7, rtol=1e-7)
+                differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
+            end
+            @testset "Vector a" begin
+                k = stretch(EQ(), randn(rng, D))
+                differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @testset "Matrix a" begin
+                k = stretch(EQ(), randn(rng, D, D))
+                differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
         end
     end
 

@@ -298,6 +298,53 @@ ew(k::Product, x::AV) = ew(k.kl, x) .* ew(k.kr, x)
 pw(k::Product, x::AV) = pw(k.kl, x) .* pw(k.kr, x)
 
 
+"""
+    Stretched{Tk<:Kernel} <: Kernel
+
+Apply a length scale to a kernel. Specifically, `k(x, x′) = k(a * x, a * x′)`.
+"""
+struct Stretched{Ta<:Union{Real, AV{<:Real}, AM{<:Real}}, Tk<:Kernel} <: Kernel
+    a::Ta
+    k::Tk
+end
+
+stretch(k::Kernel, a::Union{Real, AV{<:Real}, AM{<:Real}}) = Stretched(a, k)
+
+
+# Binary methods (scalar `a`, scalar-valued input)
+ew(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, k.a .* x, k.a .* x′)
+pw(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, k.a .* x, k.a .* x′)
+
+# Unary methods (scalar)
+ew(k::Stretched{<:Real}, x::AV{<:Real}) = ew(k.k, k.a .* x)
+pw(k::Stretched{<:Real}, x::AV{<:Real}) = pw(k.k, k.a .* x)
+
+
+# Binary methods (scalar and vector `a`, vector-valued input)
+function ew(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColsAreObs, x′::ColsAreObs)
+    return ew(k.k, ColsAreObs(k.a .* x.X), ColsAreObs(k.a .* x′.X))
+end
+function pw(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColsAreObs, x′::ColsAreObs)
+    return pw(k.k, ColsAreObs(k.a .* x.X), ColsAreObs(k.a .* x′.X))
+end
+
+# Unary methods (scalar and vector `a`, vector-valued input)
+ew(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColsAreObs) = ew(k.k, ColsAreObs(k.a .* x.X))
+pw(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColsAreObs) = pw(k.k, ColsAreObs(k.a .* x.X))
+
+
+# Binary methods (matrix `a`, vector-valued input)
+function ew(k::Stretched{<:AM{<:Real}}, x::ColsAreObs, x′::ColsAreObs)
+    return ew(k.k, ColsAreObs(k.a * x.X), ColsAreObs(k.a * x′.X))
+end
+function pw(k::Stretched{<:AM{<:Real}}, x::ColsAreObs, x′::ColsAreObs)
+    return pw(k.k, ColsAreObs(k.a * x.X), ColsAreObs(k.a * x′.X))
+end
+
+# Unary methods (scalar and vector `a`, vector-valued input)
+ew(k::Stretched{<:AM{<:Real}}, x::ColsAreObs) = ew(k.k, ColsAreObs(k.a * x.X))
+pw(k::Stretched{<:AM{<:Real}}, x::ColsAreObs) = pw(k.k, ColsAreObs(k.a * x.X))
+
 
 # """
 #     Poly{Tσ<:Real} <: Kernel

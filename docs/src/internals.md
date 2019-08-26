@@ -168,3 +168,13 @@ h = f + g
 # THIS IS BAD. PLEASE DON'T DO THIS
 ```
 The mistake here is to construct a separate `GPC` object for each `GP`. This will hopefully error, but might yield incorrect results.
+
+Alternatively, if you're willing to place your model in a function you can write something like:
+```julia
+@model function foo(some arguments)
+    f1 = GP(mean, kernel)
+    f2 = GP(some other mean, some other kernel)
+    return f1, f2
+end
+```
+The `@model` macro just places a `GPC` on the first line of the function and provides it as an argument to each `GP` constructed. Suggestions for ways to improve / extend this interface are greatly appreciated.

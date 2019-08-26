@@ -8,9 +8,8 @@ include("test_util.jl")
 
 @testset "Stheno" begin
 
-    println("testing util")
-    a = time()
-    @testset "util" begin
+    println("util:")
+    @time @testset "util" begin
         include(joinpath("util", "zygote_rules.jl"))
         include(joinpath("util", "covariance_matrices.jl"))
         @testset "block_arrays" begin
@@ -20,24 +19,18 @@ include("test_util.jl")
         end
         include(joinpath("util", "abstract_data_set.jl"))
     end
-    println("testing util took $(time() - a)s")
 
-    println("testing mean_and_kernel")
-    a = time()
-    @testset "mean_and_kernel" begin
+    println("mean_and_kernel:")
+    @time @testset "mean_and_kernel" begin
         include(joinpath("mean_and_kernel", "mean.jl"))
         include(joinpath("mean_and_kernel", "kernel.jl"))
     end
-    println("mean_and_kernel took $(time() - a)s")
 
-
-    println("testing gp")
-    a = time()
-    @testset "gp" begin
+    println("gp:")
+    @time @testset "gp" begin
         include(joinpath("gp", "gp.jl"))
         include(joinpath("gp", "finite_gp.jl"))
     end
-    println("testing gp took $(time() - a)s")
 
     println("linops:")
     @time @testset "linops" begin
