@@ -10,4 +10,4 @@ makedocs(
     ],
 )
 
-deploydocs(repo="github.com/JuliaDiff/ChainRules.jl.git")
+deploydocs(repo="github.com/willtebbutt/Stheno.jl.git")
