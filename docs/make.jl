@@ -9,3 +9,5 @@ makedocs(
         "Internals" => "internals.md",
     ],
 )
+
+deploydocs(repo="github.com/JuliaDiff/ChainRules.jl.git")
