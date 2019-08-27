@@ -2,6 +2,7 @@ import Base: *, zero
 import Distances: pairwise, colwise
 using Distances: sqeuclidean, SqEuclidean, Euclidean
 using Base.Broadcast: broadcast_shape
+import Base: exp
 
 abstract type Kernel end
 
@@ -345,6 +346,18 @@ end
 ew(k::Stretched{<:AM{<:Real}}, x::ColsAreObs) = ew(k.k, ColsAreObs(k.a * x.X))
 pw(k::Stretched{<:AM{<:Real}}, x::ColsAreObs) = pw(k.k, ColsAreObs(k.a * x.X))
 
+# Create convenience versions of each of the kernels that accept a length scale.
+for (k, K) in (
+    (:eq, :EQ), (:exp, :Exp), (:matern12, :Matern12), (:matern32, :Matern32),
+    (:matern52, :Matern52), (:linear, :Linear),
+)
+    @eval $k() = $K()
+    @eval $k(a::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch($k(), a)
+    @eval export $k
+end
+
+rq(α) = RQ(α)
+rq(α, l) = stretch(rq(α), l)
 
 # """
 #     Poly{Tσ<:Real} <: Kernel

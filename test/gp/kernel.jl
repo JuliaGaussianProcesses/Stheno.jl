@@ -1,4 +1,4 @@
-using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw
+using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Product, stretch
 using LinearAlgebra
 
@@ -117,6 +117,10 @@ using LinearAlgebra
             @testset "Matrix a" begin
                 k = stretch(EQ(), randn(rng, D, D))
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @testset "Convenience Constructors" begin
+                @test eq() isa EQ
+                @test eq(0.5) isa Stretched{Float64, EQ}
             end
         end
     end
