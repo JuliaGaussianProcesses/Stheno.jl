@@ -1,4 +1,4 @@
-using FiniteDifferences, Zygote, Distances, Random, LinearAlgebra, ToeplitzMatrices, StatsFuns
+using FiniteDifferences, Zygote, Distances, Random, LinearAlgebra, StatsFuns
 using Base.Broadcast: broadcast_shape
 
 @testset "zygote_rules" begin
@@ -40,18 +40,6 @@ using Base.Broadcast: broadcast_shape
         adjoint_test(A->cholesky(A' * A + 1e-3I).U, randn(rng, N, N), A)
         adjoint_test(A->cholesky(A' * A + 1e-3I).L, randn(rng, N, N), A)
     end
-    @testset "cholesky (SymmetricToeplitz)" begin
-        rng, N = MersenneTwister(123456), 10
-        x = pairwise(eq(), range(-3.0, stop=3.0, length=N))[:, 1]
-        x[1] += 1 # ensure positive definite-ness under minor perturbations.
-        adjoint_test(
-            x->cholesky(SymmetricToeplitz(x)).U,
-            randn(rng, N, N),
-            x;
-            rtol=1e-6,
-            atol=1e-6,
-        )
-    end
     @testset "colwise(::Euclidean, X, Y; dims=2)" begin
         rng, D, P = MersenneTwister(123456), 2, 3
         X, Y, D̄ = randn(rng, D, P), randn(rng, D, P), randn(rng, P)
@@ -60,12 +48,12 @@ using Base.Broadcast: broadcast_shape
     @testset "pairwise(::Euclidean, X, Y; dims=2)" begin
         rng, D, P, Q = MersenneTwister(123456), 2, 3, 5
         X, Y, D̄ = randn(rng, D, P), randn(rng, D, Q), randn(rng, P, Q)
-        adjoint_test((X, Y)->pairwise(Euclidean(), X, Y), D̄, X, Y)
+        adjoint_test((X, Y)->pairwise(Euclidean(), X, Y; dims=2), D̄, X, Y)
     end
     @testset "pairwise(::Euclidean, X; dims=2)" begin
         rng, D, P = MersenneTwister(123456), 2, 3
         X, D̄ = randn(rng, D, P), randn(rng, P, P)
-        adjoint_test(X->pairwise(Euclidean(), X), D̄, X)
+        adjoint_test(X->pairwise(Euclidean(), X; dims=2), D̄, X)
     end
     @testset "Diagonal" begin
         rng, N = MersenneTwister(123456), 11

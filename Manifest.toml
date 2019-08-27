@@ -121,12 +121,6 @@ repo-url = "https://github.com/JuliaArrays/FillArrays.jl.git"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
 version = "0.6.3"
 
-[[FiniteDifferences]]
-deps = ["LinearAlgebra", "Printf"]
-git-tree-sha1 = "9c35e38c34464726c039962691505c9063a7d441"
-uuid = "26cc04aa-876d-5657-8c51-4c34ba976000"
-version = "0.7.0"
-
 [[ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "InteractiveUtils", "LinearAlgebra", "NaNMath", "Random", "SparseArrays", "SpecialFunctions", "StaticArrays", "Test"]
 git-tree-sha1 = "4c4d727f1b7e0092134fabfab6396b8945c1ea5b"
@@ -203,9 +197,9 @@ version = "1.1.0"
 
 [[PDMats]]
 deps = ["Arpack", "LinearAlgebra", "SparseArrays", "SuiteSparse", "Test"]
-git-tree-sha1 = "f99548922adf8dd5df2f02ab0063944201a12ed8"
+git-tree-sha1 = "9d6a9b3e19634612fb1edcafc4b1d75242b24bde"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.9.8"
+version = "0.9.9"
 
 [[Parsers]]
 deps = ["Dates", "Test"]
@@ -305,7 +299,7 @@ uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 version = "0.8.0"
 
 [[SuiteSparse]]
-deps = ["Libdl", "LinearAlgebra", "SparseArrays"]
+deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
 [[Test]]
@@ -318,16 +312,10 @@ git-tree-sha1 = "b80671c06f8f8bae08c55d67b5ce292c5ae2660c"
 uuid = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 version = "0.5.0"
 
-[[ToeplitzMatrices]]
-deps = ["Compat", "FFTW", "LinearAlgebra", "StatsBase"]
-git-tree-sha1 = "d0773d9c03cbe321899db8286487529263260fed"
-uuid = "c751599d-da0a-543b-9d20-d0a503d91d24"
-version = "0.4.3"
-
 [[Tokenize]]
-git-tree-sha1 = "c8a8b00ae44a94950814ff77850470711a360225"
+git-tree-sha1 = "dfcdbbfb2d0370716c815cbd6f8a364efb6f42cf"
 uuid = "0796e94c-ce3b-5d07-9a54-7f471281c624"
-version = "0.5.5"
+version = "0.5.6"
 
 [[URIParser]]
 deps = ["Test", "Unicode"]
@@ -349,9 +337,15 @@ uuid = "81def892-9a0e-5fdd-b105-ffc91e053289"
 version = "1.1.3"
 
 [[Zygote]]
-deps = ["DiffRules", "FFTW", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics"]
-git-tree-sha1 = "89777e2d4c02e37fda3e7933715e5490e6042c17"
+deps = ["DiffRules", "FFTW", "FillArrays", "ForwardDiff", "IRTools", "InteractiveUtils", "LinearAlgebra", "MacroTools", "NNlib", "NaNMath", "Random", "Requires", "SpecialFunctions", "Statistics", "ZygoteRules"]
+git-tree-sha1 = "1941213092241ecc4db2b12baf77d9fd9e4aa209"
 repo-rev = "master"
 repo-url = "https://github.com/FluxML/Zygote.jl.git"
 uuid = "e88e6eb3-aa80-5325-afca-941959d7151f"
-version = "0.3.2"
+version = "0.3.3"
+
+[[ZygoteRules]]
+deps = ["MacroTools"]
+git-tree-sha1 = "def5f96ac2895fd9b48435f6b97020979ee0a4c6"
+uuid = "700de1a5-db45-46bc-99cf-38207098b444"
+version = "0.1.0"

@@ -1,6 +1,6 @@
 using BlockArrays, LinearAlgebra, FiniteDifferences, Zygote, Random
-using Stheno: MeanFunction, Kernel, CrossKernel, AV, pairwise, ew, pw, BlockData, blocks
-using Stheno: block_diagonal
+using Stheno: MeanFunction, Kernel, AV, pairwise, ew, pw, BlockData, blocks
+using Stheno: block_diagonal, AbstractGP
 using LinearAlgebra: AbstractTriangular
 using FiniteDifferences: j′vp
 import FiniteDifferences: to_vec
@@ -105,12 +105,12 @@ function mean_function_tests(m::MeanFunction, x::AbstractVector)
 end
 
 """
-    cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV)
+    cross_kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV)
 
 Tests that any cross kernel `k` should be able to pass. Requires that
 `length(x0) == length(x1)` and `length(x0) ≠ length(x2)`.
 """
-function cross_kernel_tests(k::CrossKernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
+function cross_kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     @assert length(x0) == length(x1)
     @assert length(x0) ≠ length(x2)
 
@@ -164,49 +164,6 @@ function kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
 end
 
 """
-    stationary_kernel_tests(k::Kernel, x0::StepRangeLen, x1::StepRangeLen, x2::StepRangeLen)
-
-Additional tests for stationary kernels. Should be run in addition to `kernel_tests`.
-"""
-function stationary_kernel_tests(
-    k::Kernel,
-    x0::StepRangeLen,
-    x1::StepRangeLen,
-    x2::StepRangeLen,
-    x3::StepRangeLen,
-    x4::StepRangeLen,
-)
-    # Check that useful inputs have been provided.
-    @assert length(x0) == length(x1)
-    @assert length(x0) == length(x2)
-    @assert step(x0) == step(x1)
-    @assert step(x0) ≠ step(x2)
-
-    @assert length(x3) ≠ length(x0)
-    @assert step(x0) == step(x3)
-
-    @assert length(x4) ≠ length(x0)
-    @assert step(x4) ≠ length(x0)
-
-    # Unary elementwise.
-    @test ew(k, x0) == ew(k, collect(x0))
-
-    # Binary elementwise.
-    @test ew(k, x0, x1) == ew(k, collect(x0), collect(x1))
-    @test ew(k, x0, x2) == ew(k, collect(x0), collect(x2))
-
-    # Unary pairwise.
-    @test pw(k, x0) isa SymmetricToeplitz
-    @test pw(k, x0) == pw(k, collect(x0))
-
-    # Binary pairwise.
-    @test pw(k, x0, x3) isa Toeplitz
-    @test pw(k, x0, x3) == pw(k, collect(x0), collect(x3))
-    @test !isa(pw(k, x0, x4), Toeplitz)
-    @test pw(k, x0, x4) == pw(k, collect(x0), collect(x4))
-end
-
-"""
     differentiable_mean_function_tests(m::MeanFunction, ȳ::AV, x::AV)
 
 Ensure that the gradient w.r.t. the inputs of `MeanFunction` `m` are approximately correct.
@@ -256,7 +213,7 @@ end
 
 """
     differentiable_cross_kernel_tests(
-        k::CrossKernel,
+        k::Kernel,
         ȳ::AbstractVector{<:Real},
         Ȳ::AbstractMatrix{<:Real},
         x0::AbstractVector,
@@ -264,11 +221,11 @@ end
         x2::AbstractVector,
     )
 
-Ensure that the adjoint w.r.t. the inputs of a `CrossKernel` which is supposed to be
+Ensure that the adjoint w.r.t. the inputs of a `Kernel` which is supposed to be
 differentiable are approximately correct.
 """
 function differentiable_cross_kernel_tests(
-    k::CrossKernel,
+    k::Kernel,
     ȳ::AbstractVector{<:Real},
     Ȳ::AbstractMatrix{<:Real},
     x0::AbstractVector,
@@ -293,7 +250,7 @@ function differentiable_cross_kernel_tests(
 end
 function differentiable_cross_kernel_tests(
     rng::AbstractRNG,
-    k::CrossKernel,
+    k::Kernel,
     x0::AV,
     x1::AV,
     x2::AV;
@@ -306,7 +263,7 @@ end
 
 """
     differentiable_kernel_tests(
-        k::CrossKernel,
+        k::Kernel,
         ȳ::AbstractVector{<:Real},
         Ȳ::AbstractMatrix{<:Real},
         Ȳ_sq::AbstractMatrix{<:Real},
@@ -320,7 +277,7 @@ kernels (which provide unary, in addition to binary, methods for `elementwise` a
 `pairwise`.)
 """
 function differentiable_kernel_tests(
-    k::CrossKernel,
+    k::Kernel,
     ȳ::AbstractVector{<:Real},
     Ȳ::AbstractMatrix{<:Real},
     Ȳ_sq::AbstractMatrix{<:Real},
@@ -340,7 +297,7 @@ function differentiable_kernel_tests(
     @assert size(Ȳ_sq, 1) == size(Ȳ_sq, 2)
     @assert size(Ȳ_sq, 1) == length(x0)
 
-    # Run the CrossKernel tests.
+    # Run the Kernel tests.
     differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
 
     # Unary elementwise tests.
@@ -351,7 +308,7 @@ function differentiable_kernel_tests(
 end
 function differentiable_kernel_tests(
     rng::AbstractRNG,
-    k::CrossKernel,
+    k::Kernel,
     x0::AV,
     x1::AV,
     x2::AV;
@@ -361,4 +318,66 @@ function differentiable_kernel_tests(
     N, N′ = length(x0), length(x2)
     ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
     return differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, x0, x1, x2; rtol=rtol, atol=atol)
+end
+
+"""
+    abstractgp_interface_tests(
+        f::AbstractGP, f′::AbstractGP, x0::AV, x1::AV, x2::AV, x3::AV;
+        atol=1e-9, rtol=1e-9,
+    )
+
+Check that the `AbstractGP` interface is at least implemented for `f` and is
+self-consistent. `x0` and `x1` must be valid inputs for `f`. `x2` and `x3` must be a valid
+input for `f′`.
+"""
+function abstractgp_interface_tests(
+    f::AbstractGP, f′::AbstractGP, x0::AV, x1::AV, x2::AV, x3::AV;
+    atol=1e-9, rtol=1e-9,
+)
+    m = mean_vector(f, x0)
+    @test m isa AbstractVector{<:Real}
+    @test length(m) == length(x0)
+
+    @assert length(x0) ≠ length(x1)
+    @assert length(x0) ≠ length(x2)
+    @assert length(x0) == length(x3)
+
+    # Check that binary cov conforms to the API
+    K_ff′_x0_x2 = cov(f, f′, x0, x2)
+    @test K_ff′_x0_x2 isa AbstractMatrix{<:Real}
+    @test size(K_ff′_x0_x2) == (length(x0), length(x2))
+    @test K_ff′_x0_x2 ≈ cov(f′, f, x2, x0)'
+
+    # Check that unary cov is consistent with binary cov and conforms to the API
+    K_x0 = cov(f, x0)
+    @test K_x0 isa AbstractMatrix{<:Real}
+    @test size(K_x0) == (length(x0), length(x0))
+    @test K_x0 ≈ cov(f, f, x0, x0) atol=atol rtol=rtol
+    @test minimum(eigvals(K_x0)) > -atol
+    @test K_x0 ≈ K_x0' atol=atol rtol=rtol
+
+    # Check that single-process binary cov is consistent with binary-process binary-cov
+    K_x0_x1 = cov(f, x0, x1)
+    @test K_x0_x1 isa AbstractMatrix{<:Real}
+    @test size(K_x0_x1) == (length(x0), length(x1))
+    @test K_x0_x1 ≈ cov(f, f, x0, x1)
+
+    # Check that binary cov_diag conforms to the API and is consistent with binary cov
+    K_x0_x3_diag = cov_diag(f, f′, x0, x3)
+    @test K_x0_x3_diag isa AbstractVector{<:Real}
+    @test length(K_x0_x3_diag) == length(x0)
+    @test K_x0_x3_diag ≈ diag(cov(f, f′, x0, x3)) atol=atol rtol=rtol
+    @test K_x0_x3_diag ≈ cov_diag(f′, f, x3, x0) atol=atol rtol=rtol
+
+    # Check that unary-binary cov_diag is consistent.
+    K_x0_x0_diag = cov_diag(f, x0, x0)
+    @test K_x0_x0_diag isa AbstractVector{<:Real}
+    @test length(K_x0_x0_diag) == length(x0)
+    @test K_x0_x0_diag ≈ diag(cov(f, x0, x0)) atol=atol rtol=rtol
+
+    # Check that unary cov_diag conforms to the API and is consistent with unary cov
+    K_x0_diag = cov_diag(f, x0)
+    @test K_x0_diag isa AbstractVector{<:Real}
+    @test length(K_x0_diag) == length(x0)
+    @test K_x0_diag ≈ diag(cov(f, x0)) atol=atol rtol=rtol
 end
