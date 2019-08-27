@@ -1,6 +1,7 @@
 # Stheno
 
 [![Build Status](https://travis-ci.org/willtebbutt/Stheno.jl.svg?branch=master)](https://travis-ci.org/willtebbutt/Stheno.jl)[![Windows Build Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/project/willtebbutt/stheno-jl/branch/master)[![codecov.io](http://codecov.io/github/willtebbutt/Stheno.jl/coverage.svg?branch=master)](http://codecov.io/github/willtebbutt/Stheno.jl?branch=master)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://USER_NAME.github.io/PACKAGE_NAME.jl/stable)
 
 Stheno is designed to make doing non-standard things with Gaussian processes straightforward. It has an intuitive modeling syntax, is inherently able to handle both multi-input and multi-output problems, trivially supports interdomain pseudo-point approximations, and has _some_ support for structure-exploiting algebra.
 
@@ -10,6 +11,8 @@ Please open issues liberally -- if there's anything that's unclear or doesn't wo
 
 __Installation__ - `] add Stheno`.
 
+Please note that Stheno's internals have changed quite substantially for version 0.3.0. No user facing functionality should have changed though, but please raise issues liberally if it has.
+
 ## A Couple of Examples
 
 We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here are a couple of examples to get you started.
@@ -17,11 +20,11 @@ We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here ar
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
 using Stheno, Plots, Random, Statistics
-using Stheno: @model, EQ
+using Stheno: @model
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 @model function model()
-    f₁ = GP(randn(), EQ())
+    f₁ = GP(randn(), eq())
     f₂ = GP(EQ())
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
@@ -65,14 +68,14 @@ In this next example we make observations of two different noisy versions of the
 
 ```julia
 using Stheno, Random, Plots, Statistics
-using Stheno: @model, EQ, Noise
+using Stheno: @model, eq, Noise
 
 rng = MersenneTwister(123456);
 
 @model function model()
 
     # Define a smooth latent process that we wish to infer.
-    f = GP(EQ())
+    f = GP(eq())
 
     # Define the two noise processes described.
     noise1 = sqrt(1e-2) * GP(Noise()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
