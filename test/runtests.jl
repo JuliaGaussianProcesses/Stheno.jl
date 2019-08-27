@@ -20,27 +20,25 @@ include("test_util.jl")
         include(joinpath("util", "abstract_data_set.jl"))
     end
 
-    println("mean_and_kernel:")
-    @time @testset "mean_and_kernel" begin
-        include(joinpath("mean_and_kernel", "mean.jl"))
-        include(joinpath("mean_and_kernel", "kernel.jl"))
-    end
+    println("abstract_gp:")
+    @time include("abstract_gp.jl")
 
     println("gp:")
     @time @testset "gp" begin
+        include(joinpath("gp", "mean.jl"))
+        include(joinpath("gp", "kernel.jl"))
         include(joinpath("gp", "gp.jl"))
-        include(joinpath("gp", "finite_gp.jl"))
-    end
+    end    
 
-    println("linops:")
-    @time @testset "linops" begin
-        include(joinpath("linops", "test_util.jl"))
-        include(joinpath("linops", "indexing.jl"))
-        include(joinpath("linops", "cross.jl"))
-        include(joinpath("linops", "conditioning.jl"))
-        include(joinpath("linops", "product.jl"))
-        include(joinpath("linops", "addition.jl"))
-        include(joinpath("linops", "compose.jl"))
-        include(joinpath("linops", "approximate_conditioning.jl"))
+    println("composite:")
+    @time @testset "composite" begin
+        include(joinpath("composite", "test_util.jl"))
+        include(joinpath("composite", "indexing.jl"))
+        include(joinpath("composite", "cross.jl"))
+        include(joinpath("composite", "conditioning.jl"))
+        include(joinpath("composite", "product.jl"))
+        include(joinpath("composite", "addition.jl"))
+        include(joinpath("composite", "compose.jl"))
+        include(joinpath("composite", "approximate_conditioning.jl"))
     end
 end

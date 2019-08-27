@@ -36,24 +36,25 @@ module Stheno
     include(joinpath("util", "fillarrays.jl"))
     include(joinpath("util", "proper_type_piracy.jl"))
 
-    # All mean function and kernel related functionality.
-    include(joinpath("mean_and_kernel", "mean.jl"))
-    include(joinpath("mean_and_kernel", "kernel.jl"))
+    # Supertype for GPs.
+    include("abstract_gp.jl")
 
-    # Basic Gaussian process definitions.
+    # Atomic GP objects.
+    include(joinpath("gp", "mean.jl"))
+    include(joinpath("gp", "kernel.jl"))
     include(joinpath("gp", "gp.jl"))
-    include(joinpath("gp", "finite_gp.jl"))
 
-    # Affine transformations of GPs.
-    include(joinpath("linops", "indexing.jl"))
-    include(joinpath("linops", "cross.jl"))
-    include(joinpath("linops", "conditioning.jl"))
-    include(joinpath("linops", "approximate_conditioning.jl"))
-    include(joinpath("linops", "product.jl"))
-    include(joinpath("linops", "addition.jl"))
-    include(joinpath("linops", "compose.jl"))
-    # include(joinpath("linops", "gradient.jl"))
-    # include(joinpath("linops", "integrate.jl"))
+    # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.
+    include(joinpath("composite", "composite_gp.jl"))
+    include(joinpath("composite", "indexing.jl"))
+    include(joinpath("composite", "cross.jl"))
+    include(joinpath("composite", "conditioning.jl"))
+    include(joinpath("composite", "approximate_conditioning.jl"))
+    include(joinpath("composite", "product.jl"))
+    include(joinpath("composite", "addition.jl"))
+    include(joinpath("composite", "compose.jl"))
+    # include(joinpath("composite", "gradient.jl"))
+    # include(joinpath("composite", "integrate.jl"))
 
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))

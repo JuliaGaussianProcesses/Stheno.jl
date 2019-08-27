@@ -1,3 +1,19 @@
+abstract type AbstractGP end
+
+# A collection of GPs (GPC == "GP Collection"). Used to keep track of GPs.
+mutable struct GPC
+    n::Int
+    GPC() = new(0)
+end
+
+@nograd GPC
+
+next_index(gpc::GPC) = gpc.n + 1
+
+#
+# Projecting AbstractGPs onto a finite dimensional marginal
+#
+
 import Base: rand, length
 import Distributions: logpdf, ContinuousMultivariateDistribution
 
