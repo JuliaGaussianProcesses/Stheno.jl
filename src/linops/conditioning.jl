@@ -64,9 +64,8 @@ function merge(c::Tuple{Vararg{Observation}})
 end
 
 # Multi-arg stuff
-|(g::GP, c::Tuple{Vararg{Observation}}) = g | merge(c)
+|(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)
 
-|(g::Tuple{Vararg{GP}}, c::Tuple{Vararg{Observation}}) = map(g_ -> g_ | c, g)
+|(g::Tuple{Vararg{AbstractGP}}, c::Tuple{Vararg{Observation}}) = map(g_ -> g_ | c, g)
 
-|(g::Tuple{Vararg{GP}}, c::Observation) = g | (c,)
-
+|(g::Tuple{Vararg{AbstractGP}}, c::Observation) = g | (c,)

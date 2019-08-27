@@ -16,12 +16,13 @@ We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here ar
 
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
-using Stheno, Random, Statistics
-using Stheno: @model
+using Stheno, Plots, Random, Statistics
+using Stheno: @model, EQ
 
+# Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 @model function model()
-    f₁ = GP(randn(), eq())
-    f₂ = GP(eq())
+    f₁ = GP(randn(), EQ())
+    f₂ = GP(EQ())
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
 end
@@ -29,7 +30,7 @@ end
 # Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
 # at which to measure `f` using `y2`.
 rng, N₁, N₃ = MersenneTwister(123546), 10, 11;
-X₁, X₃ = rand(rng, N₁) * 10, rand(rng, N₃) * 10;
+X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
 f₁, f₂, f₃ = model();
 
 # Generate some toy observations of `f₁` and `f₃`.
@@ -45,12 +46,11 @@ Xp = range(-2.5, stop=12.5, length=Np);
 # Sample jointly from the posterior over each process.
 f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp, 1e-9), f₂′(Xp, 1e-9), f₃′(Xp, 1e-9)], S);
 
-# Compute posterior marginal distributions.
+# Compute posterior marginals.
 ms1 = marginals(f₁′(Xp));
 ms2 = marginals(f₂′(Xp));
 ms3 = marginals(f₃′(Xp));
 
-# Pull out the posterior marginal means and standard deviations.
 μf₁′, σf₁′ = mean.(ms1), std.(ms1);
 μf₂′, σf₂′ = mean.(ms2), std.(ms2);
 μf₃′, σf₃′ = mean.(ms3), std.(ms3);
@@ -64,20 +64,19 @@ In the above figure, we have visualised the posterior distribution of all of the
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
 ```julia
-using Stheno, Random, Statistics
-using Stheno: @model
+using Stheno, Random, Plots, Statistics
+using Stheno: @model, EQ, Noise
 
-# Explicitly set pseudo-randomness for reproducibility.
-rng = MersenneTwister(123456)
+rng = MersenneTwister(123456);
 
 @model function model()
 
     # Define a smooth latent process that we wish to infer.
-    f = GP(eq())
+    f = GP(EQ())
 
     # Define the two noise processes described.
-    noise1 = GP(x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)), noise(α=1e-2))
-    noise2 = GP(3.5, noise(α=1e-1))
+    noise1 = sqrt(1e-2) * GP(Noise()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
+    noise2 = sqrt(1e-1) * GP(3.5, Noise())
 
     # Define the processes that we get to observe.
     y1 = f + noise1
@@ -98,12 +97,10 @@ ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)]);
 Xp = range(-2.5, stop=12.5, length=500);
 f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp, 1e-9), y₁′(Xp, 1e-9), y₂′(Xp, 1e-9)], 100);
 
-# Compute posterior marginal distributions.
 ms1 = marginals(f′(Xp));
 ms2 = marginals(y₁′(Xp));
 ms3 = marginals(y₂′(Xp));
 
-# Pull out the posterior marginal means and standard deviations.
 μf′, σf′ = mean.(ms1), std.(ms1);
 μy₁′, σy₁′ = mean.(ms2), std.(ms2);
 μy₂′, σy₂′ = mean.(ms3), std.(ms3);
