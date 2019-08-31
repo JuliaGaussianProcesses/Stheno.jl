@@ -58,4 +58,5 @@ module Stheno
 
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))
+    include(joinpath("util", "plotting.jl"))
 end # module
