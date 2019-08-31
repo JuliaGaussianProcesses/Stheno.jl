@@ -58,6 +58,39 @@ ms3 = marginals(f₃′(Xp));
 μf₁′, σf₁′ = mean.(ms1), std.(ms1);
 μf₂′, σf₂′ = mean.(ms2), std.(ms2);
 μf₃′, σf₃′ = mean.(ms3), std.(ms3);
+
+# Instantiate plot and chose backend
+plotly();
+posterior_plot = plot();
+
+# Plot posteriors
+plot!(posterior_plot, f₁′(Xp); samples=S,
+      color=:red,
+      label="f1");
+plot!(posterior_plot, f₂′(Xp); samples=S,
+      color=:green,
+      label="f2");
+plot!(posterior_plot, f₃′(Xp); samples=S,
+      color=:blue,
+      label="f3");
+
+# Plot observations
+scatter!(posterior_plot, X₁, ŷ₁;
+    markercolor=:red,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.7,
+    label="");
+scatter!(posterior_plot, X₃, ŷ₃;
+    markercolor=:blue,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.7,
+    label="");
+
+display(posterior_plot);
 ```
 ![](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.png)
 
@@ -108,6 +141,41 @@ ms3 = marginals(y₂′(Xp));
 μf′, σf′ = mean.(ms1), std.(ms1);
 μy₁′, σy₁′ = mean.(ms2), std.(ms2);
 μy₂′, σy₂′ = mean.(ms3), std.(ms3);
+
+# Instantiate plot and chose backend
+plotly();
+posterior_plot = plot();
+
+# Plot posteriors
+plot!(posterior_plot, y₁′(Xp);
+      samples=S, sample_seriestype=:scatter,
+      color=:red,
+      label="")
+plot!(posterior_plot, y₂′(Xp);
+      samples=S, sample_seriestype=:scatter,
+      color=:green,
+      label="")
+plot!(posterior_plot, f′(Xp); samples=S,
+      color=:blue,
+      label="Latent Function")
+
+# Plot observations
+scatter!(posterior_plot, X₁, ŷ₁;
+    markercolor=:red,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.8,
+    label="Sensor 1");
+scatter!(posterior_plot, X₂, ŷ₂;
+    markercolor=:green,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.8,
+    label="Sensor 2");
+
+display(posterior_plot);
 ```
 ![](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.png)
 
@@ -128,7 +196,7 @@ The plan is again not to support the combination of GPs and Deep Learning explic
 
 ## Things that are definitely up for grabs
 Obviously, improvements to code documentation are always welcome, and if you want to write some more unit / integration tests, please feel free. In terms of larger items that require some attention, here are some thoughts:
-- Plotting recipes: there is currently a lot of _highly_ repetitive code for plotting the posterior distribution over 1D GPs. This needn't be the case, and it would be a (presumably) simple job for someone who knows what they're doing with the [Plots.jl](https://github.com/JuliaPlots/Plots.jl) recipes to make most of that code disappear. 
+- Plotting recipes: there is currently a lot of _highly_ repetitive code for plotting the posterior distribution over 1D GPs. This needn't be the case, and it would be a (presumably) simple job for someone who knows what they're doing with the [Plots.jl](https://github.com/JuliaPlots/Plots.jl) recipes to make most of that code disappear.
 - An implementation of SVI from [Gaussian Processes for Big Data](https://arxiv.org/abs/1309.6835).
 - Kronecker-factored matrices: this is quite a general issue which might be best be addressed by the creation of a separate package. It would be very helpful to have an implementation of the `AbstractMatrix` interface which implements multiplication, inversion, eigenfactorisation etc, which can then be utilised in Stheno.
 - Primitives for multi-output GPs: although Stheno does fundamentally have support for multi-output GPs, in the same way that it's helpful to implement so-called "fat" nodes in Automatic Differentiation systems, it may well be helpful to implement specialised multi-output processes in Stheno for performance's sake.
