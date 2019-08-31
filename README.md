@@ -141,9 +141,9 @@ plotly();
 posterior_plot = plot();
 
 # Plot posteriors
-plot!(posterior_plot, y₁′(Xp); samples=S, sample_seriestype=:scatter, color=:red, label="")
-plot!(posterior_plot, y₂′(Xp); samples=S, sample_seriestype=:scatter, color=:green, label="")
-plot!(posterior_plot, f′(Xp); samples=S, color=:blue, label="Latent Function")
+plot!(posterior_plot, y₁′(Xp); samples=S, sample_seriestype=:scatter, color=:red, label="");
+plot!(posterior_plot, y₂′(Xp); samples=S, sample_seriestype=:scatter, color=:green, label="");
+plot!(posterior_plot, f′(Xp); samples=S, color=:blue, label="Latent Function");
 
 # Plot observations
 scatter!(posterior_plot, X₁, ŷ₁;
