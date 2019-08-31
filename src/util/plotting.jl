@@ -1,4 +1,4 @@
-using Plots
+using RecipesBase
 
 @recipe f(gp::Stheno.AbstractGP, x::Array) = gp(x)
 @recipe f(gp::Stheno.AbstractGP, x::AbstractRange) = gp(x)
