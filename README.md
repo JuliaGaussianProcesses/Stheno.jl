@@ -20,34 +20,47 @@ We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here ar
 
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
-using Stheno, Plots, Random, Statistics
+
+#
+# We'll get going by setting up our model, generating some toy observations, and
+# constructing the posterior processes produced by conditioning on these observations.
+#
+
+using Stheno, Random, Plots
 using Stheno: @model
+
+# Create a pseudo random number generator for reproducibility.
+rng = MersenneTwister(12345);
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 @model function model()
-    f₁ = GP(randn(), eq())
-    f₂ = GP(EQ())
+    f₁ = GP(randn(rng), eq())
+    f₂ = GP(eq())
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
 end
-
-# Randomly sample `N₁` locations at which to measure `f` using `y1`, and `N2` locations
-# at which to measure `f` using `y2`.
-rng, N₁, N₃ = MersenneTwister(123546), 10, 11;
-X₁, X₃ = sort(rand(rng, N₁) * 10), sort(rand(rng, N₃) * 10);
 f₁, f₂, f₃ = model();
 
-# Generate some toy observations of `f₁` and `f₃`.
-ŷ₁, ŷ₃ = rand(rng, [f₁(X₁), f₃(X₃)]);
+# Sample `N₁` / `N₂` locations at which to measure `f₁` / `f₃`.
+N₁, N₃ = 10, 11;
+X₁, X₃ = rand(rng, N₁) * 10, rand(rng, N₃) * 10;
 
-# Compute the posterior processes.
-(f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁)←ŷ₁, f₃(X₃)←ŷ₃);
+# Sample toy observations of `f₁` / `f₃` at `X₁` / `X₃`.
+σ² = 1e-2
+ŷ₁, ŷ₃ = rand(rng, [f₁(X₁, σ²), f₃(X₃, σ²)]);
 
-# Define some plotting stuff.
-Np, S = 500, 25;
-Xp = range(-2.5, stop=12.5, length=Np);
+# Compute the posterior processes. `f₁′`, `f₂′`, `f₃′` are just new processes.
+(f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁, σ²)←ŷ₁, f₃(X₃, σ²)←ŷ₃);
+
+
+
+#
+# The are various things that we can do with a Stheno model.
+#
 
 # Sample jointly from the posterior over each process.
+Np, S = 500, 25;
+Xp = range(-2.5, stop=12.5, length=Np);
 f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp, 1e-9), f₂′(Xp, 1e-9), f₃′(Xp, 1e-9)], S);
 
 # Compute posterior marginals.
@@ -55,20 +68,34 @@ ms1 = marginals(f₁′(Xp));
 ms2 = marginals(f₂′(Xp));
 ms3 = marginals(f₃′(Xp));
 
+# Pull and mean and std of each posterior marginal.
 μf₁′, σf₁′ = mean.(ms1), std.(ms1);
 μf₂′, σf₂′ = mean.(ms2), std.(ms2);
 μf₃′, σf₃′ = mean.(ms3), std.(ms3);
 
-# Instantiate plot and chose backend
+# Compute the logpdf of the observations.
+l = logpdf([f₁(X₁, σ²), f₃(X₃, σ²)], [ŷ₁, ŷ₃])
+
+# Compute the ELBO of the observations, with pseudo-points at the same locations as the
+# observations. Could have placed them anywhere we fancy, even in f₂.
+l ≈ elbo([f₁(X₁, σ²), f₃(X₃, σ²)], [ŷ₁, ŷ₃], [f₁(X₁), f₃(X₃)])
+
+
+
+#
+# Stheno has some convenience plotting functionality for GPs with 1D inputs:
+#
+
+# Instantiate plot and chose backend.
 plotly();
 posterior_plot = plot();
 
-# Plot posteriors
+# Plot posteriors.
 plot!(posterior_plot, f₁′(Xp); samples=S, color=:red, label="f1");
 plot!(posterior_plot, f₂′(Xp); samples=S, color=:green, label="f2");
 plot!(posterior_plot, f₃′(Xp); samples=S, color=:blue, label="f3");
 
-# Plot observations
+# Plot observations.
 scatter!(posterior_plot, X₁, ŷ₁;
     markercolor=:red,
     markershape=:circle,
@@ -95,9 +122,10 @@ In the above figure, we have visualised the posterior distribution of all of the
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
 ```julia
-using Stheno, Random, Plots, Statistics
+using Stheno, Random, Plots
 using Stheno: @model, eq, Noise
 
+# Create a pseudo random number generator for reproducibility.
 rng = MersenneTwister(123456);
 
 @model function model()
@@ -118,7 +146,7 @@ end
 f, noise₁, noise₂, y₁, y₂ = model();
 
 # Generate some toy observations of `y1` and `y2`.
-X₁, X₂ = sort(rand(rng, 3) * 10), sort(rand(rng, 10) * 10);
+X₁, X₂ = rand(rng, 3) * 10, rand(rng, 10) * 10;
 ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)]);
 
 # Compute the posterior processes.
