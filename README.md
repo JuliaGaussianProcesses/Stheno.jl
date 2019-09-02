@@ -30,7 +30,7 @@ using Stheno, Random, Plots
 using Stheno: @model
 
 # Create a pseudo random number generator for reproducibility.
-rng = MersenneTwister(12345);
+rng = MersenneTwister(123456);
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 @model function model()
