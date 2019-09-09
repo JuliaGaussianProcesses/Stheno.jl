@@ -1,10 +1,10 @@
 using Stheno: GPC, ZeroMean, ConstMean, CustomMean, ZeroKernel
 using Stheno: EQ, Exp
 
-@testset "gp" begin
+@timedtestset "gp" begin
 
     # Ensure that basic functionality works as expected.
-    @testset "GP" begin
+    @timedtestset "GP" begin
         rng, gpc, N, N′ = MersenneTwister(123456), GPC(), 5, 6
         m, k = CustomMean(sin), EQ()
         f = GP(m, k, gpc)
@@ -20,14 +20,14 @@ using Stheno: EQ, Exp
     end
 
     # Check that mean-function specialisations work as expected.
-    @testset "sugar" begin
+    @timedtestset "sugar" begin
         m = 5.1
         @test GP(5, EQ(), GPC()).m isa ConstMean
         @test GP(EQ(), GPC()).m isa ZeroMean
     end
 
     # Test the creation of indepenent GPs.
-    @testset "independent GPs" begin
+    @timedtestset "independent GPs" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x, x′ = randn(rng, N), randn(rng, N′)
 

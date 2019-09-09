@@ -24,6 +24,7 @@ julia = ">=1.1.1"
 [extras]
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [targets]
-test = ["FiniteDifferences", "Test"]
+test = ["FiniteDifferences", "Test", "TimerOutputs"]

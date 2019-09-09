@@ -6,8 +6,8 @@ function abs_rel_errs(x, y)
     return [δ δ ./ vec(y)]
 end
 
-@testset "conditioning" begin
-    @testset "Observation" begin
+@timedtestset "conditioning" begin
+    @timedtestset "Observation" begin
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         y, y′ = randn(rng, N), randn(rng, N′)
@@ -22,7 +22,7 @@ end
         c = merge((c1, c2))
         @test get_y(c) == BlockVector([y, y′])
     end
-    @testset "condition once" begin
+    @timedtestset "condition once" begin
         rng, N, N′, D = MersenneTwister(123456), 10, 3, 2
         x = collect(range(-3.0, stop=3.0, length=N))
         f = GP(1, EQ(), GPC())
@@ -34,7 +34,7 @@ end
         @test maximum(abs.(mean(f′(x)) - y)) < 1e-3
         @test all(abs.(cov(f′(x))) .< 1e-6)
     end
-    @testset "condition repeatedly" begin
+    @timedtestset "condition repeatedly" begin
         rng, N, N′ = MersenneTwister(123456), 5, 7
         xx′ = collect(range(-3.0, stop=3.0, length=N+N′))
         idx = randperm(rng, length(xx′))[1:N]
@@ -57,7 +57,7 @@ end
         @test cov(f′(xx′)) ≈ cov(f′2(xx′))
         @test cov(f′(x), f′(x′)) ≈ cov(f′2(x), f′2(x′))
     end
-    @testset "Consistency Tests" begin
+    @timedtestset "Consistency Tests" begin
         rng, N, P, Q = MersenneTwister(123456), 11, 5, 3
         f = GP(sin, EQ(), GPC())
         x = collect(range(-1.0, 1.0; length=N))
@@ -81,7 +81,7 @@ end
         f′, f′′ = (f, f) | (f(x, 1e-9)←y, f(x′, 1e-9)←y′)
         abstractgp_interface_tests(f′, f′′, x0, x1, x2, x3)
     end
-    @testset "Diff Tests" begin
+    @timedtestset "Diff Tests" begin
         rng, N, P, Q = MersenneTwister(123456), 11, 5, 3
         x_obs, A_obs = collect(range(-5.0, 5.0; length=N)), randn(rng, N, N)
         y_obs = rand(rng, GP(sin, EQ(), GPC())(x_obs, _to_psd(A_obs)))
@@ -97,7 +97,7 @@ end
             collect(range(-4.0, 5.0; length=Q)),
         )
     end
-    @testset "Conditioning with cross" begin
+    @timedtestset "Conditioning with cross" begin
         rng, N, N′, σ² = MersenneTwister(123456), 3, 7, 1.0
         xx′ = collect(range(-3.0, stop=3.0, length=N+N′))
         xp = collect(range(-4.0, stop=4.0, length=N+N′+10))

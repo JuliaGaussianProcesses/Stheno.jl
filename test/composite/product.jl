@@ -1,12 +1,12 @@
 using Stheno: GPC, EQ
 
-@testset "product" begin
-    @testset "GP mul errors" begin
+@timedtestset "product" begin
+    @timedtestset "GP mul errors" begin
         gpc = GPC()
         f1, f2 = GP(EQ(), gpc), GP(EQ(), gpc)
         @test_throws ArgumentError f1 * f2
     end
-    @testset "multiply by constant" begin
+    @timedtestset "multiply by constant" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         g1, c, c′ = GP(1, EQ(), GPC()), -4.3, 2.1
@@ -44,7 +44,7 @@ using Stheno: GPC, EQ
         @test cov(g2(X), g4′(X′)) ≈ (c * c′^3) .* cov(g1(X), g1(X′))
         @test cov(g4(X), g2′(X′)) ≈ (c^3 * c′) .* cov(g1(X), g1(X′))
 
-        @testset "Consistency Tests" begin
+        @timedtestset "Consistency Tests" begin
             rng, P, Q = MersenneTwister(123456), 3, 5
             x0 = collect(range(-1.0, 1.0; length=P))
             x1 = collect(range(-0.5, 1.5; length=Q))
@@ -55,7 +55,7 @@ using Stheno: GPC, EQ
             f2 = 5 * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
-        @testset "Diff Tests" begin
+        @timedtestset "Diff Tests" begin
             standard_1D_tests(
                 MersenneTwister(123456),
                 Dict(:σ=>2.3),
@@ -67,7 +67,7 @@ using Stheno: GPC, EQ
             )
         end
     end
-    @testset "multiply by function" begin
+    @timedtestset "multiply by function" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         g1, f, f′ = GP(1, EQ(), GPC()), x->sum(sin, x), x->sum(cos, x)
@@ -111,7 +111,7 @@ using Stheno: GPC, EQ
         @test cov(g2(X), g4′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* (f′X′').^3
         @test cov(g4(X), g2′(X′)) ≈ fX.^3 .* cov(g1(X), g1(X′)) .* (f′X′')
 
-        @testset "Consistency Tests" begin
+        @timedtestset "Consistency Tests" begin
             rng, P, Q = MersenneTwister(123456), 3, 5
             x0 = collect(range(-1.0, 1.0; length=P))
             x1 = collect(range(-0.5, 1.5; length=Q))
@@ -122,7 +122,7 @@ using Stheno: GPC, EQ
             f2 = sin * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
-        @testset "Diff Tests" begin
+        @timedtestset "Diff Tests" begin
             standard_1D_tests(
                 MersenneTwister(123456),
                 Dict(:σ=>2.3, :c=>1.3),
