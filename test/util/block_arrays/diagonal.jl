@@ -101,8 +101,8 @@ function BlockDiagonal_add_tests(rng, blks; grad=true)
     end
 end
 
-@testset "BlockDiagonal" begin
-    @testset "Matrix" begin
+@timedtestset "BlockDiagonal" begin
+    @timedtestset "Matrix" begin
         rng, Ps, Qs = MersenneTwister(123456), [2, 3], [4, 5]
         vs = [randn(rng, Ps[1], Qs[1]), randn(rng, Ps[2], Qs[2])]
         general_BlockDiagonal_tests(rng, vs)
@@ -116,14 +116,14 @@ end
         BlockDiagonal_chol_tests(rng, blks)
         BlockDiagonal_add_tests(rng, blks; grad=false)
     end
-    @testset "Diagonal{T, <:Vector{T}}" begin
+    @timedtestset "Diagonal{T, <:Vector{T}}" begin
         rng, Ps = MersenneTwister(123456), [2, 3]
         vs = [Diagonal(randn(rng, Ps[n])) for n in eachindex(Ps)]
         general_BlockDiagonal_tests(rng, vs)
 
         blocks = [Diagonal(ones(P) + exp.(randn(rng, P))) for P in Ps]
         BlockDiagonal_add_tests(rng, blocks; grad=false)
-        @testset "cholesky" begin
+        @timedtestset "cholesky" begin
             x, ȳ = randn(rng, sum(Ps)), randn(rng, sum(Ps))
             adjoint_test((X, blks)->cholesky(block_diagonal(blks)).U \ X, ȳ, x, blocks)
 
@@ -132,7 +132,7 @@ end
             adjoint_test(blks->logdet(cholesky(block_diagonal(blks))), randn(rng), blocks)
         end
     end
-    @testset "Negation" begin
+    @timedtestset "Negation" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6, 7]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
 
@@ -147,7 +147,7 @@ end
         @test Matrix(first(back_diag(Ȳ))) == first(back_dens(Matrix(Ȳ)))
         @test first(back_diag(Ȳ)) isa BlockDiagonal
     end
-    @testset "adjoint" begin
+    @timedtestset "adjoint" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
 
@@ -161,7 +161,7 @@ end
         @test Matrix(first(back(Ȳ))) == first(back_dens(Matrix(Ȳ)))
         @test first(back(Ȳ)) isa BlockDiagonal
     end
-    @testset "transpose" begin
+    @timedtestset "transpose" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
 
@@ -175,7 +175,7 @@ end
         @test Matrix(first(back(Ȳ))) == first(back_dens(Matrix(Ȳ)))
         @test first(back(Ȳ)) isa BlockDiagonal
     end
-    @testset "UpperTriangular" begin
+    @timedtestset "UpperTriangular" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
 
@@ -191,7 +191,7 @@ end
         @test Ā_diag == Ā_dens
         @test Ā_diag isa BlockDiagonal
     end
-    @testset "Symmetric" begin
+    @timedtestset "Symmetric" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
         S = Symmetric(A)
@@ -202,7 +202,7 @@ end
         S_dens, back_dens = Zygote.forward(Symmetric, Matrix(A))
         @test S_diag ≈ S_dens
     end
-    @testset "tr_At_A" begin
+    @timedtestset "tr_At_A" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
 
@@ -217,7 +217,7 @@ end
         @test Matrix(Ā_diag) ≈ Ā_dens
         @test Ā_diag isa BlockDiagonal
     end
-    @testset "BlockDiagonal * BlockDiagonal" begin
+    @timedtestset "BlockDiagonal * BlockDiagonal" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
         B = block_diagonal([randn(rng, P, P) for P in Ps])
@@ -240,7 +240,7 @@ end
         @test Ā_diag isa BlockDiagonal
         @test B̄_diag isa BlockDiagonal
     end
-    @testset "BlockDiagonal * Matrix" begin
+    @timedtestset "BlockDiagonal * Matrix" begin
         rng, Ps, Q = MersenneTwister(123456), [4, 5, 6], 11
         A = block_diagonal([randn(rng, P, P) for P in Ps])
         B = randn(rng, sum(Ps), Q)
@@ -258,7 +258,7 @@ end
         @test B̄_diag ≈ B̄_dens
         @test_broken Ā_diag isa BlockDiagonal
     end
-    @testset "BlockDiagonal * Vector" begin
+    @timedtestset "BlockDiagonal * Vector" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
         x = randn(rng, sum(Ps))
@@ -275,7 +275,7 @@ end
         @test x̄_diag ≈ x̄_dens
         @test_broken Ā_diag isa BlockDiagonal
     end
-    @testset "ldiv(BlockDiagonal, Matrix)" begin
+    @timedtestset "ldiv(BlockDiagonal, Matrix)" begin
         rng, Ps, Q = MersenneTwister(123456), [4, 5, 6], 11
         A = block_diagonal([randn(rng, P, P) for P in Ps])
         B = randn(rng, sum(Ps), Q)
@@ -293,7 +293,7 @@ end
         @test Ā_diag isa BlockDiagonal
         @test blocksizes(Ā_diag) == blocksizes(A)
     end
-    @testset "ldiv(BlockDiagonal, Vector)" begin
+    @timedtestset "ldiv(BlockDiagonal, Vector)" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
         A = block_diagonal([randn(rng, P, P) for P in Ps])
         B = randn(rng, sum(Ps))
@@ -311,7 +311,7 @@ end
         @test Ā_diag isa BlockDiagonal
         @test blocksizes(Ā_diag) == blocksizes(A)
     end
-    @testset "TriangularBlockDiagonal under BlockDiagonal" begin
+    @timedtestset "TriangularBlockDiagonal under BlockDiagonal" begin
         # Stuff isn't triangular anymore, but this should really just work...
         rng, Ps = MersenneTwister(123456), [4, 5]
         U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
@@ -335,7 +335,7 @@ end
         @test Ū_diag isa BlockDiagonal
         @test X̄_diag isa BlockDiagonal
     end
-    @testset "adjoint(TriangularBlockDiagonal) under BlockDiagonal" begin
+    @timedtestset "adjoint(TriangularBlockDiagonal) under BlockDiagonal" begin
         # Legacy test. Should really be doing exactly the same as the block above.
         rng, Ps = MersenneTwister(123456), [4, 5]
         U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))

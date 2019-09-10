@@ -3,15 +3,15 @@ using Stheno: GPC, optimal_q, ApproxObs
 
 # Test Titsias implementation by checking that it (approximately) recovers exact inference
 # when M = N and Z = X.
-@testset "Titsias" begin
-    @testset "optimal_q (single conditioning)" begin
-        @testset "σ²" begin
+@timedtestset "Titsias" begin
+    @timedtestset "optimal_q (single conditioning)" begin
+        @timedtestset "σ²" begin
             rng, N, σ², gpc = MersenneTwister(123456), 10, 1e-1, GPC()
             x = collect(range(-3.0, 3.0, length=N))
             f = GP(sin, EQ(), gpc)
 
             for σ² in [1e-2, 1e-1, 1e0, 1e1]
-                @testset "σ² = $σ²" begin
+                @timedtestset "σ² = $σ²" begin
                     y = rand(rng, f(x, σ²))
 
                     # Compute approximate posterior suff. stats.
@@ -26,7 +26,7 @@ using Stheno: GPC, optimal_q, ApproxObs
                 end
             end
         end
-        @testset "Diagonal" begin
+        @timedtestset "Diagonal" begin
             rng, N, gpc = MersenneTwister(123456), 11, GPC()
             x = collect(range(-3.0, 3.0, length=N))
             f = GP(sin, EQ(), gpc)
@@ -43,7 +43,7 @@ using Stheno: GPC, optimal_q, ApproxObs
             B = U' \ cov(f(x))
             @test Λ_ε.U ≈ cholesky(Symmetric(B * (Σ \ B') + I)).U
         end
-        @testset "Dense" begin
+        @timedtestset "Dense" begin
             rng, N, gpc = MersenneTwister(123456), 10, GPC()
             x = collect(range(-3.0, 3.0, length=N))
             f = GP(sin, EQ(), gpc)
@@ -62,7 +62,7 @@ using Stheno: GPC, optimal_q, ApproxObs
             @test Λ_ε.U ≈ cholesky(Symmetric(B * (cholesky(Σ) \ B') + I)).U
         end
     end
-    @testset "optimal_q (multiple conditioning)" begin
+    @timedtestset "optimal_q (multiple conditioning)" begin
         rng, N, N′, σ², gpc = MersenneTwister(123456), 5, 7, 1e-1, GPC()
         xx′ = collect(range(-3.0, stop=3.0; length=N + N′))
         idx = randperm(rng, length(xx′))[1:N]
@@ -82,7 +82,7 @@ using Stheno: GPC, optimal_q, ApproxObs
         @test U ≈ cholesky(cov(f(xx′))).U
         @test Λ_ε.U ≈ cholesky((U' \ cov(f(xx′))) * (U' \ cov(f(xx′)))' ./ σ² + I).U
 
-        @testset "multiple cond, multiple pseudo points" begin
+        @timedtestset "multiple cond, multiple pseudo points" begin
             z, z′ = randn(rng, 3), randn(rng, 2)
             zz′ = vcat(z, z′)
             u = ApproxObs(f(zz′), (f(x, σ²)←y, f(x′, σ²)←y′))
@@ -91,7 +91,7 @@ using Stheno: GPC, optimal_q, ApproxObs
             @test u.û.Λ.U ≈ u′.û.Λ.U
             @test u.U ≈ u′.U
         end
-        @testset "single cond, multiple pseudo points" begin
+        @timedtestset "single cond, multiple pseudo points" begin
             z, z′ = randn(rng, 3), randn(rng, 2)
             zz′ = vcat(z, z′)
             u = ApproxObs(f(zz′), f(x, σ²)←y)
@@ -101,7 +101,7 @@ using Stheno: GPC, optimal_q, ApproxObs
             @test u.U ≈ u′.U
         end
     end
-    @testset "Consistency Tests" begin
+    @timedtestset "Consistency Tests" begin
         rng, N, M, σ², gpc = MersenneTwister(123456), 5, 3, 1e-1, GPC()
         x = collect(range(-3.0, 3.0, length=N))
         z = randn(rng, M)
@@ -122,7 +122,7 @@ using Stheno: GPC, optimal_q, ApproxObs
         @test_throws ArgumentError Stheno.mean_vector(ỹ.û, randn(rng, P))
         @test_throws ArgumentError cov(ỹ.û, ApproxObs(f, z, m_ε, Λ_ε, U).û, x0, x1)
     end
-    @testset "accuracy tests" begin
+    @timedtestset "accuracy tests" begin
         rng, N, N′, Nz, σ², gpc = MersenneTwister(123456), 5, 3, 2, 1e-1, GPC()
         x = collect(range(-3.0, 3.0, length=N))
         x′ = collect(range(-3.0, 3.0, length=N′))
@@ -148,8 +148,8 @@ using Stheno: GPC, optimal_q, ApproxObs
         @test cov(f′(x′), g′(x)) ≈ cov(f′_approx(x′), g′_approx(x))
         @test cov(g′(x′), f′(x)) ≈ cov(g′_approx(x′), f′_approx(x))
 
-        @testset "Standardised Tests" begin
-            @testset "Dense Obs. Noise" begin
+        @timedtestset "Standardised Tests" begin
+            @timedtestset "Dense Obs. Noise" begin
                 # N_obs, M_obs = 11, 13
                 # x_obs = collect(range(-5.0, 5.0; length=N_obs))
                 # z_obs = collect(range(-5.0, 5.0; length=M_obs))
@@ -167,13 +167,13 @@ using Stheno: GPC, optimal_q, ApproxObs
                 #     17, 19,
                 # )
             end
-            @testset "Diagonal Obs. Noise" begin
+            @timedtestset "Diagonal Obs. Noise" begin
                 
             end
-            @testset "Isotropic Obs. Noise" begin
+            @timedtestset "Isotropic Obs. Noise" begin
                 
             end
-            @testset "BlockDiagonal Obs. Noise" begin
+            @timedtestset "BlockDiagonal Obs. Noise" begin
                 
             end
         end 

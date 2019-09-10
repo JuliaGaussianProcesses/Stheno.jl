@@ -1,6 +1,6 @@
 using Stheno: GPC, EQ, Exp
 
-@testset "compose" begin
+@timedtestset "compose" begin
     rng, N, N′, gpc = MersenneTwister(123456), 5, 3, GPC()
     x, x′ = randn(rng, N), randn(rng, N′)
     f, g, h = GP(sin, EQ(), gpc), cos, GP(exp, Exp(), gpc)
@@ -19,7 +19,7 @@ using Stheno: GPC, EQ, Exp
     @test cov(fg(x), h(x′)) == zeros(length(x), length(x′))
     @test cov(h(x), fg(x′)) == zeros(length(x), length(x′))
 
-    @testset "Consistency Tests" begin
+    @timedtestset "Consistency Tests" begin
         P, Q = 4, 3
         x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
         abstractgp_interface_tests(fg, f, x0, x1, x2, x3)
@@ -28,7 +28,7 @@ using Stheno: GPC, EQ, Exp
         # f = GP(EQ(), GPC())
         # abstractgp_interface_tests(periodic(f, 0.1), f, x0, x1, x2, x3)
     end
-    @testset "Diff Tests" begin
+    @timedtestset "Diff Tests" begin
         standard_1D_tests(
             MersenneTwister(123456),
             Dict(:σ=>0.5),
