@@ -1,7 +1,7 @@
 using Stheno: GPC, EQ, Exp
 
-@testset "addition" begin
-    @testset "Correlated GPs" begin
+@timedtestset "addition" begin
+    @timedtestset "Correlated GPs" begin
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
         f1, f2 = GP(1, EQ(), gpc), GP(2, Exp(), gpc)
@@ -23,14 +23,14 @@ using Stheno: GPC, EQ, Exp
             @test cov(fa(X′), fp(X)) ≈ cov(fb(X′), fa(X)) + cov(fa(X′), fa(X))
         end
 
-        @testset "Consistency Tests" begin
+        @timedtestset "Consistency Tests" begin
             P, Q = 4, 3
             x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
             abstractgp_interface_tests(f3, f1, x0, x1, x2, x3)
             abstractgp_interface_tests(f2 - f1, f1, x0, x1, x2, x3)
         end
     end
-    @testset "Verify mean / kernel numerically" begin
+    @timedtestset "Verify mean / kernel numerically" begin
         rng, N, D = MersenneTwister(123456), 5, 6
         X = ColsAreObs(randn(rng, D, N))
         c, f = randn(rng), GP(5, EQ(), GPC())
@@ -51,13 +51,13 @@ using Stheno: GPC, EQ, Exp
         @test cov((f + sin)(x)) == cov(f(x))
         @test cov((sin + f)(x)) == cov(f(x))
 
-        @testset "Consistency Tests" begin
+        @timedtestset "Consistency Tests" begin
             P, Q = 5, 3
             x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
             abstractgp_interface_tests(c + f, f, x0, x1, x2, x3)
         end
     end
-    @testset "Standardised Tests (independent sum)" begin
+    @timedtestset "Standardised Tests (independent sum)" begin
         standard_1D_tests(
             MersenneTwister(123456),
             Dict(:l1=>0.5, :l2=>2.3),
@@ -72,7 +72,7 @@ using Stheno: GPC, EQ, Exp
             collect(range(-1.0, 0.5; length=3)),
         )
     end
-    @testset "Standardised Tests (correlated sum)" begin
+    @timedtestset "Standardised Tests (correlated sum)" begin
         standard_1D_tests(
             MersenneTwister(123456),
             Dict(:l1=>0.5, :l2=>2.3),

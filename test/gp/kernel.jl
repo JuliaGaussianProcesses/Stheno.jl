@@ -2,9 +2,9 @@ using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Product, stretch
 using LinearAlgebra
 
-@testset "kernel" begin
+@timedtestset "kernel" begin
 
-    @testset "base kernels" begin
+    @timedtestset "base kernels" begin
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
         x0 = collect(range(-2.0, 2.0; length=N)) .+ 1e-3 .* randn(rng, N)
         x1 = collect(range(-1.7, 2.3; length=N)) .+ 1e-3 .* randn(rng, N)
@@ -19,66 +19,66 @@ using LinearAlgebra
 
         ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
 
-        @testset "ZeroKernel" begin
+        @timedtestset "ZeroKernel" begin
             differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(ZeroKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @testset "OneKernel" begin
+        @timedtestset "OneKernel" begin
             differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(OneKernel(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @testset "ConstKernel" begin
+        @timedtestset "ConstKernel" begin
             @test ew(ConstKernel(5), x0) == 5 .* ones(length(x0))
             differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(ConstKernel(5.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @testset "EQ" begin
+        @timedtestset "EQ" begin
             differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(EQ(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @testset "PerEQ" begin
+        @timedtestset "PerEQ" begin
             differentiable_kernel_tests(PerEQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
         end
 
-        @testset "Exp" begin
+        @timedtestset "Exp" begin
             differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, x0 .+ 1, x1, x2)
             differentiable_kernel_tests(Exp(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @testset "Matern32" begin
+        @timedtestset "Matern32" begin
             differentiable_kernel_tests(Matern32(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Matern32(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @testset "Matern52" begin
+        @timedtestset "Matern52" begin
             differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @testset "RQ" begin
-            @testset "α=1.0" begin
+        @timedtestset "RQ" begin
+            @timedtestset "α=1.0" begin
                 differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
                 differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
-            @testset "α=1.5" begin
+            @timedtestset "α=1.5" begin
                 differentiable_kernel_tests(RQ(1.5), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
                 differentiable_kernel_tests(RQ(1.5), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
-            @testset "α=100.0" begin
+            @timedtestset "α=100.0" begin
                 differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
                 differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
-            @testset "single-input" begin
+            @timedtestset "single-input" begin
                 adjoint_test((α, x, x′)->ew(RQ(α), x, x′), ȳ, 1.5, x0, x1)
                 adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, x0, x2)
                 adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, x0)
                 adjoint_test((α, x)->pw(RQ(α), x), Ȳ_sq, 1.5, x0)
             end
-            @testset "multi-input" begin
+            @timedtestset "multi-input" begin
                 adjoint_test((α, x, x′)->ew(RQ(α), x, x′), ȳ, 1.5, X0, X1)
                 adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, X0, X2)
                 adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, X0)
@@ -86,46 +86,46 @@ using LinearAlgebra
             end
         end
 
-        @testset "Linear" begin
+        @timedtestset "Linear" begin
             differentiable_kernel_tests(Linear(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Linear(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @testset "Noise" begin
+        @timedtestset "Noise" begin
             @test ew(Noise(), x0, x0) == zeros(length(x0))
             @test pw(Noise(), x0, x0) == zeros(length(x0), length(x0))
             @test ew(Noise(), x0) == ones(length(x0))
             @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
         end
 
-        @testset "Product" begin
+        @timedtestset "Product" begin
             differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             @test EQ() * Exp() isa Product
         end
 
-        @testset "Stretched" begin
-            @testset "Scalar a" begin
+        @timedtestset "Stretched" begin
+            @timedtestset "Scalar a" begin
                 k = stretch(EQ(), 0.1)
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-7, rtol=1e-7)
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
-            @testset "Vector a" begin
+            @timedtestset "Vector a" begin
                 k = stretch(EQ(), randn(rng, D))
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
-            @testset "Matrix a" begin
+            @timedtestset "Matrix a" begin
                 k = stretch(EQ(), randn(rng, D, D))
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
-            @testset "Convenience Constructors" begin
+            @timedtestset "Convenience Constructors" begin
                 @test eq() isa EQ
                 @test eq(0.5) isa Stretched{Float64, EQ}
             end
         end
     end
 
-    @testset "(is)zero" begin
+    @timedtestset "(is)zero" begin
         @test zero(ZeroKernel()) == ZeroKernel()
         @test zero(EQ()) == ZeroKernel()
         @test iszero(ZeroKernel()) == true

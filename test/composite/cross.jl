@@ -1,7 +1,7 @@
 using Stheno: BlockData, GPC, cross
 
-@testset "cross" begin
-    @testset "Correctness tests" begin
+@timedtestset "cross" begin
+    @timedtestset "Correctness tests" begin
         rng, P, Q, gpc = MersenneTwister(123456), 2, 3, GPC()
 
         f1 = GP(sin, EQ(), gpc)
@@ -45,7 +45,7 @@ using Stheno: BlockData, GPC, cross
         @test cov(f3(x3), f4(x4)) == cov(f3(x3), f1(x1))
         @test cov(f5(x5), f3(x3)) == cov(f2(x2), f3(x3))
 
-        @testset "rand, logpdf, elbo" begin
+        @timedtestset "rand, logpdf, elbo" begin
 
             # Single-sample rand
             y1, y2 = rand([f1(x1), f2(x2)])
@@ -72,7 +72,7 @@ using Stheno: BlockData, GPC, cross
             @test elbo(f1(x1, 1e-3), y1, [f1(x1), f2(x2)]) ≈ logpdf(f1(x1, 1e-3), y1)
         end
     end
-    @testset "Standardised Tests" begin
+    @timedtestset "Standardised Tests" begin
         rng, P, Q = MersenneTwister(123456), 3, 5
         x0_1, x0_2 = collect(range(-1.0, 1.0; length=P)), collect(range(2.0, 4.0; length=P))
         x1_1, x1_2 = randn(rng, Q), randn(rng, Q)
@@ -100,7 +100,7 @@ using Stheno: BlockData, GPC, cross
         #     BlockData([z1, z2]),
         # )
     end
-    @testset "finites_to_block" begin
+    @timedtestset "finites_to_block" begin
         rng, P, Q = MersenneTwister(123456), 3, 5
         xp, xq = randn(rng, P), randn(rng, Q)
         gpc = GPC()

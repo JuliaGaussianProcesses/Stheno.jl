@@ -80,8 +80,8 @@ function adjoint_test(
 
     # Compute forwards-pass and j′vp.
     y, back = Zygote.forward(f, x...)
-    adj_ad = back(ȳ)
-    adj_fd = j′vp(fdm, f, ȳ, x...)
+    @timeit to "adj_ad" adj_ad = back(ȳ)
+    @timeit to "adj_fd" adj_fd = j′vp(fdm, f, ȳ, x...)
 
     # If unary, pull out first thing from ad.
     adj_ad = length(x) == 1 ? first(adj_ad) : adj_ad

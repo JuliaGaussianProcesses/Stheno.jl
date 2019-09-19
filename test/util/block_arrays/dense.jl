@@ -1,7 +1,7 @@
 using Random, LinearAlgebra, BlockArrays
 using BlockArrays: cumulsizes, _BlockArray, BlockSizes
 
-@testset "dense" begin
+@timedtestset "dense" begin
 
     # Test construction of a BlockArray via _BlockArray
     @testset "_BlockArray" begin

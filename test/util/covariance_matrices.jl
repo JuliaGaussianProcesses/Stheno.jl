@@ -3,7 +3,7 @@ using Stheno: Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X, diag_At_A, diag_At_B, diag_X
     diag_Xt_A_Y, diag_Xt_invA_X, diag_Xt_invA_Y, Xtinv_A_Xinv, tr_At_A
 
 
-@testset "cholesky" begin
+@timedtestset "cholesky" begin
 
     # Test additional operations for Cholesky factorisations.
     let
@@ -65,7 +65,7 @@ using Stheno: Xt_A_X, Xt_A_Y, Xt_invA_Y, Xt_invA_X, diag_At_A, diag_At_B, diag_X
         @test Xtinv_A_Xinv(A, A) isa Symmetric
         @test Xtinv_A_Xinv(A, A) ≈ A \ (A \ A_)'
     end
-    @testset "tr_At_A" begin
+    @timedtestset "tr_At_A" begin
         rng, P = MersenneTwister(123456), 11
         X = randn(rng, P, P)
 
