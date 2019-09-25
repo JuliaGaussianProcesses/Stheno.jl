@@ -94,6 +94,12 @@ We consider each method in turn.
 
 Example implementations can be found [here](https://github.com/willtebbutt/Stheno.jl/blob/master/src/mean_and_kernel/kernel.jl). Often you'll find that multiple versions of each method are implemented, specialised to different input types. For example the `EQ` kernel has (at the time of writing) two implementations of each method, one for inputs `AbstractVector{<:Real}`, and one for `ColsAreObs <: AbstractVector` inputs. These specialisations are for performance purposes.
 
+### AbstractGP Interface Implementation
+
+Given the above, the `AbstractGP` interface is straightforward to implement for `GPs`, as each method of `mean_vector` and `cov` can be implemented in terms of `ew` and `pw`. See [here](https://github.com/willtebbutt/Stheno.jl/blob/master/src/gp/gp.jl) for the implementation.
+
+If you are interested just in working with a single `GP` object, with a known `MeanFunction` and `Kernel`, this is probably as far as you need to go. Simply implement you own fancy `Mean` and `Kernel` objects, or approximations to them, and have some fun / do some research.
+
 
 
 ## CompositeGP
