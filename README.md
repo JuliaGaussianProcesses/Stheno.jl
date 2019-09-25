@@ -12,7 +12,7 @@ Please open issues liberally -- if there's anything that's unclear or doesn't wo
 
 __Installation__ - `] add Stheno`.
 
-Please note that Stheno's internals have changed quite substantially for version 0.3.0. No user facing functionality should have changed though, but please raise issues liberally if it has.
+Please note that Stheno's internals have changed quite substantially for version 0.3.0. No user facing functionality should have changed though, but please raise an issue if something seems to have broken.
 
 ## A Couple of Examples
 
@@ -200,13 +200,13 @@ As before, we visualise the posterior distribution through its marginal statisti
 
 ## Non-Gaussian problems
 
-Stheno is designed for jointly Gaussian problems, and there are no plans to support non-Gaussian likelihoods in the core package. The official stance (if you can call it that) is that since Stheno is trivially compatible with [Turing.jl](https://github.com/TuringLang/), and one should simply embed a Stheno model within a Turing model to solve non-Gaussian problems.
+Stheno doesn't currently have support for non-Gaussian likelihoods, and as such they're on the up-for-grabs list below. If you would like to see these in this package, please do get in touch (open an issue so that we can discuss where to get started, or open a PR if you're feeling ambitious).
 
-This is not to say that there would be no value in the creation of a separate package that extends Stheno to handle, for example, non-Gaussian likelihoods.
 
 ## GPs + Deep Learning
 
-The plan is again not to support the combination of GPs and Deep Learning explicitly, but rather to ensure that Stheno and [Flux.jl](https://github.com/FluxML/Flux.jl) play nicely with one another. Both packages now work with [Zygote.jl](https://github.com/FluxML/Zygote.jl), so you can use that to sort out gradient information.
+The plan is not to support the combination of GPs and Deep Learning explicitly, but rather to ensure that Stheno and [Flux.jl](https://github.com/FluxML/Flux.jl) play nicely with one another. Both packages now work with [Zygote.jl](https://github.com/FluxML/Zygote.jl), so you can use that to sort out gradient information.
+
 
 ## Things that are definitely up for grabs
 Obviously, improvements to code documentation are always welcome, and if you want to write some more unit / integration tests, please feel free. In terms of larger items that require some attention, here are some thoughts:
@@ -214,5 +214,6 @@ Obviously, improvements to code documentation are always welcome, and if you wan
 - Kronecker-factored matrices: this is quite a general issue which might be best be addressed by the creation of a separate package. It would be very helpful to have an implementation of the `AbstractMatrix` interface which implements multiplication, inversion, eigenfactorisation etc, which can then be utilised in Stheno.
 - Primitives for multi-output GPs: although Stheno does fundamentally have support for multi-output GPs, in the same way that it's helpful to implement so-called "fat" nodes in Automatic Differentiation systems, it may well be helpful to implement specialised multi-output processes in Stheno for performance's sake.
 - Some decent benchmarks: development has not focused on performance so far, but it would be extremely helpful to have a wide range of benchmarks so that we can begin to ensure that time is spent optimally. This would involve comparing against [GaussianProcesses.jl](https://github.com/STOR-i/GaussianProcesses.jl), but also some other non-Julia packages.
+- Non-Gaussian likelihoods: there are a _lot_ of approximate inference schemes that have been developed for GPs in particular contexts. [GPML](https://gitlab.com/hnickisch/gpml-matlab) probably has the most mature set of these, and would be a good place to start the transfer from. There's also [Natural Gradients in Practice](https://arxiv.org/abs/1803.09151) that might be a good startin point for a Monte Carlo approximation to natural gradient varitional inference. A good place to start with these would be to just make them for `GP`s, as opposed to any `AbstractGP`, as this is the simplest case.
 
 If you are interested in any of the above, please either open an issue or PR. Better still, if there's something not listed here that you think would be good to see, please open an issue to start a discussion regarding it.
