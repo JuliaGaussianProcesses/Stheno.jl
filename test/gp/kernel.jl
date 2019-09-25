@@ -1,5 +1,5 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Product, stretch
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Sum, Product, stretch
 using LinearAlgebra
 
 @timedtestset "kernel" begin
@@ -96,6 +96,12 @@ using LinearAlgebra
             @test pw(Noise(), x0, x0) == zeros(length(x0), length(x0))
             @test ew(Noise(), x0) == ones(length(x0))
             @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
+        end
+
+        @timedtestset "Sum" begin
+            differentiable_kernel_tests(Sum(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Sum(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            @test EQ() + Exp() isa Sum
         end
 
         @timedtestset "Product" begin

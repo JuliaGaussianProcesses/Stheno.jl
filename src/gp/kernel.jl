@@ -1,4 +1,4 @@
-import Base: *, zero
+import Base: +, *, zero
 import Distances: pairwise, colwise
 using Distances: sqeuclidean, SqEuclidean, Euclidean
 using Base.Broadcast: broadcast_shape
@@ -279,9 +279,31 @@ pw(k::Noise{T}, x::AV) where {T} = diagm(0=>ones(T, length(x)))
 
 
 """
+    Sum{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
+
+Represents the sum of two kernels `kl` and `kr` s.t. `k(x, x′) = kl(x, x′) + kr(x, x′)`.
+"""
+struct Sum{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
+    kl::Tkl
+    kr::Tkr
+end
+
++(kl::Kernel, kr::Kernel) = Sum(kl, kr)
+
+# Binary methods
+ew(k::Sum, x::AV, x′::AV) = ew(k.kl, x, x′) + ew(k.kr, x, x′)
+pw(k::Sum, x::AV, x′::AV) = pw(k.kl, x, x′) + pw(k.kr, x, x′)
+
+# Unary methods
+ew(k::Sum, x::AV) = ew(k.kl, x) + ew(k.kr, x)
+pw(k::Sum, x::AV) = pw(k.kl, x) + pw(k.kr, x)
+
+
+
+"""
     Product{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
 
-Represents the product of two kernels `kl` and `kr` st. `k(x, x′) = kl(x, x′) kr(x, x′)`.
+Represents the product of two kernels `kl` and `kr` s.t. `k(x, x′) = kl(x, x′) kr(x, x′)`.
 """
 struct Product{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
     kl::Tkl
@@ -297,6 +319,7 @@ pw(k::Product, x::AV, x′::AV) = pw(k.kl, x, x′) .* pw(k.kr, x, x′)
 # Unary methods
 ew(k::Product, x::AV) = ew(k.kl, x) .* ew(k.kr, x)
 pw(k::Product, x::AV) = pw(k.kl, x) .* pw(k.kr, x)
+
 
 
 """
