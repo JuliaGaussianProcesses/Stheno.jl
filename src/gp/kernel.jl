@@ -348,7 +348,7 @@ pw(k::Stretched{<:AM{<:Real}}, x::ColsAreObs) = pw(k.k, ColsAreObs(k.a * x.X))
 
 # Create convenience versions of each of the kernels that accept a length scale.
 for (k, K) in (
-    (:eq, :EQ), (:exp, :Exp), (:matern12, :Matern12), (:matern32, :Matern32),
+    (:eq, :EQ), (:exponential, :Exp), (:matern12, :Matern12), (:matern32, :Matern32),
     (:matern52, :Matern52), (:linear, :Linear),
 )
     @eval $k() = $K()
