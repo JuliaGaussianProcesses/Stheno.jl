@@ -323,6 +323,29 @@ pw(k::Product, x::AV) = pw(k.kl, x) .* pw(k.kr, x)
 
 
 """
+    Scaled{Tσ²<:Real, Tk<:Kernel} <: Kernel
+
+Scale the variance of `Kernel` `k` by `σ²` s.t. `(σ² * k)(x, x′) = σ² * k(x, x′)`.
+"""
+struct Scaled{Tσ²<:Real, Tk<:Kernel} <: Kernel
+    σ²::Tσ²
+    k::Tk
+end
+
+*(σ²::Real, k::Kernel) = Scaled(σ², k)
+*(k::Kernel, σ²) = σ² * k
+
+# Binary methods.
+ew(k::Scaled, x::AV, x′::AV) = k.σ² .* ew(k.k, x, x′)
+pw(k::Scaled, x::AV, x′::AV) = k.σ² .* pw(k.k, x, x′)
+
+# Unary methods.
+ew(k::Scaled, x::AV) = k.σ² .* ew(k.k, x)
+pw(k::Scaled, x::AV) = k.σ² .* pw(k.k, x)
+
+
+
+"""
     Stretched{Tk<:Kernel} <: Kernel
 
 Apply a length scale to a kernel. Specifically, `k(x, x′) = k(a * x, a * x′)`.
@@ -334,7 +357,6 @@ end
 
 stretch(k::Kernel, a::Union{Real, AV{<:Real}, AM{<:Real}}) = Stretched(a, k)
 
-
 # Binary methods (scalar `a`, scalar-valued input)
 ew(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, k.a .* x, k.a .* x′)
 pw(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, k.a .* x, k.a .* x′)
@@ -342,7 +364,6 @@ pw(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, k.a .* x, k.
 # Unary methods (scalar)
 ew(k::Stretched{<:Real}, x::AV{<:Real}) = ew(k.k, k.a .* x)
 pw(k::Stretched{<:Real}, x::AV{<:Real}) = pw(k.k, k.a .* x)
-
 
 # Binary methods (scalar and vector `a`, vector-valued input)
 function ew(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColsAreObs, x′::ColsAreObs)
@@ -355,7 +376,6 @@ end
 # Unary methods (scalar and vector `a`, vector-valued input)
 ew(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColsAreObs) = ew(k.k, ColsAreObs(k.a .* x.X))
 pw(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColsAreObs) = pw(k.k, ColsAreObs(k.a .* x.X))
-
 
 # Binary methods (matrix `a`, vector-valued input)
 function ew(k::Stretched{<:AM{<:Real}}, x::ColsAreObs, x′::ColsAreObs)
