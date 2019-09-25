@@ -1,4 +1,4 @@
-using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched
+using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched, Scaled
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Sum, Product, stretch
 using LinearAlgebra
 
@@ -108,6 +108,14 @@ using LinearAlgebra
             differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Product(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             @test EQ() * Exp() isa Product
+        end
+
+        @timedtestset "Scaled" begin
+            differentiable_kernel_tests(Scaled(0.5, EQ()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Scaled(0.5, EQ()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            adjoint_test(σ²->pw(Scaled(σ², EQ()), X0), Ȳ_sq, 0.5)
+            @test 0.5 * EQ() isa Scaled
+            @test EQ() * 0.5 isa Scaled
         end
 
         @timedtestset "Stretched" begin
