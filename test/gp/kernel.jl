@@ -115,6 +115,7 @@ using LinearAlgebra
             differentiable_kernel_tests(Scaled(0.5, EQ()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             adjoint_test(σ²->pw(Scaled(σ², EQ()), X0), Ȳ_sq, 0.5)
             @test 0.5 * EQ() isa Scaled
+            @test EQ() * 0.5 isa Scaled
         end
 
         @timedtestset "Stretched" begin
