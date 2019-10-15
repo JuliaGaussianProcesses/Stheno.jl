@@ -1,3 +1,5 @@
+using Kronecker
+
 """
     RectilinearGrid{T, Txl, Txr} <: AbstractVector{T}
 
