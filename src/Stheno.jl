@@ -59,4 +59,8 @@ module Stheno
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))
     include(joinpath("util", "plotting.jl"))
+
+    # Helpful functionality that sits on top of Stheno but isn't fully integrated
+    # into the CompositeGP infrastructure, and requires more code than simply a new kernel.
+    include(joinpath("extras", "separable.jl"))
 end # module
