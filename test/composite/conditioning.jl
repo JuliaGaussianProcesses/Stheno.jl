@@ -9,7 +9,7 @@ end
 @timedtestset "conditioning" begin
     @timedtestset "Observation" begin
         rng, N, N′, D = MersenneTwister(123456), 5, 6, 2
-        X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
         y, y′ = randn(rng, N), randn(rng, N′)
         f = GP(1, EQ(), GPC())
 
@@ -21,6 +21,7 @@ end
 
         c = merge((c1, c2))
         @test get_y(c) == BlockVector([y, y′])
+        @test get_y(Obs((c1, c2))) == BlockVector([y, y′])
     end
     @timedtestset "condition once" begin
         rng, N, N′, D = MersenneTwister(123456), 10, 3, 2
@@ -114,17 +115,22 @@ end
         f′ = f | (f(xx′, σ²)←yy′)
         fb′ = f | (cross([f, f])(BlockData([x, x′]), σ²)←vcat(y, y′))
         fmc′ = f | (f(x, σ²)←y, f(x′, σ²)←y′)
+        f′_obs = f | Obs(f(x, σ²)←y, f(x′, σ²)←y′)
 
         @test mean(f′(xp)) ≈ mean(fb′(xp))
         @test mean(f′(xp)) ≈ mean(fmc′(xp))
+        @test mean(f′(xp)) ≈ mean(f′_obs(xp))
 
         @test cov(f′(xp)) ≈ cov(fb′(xp))
         @test cov(f′(xp)) ≈ cov(fmc′(xp))
+        @test cov(f′(xp)) ≈ cov(f′_obs(xp))
 
         @test cov(f′(xp), f′(xp)) ≈ cov(fb′(xp), fb′(xp))
         @test cov(f′(xp), f′(xp)) ≈ cov(fmc′(xp), fmc′(xp))
+        @test cov(f′(xp), f′(xp)) ≈ cov(f′_obs(xp), f′_obs(xp))
 
         @test cov(f′(xp), f′(xp′)) ≈ cov(fb′(xp), fb′(xp′))
         @test cov(f′(xp), f′(xp′)) ≈ cov(fmc′(xp), fmc′(xp′))
+        @test cov(f′(xp), f′(xp′)) ≈ cov(f′_obs(xp), f′_obs(xp′))
     end
 end

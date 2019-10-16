@@ -12,7 +12,7 @@ using Stheno: CustomMean, ZeroMean, OneMean, ConstMean
     end
     @timedtestset "ZeroMean" begin
         rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, x = ColsAreObs(randn(rng, D, P)), randn(rng, P)
+        X, x = ColVecs(randn(rng, D, P)), randn(rng, P)
         f = ZeroMean{Float64}()
 
         for x in [x, X]
@@ -22,7 +22,7 @@ using Stheno: CustomMean, ZeroMean, OneMean, ConstMean
     end
     @timedtestset "OneMean" begin
         rng, P, Q, D = MersenneTwister(123456), 3, 2, 4
-        X, x = ColsAreObs(randn(rng, D, P)), randn(rng, P)
+        X, x = ColVecs(randn(rng, D, P)), randn(rng, P)
         f = OneMean()
 
         for x in [x, X]
@@ -32,7 +32,7 @@ using Stheno: CustomMean, ZeroMean, OneMean, ConstMean
     end
     @timedtestset "ConstMean" begin
         rng, D, N = MersenneTwister(123456), 5, 3
-        X, x, c = ColsAreObs(randn(rng, D, N)), randn(rng, N), randn(rng)
+        X, x, c = ColVecs(randn(rng, D, N)), randn(rng, N), randn(rng)
         m = ConstMean(c)
 
         for x in [x, X]

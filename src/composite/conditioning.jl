@@ -63,6 +63,7 @@ function merge(c::Tuple{Vararg{Observation}})
     return merge(map(get_f, c))←block_y
 end
 Observation(c::Tuple{Vararg{Observation}}) = merge(c)
+Observation(c::Observation...) = Observation(c)
 
 # Multi-arg stuff
 |(g::AbstractGP, c::Tuple{Vararg{Observation}}) = g | merge(c)

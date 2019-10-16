@@ -36,8 +36,8 @@ struct Stretch{T<:Real}
 end
 (s::Stretch)(x) = s.l * x
 broadcasted(s::Stretch{<:Real}, x::StepRangeLen) = s.l .* x
-broadcasted(s::Stretch{<:Real}, x::ColsAreObs) = ColsAreObs(s.l .* x.X)
-broadcasted(s::Stretch{<:AbstractMatrix}, x::ColsAreObs) = ColsAreObs(s.l * x.X)
+broadcasted(s::Stretch{<:Real}, x::ColVecs) = ColVecs(s.l .* x.X)
+broadcasted(s::Stretch{<:AbstractMatrix}, x::ColVecs) = ColVecs(s.l * x.X)
 
 """
     stretch(f::AbstractGP, l::Union{AbstractVecOrMat, Real})
@@ -59,15 +59,15 @@ struct Select{Tidx}
     idx::Tidx
 end
 (f::Select)(x) = x[f.idx]
-broadcasted(f::Select, x::ColsAreObs) = ColsAreObs(x.X[f.idx, :])
-broadcasted(f::Select{<:Integer}, x::ColsAreObs) = x.X[f.idx, :]
+broadcasted(f::Select, x::ColVecs) = ColVecs(x.X[f.idx, :])
+broadcasted(f::Select{<:Integer}, x::ColVecs) = x.X[f.idx, :]
 
 function broadcasted(f::Select, x::AbstractVector{<:CartesianIndex})
     out = Matrix{Int}(undef, length(f.idx), length(x))
     for i in f.idx, n in eachindex(x)
         out[i, n] = x[n][i]
     end
-    return ColsAreObs(out)
+    return ColVecs(out)
 end
 @adjoint function broadcasted(f::Select, x::AV{<:CartesianIndex})
     return broadcasted(f, x), Δ->(nothing, nothing)
@@ -99,7 +99,7 @@ struct Periodic{Tf<:Real}
 end
 (p::Periodic)(t::Real) = [cos((2π * p.f) * t), sin((2π * p.f) * t)]
 function broadcasted(p::Periodic, x::AbstractVector{<:Real})
-    return ColsAreObs(vcat(cos.((2π * p.f) .* x)', sin.((2π * p.f) .* x)'))
+    return ColVecs(vcat(cos.((2π * p.f) .* x)', sin.((2π * p.f) .* x)'))
 end
 
 """

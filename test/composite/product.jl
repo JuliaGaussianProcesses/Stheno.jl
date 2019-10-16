@@ -8,7 +8,7 @@ using Stheno: GPC, EQ
     end
     @timedtestset "multiply by constant" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
-        X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
         g1, c, c′ = GP(1, EQ(), GPC()), -4.3, 2.1
         g2, g2′ = c * g1, g1 * c′
         g3, g3′ = c * g2, g2′ * c′
@@ -69,7 +69,7 @@ using Stheno: GPC, EQ
     end
     @timedtestset "multiply by function" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
-        X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
         g1, f, f′ = GP(1, EQ(), GPC()), x->sum(sin, x), x->sum(cos, x)
         g2, g2′ = f * g1, g1 * f′
         g3, g3′ = f * g2, g2′ * f′

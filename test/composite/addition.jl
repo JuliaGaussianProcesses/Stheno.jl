@@ -3,7 +3,7 @@ using Stheno: GPC, EQ, Exp
 @timedtestset "addition" begin
     @timedtestset "Correlated GPs" begin
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
-        X, X′ = ColsAreObs(randn(rng, D, N)), ColsAreObs(randn(rng, D, N′))
+        X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
         f1, f2 = GP(1, EQ(), gpc), GP(2, Exp(), gpc)
         f3 = f1 + f2
         f4 = f1 + f3
@@ -32,7 +32,7 @@ using Stheno: GPC, EQ, Exp
     end
     @timedtestset "Verify mean / kernel numerically" begin
         rng, N, D = MersenneTwister(123456), 5, 6
-        X = ColsAreObs(randn(rng, D, N))
+        X = ColVecs(randn(rng, D, N))
         c, f = randn(rng), GP(5, EQ(), GPC())
 
         @test mean((f + c)(X)) == mean(f(X)) .+ c

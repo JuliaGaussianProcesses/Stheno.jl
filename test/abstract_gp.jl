@@ -29,7 +29,7 @@ end
     end
     @testset "rand (deterministic)" begin
         rng, N, D = MersenneTwister(123456), 10, 2
-        X, x, Σy = ColsAreObs(randn(rng, D, N)), randn(rng, N), zeros(N, N)
+        X, x, Σy = ColVecs(randn(rng, D, N)), randn(rng, N), zeros(N, N)
         Σy = generate_noise_matrix(rng, N)
         fX = FiniteGP(GP(1, EQ(), GPC()), X, Σy)
         fx = FiniteGP(GP(1, EQ(), GPC()), x, Σy)
@@ -43,7 +43,7 @@ end
     end
     @testset "rand (statistical)" begin
         rng, N, D, μ0, S = MersenneTwister(123456), 10, 2, 1, 100_000
-        X, Σy = ColsAreObs(randn(rng, D, N)), 1e-12
+        X, Σy = ColVecs(randn(rng, D, N)), 1e-12
         f = FiniteGP(GP(1, EQ(), GPC()), X, Σy)
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.

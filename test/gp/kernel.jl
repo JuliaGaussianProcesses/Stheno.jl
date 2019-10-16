@@ -13,9 +13,9 @@ using LinearAlgebra
         x2_r, x3_r = range(-5.0, step=2, length=N), range(-3.0, step=1, length=N′)
         x4_r = range(-2.0, step=2, length=N′)
 
-        X0 = ColsAreObs(randn(rng, D, N))
-        X1 = ColsAreObs(randn(rng, D, N))
-        X2 = ColsAreObs(randn(rng, D, N′))
+        X0 = ColVecs(randn(rng, D, N))
+        X1 = ColVecs(randn(rng, D, N))
+        X2 = ColVecs(randn(rng, D, N′))
 
         ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
 

@@ -36,7 +36,7 @@ include("test_util.jl")
         include(joinpath("gp", "mean.jl"))
         include(joinpath("gp", "kernel.jl"))
         include(joinpath("gp", "gp.jl"))
-    end    
+    end
 
     println("composite:")
     @timedtestset "composite" begin
