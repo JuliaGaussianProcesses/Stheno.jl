@@ -1,5 +1,5 @@
 import Base: ∘
-export ∘, select, stretch, periodic
+export ∘, select, stretch, periodic, shift
 
 """
     ∘(f::GP, g)
@@ -27,11 +27,11 @@ cov_diag(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = cov_diag(f, 
 
 
 """
-    Stretch{T<:Real}
+    Stretch{T<:Union{Real, AbstractMatrix{<:Real}}}
 
 Stretch all elements of the inputs by `l`.
 """
-struct Stretch{T<:Real}
+struct Stretch{T<:Union{Real, AbstractMatrix{<:Real}}}
     l::T
 end
 (s::Stretch)(x) = s.l * x
@@ -46,7 +46,7 @@ Equivalent to `f ∘ Stretch(l)`
 """
 stretch(f::AbstractGP, l::Real) = f ∘ Stretch(l)
 stretch(f::AbstractGP, a::AbstractVector) = stretch(f, Diagonal(a))
-stretch(f::AbstractGP, A::AbstractMatrix) = f ∘ LinearTransform(A)
+stretch(f::AbstractGP, A::AbstractMatrix) = f ∘ Stretch(A)
 
 
 
@@ -108,3 +108,26 @@ end
 Produce an AbstractGP with period `f`.
 """
 periodic(g::AbstractGP, f::Real) = g ∘ Periodic(f)
+
+
+
+#
+# Translations of GPs through their input spaces.
+#
+
+struct Shift{Ta<:Union{Real, AV{<:Real}}}
+    a::Ta
+end
+(f::Shift{<:Real})(x::Real) = x - f.a
+(f::Shift{<:AV{<:Real}})(x::AV{<:Real}) = x - f.a
+(f::Shift{<:Real})(x::AV{<:Real}) = x .- f.a
+
+broadcasted(f::Shift, x::ColVecs) = ColVecs(x.X .- f.a)
+
+"""
+    shift(f::AbstractGP, a::Real)
+    shift(f::AbstractGP, a::AbstractVector{<:Real})
+
+Returns the GP `g` given by `g(x) = f(x - a)`
+"""
+shift(f::AbstractGP, a) = f ∘ Shift(a)
