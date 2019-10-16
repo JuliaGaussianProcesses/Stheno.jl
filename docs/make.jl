@@ -7,6 +7,7 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Internals" => "internals.md",
+        "Input Types" => "input_types.md",
     ],
 )
 
