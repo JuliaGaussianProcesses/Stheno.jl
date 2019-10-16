@@ -163,7 +163,7 @@ Zygote.@nograd _test_block_consistency
 # end
 
 import Base: |, merge
-export ←, |
+export ←, |, Obs
 
 """
     Observation
@@ -176,7 +176,7 @@ struct Observation{Tf<:FiniteGP, Ty<:Vector}
 end
 
 const Obs = Observation
-export Obs
+
 
 ←(f, y) = Observation(f, y)
 get_f(c::Observation) = c.f
