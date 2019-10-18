@@ -6,6 +6,12 @@ import Base: exp
 
 abstract type Kernel end
 
+
+
+#
+# Base Kernels
+#
+
 """
     ZeroKernel <: Kernel
 
@@ -261,6 +267,102 @@ pw(k::Linear, x::ColVecs) = x.X' * x.X
 
 
 """
+    Poly{Tσ<:Real} <: Kernel
+
+Inhomogeneous Polynomial kernel. `Poly(p, σ²)` creates a `Poly{p}` with variance σ²,
+defined as
+```julia
+k(xl, xr) = (dot(xl, xr) + σ²)^p
+```
+"""
+struct Poly{p, Tσ²<:Real} <: Kernel
+    σ²::Tσ²
+end
+Poly(p::Int, σ²::Real) = Poly{p, typeof(σ²)}(σ²)
+
+_poly(k, σ², p) = (σ² + k)^p
+Zygote.@adjoint function _poly(k, σ², p)
+    y = _poly(k, σ², p)
+    return y, function(Δ)
+        d = Δ * p * y / (σ² + k)
+        return (d, d, nothing)
+    end
+end
+
+# Binary methods
+ew(k::Poly{p}, x::AV, x′::AV) where {p} = _poly.(ew(Linear(), x, x′), k.σ², p)
+pw(k::Poly{p}, x::AV, x′::AV) where {p} = _poly.(pw(Linear(), x, x′), k.σ², p)
+
+# Unary methods
+ew(k::Poly{p}, x::AV) where {p} = _poly.(ew(Linear(), x), k.σ², p)
+pw(k::Poly{p}, x::AV) where {p} = _poly.(pw(Linear(), x), k.σ², p)
+
+
+
+"""
+    GammaExp
+
+The γ-Exponential kernel, 0 < γ ⩽ 2, is given by `k(xl, xr) = exp(-||xl - xr||^γ)`.
+"""
+struct GammaExp{Tγ<:Real} <: Kernel
+    γ::Tγ
+end
+
+# Binary methods
+ew(k::GammaExp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′).^k.γ)
+pw(k::GammaExp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′').^k.γ)
+ew(k::GammaExp, x::ColVecs, x′::ColVecs) = exp.(.-colwise(Euclidean(), x.X, x′.X).^k.γ)
+function pw(k::GammaExp, x::ColVecs, x′::ColVecs)
+    return exp.(.-pairwise(Euclidean(), x.X, x′.X; dims=2).^k.γ)
+end
+
+# Unary methods
+ew(::GammaExp, x::AV{<:Real}) = ones(eltype(x), length(x))
+ew(::GammaExp, x::ColVecs{T}) where {T} = ones(T, length(x))
+pw(k::GammaExp, x::AV{<:Real}) = pw(k, x, x)
+pw(k::GammaExp, x::ColVecs) = exp.(.-pairwise(Euclidean(), x.X; dims=2).^k.γ)
+
+
+
+"""
+    Wiener <: Kernel
+
+The standardised stationary Wiener-process kernel.
+"""
+struct Wiener <: Kernel end
+
+_wiener(x::Real, x′::Real) = min(x, x′)
+
+# Binary methods
+ew(k::Wiener, x::AV{<:Real}, x′::AV{<:Real}) = _wiener.(x, x′)
+pw(k::Wiener, x::AV{<:Real}, x′::AV{<:Real}) = _wiener.(x, x′')
+
+# Unary methods
+ew(k::Wiener, x::AV{<:Real}) = x
+pw(k::Wiener, x::AV{<:Real}) = pw(k, x, x)
+
+
+
+"""
+    WienerVelocity <: Kernel
+
+The standardised WienerVelocity kernel.
+"""
+struct WienerVelocity <: Kernel end
+
+_wiener_vel(x::Real, x′::Real) = min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
+
+# Binary methods
+ew(k::WienerVelocity, x::AV{<:Real}, x′::AV{<:Real}) = _wiener_vel.(x, x′)
+pw(k::WienerVelocity, x::AV{<:Real}, x′::AV{<:Real}) = _wiener_vel.(x, x′')
+
+# Unary methods
+ew(k::WienerVelocity, x::AV{<:Real}) = ew(k, x, x)
+pw(k::WienerVelocity, x::AV{<:Real}) = pw(k, x, x)
+
+
+
+"""
     Noise{T<:Real} <: Kernel
 
 The standardised aleatoric white-noise kernel. Isn't really a kernel, but never mind...
@@ -277,6 +379,10 @@ ew(k::Noise{T}, x::AV) where {T} = ones(T, length(x))
 pw(k::Noise{T}, x::AV) where {T} = diagm(0=>ones(T, length(x)))
 
 
+
+#
+# Composite Kernels
+#
 
 """
     Sum{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
@@ -402,34 +508,3 @@ end
 rq(α) = RQ(α)
 rq(α, l) = stretch(rq(α), l)
 export rq
-
-# """
-#     Poly{Tσ<:Real} <: Kernel
-
-# Standardised Polynomial kernel. `Poly(p, σ)` creates a `Poly`.
-# """
-# struct Poly{Tσ<:Real} <: Kernel
-#     p::Int
-#     σ::Tσ
-# end
-# @inline (k::Poly)(x::Real, x′::Real) = (x * x′ + k.σ)^k.p
-
-
-# """
-#     Wiener <: Kernel
-
-# The standardised stationary Wiener-process kernel.
-# """
-# struct Wiener <: Kernel end
-# @inline (::Wiener)(x::Real, x′::Real) = min(x, x′)
-# cov(::Wiener, X::AM, X′::AM) =
-
-
-# """
-#     WienerVelocity <: Kernel
-
-# The standardised WienerVelocity kernel.
-# """
-# struct WienerVelocity <: Kernel end
-# @inline (::WienerVelocity)(x::Real, x′::Real) =
-#     min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
