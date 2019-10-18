@@ -1,30 +1,30 @@
 using Random, LinearAlgebra, Zygote
-using Stheno: ColsAreObs, BlockData
+using Stheno: ColVecs, BlockData
 
 @timedtestset "abstract_data_set" begin
     rng, N, D = MersenneTwister(123456), 10, 2
     x, X = randn(rng, N), randn(rng, D, N)
 
     # Test Matrix data sets.
-    @timedtestset "ColsAreObs" begin
-        DX = ColsAreObs(X)
+    @timedtestset "ColVecs" begin
+        DX = ColVecs(X)
         @test DX == DX
         @test size(DX) == (N,)
         @test length(DX) == N
         @test getindex(DX, 5) isa Vector
         @test getindex(DX, 5) == X[:, 5]
-        @test getindex(DX, 1:2:6) isa ColsAreObs
-        @test getindex(DX, 1:2:6) == ColsAreObs(X[:, 1:2:6])
+        @test getindex(DX, 1:2:6) isa ColVecs
+        @test getindex(DX, 1:2:6) == ColVecs(X[:, 1:2:6])
         @test view(DX, 4) isa AbstractVector
         @test view(DX, 4) == view(X, :, 4)
-        @test view(DX, 1:2:4) isa ColsAreObs
-        @test view(DX, 1:2:4) == ColsAreObs(view(X, :, 1:2:4))
+        @test view(DX, 1:2:4) isa ColVecs
+        @test view(DX, 1:2:4) == ColVecs(view(X, :, 1:2:4))
         @test eltype(DX) == Vector{Float64}
         @test eachindex(DX) == 1:N
 
         let
-            @test Zygote.forward(ColsAreObs, X)[1] == DX
-            DX, back = Zygote.forward(ColsAreObs, X)
+            @test Zygote.forward(ColVecs, X)[1] == DX
+            DX, back = Zygote.forward(ColVecs, X)
             @test back((X=ones(size(X)),))[1] == ones(size(X))
 
             @test Zygote.forward(DX->DX.X, DX)[1] == X
@@ -35,7 +35,7 @@ using Stheno: ColsAreObs, BlockData
 
     # Test BlockDataSet.
     @timedtestset "BlockData" begin
-        DX = ColsAreObs(X)
+        DX = ColVecs(X)
         DxX = BlockData([x, DX])
         @test size(DxX) == (2N,)
         @test length(DxX) == 2N

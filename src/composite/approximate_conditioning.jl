@@ -55,11 +55,11 @@ function cov(f::GP, u′::PPGP, x::AV, z′::AV)
 end
 
 """
-    ApproxObs(u::AbstractGP, z::AV, m::AV{<:Real}, Λ::AM{<:Real}, U::AM)
+    PseudoObs(u::AbstractGP, z::AV, m::AV{<:Real}, Λ::AM{<:Real}, U::AM)
 
 Construct approximate observations of `u` at `z`, with mean and cov. `m` and `Λ`
 """
-struct ApproxObs{Tu<:AbstractGP, Tû<:PPGP, Tz<:AV, TU<:AM, Tα<:AV}
+struct PseudoObs{Tu<:AbstractGP, Tû<:PPGP, Tz<:AV, TU<:AM, Tα<:AV}
     u::Tu
     û::Tû
     z::Tz
@@ -67,32 +67,23 @@ struct ApproxObs{Tu<:AbstractGP, Tû<:PPGP, Tz<:AV, TU<:AM, Tα<:AV}
     α::Tα
 end
 
-function ApproxObs(u::AbstractGP, z::AV, m::AV, Λ::Cholesky, U::AM)
-    return ApproxObs(u, PPGP(m, Λ, z, u.gpc), z, U, U \ m)
+function PseudoObs(u::AbstractGP, z::AV, m::AV, Λ::Cholesky, U::AM)
+    return PseudoObs(u, PPGP(m, Λ, z, u.gpc), z, U, U \ m)
 end
 
-ApproxObs(u::FiniteGP, c::Observation) = ApproxObs(u.f, u.x, optimal_q(c, u)...)
-
-ApproxObs(u::FiniteGP, cs::Tuple{Vararg{Observation}}) = ApproxObs(u, merge(cs))
-
-ApproxObs(us::Tuple{Vararg{FiniteGP}}, c::Observation) = ApproxObs(merge(us), c)
-
-function ApproxObs(us::Tuple{Vararg{FiniteGP}}, cs::Tuple{Vararg{Observation}})
-    return ApproxObs(merge(us), merge(cs))
-end
-
-
+PseudoObs(c::Observation, u::FiniteGP) = PseudoObs(u.f, u.x, optimal_q(c, u)...)
+PseudoObs(c::Observation, us::FiniteGP...) = PseudoObs(c, merge(us))
 
 
 
 """
-    |(f::AbstractGP, ỹ::ApproxObs)
+    |(f::AbstractGP, ỹ::PseudoObs)
 
 Condition `f` on approximate observations `ỹ`.
 """
-|(f::AbstractGP, ỹ::ApproxObs) = CompositeGP((|, f, ỹ), f.gpc)
+|(f::AbstractGP, ỹ::PseudoObs) = CompositeGP((|, f, ỹ), f.gpc)
 
-const approx_cond = Tuple{typeof(|), AbstractGP, ApproxObs}
+const approx_cond = Tuple{typeof(|), AbstractGP, PseudoObs}
 
 mean_vector((_, f, ỹ)::approx_cond, x::AV) = mean(f(x)) + cov(f(x), ỹ.u(ỹ.z)) * ỹ.α
 

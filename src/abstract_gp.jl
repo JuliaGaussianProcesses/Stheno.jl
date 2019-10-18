@@ -77,13 +77,23 @@ rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
 rand(f::FiniteGP) = vec(rand(f, 1))
 
 """
-    logpdf(f::FiniteGP, y::AbstractVector{<:Real})
+    logpdf(f::FiniteGP, Y::AbstractMatrix{<:Real})
 
-The log probability density of `y` under `f`.
+The log probability density of each column of `Y` under `f`.
 """
 function logpdf(f::FiniteGP, y::AbstractVector{<:Real})
     μ, C = mean(f), cholesky(Symmetric(cov(f)))
     return -(length(y) * log(2π) + logdet(C) + Xt_invA_X(C, y - μ)) / 2
+end
+
+"""
+    logpdf(f::FiniteGP, y::AbstractVector{<:Real})
+
+The log probability density of `y` under `f`.
+"""
+function logpdf(f::FiniteGP, Y::AbstractMatrix{<:Real})
+    μ, C = mean(f), cholesky(Symmetric(cov(f)))
+    return -((size(Y, 1) * log(2π) + logdet(C)) .+ diag_Xt_invA_X(C, Y .- μ)) ./ 2
 end
 
 """
@@ -105,7 +115,7 @@ function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
 end
 
 function consistency_check(f, y, u)
-    @assert length(f) == length(y)
+    @assert length(f) == size(y, 1)
 end
 Zygote.@nograd consistency_check
 
@@ -163,7 +173,7 @@ Zygote.@nograd _test_block_consistency
 # end
 
 import Base: |, merge
-export ←, |
+export ←, |, Obs
 
 """
     Observation
@@ -176,7 +186,7 @@ struct Observation{Tf<:FiniteGP, Ty<:Vector}
 end
 
 const Obs = Observation
-export Obs
+
 
 ←(f, y) = Observation(f, y)
 get_f(c::Observation) = c.f

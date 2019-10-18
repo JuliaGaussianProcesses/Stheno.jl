@@ -21,6 +21,7 @@ GP(m::Tm, k::Tk, gpc::GPC) where {Tm<:MeanFunction, Tk<:Kernel} = GP{Tm, Tk}(m, 
 GP(f, k::Kernel, gpc::GPC) = GP(CustomMean(f), k, gpc)
 GP(m::Real, k::Kernel, gpc::GPC) = GP(ConstMean(m), k, gpc)
 GP(k::Kernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
+GP(k::Kernel, m, gpc::GPC) = GP(m, k, gpc)
 
 mean_vector(f::GP, x::AV) = ew(f.m, x)
 

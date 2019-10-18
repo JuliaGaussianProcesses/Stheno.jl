@@ -16,11 +16,11 @@
         # )
 
     #     for D in Ds()
-    #         @benchset "ColsAreObs (D=$D) CPU" create_benchmarks(
+    #         @benchset "ColVecs (D=$D) CPU" create_benchmarks(
     #             EQ();
     #             x=randn(D), x′=randn(D),
-    #             x̄s=[ColsAreObs(randn(D, N)) for N in Ns()],
-    #             x̄′s=[ColsAreObs(randn(D, N)) for N in Ns()],
+    #             x̄s=[ColVecs(randn(D, N)) for N in Ns()],
+    #             x̄′s=[ColVecs(randn(D, N)) for N in Ns()],
     #         )
     #     end
 

@@ -21,9 +21,16 @@ using Stheno: EQ, Exp
 
     # Check that mean-function specialisations work as expected.
     @timedtestset "sugar" begin
-        m = 5.1
         @test GP(5, EQ(), GPC()).m isa ConstMean
         @test GP(EQ(), GPC()).m isa ZeroMean
+    end
+
+    # Check that GP(kernel, mean, gpc) always works.
+    @timedtestset "reversed construction" begin
+        @test GP(eq(), CustomMean(sin), GPC()).m isa CustomMean{typeof(sin)}
+        @test GP(eq(), CustomMean(sin), GPC()).k isa Stheno.EQ
+        @test GP(eq(), 5.0, GPC()).m isa ConstMean
+        @test GP(eq(), 5.0, GPC()).k isa Stheno.EQ
     end
 
     # Test the creation of indepenent GPs.

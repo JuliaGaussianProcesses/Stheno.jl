@@ -1,5 +1,5 @@
 using LinearAlgebra
-using Stheno: GPC, optimal_q, ApproxObs
+using Stheno: GPC, optimal_q, PseudoObs
 
 # Test Titsias implementation by checking that it (approximately) recovers exact inference
 # when M = N and Z = X.
@@ -73,7 +73,7 @@ using Stheno: GPC, optimal_q, ApproxObs
         y, y′ = rand(rng, [f(x, σ²), f(x′, σ²)])
 
         # Compute approximate posterior suff. stats.
-        obs = ApproxObs(f(xx′), (f(x, σ²) ← y, f(x′, σ²)←y′))
+        obs = PseudoObs(Obs(f(x, σ²) ← y, f(x′, σ²)←y′), f(xx′))
         m_ε, Λ_ε, U = obs.û.m, obs.û.Λ, obs.U
         f′ = f | (f(x, σ²) ← y, f(x′, σ²)←y′)
 
@@ -85,8 +85,8 @@ using Stheno: GPC, optimal_q, ApproxObs
         @timedtestset "multiple cond, multiple pseudo points" begin
             z, z′ = randn(rng, 3), randn(rng, 2)
             zz′ = vcat(z, z′)
-            u = ApproxObs(f(zz′), (f(x, σ²)←y, f(x′, σ²)←y′))
-            u′ = ApproxObs((f(z), f(z′)), (f(x, σ²)←y, f(x′, σ²)←y′))
+            u = PseudoObs(Obs(f(x, σ²)←y, f(x′, σ²)←y′), f(zz′))
+            u′ = PseudoObs(Obs(f(x, σ²)←y, f(x′, σ²)←y′), f(z), f(z′))
             @test u.û.m ≈ u′.û.m
             @test u.û.Λ.U ≈ u′.û.Λ.U
             @test u.U ≈ u′.U
@@ -94,8 +94,8 @@ using Stheno: GPC, optimal_q, ApproxObs
         @timedtestset "single cond, multiple pseudo points" begin
             z, z′ = randn(rng, 3), randn(rng, 2)
             zz′ = vcat(z, z′)
-            u = ApproxObs(f(zz′), f(x, σ²)←y)
-            u′ = ApproxObs((f(z), f(z′)), f(x, σ²)←y)
+            u = PseudoObs(f(x, σ²)←y, f(zz′))
+            u′ = PseudoObs(f(x, σ²)←y, f(z), f(z′))
             @test u.û.m ≈ u′.û.m
             @test u.û.Λ.U ≈ u′.û.Λ.U
             @test u.U ≈ u′.U
@@ -112,7 +112,7 @@ using Stheno: GPC, optimal_q, ApproxObs
 
         # Generate approximate posterior
         m_ε, Λ_ε, U = optimal_q(f(x, σ²)←y, f(z))
-        ỹ = ApproxObs(f, z, m_ε, Λ_ε, U)
+        ỹ = PseudoObs(f, z, m_ε, Λ_ε, U)
         f′_approx = f | ỹ
 
         P, Q = 7, 4
@@ -120,7 +120,7 @@ using Stheno: GPC, optimal_q, ApproxObs
         abstractgp_interface_tests(f′_approx, f, x0, x1, x2, x3)
 
         @test_throws ArgumentError Stheno.mean_vector(ỹ.û, randn(rng, P))
-        @test_throws ArgumentError cov(ỹ.û, ApproxObs(f, z, m_ε, Λ_ε, U).û, x0, x1)
+        @test_throws ArgumentError cov(ỹ.û, PseudoObs(f, z, m_ε, Λ_ε, U).û, x0, x1)
     end
     @timedtestset "accuracy tests" begin
         rng, N, N′, Nz, σ², gpc = MersenneTwister(123456), 5, 3, 2, 1e-1, GPC()
@@ -138,7 +138,7 @@ using Stheno: GPC, optimal_q, ApproxObs
 
         # Approximate conditioning that should yield (almost) exact results.
         m_ε, Λ_ε, U = optimal_q(f(x, σ²)←y, f(z))
-        ỹ = ApproxObs(f, z, m_ε, Λ_ε, U)
+        ỹ = PseudoObs(f, z, m_ε, Λ_ε, U)
         f′_approx = f | ỹ
         g′_approx = f | ỹ
 

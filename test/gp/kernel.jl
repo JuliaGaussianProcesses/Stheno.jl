@@ -13,9 +13,9 @@ using LinearAlgebra
         x2_r, x3_r = range(-5.0, step=2, length=N), range(-3.0, step=1, length=N′)
         x4_r = range(-2.0, step=2, length=N′)
 
-        X0 = ColsAreObs(randn(rng, D, N))
-        X1 = ColsAreObs(randn(rng, D, N))
-        X2 = ColsAreObs(randn(rng, D, N′))
+        X0 = ColVecs(randn(rng, D, N))
+        X1 = ColVecs(randn(rng, D, N))
+        X2 = ColVecs(randn(rng, D, N′))
 
         ȳ, Ȳ, Ȳ_sq = randn(rng, N), randn(rng, N, N′), randn(rng, N, N)
 
@@ -133,8 +133,22 @@ using LinearAlgebra
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
             @timedtestset "Convenience Constructors" begin
-                @test eq() isa EQ
-                @test eq(0.5) isa Stretched{Float64, EQ}
+                unstretched = [
+                    (eq(), EQ()),
+                    (rq(1.5), RQ(1.5)),
+                ]
+                stretched = [
+                    (eq(0.7), stretch(EQ(), 0.7)),
+                    (rq(1.5, 0.5), stretch(RQ(1.5), 0.5)),
+                ]
+                @testset "$k_conv" for (k_conv, k) in unstretched
+                    @test pw(k_conv, x0) ≈ pw(k, x0)
+                    differentiable_kernel_tests(k_conv, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                end
+                @testset "$k_conv" for (k_conv, k) in stretched
+                    @test pw(k_conv, x0) ≈ pw(k, x0)
+                    differentiable_kernel_tests(k_conv, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                end
             end
         end
     end

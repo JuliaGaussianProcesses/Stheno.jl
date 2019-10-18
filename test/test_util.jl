@@ -27,9 +27,9 @@ function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
 end
 
 # AbstractArrays.
-function to_vec(x::ColsAreObs{<:Real})
+function to_vec(x::ColVecs{<:Real})
     x_vec, back = to_vec(x.X)
-    return x_vec, x_vec -> ColsAreObs(back(x_vec))
+    return x_vec, x_vec -> ColVecs(back(x_vec))
 end
 to_vec(x::BlockArray) = vec(Array(x)), x_->BlockArray(reshape(x_, size(x)), blocksizes(x))
 function to_vec(x::BlockData)
@@ -185,7 +185,7 @@ end
 function differentiable_mean_function_tests(
     m::MeanFunction,
     ȳ::AbstractVector{<:Real},
-    x::ColsAreObs{<:Real};
+    x::ColVecs{<:Real};
     rtol=_rtol,
     atol=_atol,
 )
@@ -193,7 +193,7 @@ function differentiable_mean_function_tests(
     mean_function_tests(m, x)
 
     @assert length(ȳ) == length(x)
-    adjoint_test(X->ew(m, ColsAreObs(X)), ȳ, x.X; rtol=rtol, atol=atol)  
+    adjoint_test(X->ew(m, ColVecs(X)), ȳ, x.X; rtol=rtol, atol=atol)  
 end
 function differentiable_mean_function_tests(
     rng::AbstractRNG,

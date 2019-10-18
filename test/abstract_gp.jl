@@ -29,7 +29,7 @@ end
     end
     @testset "rand (deterministic)" begin
         rng, N, D = MersenneTwister(123456), 10, 2
-        X, x, Σy = ColsAreObs(randn(rng, D, N)), randn(rng, N), zeros(N, N)
+        X, x, Σy = ColVecs(randn(rng, D, N)), randn(rng, N), zeros(N, N)
         Σy = generate_noise_matrix(rng, N)
         fX = FiniteGP(GP(1, EQ(), GPC()), X, Σy)
         fx = FiniteGP(GP(1, EQ(), GPC()), x, Σy)
@@ -43,7 +43,7 @@ end
     end
     @testset "rand (statistical)" begin
         rng, N, D, μ0, S = MersenneTwister(123456), 10, 2, 1, 100_000
-        X, Σy = ColsAreObs(randn(rng, D, N)), 1e-12
+        X, Σy = ColVecs(randn(rng, D, N)), 1e-12
         f = FiniteGP(GP(1, EQ(), GPC()), X, Σy)
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.
@@ -122,7 +122,7 @@ end
     #     # end
     # end
     @testset "logpdf / elbo" begin
-        rng, N, σ, gpc = MersenneTwister(123456), 10, 1e-1, GPC()
+        rng, N, S, σ, gpc = MersenneTwister(123456), 10, 11, 1e-1, GPC()
         x = collect(range(-3.0, stop=3.0, length=N))
         f = GP(1, EQ(), gpc)
         fx, y = FiniteGP(f, x, 0), FiniteGP(f, x, σ^2)
@@ -132,10 +132,16 @@ end
         @test logpdf(y, ŷ) isa Real
         @test logpdf(y, ŷ) ≈ logpdf(MvNormal(Vector(mean(y)), cov(y)), ŷ)
 
+        # Check that multi-sample logpdf returns the correct type and is consistent with
+        # single-sample logpdf
+        Ŷ = rand(rng, y, S)
+        @test logpdf(y, Ŷ) isa Vector{Float64}
+        @test logpdf(y, Ŷ) ≈ [logpdf(y, Ŷ[:, n]) for n in 1:S]
+
         # Check gradient of logpdf at mean is zero for `f`.
         adjoint_test(ŷ->logpdf(fx, ŷ), 1, ones(size(ŷ)))
         lp, back = Zygote.forward(ŷ->logpdf(fx, ŷ), ones(size(ŷ)))
-        @test back(randn(rng))[1] == zeros(size(ŷ)) 
+        @test back(randn(rng))[1] == zeros(size(ŷ))
 
         # Check that gradient of logpdf at mean is zero for `y`.
         adjoint_test(ŷ->logpdf(y, ŷ), 1, ones(size(ŷ)))
@@ -149,13 +155,24 @@ end
             l̄, collect(x);
             atol=1e-8, rtol=1e-8,
         )
+        adjoint_test(
+            x->sum(logpdf(FiniteGP(f, x, 1e-3), ones(size(Ŷ)))),
+            l̄, collect(x);
+            atol=1e-8, rtol=1e-8,
+        )
 
         # Check that the gradient w.r.t. the noise is approximately correct for `f`.
-        adjoint_test(σ_->logpdf(FiniteGP(f, x, softplus(σ_)), ŷ), l̄, randn(rng))
+        σ_ = randn(rng)
+        adjoint_test((σ_, ŷ)->logpdf(FiniteGP(f, x, softplus(σ_)), ŷ), l̄, σ_, ŷ)
+        adjoint_test((σ_, Ŷ)->sum(logpdf(FiniteGP(f, x, softplus(σ_)), Ŷ)), l̄, σ_, Ŷ)
 
         # Check that the gradient w.r.t. a scaling of the GP works.
         adjoint_test(
             α->logpdf(FiniteGP(α * f, x, 1e-1), ŷ), l̄, randn(rng);
+            atol=1e-8, rtol=1e-8,
+        )
+        adjoint_test(
+            α->sum(logpdf(FiniteGP(α * f, x, 1e-1), Ŷ)), l̄, randn(rng);
             atol=1e-8, rtol=1e-8,
         )
 
