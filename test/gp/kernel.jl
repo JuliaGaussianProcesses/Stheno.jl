@@ -133,8 +133,22 @@ using LinearAlgebra
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
             @timedtestset "Convenience Constructors" begin
-                @test eq() isa EQ
-                @test eq(0.5) isa Stretched{Float64, EQ}
+                unstretched = [
+                    (eq(), EQ()),
+                    (rq(1.5), RQ(1.5)),
+                ]
+                stretched = [
+                    (eq(0.7), stretch(EQ(), 0.7)),
+                    (rq(1.5, 0.5), stretch(RQ(1.5), 0.5)),
+                ]
+                @testset "$k_conv" for (k_conv, k) in unstretched
+                    @test pw(k_conv, x0) ≈ pw(k, x0)
+                    differentiable_kernel_tests(k_conv, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                end
+                @testset "$k_conv" for (k_conv, k) in stretched
+                    @test pw(k_conv, x0) ≈ pw(k, x0)
+                    differentiable_kernel_tests(k_conv, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                end
             end
         end
     end

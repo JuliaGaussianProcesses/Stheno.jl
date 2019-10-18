@@ -401,6 +401,7 @@ end
 
 rq(α) = RQ(α)
 rq(α, l) = stretch(rq(α), l)
+export rq
 
 # """
 #     Poly{Tσ<:Real} <: Kernel

@@ -119,8 +119,6 @@ struct Shift{Ta<:Union{Real, AV{<:Real}}}
     a::Ta
 end
 (f::Shift{<:Real})(x::Real) = x - f.a
-(f::Shift{<:AV{<:Real}})(x::AV{<:Real}) = x - f.a
-(f::Shift{<:Real})(x::AV{<:Real}) = x .- f.a
 
 broadcasted(f::Shift, x::ColVecs) = ColVecs(x.X .- f.a)
 
