@@ -1,6 +1,6 @@
 name = "Stheno"
 uuid = "8188c328-b5d6-583d-959b-9690869a5511"
-version = "0.3.2"
+version = "0.4.0"
 
 [deps]
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
