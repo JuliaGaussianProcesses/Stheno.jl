@@ -1,5 +1,6 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched, Scaled
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Sum, Product, stretch
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Sum, Product, stretch,
+    Poly, GammaExp, Wiener, WienerVelocity
 using LinearAlgebra
 
 @timedtestset "kernel" begin
@@ -91,6 +92,36 @@ using LinearAlgebra
             differentiable_kernel_tests(Linear(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
+        @timedtestset "Poly" begin
+            @test pw(Poly(1, 0.0), x0) ≈ pw(Linear(), x0)
+            @testset "Poly{$p}" for p in [1, 2, 3]
+                differentiable_kernel_tests(Poly(p, 0.5), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(Poly(p, 0.5), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+        end
+
+        @timedtestset "GammaExp" begin
+            @test pw(GammaExp(2.0), x0) ≈ pw(stretch(EQ(), sqrt(2)), x0)
+            @testset "γ=$γ" for γ in [1.0, 1.5, 2.0]
+                differentiable_kernel_tests(GammaExp(γ), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(GammaExp(γ), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+        end
+
+        @timedtestset "Wiener" begin
+            x0 = collect(range(0.1, 2.0; length=N)) .+ 1e-3 .* randn(rng, N)
+            x1 = collect(range(0.1, 2.3; length=N)) .+ 1e-3 .* randn(rng, N)
+            x2 = collect(range(0.1, 3.3; length=N′)) .+ 1e-3 .* randn(rng, N′)
+            kernel_tests(Wiener(), x0, x1, x2)
+        end
+
+        @timedtestset "WienerVelocity" begin
+            x0 = collect(range(0.1, 2.0; length=N)) .+ 1e-3 .* randn(rng, N)
+            x1 = collect(range(0.1, 2.3; length=N)) .+ 1e-3 .* randn(rng, N)
+            x2 = collect(range(0.1, 3.3; length=N′)) .+ 1e-3 .* randn(rng, N′)
+            kernel_tests(WienerVelocity(), x0, x1, x2)
+        end
+
         @timedtestset "Noise" begin
             @test ew(Noise(), x0, x0) == zeros(length(x0))
             @test pw(Noise(), x0, x0) == zeros(length(x0), length(x0))
@@ -136,10 +167,14 @@ using LinearAlgebra
                 unstretched = [
                     (eq(), EQ()),
                     (rq(1.5), RQ(1.5)),
+                    (γ_exponential(2.0), GammaExp(2.0)),
+                    (poly(2, 0.6), Poly(2, 0.6)),
                 ]
                 stretched = [
                     (eq(0.7), stretch(EQ(), 0.7)),
                     (rq(1.5, 0.5), stretch(RQ(1.5), 0.5)),
+                    (γ_exponential(2.0, 0.53), stretch(GammaExp(2.0), 0.53)),
+                    (poly(2, 0.6, 0.4), stretch(Poly(2, 0.6), 0.4)),
                 ]
                 @testset "$k_conv" for (k_conv, k) in unstretched
                     @test pw(k_conv, x0) ≈ pw(k, x0)
@@ -148,6 +183,24 @@ using LinearAlgebra
                 @testset "$k_conv" for (k_conv, k) in stretched
                     @test pw(k_conv, x0) ≈ pw(k, x0)
                     differentiable_kernel_tests(k_conv, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                end
+
+                # Wiener kernels aren't differentiable.
+                not_diff_unstretched = [
+                    (wiener(), Wiener()),
+                    (wiener_velocity(), WienerVelocity()),
+                ]
+                not_diff_stretched = [
+                    (wiener(0.67), stretch(Wiener(), 0.67)),
+                    (wiener_velocity(0.65), stretch(WienerVelocity(), 0.65)),
+                ]
+                @testset "$k_conv" for (k_conv, k) in not_diff_unstretched
+                    @test pw(k_conv, x0) ≈ pw(k, x0)
+                    kernel_tests(k_conv, abs.(x0), abs.(x1), abs.(x2))
+                end
+                @testset "$k_conv" for (k_conv, k) in not_diff_stretched
+                    @test pw(k_conv, x0) ≈ pw(k, x0)
+                    kernel_tests(k_conv, abs.(x0), abs.(x1), abs.(x2))
                 end
             end
         end
@@ -159,27 +212,4 @@ using LinearAlgebra
         @test iszero(ZeroKernel()) == true
         @test iszero(EQ()) == false
     end
-
-    # # Tests for Polynomial kernel.
-    # @test !isstationary(Poly)
-    # @test Poly(2, -1.0)(1.0, 1.0) == 0.0
-    # @test Poly(5, -1.0)(1.0, 1.0) == 0.0
-    # @test Poly(5, 0.0)(1.0, 1.0) == 1.0
-    # @test Poly(5, 0.0) == Poly(5, 0.0)
-    # @test Poly(2, 1.0) != Poly(5, 1.0)
-
-    # # Tests for Wiener kernel.
-    # @test !isstationary(Wiener)
-    # @test Wiener()(1.0, 1.0) == 1.0
-    # @test Wiener()(1.0, 1.5) == 1.0
-    # @test Wiener()(1.5, 1.0) == 1.0
-    # @test Wiener() == Wiener()
-    # @test Wiener() != Noise()
-
-    # # Tests for WienerVelocity.
-    # @test !isstationary(WienerVelocity)
-    # @test WienerVelocity()(1.0, 1.0) == 1 / 3
-    # @test WienerVelocity() == WienerVelocity()
-    # @test WienerVelocity() != Wiener()
-    # @test WienerVelocity() != Noise()
 end
