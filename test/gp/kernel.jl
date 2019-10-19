@@ -167,10 +167,14 @@ using LinearAlgebra
                 unstretched = [
                     (eq(), EQ()),
                     (rq(1.5), RQ(1.5)),
+                    (γ_exponential(2.0), GammaExp(2.0)),
+                    (poly(2, 0.6), Poly(2, 0.6)),
                 ]
                 stretched = [
                     (eq(0.7), stretch(EQ(), 0.7)),
                     (rq(1.5, 0.5), stretch(RQ(1.5), 0.5)),
+                    (γ_exponential(2.0, 0.53), stretch(GammaExp(2.0), 0.53)),
+                    (poly(2, 0.6, 0.4), stretch(Poly(2, 0.6), 0.4)),
                 ]
                 @testset "$k_conv" for (k_conv, k) in unstretched
                     @test pw(k_conv, x0) ≈ pw(k, x0)
@@ -179,6 +183,24 @@ using LinearAlgebra
                 @testset "$k_conv" for (k_conv, k) in stretched
                     @test pw(k_conv, x0) ≈ pw(k, x0)
                     differentiable_kernel_tests(k_conv, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                end
+
+                # Wiener kernels aren't differentiable.
+                not_diff_unstretched = [
+                    (wiener(), Wiener()),
+                    (wiener_velocity(), WienerVelocity()),
+                ]
+                not_diff_stretched = [
+                    (wiener(0.67), stretch(Wiener(), 0.67)),
+                    (wiener_velocity(0.65), stretch(WienerVelocity(), 0.65)),
+                ]
+                @testset "$k_conv" for (k_conv, k) in not_diff_unstretched
+                    @test pw(k_conv, x0) ≈ pw(k, x0)
+                    kernel_tests(k_conv, abs.(x0), abs.(x1), abs.(x2))
+                end
+                @testset "$k_conv" for (k_conv, k) in not_diff_stretched
+                    @test pw(k_conv, x0) ≈ pw(k, x0)
+                    kernel_tests(k_conv, abs.(x0), abs.(x1), abs.(x2))
                 end
             end
         end

@@ -497,8 +497,14 @@ pw(k::Stretched{<:AM{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(k.a * x.X))
 
 # Create convenience versions of each of the kernels that accept a length scale.
 for (k, K) in (
-    (:eq, :EQ), (:exponential, :Exp), (:matern12, :Matern12), (:matern32, :Matern32),
-    (:matern52, :Matern52), (:linear, :Linear),
+    (:eq, :EQ),
+    (:exponential, :Exp),
+    (:matern12, :Matern12),
+    (:matern32, :Matern32),
+    (:matern52, :Matern52),
+    (:linear, :Linear),
+    (:wiener, :Wiener),
+    (:wiener_velocity, :WienerVelocity),
 )
     @eval $k() = $K()
     @eval $k(a::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch($k(), a)
@@ -508,3 +514,11 @@ end
 rq(α) = RQ(α)
 rq(α, l) = stretch(rq(α), l)
 export rq
+
+γ_exponential(γ::Real) = GammaExp(γ)
+γ_exponential(γ::Real, l::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch(GammaExp(γ), l)
+export γ_exponential
+
+poly(p::Int, σ²::Real) = Poly(p, σ²)
+poly(p::Int, σ²::Real, l::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch(Poly(p, σ²), l)
+export poly
