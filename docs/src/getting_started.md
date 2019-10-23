@@ -163,7 +163,7 @@ n_samples, n_adapts = 100, 20
 metric = DiagEuclideanMetric(3)
 h = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
 int = Leapfrog(find_good_eps(h, θ0))
-prop = NUTS{Multinomial,GeneralisedNoUTurn}(int)
+prop = NUTS{MultinomialST, GeneralisedNoUTurn}(int)
 adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
 
 # Perform inference
