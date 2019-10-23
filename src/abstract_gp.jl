@@ -1,3 +1,5 @@
+export GPC
+
 abstract type AbstractGP end
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of GPs.
