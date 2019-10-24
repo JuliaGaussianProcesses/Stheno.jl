@@ -1,10 +1,10 @@
 # Getting Started
 
-Here we document how you can achieve the basic things that you might wish to do with a traditional GP package in Stheno by way of concise examples. We lean heavily on the rest of the Julia ecosystem for each of these examples -- this page really exemplifies the way in which different packages play together nicely in the Julia!
+Here we document how to achieve the basic things that any GP package aught to be able to do. We lean heavily on the rest of the Julia ecosystem for each of these examples -- this page really exemplifies the way in which different packages play together nicely in the Julia!
 
 ## Exact Inference in a GP in 2 Minutes
 
-While Stheno offers some bells and whistles that other GP frameworks do not, it also offers the same functionality as a traditional GP framework.
+While Stheno offers some bells and whistles that other GP frameworks do not, it also offers the same functionality as a usual GP framework.
 
 ```julia
 using Stheno
@@ -33,9 +33,9 @@ logpdf(fx, y)
 ```julia
 Stheno.pairwise(k, x) + σ² * I
 ```
-As such you can draw samples from it and compute the log probability of it taking a particular value in the same way that you would an `MvNormal` from [Distributions.jl](https://github.com/JuliaStats/Distributions.jl).
+As such samples can be drawn from it, and the log probability any particular value under it can be computed, in the same way that you would an `MvNormal` from [Distributions.jl](https://github.com/JuliaStats/Distributions.jl).
 
-We can plot this with [Plots.jl](https://github.com/JuliaPlots/Plots.jl)
+We can visualise `x` and `y` with [Plots.jl](https://github.com/JuliaPlots/Plots.jl)
 ```julia
 using Plots
 plt = plot();
@@ -61,14 +61,6 @@ plot!(plt, f_posterior(x_plot); samples=10, label="", color=:blue);
 display(plt);
 ```
 ![img](assets/samples_posterior.svg)
-
-That's it! You now worked through the fundamental components blocks in Stheno, and know how to
-
-- specify a kernel with a particular length-scale and variance
-- construct a GP
-- sample from a GP, and specify an observation noise
-- compute the log marginal likelihood of some observations
-- visualise a simple 1D example
 
 
 ## Fit a GP with NelderMead in 2 Minutes
@@ -136,7 +128,7 @@ display(plt);
 ```
 ![img](assets/samples_posterior_bfgs.svg)
 
-Notice that the two optimisers produce (nearly) indistinguishable results.
+Notice that the two optimisers produce (almost) indistinguishable results.
 
 
 ## Inference with NUTS in 2 minutes
@@ -179,6 +171,20 @@ display(plt_hypers);
 ```
 ![img](assets/posterior_hypers.svg)
 
-As expected, the sampler converges to the stationary distribution quickly, and returns a number of samples from the posterior. One could combine this code with that from the previous sections to make predictions under the posterior over the hyperparameters.
+As expected, the sampler converges to the posterior distribution quickly. One could combine this code with that from the previous sections to make predictions under the posterior over the hyperparameters.
 
 Also note that we didn't specify a prior over the kernel parameters in this example, so essentially used an improper prior. We could have used a proper prior by appropriately modifying `ℓπ`.
+
+
+## Conclusion
+
+That's it! You now know how to do typical GP stuff in Stheno. In particular how to:
+
+- specify a kernel with a particular length-scale and variance
+- construct a GP
+- sample from a GP, and specify an observation noise
+- compute the log marginal likelihood of some observations
+- visualise a simple 1D example
+- infer kernel parameters in a variety of ways
+
+We _not_ covered any of the fancy features of Stheno yet tough.
