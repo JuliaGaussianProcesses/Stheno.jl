@@ -44,7 +44,7 @@ plt = plot();
 scatter!(plt, x, y; color=:red, label="");
 display(plt);
 ```
-![img](assets/samples.svg)
+![img](http://willtebbutt.github.io/resources/samples.svg)
 
 It's straightforward to compute the posterior over `f`:
 ```julia
@@ -62,7 +62,7 @@ x_plot = range(-4.0, 4.0; length=1000);
 plot!(plt, f_posterior(x_plot); samples=10, label="", color=:blue);
 display(plt);
 ```
-![img](assets/samples_posterior.svg)
+![img](http://willtebbutt.github.io/resources/samples_posterior.svg)
 
 
 ## Fit a GP with NelderMead in 2 Minutes
@@ -104,7 +104,7 @@ f_posterior_ml = f | Obs(f(x, σ²_n_ml), y);
 plot!(plt, f_posterior_ml(x_plot); samples=10, color=:green, label="");
 display(plt);
 ```
-![img](assets/samples_posterior_both.svg)
+![img](http://willtebbutt.github.io/resources/samples_posterior_both.svg)
 
 (Of course the exact posterior has not been recovered because the exact hyperparameters cannot be expected to be recovered.)
 
@@ -128,7 +128,7 @@ f_posterior_bfgs = f | Obs(f(x, σ²_n_bfgs), y);
 plot!(plt, f_posterior_bfgs(x_plot); samples=10, color=:purple, label="");
 display(plt);
 ```
-![img](assets/samples_posterior_bfgs.svg)
+![img](http://willtebbutt.github.io/resources/samples_posterior_bfgs.svg)
 
 Notice that the two optimisers produce (almost) indistinguishable results.
 
@@ -171,7 +171,7 @@ plot!(plt_hypers, getindex.(hypers, 2); label="length scale");
 plot!(plt_hypers, getindex.(hypers, 3); label="obs noise variance");
 display(plt_hypers);
 ```
-![img](assets/posterior_hypers.svg)
+![img](http://willtebbutt.github.io/resources/posterior_hypers.svg)
 
 As expected, the sampler converges to the posterior distribution quickly. One could combine this code with that from the previous sections to make predictions under the posterior over the hyperparameters.
 
