@@ -2,6 +2,8 @@
 
 Here we document how to achieve the basic things that any GP package aught to be able to do. We lean heavily on the rest of the Julia ecosystem for each of these examples -- this page really exemplifies the way in which different packages play together nicely in the Julia!
 
+This guide assumes that you know roughly what's going on conceptually with GPs. If you're new to Gaussian processes, I cannot recommend [this video lecture](http://videolectures.net/gpip06_mackay_gpb/) highly enough.
+
 ## Exact Inference in a GP in 2 Minutes
 
 While Stheno offers some bells and whistles that other GP frameworks do not, it also offers the same functionality as a usual GP framework.
