@@ -1,10 +1,10 @@
-using Zygote, IRTools, Random
+using Zygote
 using Zygote: @adjoint, literal_getproperty
 import Zygote: accum
 
 import Distances: pairwise, colwise
 
-@nograd MersenneTwister, propertynames
+@nograd MersenneTwister, propertynames, broadcast_shape
 
 function accum(D::Diagonal{T}, B::AbstractMatrix) where {T}
     A = Matrix{Union{T, Nothing}}(undef, size(D))
