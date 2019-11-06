@@ -1,12 +1,9 @@
 using Stheno: FiniteGP, GPC, pw, ConstMean, GP
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, block_diagonal, tr_Cf_invΣy
-using Statistics, StatsFuns
+using Statistics
 using Distributions: MvNormal, PDMat
 
 _rng() = MersenneTwister(123456)
-
-_to_psd(A) = A * A' + I
-
 
 function generate_noise_matrix(rng::AbstractRNG, N::Int)
     A = randn(rng, N, N)
@@ -163,8 +160,8 @@ end
 
         # Check that the gradient w.r.t. the noise is approximately correct for `f`.
         σ_ = randn(rng)
-        adjoint_test((σ_, ŷ)->logpdf(FiniteGP(f, x, softplus(σ_)), ŷ), l̄, σ_, ŷ)
-        adjoint_test((σ_, Ŷ)->sum(logpdf(FiniteGP(f, x, softplus(σ_)), Ŷ)), l̄, σ_, Ŷ)
+        adjoint_test((σ_, ŷ)->logpdf(FiniteGP(f, x, exp(σ_)), ŷ), l̄, σ_, ŷ)
+        adjoint_test((σ_, Ŷ)->sum(logpdf(FiniteGP(f, x, exp(σ_)), Ŷ)), l̄, σ_, Ŷ)
 
         # Check that the gradient w.r.t. a scaling of the GP works.
         adjoint_test(
@@ -209,14 +206,14 @@ end
 #         # Test gradient w.r.t. random sampling.
 #         N = length(x)
 #         adjoint_test(
-#             (x, isp_σ)->rand(_rng(), FiniteGP(f, x, softplus(isp_σ)^2)),
+#             (x, isp_σ)->rand(_rng(), FiniteGP(f, x, exp(isp_σ)^2)),
 #             randn(rng, N),
 #             x,
 #             isp_σ,;
 #             atol=atol, rtol=rtol,
 #         )
 #         adjoint_test(
-#             (x, isp_σ)->rand(_rng(), FiniteGP(f, x, softplus(isp_σ)^2), 11),
+#             (x, isp_σ)->rand(_rng(), FiniteGP(f, x, exp(isp_σ)^2), 11),
 #             randn(rng, N, 11),
 #             x,
 #             isp_σ,;
@@ -224,20 +221,20 @@ end
 #         )
 
 #         # Check that gradient w.r.t. logpdf is correct.
-#         y, l̄ = rand(rng, FiniteGP(f, x, softplus(isp_σ))), randn(rng)
+#         y, l̄ = rand(rng, FiniteGP(f, x, exp(isp_σ))), randn(rng)
 #         adjoint_test(
-#             (x, isp_σ, y)->logpdf(FiniteGP(f, x, softplus(isp_σ)), y),
+#             (x, isp_σ, y)->logpdf(FiniteGP(f, x, exp(isp_σ)), y),
 #             l̄, x, isp_σ, y;
 #             atol=atol, rtol=rtol,
 #         )
 
 #         # Check that elbo is tight-ish when it's meant to be.
-#         fx, yx = FiniteGP(f, x, 1e-9), FiniteGP(f, x, softplus(isp_σ))
+#         fx, yx = FiniteGP(f, x, 1e-9), FiniteGP(f, x, exp(isp_σ))
 #         @test isapprox(elbo(yx, y, fx), logpdf(yx, y); atol=1e-6, rtol=1e-6)
 
 #         # Check that gradient w.r.t. elbo is correct.
 #         adjoint_test(
-#             (x, ŷ, isp_σ)->elbo(FiniteGP(f, x, softplus(isp_σ)), ŷ, FiniteGP(f, x, 1e-9)),
+#             (x, ŷ, isp_σ)->elbo(FiniteGP(f, x, exp(isp_σ)), ŷ, FiniteGP(f, x, 1e-9)),
 #             randn(rng), x, y, isp_σ;
 #             atol=1e-6, rtol=1e-6,
 #         )
@@ -249,7 +246,7 @@ end
 # @testset "FiniteGP (integration)" begin
 #     rng = MersenneTwister(123456)
 #     xs = [collect(range(-3.0, stop=3.0, length=N)) for N in [2, 5, 10]]
-#     σs = invsoftplus.([1e-1, 1e0, 1e1])
+#     σs = log.([1e-1, 1e0, 1e1])
 #     for (k, name, atol, rtol) in vcat(
 #         [
 #             (EQ(), "EQ", 1e-6, 1e-6),
@@ -265,7 +262,7 @@ end
 #         )
 #             for (k, k_name) in ((EQ, "EQ"), (linear, "linear"), (exp, "exp"))
 #             for α in (nothing, randn(rng))
-#             for β in (nothing, softplus(randn(rng)))
+#             for β in (nothing, exp(randn(rng)))
 #             for l in (nothing, randn(rng))
 #         ],
 #     )

@@ -9,8 +9,8 @@ const _rtol = 1e-10
 const _atol = 1e-10
 
 _to_psd(A::Matrix{<:Real}) = A * A' + I
-_to_psd(a::Vector{<:Real}) = softplus.(a) .+ 1
-_to_psd(σ::Real) = softplus(σ) + 1
+_to_psd(a::Vector{<:Real}) = exp.(a) .+ 1
+_to_psd(σ::Real) = exp(σ) + 1
 _to_psd(As::Vector{<:Matrix{<:Real}}) = block_diagonal(_to_psd.(As))
 
 Base.length(::Nothing) = 0
