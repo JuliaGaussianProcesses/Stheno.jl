@@ -1,8 +1,6 @@
 import Base: +, *, zero
-import Distances: pairwise, colwise
 using Distances: sqeuclidean, SqEuclidean, Euclidean
 using Base.Broadcast: broadcast_shape
-import Base: exp
 
 abstract type Kernel end
 
@@ -77,39 +75,12 @@ The standardised Exponentiated Quadratic kernel (no free parameters).
 struct EQ <: Kernel end
 
 # Binary methods.
-ew(::EQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-sqeuclidean.(x, x′) ./ 2)
-pw(::EQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-sqeuclidean.(x, x′') ./ 2)
-ew(::EQ, X::ColVecs, X′::ColVecs) = exp.(.-colwise(SqEuclidean(), X.X, X′.X) ./ 2)
-pw(::EQ, X::ColVecs, X′::ColVecs) = exp.(.-pw(SqEuclidean(), X.X, X′.X; dims=2) ./ 2)
+ew(::EQ, x::AV, x′::AV) = exp.(.-ew(SqEuclidean(), x, x′) ./ 2)
+pw(::EQ, x::AV, x′::AV) = exp.(.-pw(SqEuclidean(), x, x′) ./ 2)
 
 # Unary methods.
-ew(::EQ, x::AV) = ones(eltype(x), length(x))
-pw(::EQ, x::AV{<:Real}) = pw(EQ(), x, x)
-ew(::EQ, X::ColVecs) = ones(eltype(X.X), length(X))
-pw(::EQ, X::ColVecs) = exp.(.-pw(SqEuclidean(), X.X; dims=2) ./ 2)
-
-# Optimised adjoints. These really do count in terms of performance (I think).
-@adjoint function ew(::EQ, x::AV{<:Real}, x′::AV{<:Real})
-    s = ew(EQ(), x, x′)
-    return s, function(Δ)
-        x̄′ = (x .- x′) .* Δ .* s
-        return nothing, -x̄′, x̄′
-    end
-end
-@adjoint function pw(::EQ, x::AV{<:Real}, x′::AV{<:Real})
-    s = pw(EQ(), x, x′)
-    return s, function(Δ)
-        x̄′ = Δ .* (x .- x′') .* s
-        return nothing, -reshape(sum(x̄′; dims=2), :), reshape(sum(x̄′; dims=1), :)
-    end
-end
-@adjoint function pw(::EQ, x::AV{<:Real})
-    s = pw(EQ(), x)
-    return s, function(Δ)
-        x̄_tmp = Δ .* (x .- x') .* s
-        return nothing, reshape(sum(x̄_tmp; dims=1), :) - reshape(sum(x̄_tmp; dims=2), :)
-    end
-end
+ew(::EQ, x::AV) = exp.(.-ew(SqEuclidean(), x) ./ 2)
+pw(::EQ, x::AV) = exp.(.-pw(SqEuclidean(), x) ./ 2)
 
 
 
@@ -138,16 +109,12 @@ The standardised Exponential kernel.
 struct Exp <: Kernel end
 
 # Binary methods
-ew(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′))
-pw(k::Exp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′'))
-ew(k::Exp, x::ColVecs, x′::ColVecs) = exp.(.-colwise(Euclidean(), x.X, x′.X))
-pw(k::Exp, x::ColVecs, x′::ColVecs) = exp.(.-pairwise(Euclidean(), x.X, x′.X; dims=2))
+ew(k::Exp, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′))
+pw(k::Exp, x::AV, x′::AV) = exp.(.-pw(Euclidean(), x, x′))
 
 # Unary methods
-ew(::Exp, x::AV{<:Real}) = ones(eltype(x), length(x))
-ew(::Exp, x::ColVecs{T}) where {T} = ones(T, length(x))
-pw(k::Exp, x::AV{<:Real}) = pw(k, x, x)
-pw(k::Exp, x::ColVecs) = exp.(.-pairwise(Euclidean(), x.X; dims=2))
+ew(::Exp, x::AV) = exp.(.-ew(Euclidean(), x))
+pw(::Exp, x::AV) = exp.(.-pw(Euclidean(), x))
 
 
 
@@ -173,18 +140,12 @@ function _matern32(d)
 end
 
 # Binary methods
-ew(::Matern32, x::AV{<:Real}, x′::AV{<:Real}) = _matern32.(abs.(x .- x′))
-pw(::Matern32, x::AV{<:Real}, x′::AV{<:Real}) = _matern32.(abs.(x .- x′'))
-ew(k::Matern32, x::ColVecs, x′::ColVecs) = _matern32.(colwise(Euclidean(), x.X, x′.X))
-function pw(k::Matern32, x::ColVecs, x′::ColVecs)
-    return _matern32.(pairwise(Euclidean(), x.X, x′.X; dims=2))
-end
+ew(k::Matern32, x::AV, x′::AV) = _matern32.(ew(Euclidean(), x, x′))
+pw(k::Matern32, x::AV, x′::AV) = _matern32.(pw(Euclidean(), x, x′))
 
 # Unary methods
-ew(::Matern32, x::AV{<:Real}) = ones(eltype(x), length(x))
-pw(k::Matern32, x::AV{<:Real}) = pw(k, x, x)
-ew(::Matern32, x::ColVecs{T}) where {T<:Real} = ones(T, length(x))
-pw(::Matern32, x::ColVecs) = _matern32.(pairwise(Euclidean(), x.X; dims=2))
+ew(k::Matern32, x::AV) = _matern32.(ew(Euclidean(), x))
+pw(k::Matern32, x::AV) = _matern32.(pw(Euclidean(), x))
 
 
 
@@ -201,18 +162,12 @@ function _matern52(d)
 end
 
 # Binary methods
-ew(::Matern52, x::AV{<:Real}, x′::AV{<:Real}) = _matern52.(abs.(x .- x′))
-pw(::Matern52, x::AV{<:Real}, x′::AV{<:Real}) = _matern52.(abs.(x .- x′'))
-ew(k::Matern52, x::ColVecs, x′::ColVecs) = _matern52.(colwise(Euclidean(), x.X, x′.X))
-function pw(k::Matern52, x::ColVecs, x′::ColVecs)
-    return _matern52.(pairwise(Euclidean(), x.X, x′.X; dims=2))
-end
+ew(k::Matern52, x::AV, x′::AV) = _matern52.(ew(Euclidean(), x, x′))
+pw(k::Matern52, x::AV, x′::AV) = _matern52.(pw(Euclidean(), x, x′))
 
 # Unary methods
-ew(::Matern52, x::AV{<:Real}) = ones(eltype(x), length(x))
-pw(k::Matern52, x::AV{<:Real}) = pw(k, x, x)
-ew(::Matern52, x::ColVecs{T}) where {T<:Real} = ones(T, length(x))
-pw(::Matern52, x::ColVecs) = _matern52.(pairwise(Euclidean(), x.X; dims=2))
+ew(k::Matern52, x::AV) = _matern52.(ew(Euclidean(), x))
+pw(k::Matern52, x::AV) = _matern52.(pw(Euclidean(), x))
 
 
 
@@ -227,21 +182,13 @@ end
 
 _rq(d, α) = (1 + d / (2α))^(-α)
 
-# Binary methods
-ew(k::RQ, x::AV{<:Real}, x′::AV{<:Real}) = _rq.(sqeuclidean.(x, x′), k.α)
-pw(k::RQ, x::AV{<:Real}, x′::AV{<:Real}) = _rq.(sqeuclidean.(x, x′'), k.α)
-function ew(k::RQ, x::ColVecs, x′::ColVecs)
-    return _rq.(colwise(SqEuclidean(), x.X, x′.X), k.α)
-end
-function pw(k::RQ, x::ColVecs, x′::ColVecs)
-    return _rq.(pairwise(SqEuclidean(), x.X, x′.X; dims=2), k.α)
-end
+# Binary methods.
+ew(k::RQ, x::AV, x′::AV) = _rq.(ew(SqEuclidean(), x, x′), k.α)
+pw(k::RQ, x::AV, x′::AV) = _rq.(pw(SqEuclidean(), x, x′), k.α)
 
-# Unary methods
-ew(k::RQ, x::AV{<:Real}) = ones(eltype(x), length(x))
-pw(k::RQ, x::AV{<:Real}) = pw(k, x, x)
-ew(k::RQ, x::ColVecs{T}) where {T<:Real} = ones(T, length(x))
-pw(k::RQ, x::ColVecs) = _rq.(pairwise(SqEuclidean(), x.X; dims=2), k.α)
+# Unary methods.
+ew(k::RQ, x::AV) = _rq.(ew(SqEuclidean(), x), k.α)
+pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), k.α)
 
 
 
@@ -309,18 +256,12 @@ struct GammaExp{Tγ<:Real} <: Kernel
 end
 
 # Binary methods
-ew(k::GammaExp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′).^k.γ)
-pw(k::GammaExp, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-abs.(x .- x′').^k.γ)
-ew(k::GammaExp, x::ColVecs, x′::ColVecs) = exp.(.-colwise(Euclidean(), x.X, x′.X).^k.γ)
-function pw(k::GammaExp, x::ColVecs, x′::ColVecs)
-    return exp.(.-pairwise(Euclidean(), x.X, x′.X; dims=2).^k.γ)
-end
+ew(k::GammaExp, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′).^k.γ)
+pw(k::GammaExp, x::AV, x′::AV) = exp.(.-pw(Euclidean(), x, x′).^k.γ)
 
 # Unary methods
-ew(::GammaExp, x::AV{<:Real}) = ones(eltype(x), length(x))
-ew(::GammaExp, x::ColVecs{T}) where {T} = ones(T, length(x))
-pw(k::GammaExp, x::AV{<:Real}) = pw(k, x, x)
-pw(k::GammaExp, x::ColVecs) = exp.(.-pairwise(Euclidean(), x.X; dims=2).^k.γ)
+ew(k::GammaExp, x::AV) = exp.(.-ew(Euclidean(), x).^k.γ)
+pw(k::GammaExp, x::AV) = exp.(.-pw(Euclidean(), x).^k.γ)
 
 
 
