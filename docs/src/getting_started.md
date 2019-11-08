@@ -189,4 +189,4 @@ That's it! You now know how to do typical GP stuff in Stheno. In particular how 
 - visualise a simple 1D example
 - infer kernel parameters in a variety of ways
 
-We _not_ covered any of the fancy features of Stheno yet tough.
+We _haven't_ covered any of the fancy features of Stheno yet though.
