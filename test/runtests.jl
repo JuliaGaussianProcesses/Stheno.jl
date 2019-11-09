@@ -1,4 +1,4 @@
-using Stheno, Test, Random, BlockArrays, StatsFuns, TimerOutputs
+using Stheno, Test, Random, BlockArrays, TimerOutputs
 using BlockArrays: _BlockArray
 
 using Stheno: ew, pw, mean_vector, cov, cov_diag

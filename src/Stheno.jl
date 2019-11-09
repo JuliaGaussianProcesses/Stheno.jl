@@ -1,6 +1,6 @@
 module Stheno
 
-    using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random,
+    using Distributions, Distances, BlockArrays, Statistics, Random,
         LinearAlgebra, Zygote
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
@@ -33,7 +33,6 @@ module Stheno
     include(joinpath("util", "block_arrays", "triangular.jl"))
     include(joinpath("util", "abstract_data_set.jl"))
     include(joinpath("util", "distances.jl"))
-    include(joinpath("util", "fillarrays.jl"))
     include(joinpath("util", "proper_type_piracy.jl"))
 
     # Supertype for GPs.

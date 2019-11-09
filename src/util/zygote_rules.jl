@@ -61,3 +61,11 @@ end
         error("@adjoint not implemented for :factors. (I couldn't make it work...)")
     end
 end
+
+import LinearAlgebra: HermOrSym, diag, Diagonal
+
+diag(S::Symmetric{T, <:Diagonal{T}} where T) = S.data.diag
+Zygote._symmetric_back(Δ::Diagonal) = Δ
+
+# Diagonal matrices are always symmetric...
+cholesky(A::HermOrSym{T, <:Diagonal{T}} where T) = cholesky(Diagonal(diag(A)))
