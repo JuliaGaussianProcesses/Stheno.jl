@@ -21,15 +21,13 @@ Distributions = "0.19, 0.20, 0.21"
 FiniteDifferences = "0.9"
 MacroTools = "0.5"
 RecipesBase = "0.7.0"
-StatsFuns = "0.8.0"
 Zygote = "0.3.4"
 ZygoteRules = "0.1.0"
 
 [extras]
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
-StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [targets]
-test = ["FiniteDifferences", "StatsFuns", "Test", "TimerOutputs"]
+test = ["FiniteDifferences", "Test", "TimerOutputs"]
