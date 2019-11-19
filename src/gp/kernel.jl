@@ -1,6 +1,7 @@
 import Base: +, *, zero
 using Distances: sqeuclidean, SqEuclidean, Euclidean
 using Base.Broadcast: broadcast_shape
+using LinearAlgebra: isposdef, checksquare
 
 abstract type Kernel end
 
@@ -319,6 +320,28 @@ pw(k::Noise{T}, x::AV, x′::AV) where {T} = zeros(T, length(x), length(x′))
 ew(k::Noise{T}, x::AV) where {T} = ones(T, length(x))
 pw(k::Noise{T}, x::AV) where {T} = diagm(0=>ones(T, length(x)))
 
+
+"""
+    Precomputed{T<:Real} <: Kernel
+
+Using the values of a precomputed Gram matrix as a kernel.
+"""
+struct Precomputed{M<:AbstractMatrix{T<:Real}} <: Kernel
+    K::M
+    function Precomputed(M)
+        checksquare(M)
+        @assert isposdef(M) "M is not positive definite"
+        new{typeof(M)}(M)
+    end
+end
+
+# Binary methods.
+ew(k::Precomputed, x::AV{<:Int}, x′::AV{<:Int}) = [K[p, q] for (p, q) in zip(x, x′)]
+pw(k::Precomputed, x::AV{<:Int}, x′::AV{<:Int}) = k.K[x,x′]
+
+# Unary methods.
+ew(k::Precomputed, x::AV) = diag(k.K)[x]
+pw(k::Precomputed, x::AV) = k.K[x,x]
 
 
 #
