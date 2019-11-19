@@ -9,8 +9,8 @@ const _rtol = 1e-10
 const _atol = 1e-10
 
 _to_psd(A::Matrix{<:Real}) = A * A' + I
-_to_psd(a::Vector{<:Real}) = softplus.(a) .+ 1
-_to_psd(σ::Real) = softplus(σ) + 1
+_to_psd(a::Vector{<:Real}) = exp.(a) .+ 1
+_to_psd(σ::Real) = exp(σ) + 1
 _to_psd(As::Vector{<:Matrix{<:Real}}) = block_diagonal(_to_psd.(As))
 
 Base.length(::Nothing) = 0
@@ -77,14 +77,10 @@ function adjoint_test(
     fdm=FiniteDifferences.Central(5, 1),
     print_results=false,
 )
-
     # Compute forwards-pass and j′vp.
     y, back = Zygote.forward(f, x...)
     @timeit to "adj_ad" adj_ad = back(ȳ)
     @timeit to "adj_fd" adj_fd = j′vp(fdm, f, ȳ, x...)
-
-    # If unary, pull out first thing from ad.
-    adj_ad = length(x) == 1 ? first(adj_ad) : adj_ad
 
     # Check that forwards-pass agrees with plain forwards-pass.
     @test y ≈ f(x...)

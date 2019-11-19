@@ -1,10 +1,10 @@
-using Zygote, IRTools, Random
+using Zygote
 using Zygote: @adjoint, literal_getproperty
 import Zygote: accum
 
 import Distances: pairwise, colwise
 
-@nograd MersenneTwister, propertynames
+@nograd MersenneTwister, propertynames, broadcast_shape
 
 function accum(D::Diagonal{T}, B::AbstractMatrix) where {T}
     A = Matrix{Union{T, Nothing}}(undef, size(D))
@@ -61,3 +61,11 @@ end
         error("@adjoint not implemented for :factors. (I couldn't make it work...)")
     end
 end
+
+import LinearAlgebra: HermOrSym, diag, Diagonal
+
+diag(S::Symmetric{T, <:Diagonal{T}} where T) = S.data.diag
+Zygote._symmetric_back(Δ::Diagonal) = Δ
+
+# Diagonal matrices are always symmetric...
+cholesky(A::HermOrSym{T, <:Diagonal{T}} where T) = cholesky(Diagonal(diag(A)))

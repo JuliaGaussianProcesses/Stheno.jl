@@ -1,14 +1,16 @@
 module Stheno
 
-    using Distributions, Distances, BlockArrays, FillArrays, Statistics, Random, Zygote,
-        LinearAlgebra
+    using Distributions, Distances, BlockArrays, Statistics, Random,
+        LinearAlgebra, Zygote
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
     import Statistics: mean, cov
     using LinearAlgebra: AbstractTriangular
-    using Zygote: @adjoint, @nograd, @showgrad, hook
+    using ZygoteRules: @adjoint
+    using Zygote: @nograd
     using BlockArrays: _BlockArray
     import LinearAlgebra: cholesky, cross
+    import Distances: pairwise, colwise
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
@@ -18,13 +20,10 @@ module Stheno
     const BlockUpperTriangular{T} = UpperTriangular{T, <:BlockMatrix{T}}
     const BlockTriangular{T} = Union{BlockLowerTriangular{T}, BlockUpperTriangular{T}}
 
-
     function elementwise end
 
     const pw = pairwise
     const ew = elementwise
-
-    Zygote.@nograd broadcast_shape
 
     # Various bits of utility that aren't inherently GP-related. Often very type-piratic.
     include(joinpath("util", "zygote_rules.jl"))
@@ -33,7 +32,7 @@ module Stheno
     include(joinpath("util", "block_arrays", "diagonal.jl"))
     include(joinpath("util", "block_arrays", "triangular.jl"))
     include(joinpath("util", "abstract_data_set.jl"))
-    include(joinpath("util", "fillarrays.jl"))
+    include(joinpath("util", "distances.jl"))
     include(joinpath("util", "proper_type_piracy.jl"))
 
     # Supertype for GPs.

@@ -1,4 +1,4 @@
-using Stheno, Test, Random, BlockArrays, StatsFuns, TimerOutputs
+using Stheno, Test, Random, BlockArrays, TimerOutputs
 using BlockArrays: _BlockArray
 
 using Stheno: ew, pw, mean_vector, cov, cov_diag
@@ -24,11 +24,7 @@ include("test_util.jl")
             include(joinpath("util", "block_arrays", "diagonal.jl"))
         end
         include(joinpath("util", "abstract_data_set.jl"))
-    end
-
-    println("abstract_gp:")
-    @timedtestset "abstract_gp" begin
-        include("abstract_gp.jl")
+        include(joinpath("util", "distances.jl"))
     end
 
     println("gp:")
@@ -48,6 +44,11 @@ include("test_util.jl")
         include(joinpath("composite", "addition.jl"))
         include(joinpath("composite", "compose.jl"))
         include(joinpath("composite", "approximate_conditioning.jl"))
+    end
+
+    println("abstract_gp:")
+    @timedtestset "abstract_gp" begin
+        include("abstract_gp.jl")
     end
 end
 
