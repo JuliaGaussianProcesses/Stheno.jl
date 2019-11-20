@@ -1,6 +1,6 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched, Scaled
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Sum, Product, stretch,
-    Poly, GammaExp, Wiener, WienerVelocity
+    Poly, GammaExp, Wiener, WienerVelocity, Precomputed
 using LinearAlgebra
 
 @timedtestset "kernel" begin
@@ -58,6 +58,16 @@ using LinearAlgebra
         @timedtestset "Matern52" begin
             differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+        end
+
+        @timedtestset "precomputed" begin
+            X = randn(rng, N, N)
+            K = X * X'
+            k = Linear()
+            @test pw(Precomputed(K), 1:N) ≈ pw(k, ColVecs(X'))
+            @test pw(Precomputed(K), 1:N, 1:N) ≈ pw(k, ColVecs(X'), ColVecs(X'))
+            @test ew(Precomputed(K), 1:N) ≈ ew(k, ColVecs(X'))
+            @test ew(Precomputed(K), 1:N, 1:N) ≈ ew(k, ColVecs(X'), ColVecs(X'))
         end
 
         @timedtestset "RQ" begin

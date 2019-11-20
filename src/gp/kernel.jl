@@ -326,23 +326,24 @@ pw(k::Noise{T}, x::AV) where {T} = diagm(0=>ones(T, length(x)))
 
 Using the values of a precomputed Gram matrix as a kernel.
 """
-struct Precomputed{M<:AbstractMatrix{T<:Real}} <: Kernel
+struct Precomputed{M<:AbstractMatrix{<:Real}} <: Kernel
     K::M
-    function Precomputed(M)
-        checksquare(M)
-        @assert isposdef(M) "M is not positive definite"
-        new{typeof(M)}(M)
+    function Precomputed(K::AbstractMatrix{<:Real})
+        checksquare(K)
+        @assert isposdef(K) "M is not positive definite"
+        new{typeof(K)}(K)
     end
 end
 
 # Binary methods.
-ew(k::Precomputed, x::AV{<:Int}, x′::AV{<:Int}) = [K[p, q] for (p, q) in zip(x, x′)]
+ew(k::Precomputed, x::AV{<:Int}, x′::AV{<:Int}) = [k.K[p, q] for (p, q) in zip(x, x′)]
 pw(k::Precomputed, x::AV{<:Int}, x′::AV{<:Int}) = k.K[x,x′]
 
 # Unary methods.
 ew(k::Precomputed, x::AV) = diag(k.K)[x]
 pw(k::Precomputed, x::AV) = k.K[x,x]
 
+export Precomputed
 
 #
 # Composite Kernels
@@ -468,7 +469,7 @@ for (k, K) in (
     (:matern52, :Matern52),
     (:linear, :Linear),
     (:wiener, :Wiener),
-    (:wiener_velocity, :WienerVelocity),
+    (:wiener_velocity, :WienerVelocity)
 )
     @eval $k() = $K()
     @eval $k(a::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch($k(), a)
