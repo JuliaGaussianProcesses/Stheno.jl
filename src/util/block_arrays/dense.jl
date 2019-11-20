@@ -23,7 +23,10 @@ const BlockArrayAdjoint = NamedTuple{(:blocks, :block_sizes)}
 ####################################### Various util #######################################
 
 import BlockArrays: BlockVector, BlockMatrix, blocksizes, cumulsizes, AbstractBlockSizes
+import BlockArrays: BlockSizes
 export BlockVector, BlockMatrix, blocksizes, blocklengths
+
+@nograd BlockSizes
 
 @adjoint function _BlockArray(
     blocks::R,
@@ -199,7 +202,7 @@ are_conformal(A::AVM, B::AVM) = cumulsizes(A, 2) == cumulsizes(B, 1)
 #         for k in 1:j-1
 #             D[Block(j, j)] -= U[Block(k, j)]' * U[Block(k, j)]
 #         end
-#         U_tmp, back = Zygote.forward(A->cholesky(A).U, D[Block(j, j)])
+#         U_tmp, back = Zygote.pullback(A->cholesky(A).U, D[Block(j, j)])
 #         U[Block(j, j)] = U_tmp
 #         backs[j] = back
 #         # U[Block(j, j)] = cholesky(U[Block(j, j)]).U

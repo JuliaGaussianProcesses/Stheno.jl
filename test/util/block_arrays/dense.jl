@@ -12,7 +12,7 @@ using BlockArrays: cumulsizes, _BlockArray, BlockSizes
             x_blks = BlockArray(x, blk_sizes).blocks
             ȳ_blks = BlockArray(ȳ, blk_sizes).blocks
 
-            y, back = Zygote.forward(_BlockArray, x_blks, blk_sizes)
+            y, back = Zygote.pullback(_BlockArray, x_blks, blk_sizes)
             @test y == _BlockArray(x_blks, blk_sizes)
             @test first(back(ȳ)) == ȳ_blks
             @test last(back(ȳ)) === nothing
@@ -25,7 +25,7 @@ using BlockArrays: cumulsizes, _BlockArray, BlockSizes
             X_blks = BlockArray(X, blk_sizes).blocks
             Ȳ_blks = BlockArray(Ȳ, blk_sizes).blocks
 
-            Y, back = Zygote.forward(_BlockArray, X_blks, blk_sizes)
+            Y, back = Zygote.pullback(_BlockArray, X_blks, blk_sizes)
             @test Y == _BlockArray(X_blks, blk_sizes)
             @test first(back(Ȳ)) == Ȳ_blks
             @test last(back(Ȳ)) === nothing
@@ -182,12 +182,12 @@ using BlockArrays: cumulsizes, _BlockArray, BlockSizes
 
     #         # Compute cholesky adjoint with Matrix.
     #         C̄_dense = (factors=C̄_factors, uplo=nothing, info=nothing)
-    #         _, back_dense = Zygote.forward(cholesky, A_)
+    #         _, back_dense = Zygote.pullback(cholesky, A_)
     #         Ā_ = first(back_dense(C̄))
 
     #         # Compute cholesky adjoint with BlockMatrix.
     #         C̄_block = (factors=BlockArray(C̄_factors, blocksizes(A)...),)
-    #         _, back_block = Zygote.forward(cholesky, A)
+    #         _, back_block = Zygote.pullback(cholesky, A)
     #         Ā = first(back_block(C̄_block))
 
     #         # Ensure approximate agreement.
@@ -201,18 +201,18 @@ using BlockArrays: cumulsizes, _BlockArray, BlockSizes
     #     @test logdet(C) ≈ logdet(C_)
 
     #     # Check that the forwards-pass agrees.
-    #     @test Zygote.forward(logdet, C)[1] == logdet(C)
+    #     @test Zygote.pullback(logdet, C)[1] == logdet(C)
 
     #     # Check that reverse-pass agrees with dense revese-pass.
     #     @testset "logdet gradients" begin
     #         ȳ = randn(rng)
 
     #         # Compute adjoint with dense.
-    #         _, back_dense = Zygote.forward(logdet, C_)
+    #         _, back_dense = Zygote.pullback(logdet, C_)
     #         C̄_ = back_dense(ȳ)
 
     #         # Compute adjoint with block
-    #         _, back_block = Zygote.forward(logdet, C)
+    #         _, back_block = Zygote.pullback(logdet, C)
     #         C̄ = back_block(ȳ)
 
     #         # Check that both answers approximately agree.

@@ -57,8 +57,8 @@ function BlockDiagonal_chol_tests(rng, blocks)
     @test C.U ≈ Csym.U
 
     # Test backprop for accessing `U`.
-    U_diag, back_diag = Zygote.forward(D->cholesky(D).U, D)
-    U_dens, back_dens = Zygote.forward(D->cholesky(D).U, Matrix(D))
+    U_diag, back_diag = Zygote.pullback(D->cholesky(D).U, D)
+    U_dens, back_dens = Zygote.pullback(D->cholesky(D).U, Matrix(D))
 
     @test U_diag ≈ U_dens
 
@@ -69,8 +69,8 @@ function BlockDiagonal_chol_tests(rng, blocks)
     @test D̄_diag isa BlockDiagonal
 
     # Test backprop for logdet of a Cholesky.
-    l_diag, l_back_diag = Zygote.forward(D->logdet(cholesky(D)), D)
-    l_dens, l_back_dens = Zygote.forward(D->logdet(cholesky(D)), Matrix(D))
+    l_diag, l_back_diag = Zygote.pullback(D->logdet(cholesky(D)), D)
+    l_dens, l_back_dens = Zygote.pullback(D->logdet(cholesky(D)), Matrix(D))
 
     @test l_diag ≈ l_dens
 
@@ -139,8 +139,8 @@ end
         @test Matrix(-A) == -Matrix(A)
         @test -A isa BlockDiagonal
 
-        Y_diag, back_diag = Zygote.forward(-, A)
-        Y_dens, back_dens = Zygote.forward(-, Matrix(A))
+        Y_diag, back_diag = Zygote.pullback(-, A)
+        Y_dens, back_dens = Zygote.pullback(-, Matrix(A))
 
         Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
         @test Y_diag == -A
@@ -154,8 +154,8 @@ end
         @test Matrix(A') == Matrix(A)'
         @test A' isa BlockDiagonal
 
-        Y, back = Zygote.forward(adjoint, A)
-        Y_dens, back_dens = Zygote.forward(adjoint, Matrix(A))
+        Y, back = Zygote.pullback(adjoint, A)
+        Y_dens, back_dens = Zygote.pullback(adjoint, Matrix(A))
         Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
         @test Y == A'
         @test Matrix(first(back(Ȳ))) == first(back_dens(Matrix(Ȳ)))
@@ -168,8 +168,8 @@ end
         @test Matrix(transpose(A)) == transpose(Matrix(A))
         @test transpose(A) isa BlockDiagonal
 
-        Y, back = Zygote.forward(transpose, A)
-        Y_dens, back_dens = Zygote.forward(transpose, Matrix(A))
+        Y, back = Zygote.pullback(transpose, A)
+        Y_dens, back_dens = Zygote.pullback(transpose, Matrix(A))
         Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
         @test Y == transpose(A)
         @test Matrix(first(back(Ȳ))) == first(back_dens(Matrix(Ȳ)))
@@ -182,8 +182,8 @@ end
         @test Matrix(UpperTriangular(A)) == UpperTriangular(Matrix(A))
         @test UpperTriangular(A) isa BlockDiagonal
 
-        B_diag, back_diag = Zygote.forward(UpperTriangular, A)
-        B_dens, back_dens = Zygote.forward(UpperTriangular, Matrix(A))
+        B_diag, back_diag = Zygote.pullback(UpperTriangular, A)
+        B_dens, back_dens = Zygote.pullback(UpperTriangular, Matrix(A))
         @test Matrix(B_diag) == B_dens
 
         B̄ = block_diagonal([randn(rng, P, P) for P in Ps])
@@ -198,8 +198,8 @@ end
         @test S == Symmetric(Matrix(A))
         @test S isa BlockDiagonal
 
-        S_diag, back_diag = Zygote.forward(Symmetric, A)
-        S_dens, back_dens = Zygote.forward(Symmetric, Matrix(A))
+        S_diag, back_diag = Zygote.pullback(Symmetric, A)
+        S_dens, back_dens = Zygote.pullback(Symmetric, Matrix(A))
         @test S_diag ≈ S_dens
     end
     @timedtestset "tr_At_A" begin
@@ -208,8 +208,8 @@ end
 
         @test tr_At_A(A) ≈ tr_At_A(Matrix(A))
 
-        b_diag, back_diag = Zygote.forward(tr_At_A, A)
-        b_dens, back_dens = Zygote.forward(tr_At_A, Matrix(A))
+        b_diag, back_diag = Zygote.pullback(tr_At_A, A)
+        b_dens, back_dens = Zygote.pullback(tr_At_A, Matrix(A))
         @test b_diag ≈ b_dens
 
         b̄ = randn(rng)
@@ -225,8 +225,8 @@ end
         @test Matrix(A * B) ≈ Matrix(A) * Matrix(B)
         @test A * B isa BlockDiagonal
 
-        Y_diag, back_diag = Zygote.forward(*, A, B)
-        Y_dens, back_dens = Zygote.forward(*, Matrix(A), Matrix(B))
+        Y_diag, back_diag = Zygote.pullback(*, A, B)
+        Y_dens, back_dens = Zygote.pullback(*, Matrix(A), Matrix(B))
 
         Ȳ = block_diagonal([randn(rng, P, P) for P in Ps])
         @test Y_diag == A * B
@@ -247,8 +247,8 @@ end
         @test Matrix(A * B) ≈ Matrix(A) * B
         @test Matrix(A * collect(B')') ≈ Matrix(A) * B
 
-        Y_diag, back_diag = Zygote.forward(*, A, B)
-        Y_dens, back_dens = Zygote.forward(*, Matrix(A), B)
+        Y_diag, back_diag = Zygote.pullback(*, A, B)
+        Y_dens, back_dens = Zygote.pullback(*, Matrix(A), B)
         @test Y_diag ≈ Y_dens
 
         Ȳ = randn(rng, sum(Ps), Q)
@@ -264,8 +264,8 @@ end
         x = randn(rng, sum(Ps))
         @test Vector(A * x) ≈ Matrix(A) * x
 
-        Y_diag, back_diag = Zygote.forward(*, A, x)
-        Y_dens, back_dens = Zygote.forward(*, Matrix(A), x)
+        Y_diag, back_diag = Zygote.pullback(*, A, x)
+        Y_dens, back_dens = Zygote.pullback(*, Matrix(A), x)
         @test Y_diag ≈ Y_dens
 
         ȳ = randn(rng, sum(Ps))
@@ -281,8 +281,8 @@ end
         B = randn(rng, sum(Ps), Q)
         @test Matrix(A \ B) ≈ Matrix(A) \ B
 
-        Y_diag, back_diag = Zygote.forward(\, A, B)
-        Y_dens, back_dens = Zygote.forward(\, Matrix(A), B)
+        Y_diag, back_diag = Zygote.pullback(\, A, B)
+        Y_dens, back_dens = Zygote.pullback(\, Matrix(A), B)
         @test Y_diag ≈ Y_dens
 
         Ȳ = randn(rng, sum(Ps), Q)
@@ -299,8 +299,8 @@ end
         B = randn(rng, sum(Ps))
         @test Vector(A \ B) ≈ Matrix(A) \ B
 
-        Y_diag, back_diag = Zygote.forward(\, A, B)
-        Y_dens, back_dens = Zygote.forward(\, Matrix(A), B)
+        Y_diag, back_diag = Zygote.pullback(\, A, B)
+        Y_dens, back_dens = Zygote.pullback(\, Matrix(A), B)
         @test Y_diag ≈ Y_dens
 
         Ȳ = randn(rng, sum(Ps))
@@ -318,8 +318,8 @@ end
         X = block_diagonal([randn(rng, P, P) for P in Ps])
         @test U \ X ≈ UpperTriangular(Matrix(U)) \ Matrix(X)
 
-        A_diag, back_diag = Zygote.forward(\, U, X)
-        A_dens, back_dens = Zygote.forward(\, Matrix(U), Matrix(X))
+        A_diag, back_diag = Zygote.pullback(\, U, X)
+        A_dens, back_dens = Zygote.pullback(\, Matrix(U), Matrix(X))
 
         Ā = block_diagonal([randn(rng, P, P) for P in Ps])
         Ū_diag, X̄_diag = back_diag(Ā)
@@ -342,8 +342,8 @@ end
         X = block_diagonal([randn(rng, P, P) for P in Ps])
         @test U' \ X ≈ UpperTriangular(Matrix(U))' \ Matrix(X)
 
-        A_diag, back_diag = Zygote.forward((U, X)->U' \ X, U, X)
-        A_dens, back_dens = Zygote.forward((U, X)->U' \ X, Matrix(U), Matrix(X))
+        A_diag, back_diag = Zygote.pullback((U, X)->U' \ X, U, X)
+        A_dens, back_dens = Zygote.pullback((U, X)->U' \ X, Matrix(U), Matrix(X))
 
         Ā = block_diagonal([randn(rng, P, P) for P in Ps])
         Ū_diag, X̄_diag = back_diag(Ā)

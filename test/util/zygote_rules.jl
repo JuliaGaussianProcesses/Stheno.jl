@@ -9,13 +9,13 @@ using Base.Broadcast: broadcast_shape
         C = cholesky(S)
 
         # Check that non-differentiable ops run forwards and have `nothing` gradients.
-        _, back = Zygote.forward(C->C.info, C)
+        _, back = Zygote.pullback(C->C.info, C)
         @test back(1)[1] == (uplo=nothing, info=nothing, factors=nothing)
-        _, back = Zygote.forward(C->C.uplo, C)
+        _, back = Zygote.pullback(C->C.uplo, C)
         @test back(1)[1] == (uplo=nothing, info=nothing, factors=nothing)
 
         # Unit test retrieving the factors.
-        @test_throws ErrorException Zygote.forward(C->C.factors, C)
+        @test_throws ErrorException Zygote.pullback(C->C.factors, C)
 
         # Test getproperty.
         adjoint_test(A->Cholesky(A, :U, 0).U, randn(rng, N, N), A)

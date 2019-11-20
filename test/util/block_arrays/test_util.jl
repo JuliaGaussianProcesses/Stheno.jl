@@ -12,12 +12,12 @@ function dense_BlockMatrix_BlockVector_mul_tests(rng, X, y)
     @test Vector(X * y) ≈ Matrix(X) * Vector(y)
 
     z̄ = _BlockArray([randn(rng, P) for P in Ps], Ps)
-    z, back = Zygote.forward(*, X, y)
+    z, back = Zygote.pullback(*, X, y)
     X̄, ȳ = back(z̄)
     @test X̄ isa AbstractBlockMatrix
     @test ȳ isa AbstractBlockVector
 
-    z_dense, back_dense = Zygote.forward(*, Matrix(X), Vector(y))
+    z_dense, back_dense = Zygote.pullback(*, Matrix(X), Vector(y))
     X̄_dense, ȳ_dense = back_dense(Vector(z̄))
     @test Vector(z) ≈ z_dense
     @test Matrix(X̄) ≈ X̄_dense
@@ -39,12 +39,12 @@ function dense_BlockMatrix_BlockMatrix_mul_tests(rng, X, Y)
     @test Matrix(X * Y) ≈ Matrix(X) * Matrix(Y)
 
     Z̄ = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
-    Z, back = Zygote.forward(*, X, Y)
+    Z, back = Zygote.pullback(*, X, Y)
     X̄, Ȳ = back(Z̄)
     @test X̄ isa AbstractBlockMatrix
     @test Ȳ isa AbstractBlockMatrix
 
-    Z_dense, back_dense = Zygote.forward(*, Matrix(X), Matrix(Y))
+    Z_dense, back_dense = Zygote.pullback(*, Matrix(X), Matrix(Y))
     X̄_dense, Ȳ_dense = back_dense(Matrix(Z̄))
     @test Matrix(Z) ≈ Z_dense
     @test Matrix(X̄) ≈ X̄_dense

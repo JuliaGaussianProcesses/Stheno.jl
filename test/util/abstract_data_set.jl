@@ -23,12 +23,12 @@ using Stheno: ColVecs, BlockData
         @test eachindex(DX) == 1:N
 
         let
-            @test Zygote.forward(ColVecs, X)[1] == DX
-            DX, back = Zygote.forward(ColVecs, X)
+            @test Zygote.pullback(ColVecs, X)[1] == DX
+            DX, back = Zygote.pullback(ColVecs, X)
             @test back((X=ones(size(X)),))[1] == ones(size(X))
 
-            @test Zygote.forward(DX->DX.X, DX)[1] == X
-            X_, back = Zygote.forward(DX->DX.X, DX)
+            @test Zygote.pullback(DX->DX.X, DX)[1] == X
+            X_, back = Zygote.pullback(DX->DX.X, DX)
             @test back(ones(size(X)))[1].X == ones(size(X))
         end
     end

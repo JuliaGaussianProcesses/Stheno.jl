@@ -48,7 +48,7 @@ LowerTriangular(A::BlockDiagonal) = block_diagonal(LowerTriangular.(A.blocks.dia
 
 Symmetric(A::BlockDiagonal) = block_diagonal(Symmetric.(A.blocks.diag))
 @adjoint function Symmetric(A::BlockDiagonal)
-    return Zygote.forward(A->block_diagonal(Symmetric.(A.blocks.diag)), A)
+    return Zygote.pullback(A->block_diagonal(Symmetric.(A.blocks.diag)), A)
 end
 
 
@@ -149,7 +149,7 @@ end
 
 \(A::BlockDiagonal{<:Real}, x::AbstractVector{<:Real}) = reshape(A \ reshape(x, :, 1), :)
 @adjoint function \(A::BlockDiagonal{<:Real}, x::AbstractVector{<:Real})
-    y_mat, back = Zygote.forward(\, A, reshape(x, :, 1))
+    y_mat, back = Zygote.pullback(\, A, reshape(x, :, 1))
     return vec(y_mat), function(Δ::AbstractVector{<:Real})
         Ā, x̄ = back(reshape(Δ, :, 1))
         return Ā, vec(x̄)
@@ -172,7 +172,7 @@ function cholesky(A::BlockDiagonal{<:Real})
     return Cholesky(block_diagonal(Cs), :U, 0)
 end
 @adjoint function cholesky(A::BlockDiagonal{<:Real})
-    Cs_backs = map(A->Zygote.forward(A->cholesky(A).U, A), diag(A.blocks))
+    Cs_backs = map(A->Zygote.pullback(A->cholesky(A).U, A), diag(A.blocks))
     Cs, backs = first.(Cs_backs), last.(Cs_backs)
     function back(Ū::BlockDiagonal)
         # @show typeof(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs))
