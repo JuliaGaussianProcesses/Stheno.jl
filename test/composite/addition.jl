@@ -107,10 +107,10 @@ end
 # end
 
 # @benchmark foo_logpdf($x,  $y)
-# @benchmark Zygote.forward(foo_logpdf, $x, $y)
+# @benchmark Zygote.pullback(foo_logpdf, $x, $y)
 
 # let
-#     z, back = Zygote.forward(foo_logpdf, x, y)
+#     z, back = Zygote.pullback(foo_logpdf, x, y)
 #     @benchmark $back($(randn()))
 # end
 
@@ -120,17 +120,17 @@ end
 #         C = cholesky(Symmetric(cov(fx)))
 #         return logdet(C) + Xt_invA_X(C, y)
 #     end
-#     display(@benchmark Zygote.forward($foo, $x, $y)) 
-#     z_pw, back_pw = Zygote.forward(foo, x, y)
+#     display(@benchmark Zygote.pullback($foo, $x, $y)) 
+#     z_pw, back_pw = Zygote.pullback(foo, x, y)
 #     @benchmark $back_pw(randn())
 # end
 
 
 # @benchmark foo_elbo($x, $y, $z)
-# @benchmark Zygote.forward(foo_elbo, $x, $y, $z)
+# @benchmark Zygote.pullback(foo_elbo, $x, $y, $z)
 
 # let
-#     L, back = Zygote.forward(foo_elbo, x, y, z)
+#     L, back = Zygote.pullback(foo_elbo, x, y, z)
 #     @benchmark $back($L)
 # end
 

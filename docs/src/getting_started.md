@@ -142,7 +142,7 @@ using AdvancedHMC, Zygote
 # Define the log marginal likelihood function and its gradient
 ℓπ(θ) = -nlml(θ)
 function ∂ℓπ∂θ(θ)
-    lml, back = Zygote.forward(ℓπ, θ)
+    lml, back = Zygote.pullback(ℓπ, θ)
     ∂θ = first(back(1.0))
     return lml, ∂θ
 end

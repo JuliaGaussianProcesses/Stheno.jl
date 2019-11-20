@@ -9,8 +9,8 @@ function create_benchmarks(name, grads::Bool, f, x...)
     if grads
         @benchset name begin
             @bench "eval" $f($x...)
-            __forward() = Zygote.forward(f, x...)
-            out, back = Zygote.forward(f, x...)
+            __forward() = Zygote.pullback(f, x...)
+            out, back = Zygote.pullback(f, x...)
             @bench "forward" $__forward()
             @bench "back" $back($out)
             # @bench "gradient" $__gradient()

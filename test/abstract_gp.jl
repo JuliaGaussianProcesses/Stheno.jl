@@ -137,12 +137,12 @@ end
 
         # Check gradient of logpdf at mean is zero for `f`.
         adjoint_test(ŷ->logpdf(fx, ŷ), 1, ones(size(ŷ)))
-        lp, back = Zygote.forward(ŷ->logpdf(fx, ŷ), ones(size(ŷ)))
+        lp, back = Zygote.pullback(ŷ->logpdf(fx, ŷ), ones(size(ŷ)))
         @test back(randn(rng))[1] == zeros(size(ŷ))
 
         # Check that gradient of logpdf at mean is zero for `y`.
         adjoint_test(ŷ->logpdf(y, ŷ), 1, ones(size(ŷ)))
-        lp, back = Zygote.forward(ŷ->logpdf(y, ŷ), ones(size(ŷ)))
+        lp, back = Zygote.pullback(ŷ->logpdf(y, ŷ), ones(size(ŷ)))
         @test back(randn(rng))[1] == zeros(size(ŷ))
 
         # Check that gradient w.r.t. inputs is approximately correct for `f`.

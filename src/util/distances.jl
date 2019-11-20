@@ -16,7 +16,7 @@ for (d, D) in [(:sqeuclidean, :SqEuclidean), (:euclidean, :Euclidean)]
 end
 
 @adjoint function pairwise(::Euclidean, X::AV{<:Real})
-    D, back = Zygote.forward(X->pairwise(SqEuclidean(), X), X)
+    D, back = Zygote.pullback(X->pairwise(SqEuclidean(), X), X)
     D .= sqrt.(D)
     return D, function(Δ)
         Δ = Δ ./ (2 .* D)

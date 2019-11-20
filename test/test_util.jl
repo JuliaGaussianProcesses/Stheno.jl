@@ -78,7 +78,7 @@ function adjoint_test(
     print_results=false,
 )
     # Compute forwards-pass and j′vp.
-    y, back = Zygote.forward(f, x...)
+    y, back = Zygote.pullback(f, x...)
     @timeit to "adj_ad" adj_ad = back(ȳ)
     @timeit to "adj_fd" adj_fd = j′vp(fdm, f, ȳ, x...)
 

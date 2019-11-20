@@ -39,14 +39,14 @@ end
 
 @adjoint function pairwise(::Euclidean, X::AbstractMatrix, Y::AbstractMatrix; dims=2)
     @assert dims == 2
-    D, back = Zygote.forward((X, Y)->pairwise(SqEuclidean(), X, Y; dims=2), X, Y)
+    D, back = Zygote.pullback((X, Y)->pairwise(SqEuclidean(), X, Y; dims=2), X, Y)
     D .= sqrt.(D)
     return D, Δ -> (nothing, back(Δ ./ (2 .* D))...)
 end
 
 @adjoint function pairwise(::Euclidean, X::AbstractMatrix; dims=2)
     @assert dims == 2
-    D, back = Zygote.forward(X->pairwise(SqEuclidean(), X; dims=2), X)
+    D, back = Zygote.pullback(X->pairwise(SqEuclidean(), X; dims=2), X)
     D .= sqrt.(D)
     return D, function(Δ)
         Δ = Δ ./ (2 .* D)

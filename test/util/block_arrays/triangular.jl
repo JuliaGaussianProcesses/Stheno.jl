@@ -13,12 +13,12 @@ function solve_BlockTriangular_Vector_tests(rng, T, x, TriangleType)
 
     z̄ = _BlockArray([randn(rng, P) for P in Ps], Ps)
 
-    z, back = Zygote.forward(\, T, x)
+    z, back = Zygote.pullback(\, T, x)
     L̄, x̄ = back(z̄)
     @test L̄ isa BlockMatrix
     @test x̄ isa BlockVector
 
-    z_vec, back_mat = Zygote.forward(\, Tmat, xvec)
+    z_vec, back_mat = Zygote.pullback(\, Tmat, xvec)
     L̄_mat, x̄_vec = back_mat(Vector(z̄))
     @test z_vec ≈ Vector(z)
     @test L̄_mat ≈ Matrix(L̄)
@@ -36,12 +36,12 @@ function solve_BlockTriangular_Matrix_tests(rng, T, X, TriangleType)
 
     Z̄ = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
 
-    Z, back = Zygote.forward(\, T, X)
+    Z, back = Zygote.pullback(\, T, X)
     T̄, X̄ = back(Z̄)
     @test T̄ isa BlockMatrix
     @test X̄ isa BlockMatrix
 
-    Z_vec, back_mat = Zygote.forward(\, Tmat, Xmat)
+    Z_vec, back_mat = Zygote.pullback(\, Tmat, Xmat)
     T̄_mat, X̄_mat = back_mat(Matrix(Z̄))
     @test Z_vec ≈ Matrix(Z)
     @test T̄_mat ≈ Matrix(T̄)
