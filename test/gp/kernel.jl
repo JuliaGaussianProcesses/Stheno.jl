@@ -61,13 +61,12 @@ using LinearAlgebra
         end
 
         @timedtestset "precomputed" begin
-            X = randn(rng, N, N)
+            x = ColVecs(randn(rng, N, N))
             K = X * X'
-            k = Linear()
-            @test pw(Precomputed(K), 1:N) ≈ pw(k, ColVecs(X'))
-            @test pw(Precomputed(K), 1:N, 1:N) ≈ pw(k, ColVecs(X'), ColVecs(X'))
-            @test ew(Precomputed(K), 1:N) ≈ ew(k, ColVecs(X'))
-            @test ew(Precomputed(K), 1:N, 1:N) ≈ ew(k, ColVecs(X'), ColVecs(X'))
+            K = pw(linear(), x)
+            k = precomputed(K)
+            @test pw(k, 1:N, 1:N) == pw(linear(), x)
+            kernel_tests(k, 1:N-1, 2:N, 1:N)
         end
 
         @timedtestset "RQ" begin
