@@ -346,6 +346,9 @@ pw(k::Precomputed, x::AV{<:Integer}, x′::AV{<:Integer}) = k.K[x, x′]
 ew(k::Precomputed, x::AV{<:Integer}) = diag(k.K)[x]
 pw(k::Precomputed, x::AV{<:Integer}) = k.K[x,x]
 
+precomputed(K::AbstractMatrix) = Precomputed(K)
+export precomputed
+
 #
 # Composite Kernels
 #

@@ -62,10 +62,10 @@ using LinearAlgebra
 
         @timedtestset "precomputed" begin
             x = ColVecs(randn(rng, N, N))
-            K = X * X'
             K = pw(linear(), x)
             k = precomputed(K)
-            @test pw(k, 1:N, 1:N) == pw(linear(), x)
+            @test pw(k, 1:N) == pw(linear(), x)
+            @test ew(k, 1:N) == ew(linear(), x)
             kernel_tests(k, 1:N-1, 2:N, 1:N)
         end
 
