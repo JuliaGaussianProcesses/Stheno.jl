@@ -46,4 +46,14 @@ using Base.Broadcast: broadcast_shape
         adjoint_test(Diagonal, rand(rng, N, N), randn(rng, N))
         adjoint_test(x->Diagonal(x).diag, randn(rng, N), randn(rng, N))
     end
+    @timedtestset "broadcast" begin
+        @timedtestset "exp" begin
+            rng, N = MersenneTwister(123456), 11
+            adjoint_test(x->exp.(x), randn(rng, N), randn(rng, N))
+        end
+        @timedtestset "-" begin
+            rng, N = MersenneTwister(123456), 11
+            adjoint_test(x->.-x, randn(rng, N), randn(rng, N))
+        end
+    end
 end

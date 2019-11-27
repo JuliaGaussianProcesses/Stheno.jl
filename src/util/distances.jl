@@ -1,8 +1,12 @@
 # Implement some extensions to Euclidean and Squared-Euclidean distances.
 for (d, D) in [(:sqeuclidean, :SqEuclidean), (:euclidean, :Euclidean)]
     @eval begin
-        ew(::$D, x::AV{<:Real}, x′::AV{<:Real}) = $d.(x, x′)
-        pw(::$D, x::AV{<:Real}, x′::AV{<:Real}) = $d.(x, x′')
+        function ew(d::$D, x::AV{<:Real}, x′::AV{<:Real})
+            return colwise(d, reshape(x, 1, :), reshape(x′, 1, :); dims=2)
+        end
+        function pw(d::$D, x::AV{<:Real}, x′::AV{<:Real})
+            return pw(d, reshape(x, 1, :), reshape(x′, 1, :); dims=2)
+        end
 
         ew(::$D, x::AV{T}) where {T<:Real} = zeros(T, length(x))
         pw(::$D, x::AV{<:Real}) = pairwise($D(), x, x)
