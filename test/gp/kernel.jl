@@ -60,15 +60,6 @@ using LinearAlgebra
             differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @timedtestset "precomputed" begin
-            x = ColVecs(randn(rng, N, N))
-            K = pw(linear(), x)
-            k = precomputed(K)
-            @test pw(k, 1:N) == pw(linear(), x)
-            @test ew(k, 1:N) == ew(linear(), x)
-            kernel_tests(k, 1:N-1, 2:N, 1:N)
-        end
-
         @timedtestset "RQ" begin
             @timedtestset "α=1.0" begin
                 differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
@@ -136,6 +127,15 @@ using LinearAlgebra
             @test pw(Noise(), x0, x0) == zeros(length(x0), length(x0))
             @test ew(Noise(), x0) == ones(length(x0))
             @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
+        end
+
+        @timedtestset "precomputed" begin
+            x = ColVecs(randn(rng, N, N))
+            K = pw(linear(), x)
+            k = precomputed(K)
+            @test pw(k, 1:N) == pw(linear(), x)
+            @test ew(k, 1:N) == ew(linear(), x)
+            kernel_tests(k, 1:N-1, 2:N, 1:N)
         end
 
         @timedtestset "Sum" begin

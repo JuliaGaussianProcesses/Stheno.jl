@@ -2,10 +2,10 @@
 for (d, D) in [(:sqeuclidean, :SqEuclidean), (:euclidean, :Euclidean)]
     @eval begin
         function ew(d::$D, x::AV{<:Real}, x′::AV{<:Real})
-            return colwise(d, reshape(x, 1, :), reshape(x′, 1, :); dims=2)
+            return colwise($D(), reshape(x, 1, :), reshape(x′, 1, :))
         end
         function pw(d::$D, x::AV{<:Real}, x′::AV{<:Real})
-            return pw(d, reshape(x, 1, :), reshape(x′, 1, :); dims=2)
+            return pw($D(), reshape(x, 1, :), reshape(x′, 1, :); dims=2)
         end
 
         ew(::$D, x::AV{T}) where {T<:Real} = zeros(T, length(x))
