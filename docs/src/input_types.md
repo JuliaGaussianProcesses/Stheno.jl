@@ -84,19 +84,4 @@ using Distances: SqEuclidean
 pw(k::EQ, x::RowVecs, x′::RowVecs) = exp.(.-pw(SqEuclidean(), x.X, x′.X; dims=1) ./ 2)
 # insert implementations for the unary pw and the two ew methods
 ```
-Unfortunately, this _does_ mean that every `Kernel` needs four new methods to handle a new data structure. While the implementation is usually straightforward, this is somewhat more laborious than is ideal.
-
-There are, however, a couple of tricks that can be employed to avoid this task. If it is the case that a particular data structure can be easily **converted** into e.g., a `ColVecs` object, then one can compose the GP of interest with a function doing this conversion:
-```julia
-# It needs to be possible to broadcast the composition operator efficiently
-# over the `RowVecs` data type for the new `to_colvecs` function.
-to_colvecs(x) = error("Shouldn't ever hit this")
-Base.broadcasted(::typeof(to_colvecs), x::RowVecs) = ColVecs(x.X')
-
-using Stheno: GPC
-f = GP(eq(), GPC())
-g = f ∘ to_colvecs # \circ
-
-x = RowVecs(randn(10, 3))
-rand(g(x))
-```
+In the worst case, this means that every `Kernel` needs four new methods to handle a new data structure. Fortunately, this case isn't typical. Most of the `Kernel`s in `src/kernels.jl` are implemented in terms of the `SqEuclidean` and `Euclidean` distances, and are generically typed. As such it is sufficient to add new `ew` and `pw` methods involving those types, without the need to re-implement those methods for kernels. See [src/util/distances.jl](https://github.com/willtebbutt/Stheno.jl/blob/master/src/util/distances.jl) for examples.
