@@ -11,14 +11,4 @@ Base.size(x::RowVecs) = (length(x),)
 Base.getindex(x::RowVecs, n::Int) = x.X[n, :]</code></pre><p>This structure prints nicely and pass some consistency checks, but none of the base <code>Kernel</code>s in the package know how to treat it. This means that, for example, new <code>pw</code> and <code>ew</code> methods that are specialised to <code>RowVec</code> must be added:</p><pre><code class="language-julia">import Stheno: pw, EQ
 using Distances: SqEuclidean
 pw(k::EQ, x::RowVecs, x′::RowVecs) = exp.(.-pw(SqEuclidean(), x.X, x′.X; dims=1) ./ 2)
-# insert implementations for the unary pw and the two ew methods</code></pre><p>Unfortunately, this <em>does</em> mean that every <code>Kernel</code> needs four new methods to handle a new data structure. While the implementation is usually straightforward, this is somewhat more laborious than is ideal.</p><p>There are, however, a couple of tricks that can be employed to avoid this task. If it is the case that a particular data structure can be easily <strong>converted</strong> into e.g., a <code>ColVecs</code> object, then one can compose the GP of interest with a function doing this conversion:</p><pre><code class="language-julia"># It needs to be possible to broadcast the composition operator efficiently
-# over the `RowVecs` data type for the new `to_colvecs` function.
-to_colvecs(x) = error(&quot;Shouldn&#39;t ever hit this&quot;)
-Base.broadcasted(::typeof(to_colvecs), x::RowVecs) = ColVecs(x.X&#39;)
-
-using Stheno: GPC
-f = GP(eq(), GPC())
-g = f ∘ to_colvecs # \circ
-
-x = RowVecs(randn(10, 3))
-rand(g(x))</code></pre><footer><hr/><a class="previous" href="../internals/"><span class="direction">Previous</span><span class="title">Internals</span></a></footer></article></body></html>
+# insert implementations for the unary pw and the two ew methods</code></pre><p>In the worst case, this means that every <code>Kernel</code> needs four new methods to handle a new data structure. Fortunately, this case isn&#39;t typical. Most of the <code>Kernel</code>s in <code>src/kernels.jl</code> are implemented in terms of the <code>SqEuclidean</code> and <code>Euclidean</code> distances, and are generically typed. As such it is sufficient to add new <code>ew</code> and <code>pw</code> methods involving those types, without the need to re-implement those methods for kernels. See <a href="https://github.com/willtebbutt/Stheno.jl/blob/master/src/util/distances.jl">src/util/distances.jl</a> for examples.</p><footer><hr/><a class="previous" href="../internals/"><span class="direction">Previous</span><span class="title">Internals</span></a></footer></article></body></html>
