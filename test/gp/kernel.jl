@@ -60,15 +60,6 @@ using LinearAlgebra
             differentiable_kernel_tests(Matern52(), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
         end
 
-        @timedtestset "precomputed" begin
-            x = ColVecs(randn(rng, N, N))
-            K = pw(linear(), x)
-            k = precomputed(K)
-            @test pw(k, 1:N) == pw(linear(), x)
-            @test ew(k, 1:N) == ew(linear(), x)
-            kernel_tests(k, 1:N-1, 2:N, 1:N)
-        end
-
         @timedtestset "RQ" begin
             @timedtestset "α=1.0" begin
                 differentiable_kernel_tests(RQ(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
@@ -138,6 +129,16 @@ using LinearAlgebra
             @test pw(Noise(), x0) == Diagonal(ones(length(x0)))
         end
 
+        @timedtestset "precomputed" begin
+            rng = MersenneTwister(123456)
+            x = ColVecs(randn(rng, N, N))
+            K = pw(linear(), x)
+            k = precomputed(K)
+            @test pw(k, 1:N) == pw(linear(), x)
+            @test ew(k, 1:N) ≈ ew(linear(), x)
+            kernel_tests(k, 1:N-1, 2:N, 1:N)
+        end
+
         @timedtestset "Sum" begin
             differentiable_kernel_tests(Sum(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
             differentiable_kernel_tests(Sum(EQ(), Exp()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
@@ -166,11 +167,11 @@ using LinearAlgebra
             end
             @timedtestset "Vector a" begin
                 k = stretch(EQ(), randn(rng, D))
-                differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+                differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
             @timedtestset "Matrix a" begin
                 k = stretch(EQ(), randn(rng, D, D))
-                differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+                differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
             @timedtestset "Convenience Constructors" begin
                 unstretched = [

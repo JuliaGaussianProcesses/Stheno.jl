@@ -69,3 +69,19 @@ Zygote._symmetric_back(Δ::Diagonal) = Δ
 
 # Diagonal matrices are always symmetric...
 cholesky(A::HermOrSym{T, <:Diagonal{T}} where T) = cholesky(Diagonal(diag(A)))
+
+
+
+#
+# Some very specific broadcasting hacks while Zygote has crappy broadcasting.
+#
+
+import Base.Broadcast: broadcasted
+
+@adjoint broadcasted(::typeof(-), x::AbstractArray) = .-x, Δ->(nothing, .-Δ,)
+
+@adjoint function broadcasted(::typeof(exp), x::AbstractArray)
+    y = exp.(x)
+    return y, Δ->(nothing, Δ .* y)
+end
+
