@@ -290,5 +290,6 @@ That's it! You now know how to do typical GP stuff in Stheno. In particular how 
 - compute the log marginal likelihood of some observations
 - visualise a simple 1D example
 - infer kernel parameters in a variety of ways
+- utilise Soss.jl to automatically handle parameters and their transformations
 
-We _haven't_ covered any of the fancy features of Stheno yet though.
+This are just the basic features of Stheno, that you could expect to find in any other GP package. We _haven't_ covered any of the fancy features of Stheno yet though.
