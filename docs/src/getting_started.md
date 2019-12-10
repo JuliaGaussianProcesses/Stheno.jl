@@ -157,7 +157,7 @@ n_samples, n_adapts = 100, 20
 metric = DiagEuclideanMetric(3)
 h = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
 int = Leapfrog(find_good_eps(h, θ0))
-prop = NUTS{MultinomialST, GeneralisedNoUTurn}(int)
+prop = NUTS{MultinomialTS, GeneralisedNoUTurn}(int)
 adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
 
 # Perform inference
@@ -176,6 +176,108 @@ display(plt_hypers);
 As expected, the sampler converges to the posterior distribution quickly. One could combine this code with that from the previous sections to make predictions under the posterior over the hyperparameters.
 
 Also note that we didn't specify a prior over the kernel parameters in this example, so essentially used an improper prior. We could have used a proper prior by appropriately modifying `ℓπ`.
+
+
+
+## Integration with Soss.jl
+
+In all of the examples seen so far it has been necessary to manually define the function `unpack` to convert between a vector representation of our hyperparameters and one that is useful for computing the nlml. Moreover, it has been necessary to manually define conversions between unconstrained and constrained parametrisations of our hyperparameters. While this is fairly straightforward for a small number of parameters, it's clearly not a scalable solution.
+
+Instead we can make use of functionality defined in [Soss.jl](https://github.com/cscherrer/Soss.jl) to
+
+- specify priors for the model parameters
+- automatically derive transformations between a vector of unconstrained real numbers and a form that Soss models know how to handle
+
+
+
+### Specifying a Soss model
+
+```
+using Soss
+
+M = @model x begin
+    σ² ~ LogNormal(0, 1)
+    l ~ LogNormal(0, 1)
+    σ²_n ~ LogNormal(0, 1)
+    f = Stheno.GP(σ² * stretch(matern52(), 1 / l), Stheno.GPC())
+    y ~ f(x, σ²_n + 1e-3)
+end
+```
+
+The above defines the model `M`, with `LogNormal(0, 1)` priors over each of our hyperparameters.
+
+```
+const t = xform(M(x=x), (y=y,))
+```
+
+`t` is a function that transforms between a vector of model parameters and a `NamedTuple` that `Soss` understands.
+
+```
+function ℓπ(θ)
+    (θ_, logjac) = Soss.transform_and_logjac(t, θ)
+    return logpdf(M(x=x), merge(θ_, (y=y,))) + logjac
+end
+nlj(θ) = -ℓπ(θ)
+```
+
+`ℓπ` computes the log joint of the hyperparameters and data. The examples that follow we repeat each of the previously discussed examples without ever having to implement the `unpack` function.
+
+
+
+### Fit with Nelder Mead: Stheno + Soss + Optim
+
+```
+θ0 = randn(3);
+results = Optim.optimize(nlj, θ0, NelderMead());
+θ, _ = Soss.transform_and_logjac(t, results.minimizer);
+```
+
+
+
+### Fit with BFGS: Stheno + Soss + Zygote + Optim
+
+```
+# Hack to make Zygote play nicely with a particular thing in Distributions.
+Zygote.@nograd Distributions.insupport
+
+# Point estimate of parameters via BFGS.
+θ0 = randn(3);
+results = Optim.optimize(nlj, θ->first(gradient(nlj, θ)), θ0, BFGS(); inplace=false)
+θ, _ = Soss.transform_and_logjac(t, results.minimizer);
+```
+
+
+
+### Inference with NUTS: Stheno + Soss + Zygote + AdvancedHMC
+
+```
+# Inference with AdvancedHMC.
+function ∂ℓπ∂θ(θ)
+    lml, back = Zygote.pullback(ℓπ, θ)
+    ∂θ = first(back(1.0))
+    return lml, ∂θ
+end
+
+# Sampling parameter settings
+n_samples, n_adapts = 100, 20
+
+# Draw a random starting points
+θ0 = randn(3)
+
+# Define metric space, Hamiltonian, sampling method and adaptor
+metric = DiagEuclideanMetric(3)
+h = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
+int = Leapfrog(find_good_eps(h, θ0))
+prop = NUTS{MultinomialTS, GeneralisedNoUTurn}(int)
+adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
+
+# Perform inference using NUTS.
+samples, stats = sample(h, prop, θ0, n_samples, adaptor, n_adapts; progress=true)
+
+hypers = first.(Soss.transform_and_logjac.(Ref(t), samples));
+```
+`hypers` could be plotted in exactly the same manner as before.
+
 
 
 ## Conclusion
