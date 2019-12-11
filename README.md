@@ -13,7 +13,7 @@ Please open issues liberally -- if there's anything that's unclear or doesn't wo
 
 __Installation__ - `] add Stheno`.
 
-Please note that Stheno's internals have changed quite substantially for version 0.3.0. No user facing functionality should have changed though, but please raise an issue if something seems to have broken.
+
 
 ## A Couple of Examples
 
@@ -197,6 +197,11 @@ display(posterior_plot);
 [Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.jl)
 
 As before, we visualise the posterior distribution through its marginal statistics and joint samples. Note that the posterior samples over the unobserved process are (unsurprisingly) smooth, whereas the posterior samples over the noisy processes still look uncorrelated and noise-like.
+
+
+## Hyperparameter learning and inference
+
+Fortunately, there is really no need for this package to explicitly provide support for hyperparameter optimisation as the functionality is already available elsewhere -- it's sufficient that it plays nicely with other fantastic packages in the ecosystem such as [Zygote.jl](https://github.com/FluxML/Zygote.jl/) (reverse-mode algorithmic differentiation), [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) (non-linear optimisation), [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl/) (Hamiltonian Monte Carlo / NUTS), and [Soss.jl](https://github.com/cscherrer/Soss.jl/) (a probabilistic programming framework that provides some very helpful glue). For concrete examples of the use of each of these packages in conjunction with Stheno, see the `Getting Started` section of the [(dev) docs](https://willtebbutt.github.io/Stheno.jl/dev).
 
 
 ## Non-Gaussian problems

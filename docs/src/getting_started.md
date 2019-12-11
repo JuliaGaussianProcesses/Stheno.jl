@@ -4,6 +4,10 @@ Here we document how to achieve the basic things that any GP package aught to be
 
 This guide assumes that you know roughly what's going on conceptually with GPs. If you're new to Gaussian processes, I cannot recommend [this video lecture](http://videolectures.net/gpip06_mackay_gpb/) highly enough.
 
+We shall first cover the most low-level ways to perform inference in both the process and hyperparameters, and then discuss how to integrate Stheno models with Soss.jl to remove most of the annoying boilerplate code.
+
+
+
 ## Exact Inference in a GP in 2 Minutes
 
 While Stheno offers some bells and whistles that other GP frameworks do not, it also offers the same functionality as a usual GP framework.
@@ -157,7 +161,7 @@ n_samples, n_adapts = 100, 20
 metric = DiagEuclideanMetric(3)
 h = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
 int = Leapfrog(find_good_eps(h, θ0))
-prop = NUTS{MultinomialST, GeneralisedNoUTurn}(int)
+prop = NUTS{MultinomialTS, GeneralisedNoUTurn}(int)
 adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
 
 # Perform inference
@@ -178,6 +182,110 @@ As expected, the sampler converges to the posterior distribution quickly. One co
 Also note that we didn't specify a prior over the kernel parameters in this example, so essentially used an improper prior. We could have used a proper prior by appropriately modifying `ℓπ`.
 
 
+
+## Automation with Soss.jl
+
+In all of the examples above it has been necessary to define the function `unpack` to convert between a vector representation of our hyperparameters and one that is useful for computing the nlml. Moreover, it has been necessary to manually define conversions between unconstrained and constrained parametrisations of our hyperparameters. While this is fairly straightforward for a small number of parameters, it's clearly not a scalable solution as models grow in size and complexity.
+
+Instead we can make use of functionality defined in [Soss.jl](https://github.com/cscherrer/Soss.jl) to
+
+- specify priors for the model parameters
+- automatically derive transformations between a vector of unconstrained real numbers and a form that Soss models know how to handle
+
+
+
+### Specifying a Soss model
+
+```
+using Soss
+
+M = @model x begin
+    σ² ~ LogNormal(0, 1)
+    l ~ LogNormal(0, 1)
+    σ²_n ~ LogNormal(0, 1)
+    f = Stheno.GP(σ² * stretch(matern52(), 1 / l), Stheno.GPC())
+    y ~ f(x, σ²_n + 1e-3)
+end
+```
+
+The above defines the model `M`, with `LogNormal(0, 1)` priors over each of our hyperparameters.
+
+```
+const t = xform(M(x=x), (y=y,))
+```
+
+`t` is a function that transforms between a vector of model parameters and a `NamedTuple` that `Soss` understands.
+
+```
+function ℓπ(θ)
+    (θ_, logjac) = Soss.transform_and_logjac(t, θ)
+    return logpdf(M(x=x), merge(θ_, (y=y,))) + logjac
+end
+nlj(θ) = -ℓπ(θ)
+```
+
+`ℓπ` computes the log joint of the hyperparameters and data. Note that we have replaced the unpacking and transformation functionality from the previous code with the automatically generated function `t`.
+
+The examples that follow simply repeat those found above, but utilise `t`.
+
+
+
+### Fit with Nelder Mead: Stheno + Soss + Optim
+
+```
+θ0 = randn(3);
+results = Optim.optimize(nlj, θ0, NelderMead());
+θ, _ = Soss.transform_and_logjac(t, results.minimizer);
+```
+
+
+
+### Fit with BFGS: Stheno + Soss + Zygote + Optim
+
+```
+# Hack to make Zygote play nicely with a particular thing in Distributions.
+Zygote.@nograd Distributions.insupport
+
+# Point estimate of parameters via BFGS.
+θ0 = randn(3);
+results = Optim.optimize(nlj, θ->first(gradient(nlj, θ)), θ0, BFGS(); inplace=false)
+θ, _ = Soss.transform_and_logjac(t, results.minimizer);
+```
+
+
+
+### Inference with NUTS: Stheno + Soss + Zygote + AdvancedHMC
+
+```
+# Inference with AdvancedHMC.
+function ∂ℓπ∂θ(θ)
+    lml, back = Zygote.pullback(ℓπ, θ)
+    ∂θ = first(back(1.0))
+    return lml, ∂θ
+end
+
+# Sampling parameter settings
+n_samples, n_adapts = 100, 20
+
+# Draw a random starting points
+θ0 = randn(3)
+
+# Define metric space, Hamiltonian, sampling method and adaptor
+metric = DiagEuclideanMetric(3)
+h = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
+int = Leapfrog(find_good_eps(h, θ0))
+prop = NUTS{MultinomialTS, GeneralisedNoUTurn}(int)
+adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
+
+# Perform inference using NUTS.
+samples, stats = sample(h, prop, θ0, n_samples, adaptor, n_adapts; progress=true)
+
+hypers = first.(Soss.transform_and_logjac.(Ref(t), samples));
+```
+`hypers` could be plotted in exactly the same manner as before.
+
+
+
 ## Conclusion
 
 That's it! You now know how to do typical GP stuff in Stheno. In particular how to:
@@ -188,5 +296,6 @@ That's it! You now know how to do typical GP stuff in Stheno. In particular how 
 - compute the log marginal likelihood of some observations
 - visualise a simple 1D example
 - infer kernel parameters in a variety of ways
+- utilise Soss.jl to automatically handle parameters and their transformations
 
-We _haven't_ covered any of the fancy features of Stheno yet though.
+This are just the basic features of Stheno, that you could expect to find in any other GP package. We _haven't_ covered any of the fancy features of Stheno yet though.
