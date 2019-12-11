@@ -4,6 +4,10 @@ Here we document how to achieve the basic things that any GP package aught to be
 
 This guide assumes that you know roughly what's going on conceptually with GPs. If you're new to Gaussian processes, I cannot recommend [this video lecture](http://videolectures.net/gpip06_mackay_gpb/) highly enough.
 
+We shall first cover the most low-level ways to perform inference in both the process and hyperparameters, and then discuss how to integrate Stheno models with Soss.jl to remove most of the annoying boilerplate code.
+
+
+
 ## Exact Inference in a GP in 2 Minutes
 
 While Stheno offers some bells and whistles that other GP frameworks do not, it also offers the same functionality as a usual GP framework.
@@ -179,9 +183,9 @@ Also note that we didn't specify a prior over the kernel parameters in this exam
 
 
 
-## Integration with Soss.jl
+## Automation with Soss.jl
 
-In all of the examples seen so far it has been necessary to manually define the function `unpack` to convert between a vector representation of our hyperparameters and one that is useful for computing the nlml. Moreover, it has been necessary to manually define conversions between unconstrained and constrained parametrisations of our hyperparameters. While this is fairly straightforward for a small number of parameters, it's clearly not a scalable solution.
+In all of the examples above it has been necessary to define the function `unpack` to convert between a vector representation of our hyperparameters and one that is useful for computing the nlml. Moreover, it has been necessary to manually define conversions between unconstrained and constrained parametrisations of our hyperparameters. While this is fairly straightforward for a small number of parameters, it's clearly not a scalable solution as models grow in size and complexity.
 
 Instead we can make use of functionality defined in [Soss.jl](https://github.com/cscherrer/Soss.jl) to
 
@@ -220,7 +224,9 @@ end
 nlj(θ) = -ℓπ(θ)
 ```
 
-`ℓπ` computes the log joint of the hyperparameters and data. The examples that follow we repeat each of the previously discussed examples without ever having to implement the `unpack` function.
+`ℓπ` computes the log joint of the hyperparameters and data. Note that we have replaced the unpacking and transformation functionality from the previous code with the automatically generated function `t`.
+
+The examples that follow simply repeat those found above, but utilise `t`.
 
 
 
