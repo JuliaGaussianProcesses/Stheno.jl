@@ -202,21 +202,21 @@ pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), k.α)
 
 
 """
-    Cos <: Kernel
+    Cosine <: Kernel
 
 Cosine Kernel with period parameter `p`.
 """
-struct Cos{Tp<:Real} <: Kernel
+struct Cosine{Tp<:Real} <: Kernel
     p::Tp
 end
 
 # Binary methods.
-ew(k::Cos, x::AV, x′::AV) = cos.(pi.*ew(Euclidean(), x, x′) ./k.p)
-pw(k::Cos, x::AV, x′::AV) = cos.(pi.*pw(Euclidean(), x, x′') ./k.p)
+ew(k::Cosine, x::AV, x′::AV) = cos.(pi.*ew(Euclidean(), x, x′) ./k.p)
+pw(k::Cosine, x::AV, x′::AV) = cos.(pi.*pw(Euclidean(), x, x′') ./k.p)
 
 # Unary methods.
-ew(k::Cos, x::AV) = ones(eltype(x), length(x))
-pw(k::Cos, x::AV) = pw(k, x, x')
+ew(k::Cosine, x::AV) = ones(eltype(x), length(x))
+pw(k::Cosine, x::AV) = pw(k, x, x')
 
 
 

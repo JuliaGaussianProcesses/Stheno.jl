@@ -1,6 +1,6 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched, Scaled
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Sum, Product, stretch,
-    Poly, GammaExp, Wiener, WienerVelocity, Precomputed
+    Poly, GammaExp, Wiener, WienerVelocity, Precomputed, Cosine
 using LinearAlgebra
 
 @timedtestset "kernel" begin
@@ -84,6 +84,33 @@ using LinearAlgebra
                 adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, X0, X2)
                 adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, X0)
                 adjoint_test((α, x)->pw(RQ(α), x), Ȳ_sq, 1.5, X0)
+            end
+        end
+
+        @timedtestset "Cosine" begin
+            @timedtestset "p=1.0" begin
+                differentiable_kernel_tests(Cosine(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(Cosine(1.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @timedtestset "p=1.5" begin
+                differentiable_kernel_tests(Cosine(1.5), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(Cosine(1.5), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @timedtestset "p=100.0" begin
+                differentiable_kernel_tests(Cosine(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+                differentiable_kernel_tests(Cosine(100.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            end
+            @timedtestset "single-input" begin
+                adjoint_test((p, x, x′)->ew(Cosine(p), x, x′), ȳ, 1.5, x0, x1)
+                adjoint_test((p, x, x′)->pw(Cosine(p), x, x′), Ȳ, 1.5, x0, x2)
+                adjoint_test((p, x)->ew(Cosine(p), x), ȳ, 1.5, x0)
+                adjoint_test((p, x)->pw(Cosine(p), x), Ȳ_sq, 1.5, x0)
+            end
+            @timedtestset "multi-input" begin
+                adjoint_test((p, x, x′)->ew(Cosine(p), x, x′), ȳ, 1.5, X0, X1)
+                adjoint_test((p, x, x′)->pw(Cosine(p), x, x′), Ȳ, 1.5, X0, X2)
+                adjoint_test((p, x)->ew(Cosine(p), x), ȳ, 1.5, X0)
+                adjoint_test((p, x)->pw(Cosine(p), x), Ȳ_sq, 1.5, X0)
             end
         end
 
