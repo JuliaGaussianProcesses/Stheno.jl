@@ -1,4 +1,4 @@
-import Base: +, *, zero
+import Base: +, *, zero, cos
 using Distances: sqeuclidean, SqEuclidean, Euclidean
 using Base.Broadcast: broadcast_shape
 using LinearAlgebra: isposdef, checksquare
@@ -215,8 +215,8 @@ ew(k::Cosine, x::AV, x′::AV) = cos.(pi.*ew(Euclidean(), x, x′) ./k.p)
 pw(k::Cosine, x::AV, x′::AV) = cos.(pi.*pw(Euclidean(), x, x′) ./k.p)
 
 # Unary methods.
-ew(k::Cosine, x::AV) = ones(eltype(x), length(x))
-pw(k::Cosine, x::AV) = pw(k, x, x)
+ew(k::Cosine, x::AV) = 1 .+ ew(Euclidean(), x)
+pw(k::Cosine, x::AV) = cos.(pi .* pw(Euclidean(), x) ./ k.p)
 
 
 
@@ -512,6 +512,10 @@ end
 rq(α) = RQ(α)
 rq(α, l) = stretch(rq(α), l)
 export rq
+
+cosine(p) = Cosine(p)
+cosine(p, l) = stretch(cosine(p), l)
+export cosine
 
 γ_exponential(γ::Real) = GammaExp(γ)
 γ_exponential(γ::Real, l::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch(GammaExp(γ), l)

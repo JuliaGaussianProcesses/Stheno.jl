@@ -1,6 +1,6 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched, Scaled
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Sum, Product, stretch,
-    Poly, GammaExp, Wiener, WienerVelocity, Precomputed, Cosine
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Cosine, Sum, Product, stretch,
+    Poly, GammaExp, Wiener, WienerVelocity, Precomputed
 using LinearAlgebra
 
 @timedtestset "kernel" begin
