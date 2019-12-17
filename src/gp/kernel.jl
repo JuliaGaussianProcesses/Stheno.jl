@@ -216,7 +216,7 @@ pw(k::Cosine, x::AV, x′::AV) = cos.(pi.*pw(Euclidean(), x, x′') ./k.p)
 
 # Unary methods.
 ew(k::Cosine, x::AV) = ones(eltype(x), length(x))
-pw(k::Cosine, x::AV) = pw(k, x, x')
+pw(k::Cosine, x::AV) = pw(k, x, x)
 
 
 
