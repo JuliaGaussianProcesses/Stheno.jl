@@ -211,12 +211,12 @@ struct Cosine{Tp<:Real} <: Kernel
 end
 
 # Binary methods.
-ew(k::Cosine, x::AV, x′::AV) = cos.(pi.*ew(Euclidean(), x, x′) ./k.p)
-pw(k::Cosine, x::AV, x′::AV) = cos.(pi.*pw(Euclidean(), x, x′) ./k.p)
+ew(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*ew(Euclidean(), x, x′) ./k.p)
+pw(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*pw(Euclidean(), x, x′) ./k.p)
 
 # Unary methods.
-ew(k::Cosine, x::AV) = 1 .+ ew(Euclidean(), x)
-pw(k::Cosine, x::AV) = cos.(pi .* pw(Euclidean(), x) ./ k.p)
+ew(k::Cosine, x::AV{<:Real}) = 1 .+ ew(Euclidean(), x)
+pw(k::Cosine, x::AV{<:Real}) = cos.(pi .* pw(Euclidean(), x) ./ k.p)
 
 
 
