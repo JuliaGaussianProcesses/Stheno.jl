@@ -1,4 +1,4 @@
-import Base: +, *, zero
+import Base: +, *, zero, cos
 using Distances: sqeuclidean, SqEuclidean, Euclidean
 using Base.Broadcast: broadcast_shape
 using LinearAlgebra: isposdef, checksquare
@@ -198,6 +198,25 @@ pw(k::RQ, x::AV, x′::AV) = _rq.(pw(SqEuclidean(), x, x′), k.α)
 # Unary methods.
 ew(k::RQ, x::AV) = _rq.(ew(SqEuclidean(), x), k.α)
 pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), k.α)
+
+
+
+"""
+    Cosine <: Kernel
+
+Cosine Kernel with period parameter `p`.
+"""
+struct Cosine{Tp<:Real} <: Kernel
+    p::Tp
+end
+
+# Binary methods.
+ew(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*ew(Euclidean(), x, x′) ./k.p)
+pw(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*pw(Euclidean(), x, x′) ./k.p)
+
+# Unary methods.
+ew(k::Cosine, x::AV{<:Real}) = 1 .+ ew(Euclidean(), x)
+pw(k::Cosine, x::AV{<:Real}) = cos.(pi .* pw(Euclidean(), x) ./ k.p)
 
 
 
@@ -493,6 +512,10 @@ end
 rq(α) = RQ(α)
 rq(α, l) = stretch(rq(α), l)
 export rq
+
+cosine(p) = Cosine(p)
+cosine(p, l) = stretch(cosine(p), l)
+export cosine
 
 γ_exponential(γ::Real) = GammaExp(γ)
 γ_exponential(γ::Real, l::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch(GammaExp(γ), l)
