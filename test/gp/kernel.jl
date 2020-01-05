@@ -96,7 +96,6 @@ using LinearAlgebra
             end
             @timedtestset "p=100.0" begin
                 differentiable_kernel_tests(Cosine(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-8)        
-                differentiable_kernel_tests(Cosine(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-8)        
             end
             @timedtestset "single-input" begin
                 adjoint_test((p, x, x′)->ew(Cosine(p), x, x′), ȳ, 1.5, x0, x1)
