@@ -1,6 +1,6 @@
 module Stheno
 
-    using Distributions, Distances, BlockArrays, Statistics, Random,
+    using Distributions, Distances, BlockArrays, Statistics, Random, FillArrays,
         LinearAlgebra, Zygote
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
