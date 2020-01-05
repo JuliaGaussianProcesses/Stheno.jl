@@ -93,7 +93,6 @@ using LinearAlgebra
             end
             @timedtestset "p=1.5" begin
                 differentiable_kernel_tests(Cosine(1.5), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-8)        
-                differentiable_kernel_tests(Cosine(1.5), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-8)        
             end
             @timedtestset "p=100.0" begin
                 differentiable_kernel_tests(Cosine(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-8)        
