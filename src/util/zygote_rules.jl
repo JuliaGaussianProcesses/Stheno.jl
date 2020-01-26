@@ -3,6 +3,7 @@ using Zygote: @adjoint, literal_getproperty
 import Zygote: accum
 
 import Distances: pairwise, colwise
+const dtol = 1e-12 # threshold value for precise recalculation of distances
 
 @nograd MersenneTwister, propertynames, broadcast_shape
 
@@ -39,14 +40,14 @@ end
 
 @adjoint function pairwise(::Euclidean, X::AbstractMatrix, Y::AbstractMatrix; dims=2)
     @assert dims == 2
-    D, back = Zygote.pullback((X, Y)->pairwise(SqEuclidean(), X, Y; dims=2), X, Y)
+    D, back = Zygote.pullback((X, Y)->pairwise(SqEuclidean(dtol), X, Y; dims=2), X, Y)
     D .= sqrt.(D)
     return D, Δ -> (nothing, back(Δ ./ (2 .* D))...)
 end
 
 @adjoint function pairwise(::Euclidean, X::AbstractMatrix; dims=2)
     @assert dims == 2
-    D, back = Zygote.pullback(X->pairwise(SqEuclidean(), X; dims=2), X)
+    D, back = Zygote.pullback(X->pairwise(SqEuclidean(dtol), X; dims=2), X)
     D .= sqrt.(D)
     return D, function(Δ)
         Δ = Δ ./ (2 .* D)
@@ -84,4 +85,3 @@ import Base.Broadcast: broadcasted
     y = exp.(x)
     return y, Δ->(nothing, Δ .* y)
 end
-

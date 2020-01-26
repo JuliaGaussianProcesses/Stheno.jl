@@ -56,4 +56,13 @@ using Base.Broadcast: broadcast_shape
             adjoint_test(x->.-x, randn(rng, N), randn(rng, N))
         end
     end
+    @timedtestset "Pairwise when X ≈ Y" begin
+        rng, D, P = MersenneTwister(13), 2, 3, 5
+        X, D̄ = randn(rng, D, P), randn(rng, P, P)
+        Y = X .+ 1e-8
+        adjoint_test(
+            (X, Y)->pairwise(Euclidean(Stheno.dtol), X, Y; dims=2), D̄, X, Y;
+            rtol=1e-3, atol=1e-3, fdm=FiniteDifferences.Forward(2, 1)
+        ) # relaxed test because of machine precision concerns with finite differences
+    end
 end
