@@ -37,7 +37,7 @@ logpdf(fx, y)
 ```
 `fx` should be thought of as "`f` at `x`", and is just as a multivariate Normal distribution, with zero mean and covariance matrix
 ```julia
-Stheno.pairwise(k, x) + σ² * I
+Stheno.pairwise(k, x) + σ²_n * I
 ```
 As such samples can be drawn from it, and the log probability any particular value under it can be computed, in the same way that you would an `MvNormal` from [Distributions.jl](https://github.com/JuliaStats/Distributions.jl).
 
@@ -60,7 +60,7 @@ f_posterior = f | (fx ← y) # ← is \leftarrow[TAB]
 ```
 This is just syntactic sugar for the above. You can use it, or not, the choice is entirely your own.
 
-[Plots.jl](https://github.com/JuliaPlots/Plots.jl) knows how to plot GPs, so it's straightforward to look at the posterior:
+Stheno.jl knows how to use [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to plot GPs, so it's straightforward to look at the posterior:
 ```julia
 x_plot = range(-4.0, 4.0; length=1000);
 plot!(plt, f_posterior(x_plot); samples=10, label="", color=:blue);
@@ -92,7 +92,7 @@ function nlml(θ)
 end
 ```
 
-Hopefully it's clear what we mean by low-level here. We've manually defined a function to unpack a parameter vector `θ` and use this to construct a function that computes the log marginal probability of `y` for any particular `θ`. We can use a gradient-free optimisation technique from [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) to find the parameters whose log marginal likelihood is minimal:
+Hopefully it's clear what we mean by low-level here. We've manually defined a function to unpack a parameter vector `θ` and use this to construct a function that computes the negative log marginal likelihood of `θ`. We can use any gradient-free optimisation technique from [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) to find the parameters whose negative log marginal likelihood is minimal:
 ```julia
 using Optim
 θ0 = randn(3);
