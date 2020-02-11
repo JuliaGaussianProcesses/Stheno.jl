@@ -5,7 +5,12 @@ using LinearAlgebra: isposdef, checksquare
 
 abstract type Kernel end
 
+# API exports
+export Kernel, elementwise, pairwise, ew, pw
 
+# Kernel exports
+export EQ, PerEQ, Exp, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp,
+    Wiener, WienerVelocity
 
 #
 # Base Kernels
@@ -68,10 +73,15 @@ pw(k::ConstKernel, x::AV) = pw(k, x, x)
 
 
 
-"""
+@doc raw"""
     EQ <: Kernel
 
-The standardised Exponentiated Quadratic kernel (no free parameters).
+The standardised Exponentiated Quadratic kernel. a.k.a. the Radial Basis Function (RBF), or
+Squared Exponential kernel.
+
+``k(x, x^\prime) = \exp( -\frac{1}{2} || x - x^\prime||_2^2 )``
+
+For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct EQ <: Kernel end
 
@@ -85,10 +95,14 @@ pw(::EQ, x::AV) = exp.(.-pw(SqEuclidean(), x) ./ 2)
 
 
 
-"""
+@doc raw"""
     PerEQ
 
 The usual periodic kernel derived by mapping the input domain onto the unit circle.
+
+`` k(x, x^\prime) = \exp (-2 \sin (\pi | x - x^\prime |^2)``
+
+For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct PerEQ <: Kernel end
 
@@ -102,10 +116,14 @@ pw(k::PerEQ, x::AV{<:Real}) = pw(k, x, x)
 
 
 
-"""
+@doc raw"""
     Exp <: Kernel
 
-The standardised Exponential kernel.
+The standardised Exponential kernel:
+
+`` k(x, x^\prime) = \exp(-||x - x^\prime||_2)``
+
+For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct Exp <: Kernel end
 
@@ -120,9 +138,11 @@ pw(::Exp, x::AV) = exp.(.-pw(Euclidean(), x))
 
 
 """
-    Matern12
+    Matern12 <: Kernel
 
-Equivalent to the Exponential kernel.
+The standardised Matern kernel with ν = 1 / 2. Equivalent to the [`Exp`](@ref) kernel.
+
+For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 const Matern12 = Exp
 
@@ -131,7 +151,9 @@ const Matern12 = Exp
 """
     Matern32 <: Kernel
 
-The Matern kernel with ν = 3 / 2
+The standardised Matern kernel with ν = 3 / 2.
+
+For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct Matern32 <: Kernel end
 
@@ -153,7 +175,9 @@ pw(k::Matern32, x::AV) = _matern32.(pw(Euclidean(), x))
 """
     Matern52 <: Kernel
 
-The Matern kernel with ν = 5 / 2
+The standardised Matern kernel with ν = 5 / 2.
+
+For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct Matern52 <: Kernel end
 
@@ -184,6 +208,8 @@ pw(k::Matern52, x::AV) = _matern52(pw(Euclidean(), x))
     RQ <: Kernel
 
 The standardised Rational Quadratic, with kurtosis `α`.
+
+For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct RQ{Tα<:Real} <: Kernel
     α::Tα
@@ -392,6 +418,20 @@ struct Sum{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
     kr::Tkr
 end
 
+"""
+    +(kl::Kernel, kr::Kernel)
+
+Construct the kernel whose value is given by the sum of those of `kl` and `kr`.
+
+```jldoctest
+julia> kl, kr = EQ(), Matern32();
+
+julia> x = randn(11);
+
+julia> pw(kl + kr, x) == pw(kl, x) + pw(kr, x)
+true
+```
+"""
 +(kl::Kernel, kr::Kernel) = Sum(kl, kr)
 
 # Binary methods
@@ -414,6 +454,20 @@ struct Product{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
     kr::Tkr
 end
 
+"""
+    +(kl::Kernel, kr::Kernel)
+
+Construct the kernel whose value is given by the product of those of `kl` and `kr`.
+
+```jldoctest
+julia> kl, kr = EQ(), Matern32();
+
+julia> x = randn(11);
+
+julia> pw(kl * kr, x) == pw(kl, x) .* pw(kr, x)
+true
+```
+"""
 *(kl::Kernel, kr::Kernel) = Product(kl, kr)
 
 # Binary methods
@@ -436,6 +490,21 @@ struct Scaled{Tσ²<:Real, Tk<:Kernel} <: Kernel
     k::Tk
 end
 
+"""
+    *(σ²::Real, k::Kernel)
+    *(k::Kernel, σ²::Real)
+
+The right way to choose the variance of a kernel. Specifically, construct a kernel that
+scales the output of `k` by `σ²`:
+```jldoctest
+julia> k = eq();
+
+julia> x = randn(11);
+
+julia> Stheno.pw(0.5 * k, x) == 0.5 .* Stheno.pw(k, x)
+true
+```
+"""
 *(σ²::Real, k::Kernel) = Scaled(σ², k)
 *(k::Kernel, σ²) = σ² * k
 
@@ -459,7 +528,85 @@ struct Stretched{Ta<:Union{Real, AV{<:Real}, AM{<:Real}}, Tk<:Kernel} <: Kernel
     k::Tk
 end
 
-stretch(k::Kernel, a::Union{Real, AV{<:Real}, AM{<:Real}}) = Stretched(a, k)
+"""
+    stretch(k::Kernel, a::Union{Real, AbstractVecOrMat{<:Real})
+
+The canonical way to give a notion of length-scale to a kernel, `a::Real`, to construct
+an automatic relevance determination (ARD) kernel, `a::AbstractVector{<:Real}`, or a
+discriminative factor-analysis kernel, `a::AbstractMatrix{<:Real}`.
+
+# Length Scale
+
+For `a::Real`, return the kernel given by:
+```julia
+stretch(k, a)(x, y) = k(a * x, a * y)
+```
+where `x` and `y` are both either `Real`s or `AbstractVector{<:Real}`s. e.g.
+```jldoctest
+xs = range(0.0, 10.0; length=2)
+ys = range(0.5, 10.5; length=3)
+k = stretch(eq(), 0.5)
+K = Stheno.pairwise(k, xs, ys)
+
+# output
+2×3 Array{Float64,2}:
+ 0.969233    0.0227942  1.03485e-6
+ 1.26071e-5  0.0795595  0.969233
+```
+if `x` and `y` are `Real`s.
+
+# Automatic Relevance Determination (ARD)
+
+For `a::AbstractVector{<:Real}`, return the automatic relevance determination (ARD) kernel
+given by:
+```julia
+stretch(k, a)(x, y) = k(a .* x, a .* y)
+```
+where `x` and `y` must be `AbstractVector{<:Real}`s. e.g.
+
+```jldoctest
+rng = MersenneTwister(123456)
+xs = ColVecs(randn(rng, 2, 2)) # efficient vector-of-column-vectors
+ys = ColVecs(randn(rng, 2, 3)) # efficient vector-of-column-vectors
+length_scales = [0.1 0.5]
+k = stretch(eq(), 1 ./ length_scales)
+K = Stheno.pairwise(k, xs, ys)
+
+# output
+2×3 Array{Float64,2}:
+ 1.00858e-8   0.000170346  0.0439152
+ 2.79756e-15  2.0696e-74   9.91334e-31
+```
+
+# Discriminative Factor Analysis
+
+For `a::AbstractMatrix{<:Real}`, return the kernel given by:
+```julia
+stretch(k, a)(x, y) = k(a * x, a * y)
+```
+where  `x` and `y` must be `AbstractVector{<:Real}`s. e.g.
+
+```jldoctest
+rng = MersenneTwister(123456)
+
+# Efficiently represented vectors of column-vectors
+xs = ColVecs(randn(rng, 5, 2)) 
+ys = ColVecs(randn(rng, 5, 3))
+
+# Project from 5 dimensions down onto 2
+A = randn(rng, 2, 5)
+
+# Construct kernel and compute covariance matrix between `xs` and `ys`.
+k = stretch(eq(), A)
+K = Stheno.pairwise(k, xs, ys)
+
+# output
+2×3 Array{Float64,2}:
+ 0.000324131  3.77237e-12  8.12649e-16
+ 1.40202e-8   0.293658     0.0808585
+```
+"""
+stretch(k::Kernel, a::Union{Real, AbstractVecOrMat{<:Real}}) = Stretched(a, k)
 
 # Binary methods (scalar `a`, scalar-valued input)
 ew(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, k.a .* x, k.a .* x′)
