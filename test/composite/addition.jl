@@ -93,16 +93,16 @@ end
 
 # # θ = Dict(:l1=>0.5, :l2=>2.3);
 # x, z = collect(range(-5.0, 5.0; length=512)), collect(range(-5.0, 5.0; length=128));
-# y = rand(GP(sin, eq(), GPC())(x, 0.1));
+# y = rand(GP(sin, EQ(), GPC())(x, 0.1));
 
 # foo_logpdf = (x, y) -> begin
 #     gpc = GPC()
-#     f = GP(sin, eq(), gpc)
+#     f = GP(sin, EQ(), gpc)
 #     return logpdf(f(x, 0.1), y)
 # end
 
 # foo_elbo = (x, y, z) -> begin
-#     f = GP(0, eq(), GPC())
+#     f = GP(0, EQ(), GPC())
 #     return elbo(f(x, 0.1), y, f(z, 0.001))
 # end
 
@@ -116,7 +116,7 @@ end
 
 # let
 #     foo = function(x, y)
-#         fx = GP(0, eq(), GPC())(x, 0.1)
+#         fx = GP(0, EQ(), GPC())(x, 0.1)
 #         C = cholesky(Symmetric(cov(fx)))
 #         return logdet(C) + Xt_invA_X(C, y)
 #     end
@@ -137,8 +137,8 @@ end
 
 # θ->begin
 #     gpc = GPC()
-#     f1 = GP(sin, eq(l=θ[:l1]), gpc)
-#     f2 = GP(cos, eq(l=θ[:l2]), gpc)
+#     f1 = GP(sin, EQ(l=θ[:l1]), gpc)
+#     f2 = GP(cos, EQ(l=θ[:l2]), gpc)
 #     f3 = f1 + f2
 #     return f3, f3
 # end,

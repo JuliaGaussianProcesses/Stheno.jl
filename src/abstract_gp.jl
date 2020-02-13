@@ -43,7 +43,7 @@ length(f::FiniteGP) = length(f.x)
 Compute the mean vector of `fx`.
 
 ```jldoctest
-julia> f = GP(matern52(), GPC());
+julia> f = GP(Matern52(), GPC());
 
 julia> x = randn(11);
 
@@ -61,20 +61,20 @@ Compute the covariance matrix of `fx`.
 ## Noise-free observations
 
 ```jldoctest cov_finitegp
-julia> f = GP(matern52(), GPC());
+julia> f = GP(Matern52(), GPC());
 
 julia> x = randn(11);
 
 julia> # Noise-free
 
-julia> cov(f(x)) == Stheno.pw(matern52(), x)
+julia> cov(f(x)) == Stheno.pw(Matern52(), x)
 true
 ```
 
 ## Isotropic observation noise
 
 ```jldoctest cov_finitegp
-julia> cov(f(x, 0.1)) == Stheno.pw(matern52(), x) + 0.1 * I
+julia> cov(f(x, 0.1)) == Stheno.pw(Matern52(), x) + 0.1 * I
 true
 ```
 
@@ -83,7 +83,7 @@ true
 ```jldoctest cov_finitegp
 julia> s = rand(11);
 
-julia> cov(f(x, s)) == Stheno.pw(matern52(), x) + Diagonal(s)
+julia> cov(f(x, s)) == Stheno.pw(Matern52(), x) + Diagonal(s)
 true
 ```
 
@@ -92,7 +92,7 @@ true
 ```jldoctest cov_finitegp
 julia> A = randn(11, 11); S = A'A;
 
-julia> cov(f(x, S)) == Stheno.pw(matern52(), x) + S
+julia> cov(f(x, S)) == Stheno.pw(Matern52(), x) + S
 true
 ```
 """
@@ -104,13 +104,13 @@ cov(f::FiniteGP) = cov(f.f, f.x) + f.Σy
 Compute the cross-covariance matrix between `fx` and `gx`.
 
 ```jldoctest
-julia> f = GP(matern32(), GPC());
+julia> f = GP(Matern32(), GPC());
 
 julia> x1 = randn(11);
 
 julia> x2 = randn(13);
 
-julia> cov(f(x1), f(x2)) == pw(matern32(), x1, x2)
+julia> cov(f(x1), f(x2)) == pw(Matern32(), x1, x2)
 true
 ```
 """
@@ -123,7 +123,7 @@ Compute a vector of Normal distributions representing the marginals of `f` effic
 In particular, the off-diagonal elements of `cov(f(x))` are never computed.
 
 ```jldoctest
-julia> f = GP(matern32(), GPC());
+julia> f = GP(Matern32(), GPC());
 
 julia> x = randn(11);
 
@@ -145,7 +145,7 @@ Obtain `N` independent samples from the marginals `f` using `rng`. Single-sample
 produce a `length(f)` vector. Multi-sample methods produce a `length(f)` x `N` `Matrix`.
 
 ```jldoctest
-julia> f = GP(matern32(), GPC());
+julia> f = GP(Matern32(), GPC());
 
 julia> x = randn(11);
 
@@ -177,7 +177,7 @@ The logpdf of `y` under `f` if is `y isa AbstractVector`. logpdf of each column 
 `y isa Matrix`.
 
 ```jldoctest
-julia> f = GP(matern32(), GPC());
+julia> f = GP(Matern32(), GPC());
 
 julia> x = randn(11);
 
@@ -209,7 +209,7 @@ The saturated Titsias Evidence LOwer Bound (ELBO). `y` are observations of `f`, 
 are pseudo-points.
 
 ```jldoctest
-julia> f = GP(matern52(), GPC());
+julia> f = GP(Matern52(), GPC());
 
 julia> x = randn(1000);
 

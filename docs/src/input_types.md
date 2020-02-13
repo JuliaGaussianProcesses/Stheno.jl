@@ -12,7 +12,7 @@ f(x, σ²)
 ```
 or computing the covariance matrix associated with a kernel:
 ```julia
-pw(eq(), x)
+pw(EQ(), x)
 ```
 When computing the cross-covariance matrix between two GPs
 ```julia
@@ -29,7 +29,7 @@ For example, this means that when handling multi-dimensional inputs stored in a 
 When constructing a GP whose domain is the real-line, for example when using a GP to solve some kind of time-series problem, it is sufficient to work with `Vector{<:Real}`s of inputs. As such, the following is completely valid:
 ```julia
 using Stheno: GPC
-f = GP(eq(), GPC())
+f = GP(EQ(), GPC())
 x = randn(10)
 f(x)
 ```
@@ -79,7 +79,7 @@ Base.getindex(x::RowVecs, n::Int) = x.X[n, :]
 ```
 This structure prints nicely and pass some consistency checks, but none of the base `Kernel`s in the package know how to treat it. This means that, for example, new `pw` and `ew` methods that are specialised to `RowVec` must be added:
 ```julia
-import Stheno: pw, EQ
+import Stheno: pw
 using Distances: SqEuclidean
 pw(k::EQ, x::RowVecs, x′::RowVecs) = exp.(.-pw(SqEuclidean(), x.X, x′.X; dims=1) ./ 2)
 # insert implementations for the unary pw and the two ew methods

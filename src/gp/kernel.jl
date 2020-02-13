@@ -6,11 +6,13 @@ using LinearAlgebra: isposdef, checksquare
 abstract type Kernel end
 
 # API exports
-export Kernel, elementwise, pairwise, ew, pw
+export Kernel, kernel, elementwise, pairwise, ew, pw
 
 # Kernel exports
-export EQ, PerEQ, Exp, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp,
-    Wiener, WienerVelocity
+export EQ, Exp, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp, Wiener,
+    WienerVelocity, Precomputed
+
+
 
 #
 # Base Kernels
@@ -74,7 +76,7 @@ pw(k::ConstKernel, x::AV) = pw(k, x, x)
 
 
 @doc raw"""
-    EQ <: Kernel
+    EQ() <: Kernel
 
 The standardised Exponentiated Quadratic kernel. a.k.a. the Radial Basis Function (RBF), or
 Squared Exponential kernel.
@@ -117,34 +119,34 @@ pw(k::PerEQ, x::AV{<:Real}) = pw(k, x, x)
 
 
 @doc raw"""
-    Exp <: Kernel
+    Matern12 <: Kernel
 
-The standardised Exponential kernel:
+The standardised Matern-1/2 / Exponential kernel:
 
 `` k(x, x^\prime) = \exp(-||x - x^\prime||_2)``
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct Exp <: Kernel end
+struct Matern12 <: Kernel end
 
 # Binary methods
-ew(k::Exp, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′))
-pw(k::Exp, x::AV, x′::AV) = exp.(.-pw(Euclidean(), x, x′))
+ew(k::Matern12, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′))
+pw(k::Matern12, x::AV, x′::AV) = exp.(.-pw(Euclidean(), x, x′))
 
 # Unary methods
-ew(::Exp, x::AV) = exp.(.-ew(Euclidean(), x))
-pw(::Exp, x::AV) = exp.(.-pw(Euclidean(), x))
+ew(::Matern12, x::AV) = exp.(.-ew(Euclidean(), x))
+pw(::Matern12, x::AV) = exp.(.-pw(Euclidean(), x))
 
 
 
 """
-    Matern12 <: Kernel
+    Exp <: Kernel
 
-The standardised Matern kernel with ν = 1 / 2. Equivalent to the [`Exp`](@ref) kernel.
+The standardised Exponential kernel. Equivalent to [`Matern12`](@ref).
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-const Matern12 = Exp
+const Exp = Matern12
 
 
 
@@ -181,26 +183,26 @@ For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct Matern52 <: Kernel end
 
-function _matern52(d::Real)
+function _Matern52(d::Real)
     λ = sqrt(5) * d
     return (1 + λ + λ^2 / 3) * exp(-λ)
 end
 
-_matern52(d::AbstractArray{<:Real}) = _matern52.(d)
+_Matern52(d::AbstractArray{<:Real}) = _Matern52.(d)
 
-@adjoint function _matern52(d::AbstractArray{<:Real})
+@adjoint function _Matern52(d::AbstractArray{<:Real})
     λ = sqrt(5) .* d
     b = exp.(-λ)
     return (1 .+ λ .+ λ.^2 ./ 3) .* b, Δ->(.-Δ .* sqrt(5) .* b .* λ .* (1 .+ λ) ./ 3,)
 end
 
 # Binary methods
-ew(k::Matern52, x::AV, x′::AV) = _matern52(ew(Euclidean(), x, x′))
-pw(k::Matern52, x::AV, x′::AV) = _matern52(pw(Euclidean(), x, x′))
+ew(k::Matern52, x::AV, x′::AV) = _Matern52(ew(Euclidean(), x, x′))
+pw(k::Matern52, x::AV, x′::AV) = _Matern52(pw(Euclidean(), x, x′))
 
 # Unary methods
-ew(k::Matern52, x::AV) = _matern52(ew(Euclidean(), x))
-pw(k::Matern52, x::AV) = _matern52(pw(Euclidean(), x))
+ew(k::Matern52, x::AV) = _Matern52(ew(Euclidean(), x))
+pw(k::Matern52, x::AV) = _Matern52(pw(Euclidean(), x))
 
 
 
@@ -497,11 +499,11 @@ end
 The right way to choose the variance of a kernel. Specifically, construct a kernel that
 scales the output of `k` by `σ²`:
 ```jldoctest
-julia> k = eq();
+julia> k = EQ();
 
 julia> x = randn(11);
 
-julia> Stheno.pw(0.5 * k, x) == 0.5 .* Stheno.pw(k, x)
+julia> pw(0.5 * k, x) == 0.5 .* Stheno.pw(k, x)
 true
 ```
 """
@@ -545,8 +547,8 @@ where `x` and `y` are both either `Real`s or `AbstractVector{<:Real}`s. e.g.
 ```jldoctest
 xs = range(0.0, 10.0; length=2)
 ys = range(0.5, 10.5; length=3)
-k = stretch(eq(), 0.5)
-K = Stheno.pairwise(k, xs, ys)
+k = stretch(EQ(), 0.5)
+K = pairwise(k, xs, ys)
 
 # output
 2×3 Array{Float64,2}:
@@ -569,8 +571,8 @@ rng = MersenneTwister(123456)
 xs = ColVecs(randn(rng, 2, 2)) # efficient vector-of-column-vectors
 ys = ColVecs(randn(rng, 2, 3)) # efficient vector-of-column-vectors
 length_scales = [0.1 0.5]
-k = stretch(eq(), 1 ./ length_scales)
-K = Stheno.pairwise(k, xs, ys)
+k = stretch(EQ(), 1 ./ length_scales)
+K = pairwise(k, xs, ys)
 
 # output
 2×3 Array{Float64,2}:
@@ -597,8 +599,8 @@ ys = ColVecs(randn(rng, 5, 3))
 A = randn(rng, 2, 5)
 
 # Construct kernel and compute covariance matrix between `xs` and `ys`.
-k = stretch(eq(), A)
-K = Stheno.pairwise(k, xs, ys)
+k = stretch(EQ(), A)
+K = pairwise(k, xs, ys)
 
 # output
 2×3 Array{Float64,2}:
@@ -640,34 +642,33 @@ end
 ew(k::Stretched{<:AM{<:Real}}, x::ColVecs) = ew(k.k, ColVecs(k.a * x.X))
 pw(k::Stretched{<:AM{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(k.a * x.X))
 
-# Create convenience versions of each of the kernels that accept a length scale.
-for (k, K) in (
-    (:eq, :EQ),
-    (:exponential, :Exp),
-    (:matern12, :Matern12),
-    (:matern32, :Matern32),
-    (:matern52, :Matern52),
-    (:linear, :Linear),
-    (:wiener, :Wiener),
-    (:wiener_velocity, :WienerVelocity),
-)
-    @eval $k() = $K()
-    @eval $k(a::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch($k(), a)
-    @eval export $k
+
+
+
+"""
+    kernel(k::Kernel;  l::Real=nothing, s::Real=nothing)
+
+Convenience functionality to provide a kernel with a length scale `l`, and to scale the
+variance of `k` by `s`. Simply applies the [`stretch`](@ref stretch) and [`*`](@ref *)
+functions.
+
+```jldoctest
+julia> k1 = kernel(EQ(); l=1.1, s=0.9);
+
+julia> k2 = 0.9 * stretch(EQ(), 1 / 1.1);
+
+julia> x = randn(11);
+
+julia> pw(k1, x) == pw(k2, x)
+true
+```
+"""
+function kernel(k::Kernel; l::Union{Real, Nothing}=nothing, s::Union{Real, Nothing}=nothing)
+    if l !== nothing
+        k = stretch(k, 1 / l)
+    end
+    if s !== nothing
+        k = s * k
+    end
+    return k
 end
-
-rq(α) = RQ(α)
-rq(α, l) = stretch(rq(α), l)
-export rq
-
-cosine(p) = Cosine(p)
-cosine(p, l) = stretch(cosine(p), l)
-export cosine
-
-γ_exponential(γ::Real) = GammaExp(γ)
-γ_exponential(γ::Real, l::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch(GammaExp(γ), l)
-export γ_exponential
-
-poly(p::Int, σ²::Real) = Poly(p, σ²)
-poly(p::Int, σ²::Real, l::Union{Real, AV{<:Real}, AM{<:Real}}) = stretch(Poly(p, σ²), l)
-export poly

@@ -1,6 +1,6 @@
 # GP API
 
-This documents the user-facing API as it relates to the `GP` object. Everything that is exported should be included here.
+This documents the user-facing API as it relates to the `GP` object.
 
 This is a more thorough introduction to the internals than the Getting Started guide, which should be refered to if you are new to Stheno.jl. It's somewhere between a reference document and a tutorial.
 
@@ -20,7 +20,7 @@ GP
 Once constructed, the correct way to interact with a `GP` is via a `FiniteGP`, which is just the multivariate Normal given by considering the `GP` at only a finite set of inputs.
 
 ```julia
-f = GP(matern52(), GPC())
+f = GP(Matern52(), GPC())
 x = randn(10)
 fx = f(x)
 ```
@@ -42,9 +42,8 @@ This is an ever-growing list. Implementing another kernel would make an excellen
 
 ```@docs
 EQ
-PerEQ
-Exp
 Matern12
+Exp
 Matern32
 Matern52
 RQ
@@ -63,6 +62,12 @@ stretch(::Stheno.Kernel, ::Union{Real, AbstractVecOrMat{<:Real}})
 *(::Real, ::Stheno.Kernel)
 +(::Stheno.Kernel, ::Stheno.Kernel)
 *(::Stheno.Kernel, ::Stheno.Kernel)
+```
+
+## Kernel Convenience
+
+```@docs
+kernel
 ```
 
 ## MeanFunctions

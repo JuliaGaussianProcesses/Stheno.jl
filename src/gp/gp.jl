@@ -10,14 +10,14 @@ also required, but only matters when composing `GP`s together.
 
 If only two arguments are provided, assume the mean to be zero everywhere:
 ```jldoctest
-julia> f = GP(matern32(), GPC());
+julia> f = GP(Matern32(), GPC());
 
 julia> x = randn(5);
 
 julia> mean(f(x)) == zeros(5)
 true
 
-julia> cov(f(x)) == Stheno.pw(matern32(), x)
+julia> cov(f(x)) == Stheno.pw(Matern32(), x)
 true
 ```
 
@@ -26,14 +26,14 @@ true
 If a `Real` is provided as the first argument, assume the mean function is constant with
 that value
 ```jldoctest
-julia> f = GP(5.0, eq(), GPC());
+julia> f = GP(5.0, EQ(), GPC());
 
 julia> x = randn(5);
 
 julia> mean(f(x)) == 5.0 .* ones(5)
 true
 
-julia> cov(f(x)) == Stheno.pw(eq(), x)
+julia> cov(f(x)) == Stheno.pw(EQ(), x)
 true
 ```
 
@@ -42,14 +42,14 @@ true
 Provide an arbitrary function to compute the mean:
 
 ```jldoctest
-julia> f = GP(x -> sin(x) + cos(x / 2), rq(3.2), GPC());
+julia> f = GP(x -> sin(x) + cos(x / 2), RQ(3.2), GPC());
 
 julia> x = randn(5);
 
 julia> mean(f(x)) == sin.(x) .+ cos.(x ./ 2)
 true
 
-julia> cov(f(x)) == Stheno.pw(rq(3.2), x)
+julia> cov(f(x)) == Stheno.pw(RQ(3.2), x)
 true
 ```
 """

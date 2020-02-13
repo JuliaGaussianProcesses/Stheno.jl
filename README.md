@@ -35,8 +35,8 @@ rng = MersenneTwister(123456);
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 @model function model()
-    f₁ = GP(randn(rng), eq())
-    f₂ = GP(eq())
+    f₁ = GP(randn(rng), EQ())
+    f₂ = GP(EQ())
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
 end
@@ -124,7 +124,7 @@ In this next example we make observations of two different noisy versions of the
 
 ```julia
 using Stheno, Random, Plots
-using Stheno: @model, eq, Noise
+using Stheno: @model, Noise
 
 # Create a pseudo random number generator for reproducibility.
 rng = MersenneTwister(123456);
@@ -132,7 +132,7 @@ rng = MersenneTwister(123456);
 @model function model()
 
     # Define a smooth latent process that we wish to infer.
-    f = GP(eq())
+    f = GP(EQ())
 
     # Define the two noise processes described.
     noise1 = sqrt(1e-2) * GP(Noise()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
