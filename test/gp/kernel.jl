@@ -150,10 +150,10 @@ using LinearAlgebra
         @timedtestset "precomputed" begin
             rng = MersenneTwister(123456)
             x = ColVecs(randn(rng, N, N))
-            K = pw(linear(), x)
+            K = pw(Linear(), x)
             k = precomputed(K)
-            @test pw(k, 1:N) == pw(linear(), x)
-            @test ew(k, 1:N) ≈ ew(linear(), x)
+            @test pw(k, 1:N) == pw(Linear(), x)
+            @test ew(k, 1:N) ≈ ew(Linear(), x)
             kernel_tests(k, 1:N-1, 2:N, 1:N)
         end
 
