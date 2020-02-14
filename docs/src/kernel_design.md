@@ -52,6 +52,3 @@ k3 = k1 * k2
 ```
 
 In fact, the variance and `stretch` functionality discussed above is implemented in terms of composite kernels. Take a look towards the bottom of the `src/GP/kernels.jl` file if you're interested how things. The `Sum` and `Product` kernels are good places to start here.
-
-
-

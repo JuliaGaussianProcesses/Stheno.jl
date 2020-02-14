@@ -38,37 +38,129 @@ FiniteGP(f::AbstractGP, x::AV) = FiniteGP(f, x, 1e-18)
 length(f::FiniteGP) = length(f.x)
 
 """
-    mean(f::FiniteGP)
+    mean(fx::FiniteGP)
 
-The mean vector of `f`.
+Compute the mean vector of `fx`.
+
+```jldoctest
+julia> f = GP(Matern52(), GPC());
+
+julia> x = randn(11);
+
+julia> mean(f(x)) == zeros(11)
+true
+```
 """
-mean(f::FiniteGP) = mean_vector(f.f, f.x)
+mean(fx::FiniteGP) = mean_vector(fx.f, fx.x)
 
 """
     cov(f::FiniteGP)
 
-The covariance matrix of `f`.
+Compute the covariance matrix of `fx`.
+
+## Noise-free observations
+
+```jldoctest cov_finitegp
+julia> f = GP(Matern52(), GPC());
+
+julia> x = randn(11);
+
+julia> # Noise-free
+
+julia> cov(f(x)) == Stheno.pw(Matern52(), x)
+true
+```
+
+## Isotropic observation noise
+
+```jldoctest cov_finitegp
+julia> cov(f(x, 0.1)) == Stheno.pw(Matern52(), x) + 0.1 * I
+true
+```
+
+## Independent anisotropic observation noise
+
+```jldoctest cov_finitegp
+julia> s = rand(11);
+
+julia> cov(f(x, s)) == Stheno.pw(Matern52(), x) + Diagonal(s)
+true
+```
+
+## Correlated observation noise
+
+```jldoctest cov_finitegp
+julia> A = randn(11, 11); S = A'A;
+
+julia> cov(f(x, S)) == Stheno.pw(Matern52(), x) + S
+true
+```
 """
 cov(f::FiniteGP) = cov(f.f, f.x) + f.Σy
 
 """
-    cov(f::FiniteGP, g::FiniteGP)
+    cov(fx::FiniteGP, gx::FiniteGP)
 
-The cross-covariance between `f` and `g`.
+Compute the cross-covariance matrix between `fx` and `gx`.
+
+```jldoctest
+julia> f = GP(Matern32(), GPC());
+
+julia> x1 = randn(11);
+
+julia> x2 = randn(13);
+
+julia> cov(f(x1), f(x2)) == pw(Matern32(), x1, x2)
+true
+```
 """
-cov(f::FiniteGP, g::FiniteGP) = cov(f.f, g.f, f.x, g.x)
+cov(fx::FiniteGP, gx::FiniteGP) = cov(fx.f, gx.f, fx.x, gx.x)
 
 """
     marginals(f::FiniteGP)
 
-Sugar, returns a vector of Normal distributions representing the marginals of `f`.
+Compute a vector of Normal distributions representing the marginals of `f` efficiently.
+In particular, the off-diagonal elements of `cov(f(x))` are never computed.
+
+```jldoctest
+julia> f = GP(Matern32(), GPC());
+
+julia> x = randn(11);
+
+julia> fs = marginals(f(x));
+
+julia> mean.(fs) == mean(f(x))
+true
+
+julia> std.(fs) == sqrt.(diag(cov(f(x))))
+true
+```
 """
 marginals(f::FiniteGP) = Normal.(mean(f), sqrt.(cov_diag(f.f, f.x) .+ diag(f.Σy)))
 
 """
     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
 
-Obtain `N` independent samples from the marginals `f` using `rng`.
+Obtain `N` independent samples from the marginals `f` using `rng`. Single-sample methods
+produce a `length(f)` vector. Multi-sample methods produce a `length(f)` x `N` `Matrix`.
+
+```jldoctest
+julia> f = GP(Matern32(), GPC());
+
+julia> x = randn(11);
+
+julia> rand(f(x)) isa Vector{Float64}
+true
+
+julia> rand(MersenneTwister(123456), f(x)) isa Vector{Float64}
+true
+
+julia> rand(f(x), 3) isa Matrix{Float64}
+true
+
+julia> rand(MersenneTwister(123456), f(x), 3) isa Matrix{Float64}
+true
+```
 """
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
     μ, C = mean(f), cholesky(Symmetric(cov(f)))
@@ -79,20 +171,32 @@ rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
 rand(f::FiniteGP) = vec(rand(f, 1))
 
 """
-    logpdf(f::FiniteGP, Y::AbstractMatrix{<:Real})
+    logpdf(f::FiniteGP, y::AbstractVecOrMat{<:Real})
 
-The log probability density of each column of `Y` under `f`.
+The logpdf of `y` under `f` if is `y isa AbstractVector`. logpdf of each column of `y` if
+`y isa Matrix`.
+
+```jldoctest
+julia> f = GP(Matern32(), GPC());
+
+julia> x = randn(11);
+
+julia> y = rand(f(x));
+
+julia> logpdf(f(x), y) isa Real
+true
+
+julia> Y = rand(f(x), 3);
+
+julia> logpdf(f(x), Y) isa AbstractVector{<:Real}
+true
+```
 """
 function logpdf(f::FiniteGP, y::AbstractVector{<:Real})
     μ, C = mean(f), cholesky(Symmetric(cov(f)))
     return -(length(y) * log(2π) + logdet(C) + Xt_invA_X(C, y - μ)) / 2
 end
 
-"""
-    logpdf(f::FiniteGP, y::AbstractVector{<:Real})
-
-The log probability density of `y` under `f`.
-"""
 function logpdf(f::FiniteGP, Y::AbstractMatrix{<:Real})
     μ, C = mean(f), cholesky(Symmetric(cov(f)))
     return -((size(Y, 1) * log(2π) + logdet(C)) .+ diag_Xt_invA_X(C, Y .- μ)) ./ 2
@@ -101,7 +205,21 @@ end
 """
    elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP)
 
-The saturated Titsias-ELBO.
+The saturated Titsias Evidence LOwer Bound (ELBO). `y` are observations of `f`, and `u`
+are pseudo-points.
+
+```jldoctest
+julia> f = GP(Matern52(), GPC());
+
+julia> x = randn(1000);
+
+julia> z = range(-5.0, 5.0; length=13);
+
+julia> y = rand(f(x, 0.1));
+
+julia> elbo(f(x, 0.1), y, f(z)) < logpdf(f(x, 0.1), y)
+true
+```
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     consistency_check(f, y, u)

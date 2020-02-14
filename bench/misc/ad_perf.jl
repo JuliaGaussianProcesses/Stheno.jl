@@ -7,7 +7,7 @@ const x2 = randn(25)
 
 θ = (m=5.0, l=1.3);
 
-@model foo(θ) = GP(ConstMean(θ.m), eq(l=θ.l));
+@model foo(θ) = GP(ConstMean(θ.m), kernel(EQ(); l=θ.l));
 
 
 

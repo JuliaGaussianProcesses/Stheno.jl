@@ -20,7 +20,7 @@ l = 0.4
 σ² = 1.3
 
 # Construct a kernel with this variance and length scale.
-k = σ² * stretch(matern52(), 1 / l)
+k = σ² * stretch(Matern52(), 1 / l)
 
 # Specify a zero-mean GP with this kernel. Don't worry about the GPC object.
 f = GP(k, GPC())
@@ -37,7 +37,7 @@ logpdf(fx, y)
 ```
 `fx` should be thought of as "`f` at `x`", and is just as a multivariate Normal distribution, with zero mean and covariance matrix
 ```julia
-Stheno.pairwise(k, x) + σ²_n * I
+pw(k, x) + σ²_n * I
 ```
 As such samples can be drawn from it, and the log probability any particular value under it can be computed, in the same way that you would an `MvNormal` from [Distributions.jl](https://github.com/JuliaStats/Distributions.jl).
 
@@ -86,7 +86,7 @@ end
 # nlml = negative log marginal likelihood (of θ)
 function nlml(θ)
     σ², l, σ²_n = unpack(θ)
-    k = σ² * stretch(matern52(), 1 / l)
+    k = σ² * stretch(Matern52(), 1 / l)
     f = GP(k, GPC())
     return -logpdf(f(x, σ²_n), y)
 end
@@ -102,7 +102,7 @@ results = Optim.optimize(nlml, θ0, NelderMead())
 
 We can now use this to construct the posterior GP and look at the posterior in comparison to the true posterior with the known hyperparameters
 ```julia
-k = σ²_ml * stretch(matern52(), 1 / l_ml);
+k = σ²_ml * stretch(Matern52(), 1 / l_ml);
 f = GP(k, GPC());
 f_posterior_ml = f | Obs(f(x, σ²_n_ml), y);
 plot!(plt, f_posterior_ml(x_plot); samples=10, color=:green, label="");
@@ -126,7 +126,7 @@ results = Optim.optimize(nlml, θ->gradient(nlml, θ)[1], θ0, BFGS(); inplace=f
 
 Once more visualising the results:
 ```julia
-k = σ²_bfgs * stretch(matern52(), 1 / l_bfgs);
+k = σ²_bfgs * stretch(Matern52(), 1 / l_bfgs);
 f = GP(k, GPC());
 f_posterior_bfgs = f | Obs(f(x, σ²_n_bfgs), y);
 plot!(plt, f_posterior_bfgs(x_plot); samples=10, color=:purple, label="");
@@ -203,7 +203,7 @@ M = @model x begin
     σ² ~ LogNormal(0, 1)
     l ~ LogNormal(0, 1)
     σ²_n ~ LogNormal(0, 1)
-    f = Stheno.GP(σ² * stretch(matern52(), 1 / l), Stheno.GPC())
+    f = Stheno.GP(σ² * stretch(Matern52(), 1 / l), Stheno.GPC())
     y ~ f(x, σ²_n + 1e-3)
 end
 ```

@@ -150,10 +150,10 @@ using LinearAlgebra
         @timedtestset "precomputed" begin
             rng = MersenneTwister(123456)
             x = ColVecs(randn(rng, N, N))
-            K = pw(linear(), x)
+            K = pw(Linear(), x)
             k = precomputed(K)
-            @test pw(k, 1:N) == pw(linear(), x)
-            @test ew(k, 1:N) ≈ ew(linear(), x)
+            @test pw(k, 1:N) == pw(Linear(), x)
+            @test ew(k, 1:N) ≈ ew(Linear(), x)
             kernel_tests(k, 1:N-1, 2:N, 1:N)
         end
 
@@ -191,46 +191,16 @@ using LinearAlgebra
                 k = stretch(EQ(), randn(rng, D, D))
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
-            @timedtestset "Convenience Constructors" begin
-                unstretched = [
-                    (eq(), EQ()),
-                    (rq(1.5), RQ(1.5)),
-                    (γ_exponential(2.0), GammaExp(2.0)),
-                    (poly(2, 0.6), Poly(2, 0.6)),
-                ]
-                stretched = [
-                    (eq(0.7), stretch(EQ(), 0.7)),
-                    (rq(1.5, 0.5), stretch(RQ(1.5), 0.5)),
-                    (γ_exponential(2.0, 0.53), stretch(GammaExp(2.0), 0.53)),
-                    (poly(2, 0.6, 0.4), stretch(Poly(2, 0.6), 0.4)),
-                ]
-                @testset "$k_conv" for (k_conv, k) in unstretched
-                    @test pw(k_conv, x0) ≈ pw(k, x0)
-                    differentiable_kernel_tests(k_conv, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-                end
-                @testset "$k_conv" for (k_conv, k) in stretched
-                    @test pw(k_conv, x0) ≈ pw(k, x0)
-                    differentiable_kernel_tests(k_conv, ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-                end
-
-                # Wiener kernels aren't differentiable.
-                not_diff_unstretched = [
-                    (wiener(), Wiener()),
-                    (wiener_velocity(), WienerVelocity()),
-                ]
-                not_diff_stretched = [
-                    (wiener(0.67), stretch(Wiener(), 0.67)),
-                    (wiener_velocity(0.65), stretch(WienerVelocity(), 0.65)),
-                ]
-                @testset "$k_conv" for (k_conv, k) in not_diff_unstretched
-                    @test pw(k_conv, x0) ≈ pw(k, x0)
-                    kernel_tests(k_conv, abs.(x0), abs.(x1), abs.(x2))
-                end
-                @testset "$k_conv" for (k_conv, k) in not_diff_stretched
-                    @test pw(k_conv, x0) ≈ pw(k, x0)
-                    kernel_tests(k_conv, abs.(x0), abs.(x1), abs.(x2))
-                end
-            end
+        end
+        @timedtestset "kernel" begin
+            x = randn(11)
+            @test pw(EQ(), x) == pw(kernel(EQ()), x)
+            @test pw(EQ(), x) == pw(kernel(EQ(); l=1.0), x)
+            @test pw(EQ(), x) == pw(kernel(EQ(); s=1.0), x)
+            @test pw(EQ(), x) == pw(kernel(EQ(); l=1.0, s=1.0), x)
+            @test pw(stretch(EQ(), 1 / 1.1), x) == pw(kernel(EQ(); l=1.1), x)
+            @test pw(0.9 * EQ(), x) == pw(kernel(EQ(); s=0.9), x)
+            @test pw(0.9 * stretch(EQ(), 1 / 1.1), x) == pw(kernel(EQ(), l=1.1, s=0.9), x)
         end
     end
 

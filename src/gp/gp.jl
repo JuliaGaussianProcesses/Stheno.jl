@@ -3,7 +3,55 @@ export GP
 """
     GP{Tm<:MeanFunction, Tk<:Kernel}
 
-A Gaussian Process (GP) with known mean `m` and kernel `k`, coordinated by `gpc`.
+A Gaussian Process (GP) with known mean `m` and kernel `k`. A book-keeping object `gpc` is
+also required, but only matters when composing `GP`s together.
+
+# Zero Mean
+
+If only two arguments are provided, assume the mean to be zero everywhere:
+```jldoctest
+julia> f = GP(Matern32(), GPC());
+
+julia> x = randn(5);
+
+julia> mean(f(x)) == zeros(5)
+true
+
+julia> cov(f(x)) == Stheno.pw(Matern32(), x)
+true
+```
+
+### Constant Mean
+
+If a `Real` is provided as the first argument, assume the mean function is constant with
+that value
+```jldoctest
+julia> f = GP(5.0, EQ(), GPC());
+
+julia> x = randn(5);
+
+julia> mean(f(x)) == 5.0 .* ones(5)
+true
+
+julia> cov(f(x)) == Stheno.pw(EQ(), x)
+true
+```
+
+### Custom Mean
+
+Provide an arbitrary function to compute the mean:
+
+```jldoctest
+julia> f = GP(x -> sin(x) + cos(x / 2), RQ(3.2), GPC());
+
+julia> x = randn(5);
+
+julia> mean(f(x)) == sin.(x) .+ cos.(x ./ 2)
+true
+
+julia> cov(f(x)) == Stheno.pw(RQ(3.2), x)
+true
+```
 """
 struct GP{Tm<:MeanFunction, Tk<:Kernel} <: AbstractGP
     m::Tm

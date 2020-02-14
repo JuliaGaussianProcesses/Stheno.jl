@@ -1,4 +1,4 @@
-using Stheno, Test, Random, BlockArrays, TimerOutputs
+using Stheno, Test, Random, BlockArrays, TimerOutputs, Documenter
 using BlockArrays: _BlockArray
 
 using Stheno: ew, pw, mean_vector, cov, cov_diag
@@ -49,6 +49,17 @@ include("test_util.jl")
     println("abstract_gp:")
     @timedtestset "abstract_gp" begin
         include("abstract_gp.jl")
+    end
+
+    println("doctests")
+    @timedtestset "doctests" begin
+        DocMeta.setdocmeta!(
+            Stheno,
+            :DocTestSetup,
+            :(using Stheno, Random, Documenter, LinearAlgebra);
+            recursive=true,
+        )
+        doctest(Stheno)
     end
 end
 

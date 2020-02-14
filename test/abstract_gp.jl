@@ -260,7 +260,7 @@ end
 #             1e-6,
 #             1e-6,
 #         )
-#             for (k, k_name) in ((EQ, "EQ"), (linear, "linear"), (exp, "exp"))
+#             for (k, k_name) in ((EQ, "EQ"), (Linear, "linear"), (Matern12, "exp"))
 #             for α in (nothing, randn(rng))
 #             for β in (nothing, exp(randn(rng)))
 #             for l in (nothing, randn(rng))

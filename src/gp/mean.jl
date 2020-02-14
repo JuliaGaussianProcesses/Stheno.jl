@@ -2,6 +2,8 @@ import Base: zero
 
 abstract type MeanFunction end
 
+
+
 """
     ZeroMean{T<:Real} <: MeanFunction
 
@@ -12,6 +14,8 @@ ZeroMean() = ZeroMean{Float64}()
 ew(::ZeroMean{T}, x::AV) where T = zeros(T, length(x))
 zero(::MeanFunction) = ZeroMean()
 
+
+
 """
     OneMean{T} <: MeanFunction
 
@@ -20,6 +24,8 @@ Return `one(T)` everywhere.
 struct OneMean{T<:Real} <: MeanFunction end
 OneMean() = OneMean{Float64}()
 ew(::OneMean{T}, x::AV) where T = ones(T, length(x))
+
+
 
 """
     ConstMean{T} <: MeanFunction
@@ -31,6 +37,8 @@ struct ConstMean{T<:Real} <: MeanFunction
 end
 ew(m::ConstMean, x::AV) = fill(m.c, length(x))
 
+
+
 """
     CustomMean{Tf} <: MeanFunction
 
@@ -39,4 +47,4 @@ A wrapper around whatever unary function you fancy.
 struct CustomMean{Tf} <: MeanFunction
     f::Tf
 end
-@noinline ew(f::CustomMean, x::AV) = map(f.f, x)
+ew(f::CustomMean, x::AV) = map(f.f, x)
