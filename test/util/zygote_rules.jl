@@ -65,4 +65,11 @@ using Base.Broadcast: broadcast_shape
             rtol=1e-3, atol=1e-3, fdm=FiniteDifferences.Forward(2, 1)
         ) # relaxed test because of machine precision concerns with finite differences
     end
+    @timedtestset "ldiv(::Diagonal, ::Matrix)" begin
+        rng, P, Q = MersenneTwister(123456), 13, 15
+        Ȳ = randn(rng, P, Q)
+        d = randn(rng, P)
+        X = randn(rng, P, Q)
+        adjoint_test((d, X)->Diagonal(d) \ X, Ȳ, d, X)
+    end
 end

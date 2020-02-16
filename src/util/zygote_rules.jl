@@ -85,3 +85,13 @@ import Base.Broadcast: broadcasted
     y = exp.(x)
     return y, Δ->(nothing, Δ .* y)
 end
+
+@adjoint function \(D::Diagonal{<:Real}, B::AbstractVecOrMat{<:Real})
+    Y = D \ B
+    function ldiv_Diagonal_pullback(Ȳ::AbstractVecOrMat{<:Real})
+        B̄ = D' \ Ȳ
+        D̄ = Diagonal(-vec(sum(B̄ .* Y; dims=2)))
+        return (D̄, B̄)
+    end
+    return Y, ldiv_Diagonal_pullback
+end
