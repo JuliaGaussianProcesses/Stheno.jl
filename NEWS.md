@@ -6,6 +6,10 @@ between versions, and discuss new features.
 If you find a breaking change this is not reported here, please either raise an issue or
 make a PR to ammend this document.
 
+## 0.6.1
+
+- Fixed performance bug in reverse-mode gradient computation for the `ELBO`, whereby an `O(N^3)` computation happened in cases where it shouldn't.
+
 ## 0.6.0
 
 ### Breaking changes
