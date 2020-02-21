@@ -120,7 +120,7 @@ display(posterior_plot);
 
 In the above figure, we have visualised the posterior distribution of all of the processes. Bold lines are posterior means, and shaded areas are three posterior standard deviations from these means. Thin lines are samples from the posterior processes.
 
-This example can also be found in the `examples/basic_gppp/process_decomposition.jl`, which also contains other toy examples of GPPP in action.
+This example can also be found in `examples/basic_gppp/process_decomposition.jl`, which also contains other toy examples of GPPP in action.
 
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
@@ -196,10 +196,9 @@ display(posterior_plot);
 ```
 ![](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.png)
 
-[Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.jl)
-
 As before, we visualise the posterior distribution through its marginal statistics and joint samples. Note that the posterior samples over the unobserved process are (unsurprisingly) smooth, whereas the posterior samples over the noisy processes still look uncorrelated and noise-like.
 
+As before, this example can also be found in `examples/basic_gppp/process_decomposition.jl`.
 
 ## Hyperparameter learning and inference
 

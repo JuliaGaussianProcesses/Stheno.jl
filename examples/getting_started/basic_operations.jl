@@ -24,6 +24,7 @@ N = 50
 x = rand(rng, N) * 10
 
 # Specify the variance of the noise under which we'll make observations of the GP.
+# We could also have made this a `Real` to specify isotropic noise.
 Σ = Diagonal(rand(rng, N) .+ 0.1)
 
 # Construct marginal distribution over `f` at `x` added to some independent zero-mean
