@@ -5,7 +5,7 @@
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://willtebbutt.github.io/Stheno.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://willtebbutt.github.io/Stheno.jl/dev)
 
-Stheno is designed to make doing non-standard things with Gaussian processes straightforward. It has an intuitive modeling syntax, is inherently able to handle both multi-input and multi-output problems, and trivially supports interdomain pseudo-point approximations.
+Stheno is designed to make doing non-standard things with Gaussian processes straightforward. It has an intuitive modeling syntax, is inherently able to handle both multi-input and multi-output problems, and trivially supports interdomain pseudo-point approximations. We call this Gaussian process Probabilistic Programming (GPPP).
 
 [We also have a Python version of the package](https://github.com/wesselb/stheno)
 
@@ -118,9 +118,9 @@ display(posterior_plot);
 ```
 ![](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.png)
 
-[Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.jl)
-
 In the above figure, we have visualised the posterior distribution of all of the processes. Bold lines are posterior means, and shaded areas are three posterior standard deviations from these means. Thin lines are samples from the posterior processes.
+
+This example can also be found in the `examples/basic_gppp/process_decomposition.jl`, which contains other toy examples of GPPP in action.
 
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
