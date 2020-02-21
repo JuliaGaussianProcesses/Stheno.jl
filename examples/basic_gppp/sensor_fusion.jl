@@ -14,9 +14,9 @@ rng = MersenneTwister(123456);
 In this example, `f` is an unknown real-valued function that we wish to infer. To achieve
 this, we have access to two sensors. The first returns noisy estimates of `f`, where we have
 been reliably informed by whoever designed the sensor that the mean of the noise is given by
-`sin(x) - 5 + sqrt(abs(x))`, and that it's variance is low (1e-2). (how the designer
-estimated this function, is why a sensor might possibly have such a weird mean error is
-beyond the scope of this example) The second returns biased measurements of `f`, where the
+`sin(x) - 5 + sqrt(abs(x))`, and that it's variance is low (1e-2). How the designer
+estimated this function, and why a sensor might possibly have such a strange mean error, is
+beyond the scope of this example. The second returns biased measurements of `f`, where the
 bias is known to be 3.5. The model below specifies a model for this scenario.
 =#
 @model function model()
