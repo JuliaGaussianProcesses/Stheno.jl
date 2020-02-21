@@ -54,4 +54,4 @@ y_post = rand(rng, fx_post)
 logpdf(fx_post, y_post)
 
 # Compute the posterior marginal distributions. (We could equally have done this with `fx`).
-post_marginals = marginals(fx_post)
+posterior_marginals = marginals(fx_post)
