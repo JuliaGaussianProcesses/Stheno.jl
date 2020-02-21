@@ -6,6 +6,8 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Stheno = "8188c328-b5d6-583d-959b-9690869a5511"
 
 [compat]
+ColorTypes = "= 0.9.1"
+FixedPointNumbers = "= 0.6.1"
 Plots = "= 0.28.4"
 Stheno = "0.6"
 julia = "1"
