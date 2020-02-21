@@ -9,3 +9,4 @@ Below we provide a brief description of each of the sub-directories.
 - `getting_started`: the most fundamental Stheno.jl functionality. If you're not comfortable with the content of this folder, you likely won't be with the rest of them.
 - `pseudo_points`: covers inducing-point / sparse / pseudo-point approximations.
 - `basic_gppp`: basic toy examples of the functionality that we call Gaussian process Probabilistic Programming (GPPP).
+- `gppp_and_pseudo_points`: combine GPPP and pseudo-point approximations to do interesting things. This is a WIP -- it doesn't work properly yet.
