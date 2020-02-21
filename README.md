@@ -17,7 +17,9 @@ __Installation__ - `] add Stheno`.
 
 ## A Couple of Examples
 
-We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here are a couple of examples to get you started.
+The primary sources of information regarding this package are the [documentation](https://willtebbutt.github.io/Stheno.jl/stable) and the examples folder, but here are a couple of flashy examples to get started with.
+
+Please raise an issue immediately if either of these examples don't work -- they're not currently included in CI, so there's always a higher chance that they'll be outdated than the internals of the package.
 
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
@@ -214,7 +216,7 @@ Stheno doesn't currently have support for non-Gaussian likelihoods, and as such 
 The plan is not to support the combination of GPs and Deep Learning explicitly, but rather to ensure that Stheno and [Flux.jl](https://github.com/FluxML/Flux.jl) play nicely with one another. Both packages now work with [Zygote.jl](https://github.com/FluxML/Zygote.jl), so you can use that to sort out gradient information.
 
 
-## Things that are definitely up for grabs
+## Things that are up for grabs
 Obviously, improvements to code documentation are always welcome, and if you want to write some more unit / integration tests, please feel free. In terms of larger items that require some attention, here are some thoughts:
 - An implementation of SVI from [Gaussian Processes for Big Data](https://arxiv.org/abs/1309.6835).
 - Kronecker-factored matrices: this is quite a general issue which might be best be addressed by the creation of a separate package. It would be very helpful to have an implementation of the `AbstractMatrix` interface which implements multiplication, inversion, eigenfactorisation etc, which can then be utilised in Stheno.
