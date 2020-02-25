@@ -164,7 +164,7 @@ true
 """
 function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
     μ, C = mean(f), cholesky(Symmetric(cov(f)))
-    return μ .+ C.U' * randn(rng, length(μ), N)
+    return μ .+ C.U' * randn(rng, promote_type(eltype(μ), eltype(C)), length(μ), N)
 end
 rand(f::FiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
@@ -192,14 +192,12 @@ julia> logpdf(f(x), Y) isa AbstractVector{<:Real}
 true
 ```
 """
-function logpdf(f::FiniteGP, y::AbstractVector{<:Real})
-    μ, C = mean(f), cholesky(Symmetric(cov(f)))
-    return -(length(y) * log(2π) + logdet(C) + Xt_invA_X(C, y - μ)) / 2
-end
+logpdf(f::FiniteGP, y::AbstractVector{<:Real}) = first(logpdf(f, reshape(y, :, 1)))
 
 function logpdf(f::FiniteGP, Y::AbstractMatrix{<:Real})
     μ, C = mean(f), cholesky(Symmetric(cov(f)))
-    return -((size(Y, 1) * log(2π) + logdet(C)) .+ diag_Xt_invA_X(C, Y .- μ)) ./ 2
+    T = promote_type(eltype(μ), eltype(C), eltype(Y))
+    return -((size(Y, 1) * T(log(2π)) + logdet(C)) .+ diag_Xt_invA_X(C, Y .- μ)) ./ 2
 end
 
 """
@@ -229,9 +227,9 @@ function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     Λ_ε = cholesky(Symmetric(A * A' + I))
     δ = chol_Σy.U' \ (y - mean(f))
 
-    return -(length(y) * log(2π) + logdet(chol_Σy) + logdet(Λ_ε) +
-        sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
-        tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
+    tmp = logdet(chol_Σy) + logdet(Λ_ε) + sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
+        tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)
+    return -(length(y) * typeof(tmp)(log(2π)) + tmp) / 2
 end
 
 function consistency_check(f, y, u)
