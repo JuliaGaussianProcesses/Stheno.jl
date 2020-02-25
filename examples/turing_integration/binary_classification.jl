@@ -35,24 +35,24 @@ test_x = Matrix(transpose(convert(Array, test[:, 4:end])))
 # y|f ~ Bernoulli(sigmoid(f))
 # This model is build using Turing.jl, please refer to https://turing.ml/dev/docs/using-turing/get-started for details.
 
-σ(x) = T(1.0) / (T(1.0)+exp(-x))
+σ(x) = one(T) / (one(T)+exp(-x))
 
 function build_gp(logl, σ², X)
-  ard_eq_kernel = σ² * stretch(EQ(), exp.(-logl))
-  gp = GP(ard_eq_kernel, GPC())
-	prior = gp(ColVecs(X), T(0.01))
-  gp, prior
+  	ard_eq_kernel = σ² * stretch(EQ(), exp.(-logl))
+  	gp = GP(ard_eq_kernel, GPC())
+		prior = gp(ColVecs(X), T(0.01))
+  	gp, prior
 end
 
 # The Turing model used to estimate the posterior distribution,
 # the latent variable is f & the parameter is logl
 @model gpc_learn(X, y) = begin
-	logl ~ Normal(T(0.0), T(2.0))
-	_, prior = build_gp(logl, T(1.0), X)
-  f ~ prior
-  for i in eachindex(y)
-      y[i] ~ Bernoulli(σ(f[i]))
-  end
+		logl ~ Normal(T(0.0), T(2.0))
+		_, prior = build_gp(logl, T(1.0), X)
+  	f ~ prior
+  	for i in eachindex(y)
+      	y[i] ~ Bernoulli(σ(f[i]))
+  	end
 end
 
 # Function used to infer the label for newly inputs

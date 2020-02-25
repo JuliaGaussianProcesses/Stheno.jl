@@ -12,7 +12,10 @@ T = Float64
 
 # define the step function 
 # step_func(x) = 0.0 if x<=0, 1.0 if x>0
-step_func(x) = (ϵ=T(0.01)*randn(rng, T); x>T(0.0) ? T(1.0)+ϵ : T(0.0)+ϵ)
+function step_func(x)
+		ϵ=T(0.01)*randn(rng, T)
+		return x>zero(T) ? one(T) + ϵ : zero(T) + ϵ
+end
 
 # prepare data
 ## training data, drawn from Normal(0, 1)
@@ -23,13 +26,13 @@ Xtrain = reshape(train_X, 1, :)
 train_y = step_func.(train_X)
 
 ## test data drawn from Uniform(-5, 5)
-test_X = Array(-5.0:0.02:5.0)
+test_X = collect(-5.0:0.02:5.0)
 Xtest = reshape(test_X, 1, :)
 test_y = step_func.(test_X)
 
 
 
-# Build a MLP that perform domain transformation to input data
+# Build an MLP that transform the input data
 # for Flux usage, please refer to: https://fluxml.ai/Flux.jl/stable/
 mlp = Chain(Dense(1, 6, relu), Dense(6, 2, relu)) |> (T==Float32 ? f32 : f64)
 # extract MLP parameters
@@ -43,9 +46,8 @@ logl = randn(rng, T, 2)
 logγ = T[0.0]
 
 function build_gp(logl, logγ)
-	ard_se_kernel = exp(T(2.0)*logγ[1])*stretch(EQ(), exp.(-logl))
-	gp = GP(T(0.0), ard_se_kernel, GPC())
-  gp
+		ard_eq_kernel = exp(T(2.0) * logγ[1]) * stretch(EQ(), exp.(-logl))
+		return GP(T(0.0), ard_eq_kernel, GPC())
 end
 
 # Since we always assume our data to be noisy, we model this noise by λ, also in log-scale
@@ -64,13 +66,12 @@ ps = Params([logl, logγ, logλ, θ_mlp...])
 # - Stheno assumes that you'll provide an `AbstractVector`, where each element is an
 #   observation. To handle multi-dimensional inputs we have the `ColVecs` object, that
 #   literally just wraps a `Matrix` and tells Stheno to pretend is a vector of vectors. This
-#   is helpful to remove some ambiguities that arrise if you don't do this.
+#   is helpful to remove some ambiguities that arise if you don't do this.
 function NLL(X, y)
-  Z = mlp(X)
-  gp = build_gp(logl, logγ)
-	margin_lik = gp(ColVecs(Z), exp(T(2.0)*logλ[1]))
-  nll = -logpdf(margin_lik, y)
-  nll
+  	Z = mlp(X)
+  	gp = build_gp(logl, logγ)
+		gp_Z = gp(ColVecs(Z), exp(T(2.0)*logλ[1]))
+  	return -logpdf(gp_Z, y)
 end
 
 
@@ -82,12 +83,12 @@ train_data = (Xtrain, train_y)
 opt = ADAGrad()
 nlls = []
 for i in 1:1500
-  nll = NLL(train_data...)
-  push!(nlls, nll)
-  gs = gradient(()->NLL(train_data...), ps)
-  for p in ps
-    update!(opt, p, gs[p])
-  end
+  	nll = NLL(train_data...)
+  	push!(nlls, nll)
+  	gs = gradient(()->NLL(train_data...), ps)
+  	for p in ps
+    		update!(opt, p, gs[p])
+  	end
 end
 
 loss_plot = plot(xlabel="Epoches", ylabel="Negative log-likelihood", legend=false)
@@ -102,7 +103,7 @@ function predict(X, Xtrain, ytrain)
     gp = build_gp(logl, logγ)
 		noisy_prior = gp(ColVecs(Ztrain), exp(T(2.0)*logλ[1]))
     posterior = gp | Obs(noisy_prior, ytrain)
-    posterior(ColVecs(Z))
+    return posterior(ColVecs(Z))
 end
 
 posterior = predict(Xtest, Xtrain, train_y)
