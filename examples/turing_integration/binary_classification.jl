@@ -38,21 +38,21 @@ test_x = Matrix(transpose(convert(Array, test[:, 4:end])))
 σ(x) = one(T) / (one(T)+exp(-x))
 
 function build_gp(logl, σ², X)
-  	ard_eq_kernel = σ² * stretch(EQ(), exp.(-logl))
-  	gp = GP(ard_eq_kernel, GPC())
-		prior = gp(ColVecs(X), T(0.01))
-  	gp, prior
+    ard_eq_kernel = σ² * stretch(EQ(), exp.(-logl))
+    gp = GP(ard_eq_kernel, GPC())
+    prior = gp(ColVecs(X), T(0.01))
+    gp, prior
 end
 
 # The Turing model used to estimate the posterior distribution,
 # the latent variable is f & the parameter is logl
 @model gpc_learn(X, y) = begin
-		logl ~ Normal(T(0.0), T(2.0))
-		_, prior = build_gp(logl, T(1.0), X)
-  	f ~ prior
-  	for i in eachindex(y)
+    logl ~ Normal(T(0.0), T(2.0))
+    _, prior = build_gp(logl, T(1.0), X)
+    f ~ prior
+    for i in eachindex(y)
       	y[i] ~ Bernoulli(σ(f[i]))
-  	end
+    end
 end
 
 # Function used to infer the label for newly inputs
@@ -61,14 +61,14 @@ function gpc_infer(x, logl, Xtrain, fsamples)
     nsamples = size(fsamples, 2)
     fxs = []
     for i in 1:nsamples
-			gp, prior = build_gp(logl[i], T(1.0), Xtrain)
+        gp, prior = build_gp(logl[i], T(1.0), Xtrain)
         conditioned_gp = gp | Obs(prior, fsamples[:, i])
         posterior = conditioned_gp(ColVecs(x))
         push!(fxs, mean.(marginals(posterior)))
     end
     fx_mean = vec(mean(hcat(fxs...), dims=2))
     p = σ.(fx_mean)
-		y = Int.(p .> T(0.5))
+    y = Int.(p .> T(0.5))
     y
 end
 
@@ -95,7 +95,7 @@ pred_y = gpc_infer(test_x, reserve_logl, train_x, reserve_fsamples)
 function accuracy(pred_y, y)
     N = length(y)
     N_neq = sum(abs.(pred_y .- y))
-		r = T(1.0) - N_neq / N
+    r = T(1.0) - N_neq / N
     r
 end
 

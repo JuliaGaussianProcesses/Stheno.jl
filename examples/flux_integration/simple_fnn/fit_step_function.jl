@@ -13,8 +13,8 @@ T = Float64
 # define the step function 
 # step_func(x) = 0.0 if x<=0, 1.0 if x>0
 function step_func(x)
-		ϵ=T(0.01)*randn(rng, T)
-		return x>zero(T) ? one(T) + ϵ : zero(T) + ϵ
+    ϵ=T(0.01)*randn(rng, T)
+    return x>zero(T) ? one(T) + ϵ : zero(T) + ϵ
 end
 
 # prepare data
@@ -46,8 +46,8 @@ logl = randn(rng, T, 2)
 logγ = T[0.0]
 
 function build_gp(logl, logγ)
-		ard_eq_kernel = exp(T(2.0) * logγ[1]) * stretch(EQ(), exp.(-logl))
-		return GP(T(0.0), ard_eq_kernel, GPC())
+    ard_eq_kernel = exp(T(2.0) * logγ[1]) * stretch(EQ(), exp.(-logl))
+    return GP(T(0.0), ard_eq_kernel, GPC())
 end
 
 # Since we always assume our data to be noisy, we model this noise by λ, also in log-scale
@@ -68,10 +68,10 @@ ps = Params([logl, logγ, logλ, θ_mlp...])
 #   literally just wraps a `Matrix` and tells Stheno to pretend is a vector of vectors. This
 #   is helpful to remove some ambiguities that arise if you don't do this.
 function NLL(X, y)
-  	Z = mlp(X)
-  	gp = build_gp(logl, logγ)
-		gp_Z = gp(ColVecs(Z), exp(T(2.0)*logλ[1]))
-  	return -logpdf(gp_Z, y)
+    Z = mlp(X)
+    gp = build_gp(logl, logγ)
+    gp_Z = gp(ColVecs(Z), exp(T(2.0)*logλ[1]))
+    return -logpdf(gp_Z, y)
 end
 
 
@@ -83,12 +83,12 @@ train_data = (Xtrain, train_y)
 opt = ADAGrad()
 nlls = []
 for i in 1:1500
-  	nll = NLL(train_data...)
-  	push!(nlls, nll)
-  	gs = gradient(()->NLL(train_data...), ps)
-  	for p in ps
-    		update!(opt, p, gs[p])
-  	end
+    nll = NLL(train_data...)
+    push!(nlls, nll)
+    gs = gradient(()->NLL(train_data...), ps)
+    for p in ps
+	update!(opt, p, gs[p])
+    end
 end
 
 loss_plot = plot(xlabel="Epoches", ylabel="Negative log-likelihood", legend=false)
@@ -101,7 +101,7 @@ png(loss_plot, "loss.png")
 function predict(X, Xtrain, ytrain)
     Z = mlp(X); Ztrain = mlp(Xtrain)
     gp = build_gp(logl, logγ)
-		noisy_prior = gp(ColVecs(Ztrain), exp(T(2.0)*logλ[1]))
+    noisy_prior = gp(ColVecs(Ztrain), exp(T(2.0)*logλ[1]))
     posterior = gp | Obs(noisy_prior, ytrain)
     return posterior(ColVecs(Z))
 end
