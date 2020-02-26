@@ -197,6 +197,20 @@ end
             atol=1e-6, rtol=1e-6,
         )
     end
+    @testset "Type Stability - $T" for T in [Float64, Float32]
+        rng = MersenneTwister(123456)
+        x = randn(rng, T, 123)
+        z = randn(rng, T, 13)
+        f = GP(T(0), EQ(), GPC())
+
+        fx = f(x, T(0.1))
+        u = f(z, T(1e-4))
+
+        y = rand(rng, fx)
+        @test y isa Vector{T}
+        @test logpdf(fx, y) isa T
+        @test elbo(fx, y, u) isa T
+    end
 end
 
 # """

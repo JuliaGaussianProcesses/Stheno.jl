@@ -5,7 +5,7 @@
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://willtebbutt.github.io/Stheno.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://willtebbutt.github.io/Stheno.jl/dev)
 
-Stheno is designed to make doing non-standard things with Gaussian processes straightforward. It has an intuitive modeling syntax, is inherently able to handle both multi-input and multi-output problems, and trivially supports interdomain pseudo-point approximations.
+Stheno is designed to make doing non-standard things with Gaussian processes straightforward. It has an intuitive modeling syntax, is inherently able to handle both multi-input and multi-output problems, and trivially supports interdomain pseudo-point approximations. We call this Gaussian process Probabilistic Programming (GPPP).
 
 [We also have a Python version of the package](https://github.com/wesselb/stheno)
 
@@ -17,7 +17,9 @@ __Installation__ - `] add Stheno`.
 
 ## A Couple of Examples
 
-We have a [model zoo](https://github.com/willtebbutt/stheno_models), but here are a couple of examples to get you started.
+The primary sources of information regarding this package are the [documentation](https://willtebbutt.github.io/Stheno.jl/stable) and the examples folder, but here are a couple of flashy examples to get started with.
+
+Please raise an issue immediately if either of these examples don't work -- they're not currently included in CI, so there's always a higher chance that they'll be outdated than the internals of the package.
 
 In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
 ```julia
@@ -116,9 +118,9 @@ display(posterior_plot);
 ```
 ![](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.png)
 
-[Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.jl)
-
 In the above figure, we have visualised the posterior distribution of all of the processes. Bold lines are posterior means, and shaded areas are three posterior standard deviations from these means. Thin lines are samples from the posterior processes.
+
+This example can also be found in `examples/basic_gppp/process_decomposition.jl`, which also contains other toy examples of GPPP in action.
 
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
@@ -194,10 +196,9 @@ display(posterior_plot);
 ```
 ![](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.png)
 
-[Model Zoo Link](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.jl)
-
 As before, we visualise the posterior distribution through its marginal statistics and joint samples. Note that the posterior samples over the unobserved process are (unsurprisingly) smooth, whereas the posterior samples over the noisy processes still look uncorrelated and noise-like.
 
+As before, this example can also be found in `examples/basic_gppp/process_decomposition.jl`.
 
 ## Hyperparameter learning and inference
 
@@ -214,7 +215,7 @@ Stheno doesn't currently have support for non-Gaussian likelihoods, and as such 
 The plan is not to support the combination of GPs and Deep Learning explicitly, but rather to ensure that Stheno and [Flux.jl](https://github.com/FluxML/Flux.jl) play nicely with one another. Both packages now work with [Zygote.jl](https://github.com/FluxML/Zygote.jl), so you can use that to sort out gradient information.
 
 
-## Things that are definitely up for grabs
+## Things that are up for grabs
 Obviously, improvements to code documentation are always welcome, and if you want to write some more unit / integration tests, please feel free. In terms of larger items that require some attention, here are some thoughts:
 - An implementation of SVI from [Gaussian Processes for Big Data](https://arxiv.org/abs/1309.6835).
 - Kronecker-factored matrices: this is quite a general issue which might be best be addressed by the creation of a separate package. It would be very helpful to have an implementation of the `AbstractMatrix` interface which implements multiplication, inversion, eigenfactorisation etc, which can then be utilised in Stheno.
