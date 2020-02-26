@@ -227,7 +227,7 @@ end
 """
     dtc(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
 
-The Deterministic Training Criterion (DTC). `y` are observations of `f`, and `u`
+The Deterministic Training Conditional (DTC) [1]. `y` are observations of `f`, and `u`
 are pseudo-points.
 
 ```jldoctest
@@ -242,6 +242,10 @@ julia> y = rand(f(x, 0.1));
 julia> isapprox(dtc(f(x, 0.1), y, f(z)), logpdf(f(x, 0.1), y); atol=1e-3, rtol=1e-3)
 true
 ```
+
+[1] - M. Seeger, C. K. I. Williams and N. D. Lawrence. "Fast Forward Selection to Speed Up
+Sparse Gaussian Process Regression". In: Proceedings of the Ninth International Workshop on
+Artificial Intelligence and Statistics. 2003
 """
 dtc(f::FiniteGP, y::AV{<:Real}, u::FiniteGP) = first(_compute_intermediates(f, y, u))
 
