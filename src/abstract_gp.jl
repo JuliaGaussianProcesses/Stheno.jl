@@ -203,7 +203,7 @@ end
 """
    elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP)
 
-The saturated Titsias Evidence LOwer Bound (ELBO). `y` are observations of `f`, and `u`
+The saturated Titsias Evidence LOwer Bound (ELBO) [1]. `y` are observations of `f`, and `u`
 are pseudo-points.
 
 ```jldoctest
@@ -218,6 +218,10 @@ julia> y = rand(f(x, 0.1));
 julia> elbo(f(x, 0.1), y, f(z)) < logpdf(f(x, 0.1), y)
 true
 ```
+
+[1] - M. K. Titsias. "Variational learning of inducing variables in sparse Gaussian
+processes". In: Proceedings of the Twelfth International Conference on Artificial
+Intelligence and Statistics. 2009.
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     _dtc, chol_Σy, A = _compute_intermediates(f, y, u)
