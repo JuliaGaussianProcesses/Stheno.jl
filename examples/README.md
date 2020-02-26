@@ -10,3 +10,5 @@ Below we provide a brief description of each of the sub-directories.
 - `pseudo_points`: covers inducing-point / sparse / pseudo-point approximations.
 - `basic_gppp`: basic toy examples of the functionality that we call Gaussian process Probabilistic Programming (GPPP).
 - `gppp_and_pseudo_points`: combine GPPP and pseudo-point approximations to do interesting things. This is a WIP -- it doesn't work properly yet.
+- `flux_integration`: indicate how Stheno.jl work with Flux.jl. Currently we have an example shows how to use Flux's neural network as a feature extractor and then use GP to do regression, Stheno's power is not limited to this, we are working on adding more functionalities and more examples.
+- `turing_integration`: a binary classification example shows how Stheno.jl, with the help of Turing.jl, can be used in non-Gaussian likelihood problems.
