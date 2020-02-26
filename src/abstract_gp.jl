@@ -220,7 +220,7 @@ true
 ```
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-    _dtc, f, chol_Σy, A = _compute_intermediates(f, y, u)
+    _dtc, chol_Σy, A = _compute_intermediates(f, y, u)
     return _dtc - (tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
 end
 
