@@ -19,7 +19,7 @@ next_index(gpc::GPC) = gpc.n + 1
 import Base: rand, length
 import Distributions: logpdf, ContinuousMultivariateDistribution
 
-export mean, std, cov, marginals, rand, logpdf, elbo
+export mean, std, cov, marginals, rand, logpdf, elbo, dtc
 
 """
     FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy}
@@ -203,7 +203,7 @@ end
 """
    elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP)
 
-The saturated Titsias Evidence LOwer Bound (ELBO). `y` are observations of `f`, and `u`
+The saturated Titsias Evidence LOwer Bound (ELBO) [1]. `y` are observations of `f`, and `u`
 are pseudo-points.
 
 ```jldoctest
@@ -218,8 +218,43 @@ julia> y = rand(f(x, 0.1));
 julia> elbo(f(x, 0.1), y, f(z)) < logpdf(f(x, 0.1), y)
 true
 ```
+
+[1] - M. K. Titsias. "Variational learning of inducing variables in sparse Gaussian
+processes". In: Proceedings of the Twelfth International Conference on Artificial
+Intelligence and Statistics. 2009.
 """
 function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
+    _dtc, chol_Σy, A = _compute_intermediates(f, y, u)
+    return _dtc - (tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)) / 2
+end
+
+"""
+    dtc(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
+
+The Deterministic Training Conditional (DTC) [1]. `y` are observations of `f`, and `u`
+are pseudo-points.
+
+```jldoctest
+julia> f = GP(Matern52(), GPC());
+
+julia> x = randn(1000);
+
+julia> z = range(-5.0, 5.0; length=256);
+
+julia> y = rand(f(x, 0.1));
+
+julia> isapprox(dtc(f(x, 0.1), y, f(z)), logpdf(f(x, 0.1), y); atol=1e-3, rtol=1e-3)
+true
+```
+
+[1] - M. Seeger, C. K. I. Williams and N. D. Lawrence. "Fast Forward Selection to Speed Up
+Sparse Gaussian Process Regression". In: Proceedings of the Ninth International Workshop on
+Artificial Intelligence and Statistics. 2003
+"""
+dtc(f::FiniteGP, y::AV{<:Real}, u::FiniteGP) = first(_compute_intermediates(f, y, u))
+
+# Factor out computations common to the `elbo` and `dtc`.
+function _compute_intermediates(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     consistency_check(f, y, u)
     chol_Σy = cholesky(f.Σy)
 
@@ -227,10 +262,11 @@ function elbo(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     Λ_ε = cholesky(Symmetric(A * A' + I))
     δ = chol_Σy.U' \ (y - mean(f))
 
-    tmp = logdet(chol_Σy) + logdet(Λ_ε) + sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ)) +
-        tr_Cf_invΣy(f, f.Σy, chol_Σy) - sum(abs2, A)
-    return -(length(y) * typeof(tmp)(log(2π)) + tmp) / 2
+    tmp = logdet(chol_Σy) + logdet(Λ_ε) + sum(abs2, δ) - sum(abs2, Λ_ε.U' \ (A * δ))
+    _dtc = -(length(y) * typeof(tmp)(log(2π)) + tmp) / 2
+    return _dtc, chol_Σy, A
 end
+
 
 function consistency_check(f, y, u)
     @assert length(f) == size(y, 1)
