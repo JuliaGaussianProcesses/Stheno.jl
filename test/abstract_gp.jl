@@ -118,7 +118,7 @@ end
     #     #     )
     #     # end
     # end
-    @testset "logpdf / elbo" begin
+    @testset "logpdf / elbo / dtc" begin
         rng, N, S, σ, gpc = MersenneTwister(123456), 10, 11, 1e-1, GPC()
         x = collect(range(-3.0, stop=3.0, length=N))
         f = GP(1, EQ(), gpc)
@@ -179,9 +179,20 @@ end
         @test elbo(y, ŷ, y) < logpdf(y, ŷ)
         @test elbo(y, ŷ, FiniteGP(f, x, 2 * σ^2)) < elbo(y, ŷ, y)
 
-        # Check adjoint w.r.t. elbo actually works with the new syntax.
+        # Check adjoint w.r.t. elbo is correct.
         adjoint_test(
             (x, ŷ, σ)->elbo(FiniteGP(f, x, σ^2), ŷ, FiniteGP(f, x, 0)),
+            randn(rng), x, ŷ, σ;
+            atol=1e-6, rtol=1e-6,
+        )
+
+        # Ensure that the dtc is close to the logpdf when appropriate.
+        @test dtc(y, ŷ, fx) isa Real
+        @test dtc(y, ŷ, fx) ≈ logpdf(y, ŷ)
+
+        # Check adjoint w.r.t. dtc is correct.
+        adjoint_test(
+            (x, ŷ, σ)->dtc(FiniteGP(f, x, σ^2), ŷ, FiniteGP(f, x, 0)),
             randn(rng), x, ŷ, σ;
             atol=1e-6, rtol=1e-6,
         )
