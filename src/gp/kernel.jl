@@ -628,10 +628,10 @@ pw(k::Stretched{<:Real}, x::AV{<:Real}) = pw(k.k, exp.(k.loga) .* x)
 
 # Binary methods (scalar and vector `a`, vector-valued input)
 function ew(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs, x′::ColVecs)
-	return ew(k.k, ColVecs(exp.(k.loga) .* x.X), ColVecs(exp.(k.loga) .* x′.X))
+    return ew(k.k, ColVecs(exp.(k.loga) .* x.X), ColVecs(exp.(k.loga) .* x′.X))
 end
 function pw(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs, x′::ColVecs)
-	return pw(k.k, ColVecs(exp.(k.loga) .* x.X), ColVecs(exp.(k.loga) .* x′.X))
+    return pw(k.k, ColVecs(exp.(k.loga) .* x.X), ColVecs(exp.(k.loga) .* x′.X))
 end
 
 # Unary methods (scalar and vector `a`, vector-valued input)
@@ -640,10 +640,10 @@ pw(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs) = pw(k.k, ColVecs(exp.(k
 
 # Binary methods (matrix `a`, vector-valued input)
 function ew(k::Stretched{<:AM{<:Real}}, x::ColVecs, x′::ColVecs)
-	return ew(k.k, ColVecs(exp.(k.loga) * x.X), ColVecs(exp.(k.loga) * x′.X))
+    return ew(k.k, ColVecs(exp.(k.loga) * x.X), ColVecs(exp.(k.loga) * x′.X))
 end
 function pw(k::Stretched{<:AM{<:Real}}, x::ColVecs, x′::ColVecs)
-	return pw(k.k, ColVecs(exp.(k.loga) * x.X), ColVecs(exp.(k.loga) * x′.X))
+    return pw(k.k, ColVecs(exp.(k.loga) * x.X), ColVecs(exp.(k.loga) * x′.X))
 end
 
 # Unary methods (scalar and vector `a`, vector-valued input)
