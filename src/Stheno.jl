@@ -41,6 +41,7 @@ module Stheno
     # Atomic GP objects.
     include(joinpath("gp", "mean.jl"))
     include(joinpath("gp", "kernel.jl"))
+		include(joinpath("gp", "neural_kernel_network.jl"))
     include(joinpath("gp", "gp.jl"))
 
     # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.

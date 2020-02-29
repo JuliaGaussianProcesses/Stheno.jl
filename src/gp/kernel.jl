@@ -2,6 +2,8 @@ import Base: +, *, zero, cos
 using Distances: sqeuclidean, SqEuclidean, Euclidean
 using Base.Broadcast: broadcast_shape
 using LinearAlgebra: isposdef, checksquare
+using Flux
+using Flux: @functor
 
 abstract type Kernel end
 
@@ -9,7 +11,7 @@ abstract type Kernel end
 export Kernel, kernel, elementwise, pairwise, ew, pw
 
 # Kernel exports
-export EQ, Exp, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp, Wiener,
+export EQ, Exp, PerEQ, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp, Wiener,
     WienerVelocity, Precomputed
 
 
@@ -106,15 +108,20 @@ The usual periodic kernel derived by mapping the input domain onto the unit circ
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct PerEQ <: Kernel end
+struct PerEQ{LT<:AV{<:Real}} <: Kernel
+	logl::LT
+end
+@functor PerEQ
+
+_pereq(d, logl) = exp(-2.0*sin(π*d)^2 / exp(2.0*logl))
 
 # Binary methods.
-ew(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-2 .* sin.(π .* abs.(x .- x′)).^2)
-pw(k::PerEQ, x::AV{<:Real}, x′::AV{<:Real}) = exp.(.-2 .* sin.(π .* abs.(x .- x′')).^2)
+ew(k::PerEQ, x::AV, x′::AV) = _pereq.(ew(Euclidean(), x, x′), k.logl[1]) 
+pw(k::PerEQ, x::AV, x′::AV) = _pereq.(pw(Euclidean(), x, x′), k.logl[1])
 
 # Unary methods.
-ew(::PerEQ, x::AV{<:Real}) = ones(eltype(x), length(x))
-pw(k::PerEQ, x::AV{<:Real}) = pw(k, x, x)
+ew(k::PerEQ, x::AV) = _pereq.(ew(Euclidean(), x), k.logl[1])
+pw(k::PerEQ, x::AV) = _pereq.(pw(Euclidean(), x), k.logl[1])
 
 
 
@@ -213,19 +220,20 @@ The standardised Rational Quadratic, with kurtosis `α`.
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct RQ{Tα<:Real} <: Kernel
-    α::Tα
+struct RQ{Tα<:AV{<:Real}} <: Kernel
+    logα::Tα
 end
+@functor RQ
 
 _rq(d, α) = (1 + d / (2α))^(-α)
 
 # Binary methods.
-ew(k::RQ, x::AV, x′::AV) = _rq.(ew(SqEuclidean(), x, x′), k.α)
-pw(k::RQ, x::AV, x′::AV) = _rq.(pw(SqEuclidean(), x, x′), k.α)
+ew(k::RQ, x::AV, x′::AV) = _rq.(ew(SqEuclidean(), x, x′), exp(k.logα[1]))
+pw(k::RQ, x::AV, x′::AV) = _rq.(pw(SqEuclidean(), x, x′), exp(k.logα[1]))
 
 # Unary methods.
-ew(k::RQ, x::AV) = _rq.(ew(SqEuclidean(), x), k.α)
-pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), k.α)
+ew(k::RQ, x::AV) = _rq.(ew(SqEuclidean(), x), exp(k.logα[1]))
+pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), exp(k.logα[1]))
 
 
 
@@ -487,11 +495,11 @@ pw(k::Product, x::AV) = pw(k.kl, x) .* pw(k.kr, x)
 
 Scale the variance of `Kernel` `k` by `σ²` s.t. `(σ² * k)(x, x′) = σ² * k(x, x′)`.
 """
-struct Scaled{Tσ²<:Real, Tk<:Kernel} <: Kernel
-    σ²::Tσ²
+struct Scaled{Tσ²<:AV{<:Real}, Tk<:Kernel} <: Kernel
+    logσ²::Tσ²
     k::Tk
 end
-
+@functor Scaled
 """
     *(σ²::Real, k::Kernel)
     *(k::Kernel, σ²::Real)
@@ -507,16 +515,16 @@ julia> pw(0.5 * k, x) == 0.5 .* Stheno.pw(k, x)
 true
 ```
 """
-*(σ²::Real, k::Kernel) = Scaled(σ², k)
-*(k::Kernel, σ²) = σ² * k
+*(logσ²::AV{<:Real}, k::Kernel) = Scaled(logσ², k)
+*(k::Kernel, logσ²) = logσ² * k
 
 # Binary methods.
-ew(k::Scaled, x::AV, x′::AV) = k.σ² .* ew(k.k, x, x′)
-pw(k::Scaled, x::AV, x′::AV) = k.σ² .* pw(k.k, x, x′)
+ew(k::Scaled, x::AV, x′::AV) = exp(k.logσ²[1]) .* ew(k.k, x, x′)
+pw(k::Scaled, x::AV, x′::AV) = exp(k.logσ²[1]) .* pw(k.k, x, x′)
 
 # Unary methods.
-ew(k::Scaled, x::AV) = k.σ² .* ew(k.k, x)
-pw(k::Scaled, x::AV) = k.σ² .* pw(k.k, x)
+ew(k::Scaled, x::AV) = exp(k.logσ²[1]) .* ew(k.k, x)
+pw(k::Scaled, x::AV) = exp(k.logσ²[1]) .* pw(k.k, x)
 
 
 
@@ -526,10 +534,10 @@ pw(k::Scaled, x::AV) = k.σ² .* pw(k.k, x)
 Apply a length scale to a kernel. Specifically, `k(x, x′) = k(a * x, a * x′)`.
 """
 struct Stretched{Ta<:Union{Real, AV{<:Real}, AM{<:Real}}, Tk<:Kernel} <: Kernel
-    a::Ta
+    loga::Ta
     k::Tk
 end
-
+@functor Stretched
 """
     stretch(k::Kernel, a::Union{Real, AbstractVecOrMat{<:Real})
 
@@ -608,39 +616,39 @@ K = pairwise(k, xs, ys)
  1.40202e-8   0.293658     0.0808585
 ```
 """
-stretch(k::Kernel, a::Union{Real, AbstractVecOrMat{<:Real}}) = Stretched(a, k)
+stretch(k::Kernel, loga::Union{Real, AbstractVecOrMat{<:Real}}) = Stretched(loga, k)
 
 # Binary methods (scalar `a`, scalar-valued input)
-ew(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, k.a .* x, k.a .* x′)
-pw(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, k.a .* x, k.a .* x′)
+ew(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, exp.(k.loga) .* x, exp.(k.loga) .* x′)
+pw(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, exp.(k.loga) .* x, exp.(k.loga) .* x′)
 
 # Unary methods (scalar)
-ew(k::Stretched{<:Real}, x::AV{<:Real}) = ew(k.k, k.a .* x)
-pw(k::Stretched{<:Real}, x::AV{<:Real}) = pw(k.k, k.a .* x)
+ew(k::Stretched{<:Real}, x::AV{<:Real}) = ew(k.k, exp.(k.loga) .* x)
+pw(k::Stretched{<:Real}, x::AV{<:Real}) = pw(k.k, exp.(k.loga) .* x)
 
 # Binary methods (scalar and vector `a`, vector-valued input)
 function ew(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs, x′::ColVecs)
-    return ew(k.k, ColVecs(k.a .* x.X), ColVecs(k.a .* x′.X))
+	return ew(k.k, ColVecs(exp.(k.loga) .* x.X), ColVecs(exp.(k.loga) .* x′.X))
 end
 function pw(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs, x′::ColVecs)
-    return pw(k.k, ColVecs(k.a .* x.X), ColVecs(k.a .* x′.X))
+	return pw(k.k, ColVecs(exp.(k.loga) .* x.X), ColVecs(exp.(k.loga) .* x′.X))
 end
 
 # Unary methods (scalar and vector `a`, vector-valued input)
-ew(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs) = ew(k.k, ColVecs(k.a .* x.X))
-pw(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs) = pw(k.k, ColVecs(k.a .* x.X))
+ew(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs) = ew(k.k, ColVecs(exp.(k.loga) .* x.X))
+pw(k::Stretched{<:Union{Real, AV{<:Real}}}, x::ColVecs) = pw(k.k, ColVecs(exp.(k.loga) .* x.X))
 
 # Binary methods (matrix `a`, vector-valued input)
 function ew(k::Stretched{<:AM{<:Real}}, x::ColVecs, x′::ColVecs)
-    return ew(k.k, ColVecs(k.a * x.X), ColVecs(k.a * x′.X))
+	return ew(k.k, ColVecs(exp.(k.loga) * x.X), ColVecs(exp.(k.loga) * x′.X))
 end
 function pw(k::Stretched{<:AM{<:Real}}, x::ColVecs, x′::ColVecs)
-    return pw(k.k, ColVecs(k.a * x.X), ColVecs(k.a * x′.X))
+	return pw(k.k, ColVecs(exp.(k.loga) * x.X), ColVecs(exp.(k.loga) * x′.X))
 end
 
 # Unary methods (scalar and vector `a`, vector-valued input)
-ew(k::Stretched{<:AM{<:Real}}, x::ColVecs) = ew(k.k, ColVecs(k.a * x.X))
-pw(k::Stretched{<:AM{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(k.a * x.X))
+ew(k::Stretched{<:AM{<:Real}}, x::ColVecs) = ew(k.k, ColVecs(exp.(k.loga) * x.X))
+pw(k::Stretched{<:AM{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(exp.(k.loga) * x.X))
 
 
 
