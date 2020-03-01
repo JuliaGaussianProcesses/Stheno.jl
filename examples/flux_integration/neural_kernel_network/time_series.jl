@@ -54,16 +54,15 @@ end
 l = median_distance_local(xtrain)
 
 
-
 # construct kernels
 iso_lin_kernel1 = stretch(Linear(), [0.0])
-iso_per_kernel1 = [log(1.0)] * stretch(PerEQ([log(l)]), [log(l)])
-iso_eq_kernel1 = [log(1.0)] * stretch(EQ(), [log(l/4.0)])
-iso_rq_kernel1 = [log(1.0)] * stretch(RQ([log(0.2)]), [log(2.0*l)])
+iso_per_kernel1 = [0.0] * stretch(PerEQ([log(l)]), [log(l)])
+iso_eq_kernel1 = [0.0] * stretch(EQ(), [log(l/4.0)])
+iso_rq_kernel1 = [0.0] * stretch(RQ([log(0.2)]), [log(2.0*l)])
 iso_lin_kernel2 = stretch(Linear(), [0.0])
-iso_rq_kernel2 = [log(1.0)] * stretch(RQ([log(0.1)]), [log(l)])
-iso_eq_kernel2 = [log(1.0)] * stretch(EQ(), [log(l)])
-iso_per_kernel2 = [log(1.0)] * stretch(PerEQ([log(l/4.0)]), [log(l/4.0)])
+iso_rq_kernel2 = [0.0] * stretch(RQ([log(0.1)]), [log(l)])
+iso_eq_kernel2 = [0.0] * stretch(EQ(), [log(l)])
+iso_per_kernel2 = [0.0] * stretch(PerEQ([log(l/4.0)]), [log(l/4.0)])
 
 
 # sum product network
@@ -101,23 +100,30 @@ for i in 1:5000
     end
 end
 
-display(plot(loss))
+plt1 = plot(legend=false, xlabel="Epoches", ylabel="Negative log-likelihood")
+plot!(plt1, loss)
+png(plt1, "loss.png")
 
 
 # predict
 function predict(X, Xtrain, ytrain)
-    noisy_prior = gp(ColVecs(Xtrain), σ²_n)
-    posterior = gp | Obs(noisy_prior, ytrain)
+    gp = GP(nkn, GPC())
+    gp_Xtrain = gp(ColVecs(Xtrain), σ²_n)
+    posterior = gp | Obs(gp_Xtrain, ytrain)
     posterior(ColVecs(X))
 end
 
 posterior = predict(Year, Xtrain, ytrain)
-pred_y = mean(posterior)
-pred_oy = @. pred_y*ytrain_std+ytrain_mean
+post_dist = marginals(posterior)
+pred_y = mean.(post_dist)
+var_y = std.(post_dist)
 
-plt = plot(xlabel="Year", ylabel="Airline Passenger number", legend=true)
-plot!(plt, year, pred_oy, title="Time series prediction",label="95% predictive confidence region")
-scatter!(plt, oxtest, oytest, label="Observations(test)", color=:red)
-scatter!(plt, oxtrain, oytrain, label="Observations(train)", color=:black)
-display(plt)
+pred_oy = @. pred_y*ytrain_std+ytrain_mean
+pred_oσ = @. var_y*ytrain_std
+
+plt2 = plot(xlabel="Year", ylabel="Airline Passenger number", legend=true)
+plot!(plt2, year, pred_oy, ribbons=3*pred_oσ, title="Time series prediction",label="95% predictive confidence region")
+scatter!(plt2, oxtest, oytest, label="Observations(test)", color=:red)
+scatter!(plt2, oxtrain, oytrain, label="Observations(train)", color=:black)
+png(plt2, "time_series.png")
 
