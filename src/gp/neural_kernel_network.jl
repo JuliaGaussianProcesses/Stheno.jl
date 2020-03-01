@@ -67,11 +67,14 @@ end
 
 # use this function to reshape the 1d array back to kernel matrix
 _rebuild_kernel(x, n, m) = reshape(x, n, m)
+# the result of `ew` function should be a 1d array, however, the result of Flux's neural network is a 2d array,
+# therefore, we reshape it to 1d
+_rebuild_diag(x) = reshape(x, :)
 
-ew(nkn::NeuralKernelNetwork, x) = nkn.chain(ew(nkn.player, x))
+ew(nkn::NeuralKernelNetwork, x) = _rebuild_diag(nkn.chain(ew(nkn.player, x)))
 pw(nkn::NeuralKernelNetwork, x) = _rebuild_kernel(nkn.chain(pw(nkn.player, x)), length(x), length(x))
 
-ew(nkn::NeuralKernelNetwork, x, x′) = nkn.chain(ew(nkn.player, x, x′))
+ew(nkn::NeuralKernelNetwork, x, x′) = _rebuild_diag(nkn.chain(ew(nkn.player, x, x′)))
 pw(nkn::NeuralKernelNetwork, x, x′) = _rebuild_kernel(nkn.chain(pw(nkn.player, x, x′)), length(x), length(x′))
 
 function Base.show(io::IO, kernel::NeuralKernelNetwork)
