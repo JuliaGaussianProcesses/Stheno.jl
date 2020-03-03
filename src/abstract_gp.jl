@@ -1,6 +1,6 @@
 export GPC
 
-abstract type AbstractGP end
+abstract type AbstractGP <: AbstractModel end
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of GPs.
 mutable struct GPC

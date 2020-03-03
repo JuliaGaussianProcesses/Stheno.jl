@@ -1,6 +1,6 @@
 import Base: zero
 
-abstract type MeanFunction end
+abstract type MeanFunction <: AbstractModel end
 
 
 
@@ -10,6 +10,8 @@ abstract type MeanFunction end
 Returns `zero(T)` everywhere.
 """
 struct ZeroMean{T<:Real} <: MeanFunction end
+get_iparam(::ZeroMean) = Union{}[]
+child(::ZeroMean) = ()
 ZeroMean() = ZeroMean{Float64}()
 ew(::ZeroMean{T}, x::AV) where T = zeros(T, length(x))
 zero(::MeanFunction) = ZeroMean()
@@ -22,6 +24,8 @@ zero(::MeanFunction) = ZeroMean()
 Return `one(T)` everywhere.
 """
 struct OneMean{T<:Real} <: MeanFunction end
+get_iparam(::OneMean) = Union{}[]
+child(::OneMean) = ()
 OneMean() = OneMean{Float64}()
 ew(::OneMean{T}, x::AV) where T = ones(T, length(x))
 
@@ -32,9 +36,11 @@ ew(::OneMean{T}, x::AV) where T = ones(T, length(x))
 
 Returns `c` everywhere.
 """
-struct ConstMean{T<:Real} <: MeanFunction
-    c::T
+struct ConstMean{T, cT<:AV{T}} <: MeanFunction
+    c::cT
 end
+get_iparam(c::ConstMean) = c.c
+child(::ConstMean) = ()
 ew(m::ConstMean, x::AV) = fill(m.c, length(x))
 
 

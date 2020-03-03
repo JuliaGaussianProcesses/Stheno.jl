@@ -64,6 +64,9 @@ struct GP{Tm<:MeanFunction, Tk<:Kernel} <: AbstractGP
         return gp
     end
 end
+get_iparam(::GP) = Union{}[]
+child(gp::GP) = (gp.m, gp.k)
+
 GP(m::Tm, k::Tk, gpc::GPC) where {Tm<:MeanFunction, Tk<:Kernel} = GP{Tm, Tk}(m, k, gpc)
 
 GP(f, k::Kernel, gpc::GPC) = GP(CustomMean(f), k, gpc)

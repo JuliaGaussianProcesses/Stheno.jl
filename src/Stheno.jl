@@ -37,6 +37,7 @@ module Stheno
 
     # Supertype for GPs.
     include("abstract_gp.jl")
+		include("abstract_model.jl")
 
     # Atomic GP objects.
     include(joinpath("gp", "mean.jl"))
@@ -55,6 +56,9 @@ module Stheno
     include(joinpath("composite", "compose.jl"))
     # include(joinpath("composite", "gradient.jl"))
     # include(joinpath("composite", "integrate.jl"))
+
+		# Neural network used in gp
+		include(joinpath("neural_network", "basic.jl"))
 
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))

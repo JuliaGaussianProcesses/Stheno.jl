@@ -4,52 +4,52 @@ using Base.Broadcast: broadcast_shape
 using LinearAlgebra: isposdef, checksquare
 
 
-abstract type Kernel end
-function get_iparam(::Kernel) end
-function child(::Kernel) end
-parameters(x::Kernel) = parameters!(parameter_eltype(x)[], x)
+abstract type Kernel <: AbstractModel end
+# function get_iparam(::Kernel) end
+# function child(::Kernel) end
+# parameters(x::Kernel) = parameters!(parameter_eltype(x)[], x)
 # parameters(x::Kernel) = parameters!(Params(), x)
-function parameters!(out, x::Kernel)
-    append!(out, get_iparam(x))
-		# push!(out, get_iparam(x))
-		for x_child in child(x)
-        parameters!(out, x_child)
-    end
-    return out
-end
-function parameter_eltype(x::Kernel)
-	  T = eltype(get_iparam(x))
-    for each in child(x)
-        T = promote_type(T, parameter_eltype(each))
-    end
-    return T
-end
-get_nparameter(x::Kernel) = length(parameters(x)) 
-
-function dispatch!(k::Kernel, v::AV)
-	  nθ_k = get_nparameter(k)
-		nθ_k == length(v) || throw(DimensionMismatch("expect $(nθ_k) parameters, got $(length(v))"))
-    θ = get_iparam(k)
-    copyto!(θ, 1, v, 1, length(θ))
-    loc = 1 + length(θ)
-    for k′ in child(k)
-			  nθ_k′ = get_nparameter(k′)
-			  dispatch!(k′, v[loc:loc+nθ_k′-1])
-        loc += nθ_k′
-    end
-    return k
-end
-extract_gradient(k::Kernel, G::NamedTuple) = extract_gradient!(parameter_eltype(k)[], G)
-function extract_gradient!(out, G::NamedTuple)
-	for each in values(G)
-		if each isa NamedTuple
-			extract_gradient!(out, each)
-		elseif each isa AV
-			append!(out, each)
-		end
-	end
-	return out
-end
+# function parameters!(out, x::Kernel)
+#     append!(out, get_iparam(x))
+# 		# push!(out, get_iparam(x))
+# 		for x_child in child(x)
+#         parameters!(out, x_child)
+#     end
+#     return out
+# end
+# function parameter_eltype(x::Kernel)
+# 	  T = eltype(get_iparam(x))
+#     for each in child(x)
+#         T = promote_type(T, parameter_eltype(each))
+#     end
+#     return T
+# end
+# get_nparameter(x::Kernel) = length(parameters(x)) 
+# 
+# function dispatch!(k::Kernel, v::AV)
+# 	  nθ_k = get_nparameter(k)
+# 		nθ_k == length(v) || throw(DimensionMismatch("expect $(nθ_k) parameters, got $(length(v))"))
+#     θ = get_iparam(k)
+#     copyto!(θ, 1, v, 1, length(θ))
+#     loc = 1 + length(θ)
+#     for k′ in child(k)
+# 			  nθ_k′ = get_nparameter(k′)
+# 			  dispatch!(k′, v[loc:loc+nθ_k′-1])
+#         loc += nθ_k′
+#     end
+#     return k
+# end
+# extract_gradient(k::Kernel, G::NamedTuple) = extract_gradient!(parameter_eltype(k)[], G)
+# function extract_gradient!(out, G::NamedTuple)
+# 	for each in values(G)
+# 		if each isa NamedTuple
+# 			extract_gradient!(out, each)
+# 		elseif each isa AV
+# 			append!(out, each)
+# 		end
+# 	end
+# 	return out
+# end
 
 
 
@@ -69,7 +69,7 @@ Definition of a particular kernel should contains:
 
 
 # API exports
-export Kernel, kernel, elementwise, pairwise, ew, pw, parameters, dispatch!, extract_gradient
+export Kernel, kernel, elementwise, pairwise, ew, pw 
 
 # Kernel exports
 export EQ, Exp, PerEQ, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp, Wiener,
