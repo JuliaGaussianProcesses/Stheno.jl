@@ -42,7 +42,7 @@ using LinearAlgebra
         end
 
         @timedtestset "PerEQ" begin
-            differentiable_kernel_tests(PerEQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
+            differentiable_kernel_tests(PerEQ(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
         end
 
         @timedtestset "Exp" begin
@@ -73,7 +73,7 @@ using LinearAlgebra
                 differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
                 differentiable_kernel_tests(RQ(100.0), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
             end
-            @timedtestset "single-input" begin
+						@timedtestset "single-input" begin                                    # Zygote return Complex{Float64}, should be Float64
                 adjoint_test((α, x, x′)->ew(RQ(α), x, x′), ȳ, 1.5, x0, x1)
                 adjoint_test((α, x, x′)->pw(RQ(α), x, x′), Ȳ, 1.5, x0, x2)
                 adjoint_test((α, x)->ew(RQ(α), x), ȳ, 1.5, x0)

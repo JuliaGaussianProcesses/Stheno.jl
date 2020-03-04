@@ -4,16 +4,10 @@ const AVM = AbstractVecOrMat
 
 abstract type AbstractModel end
 
-function get_iparam(::AbstractModel) end
-function child(::AbstractModel) end
-parameters(x::AbstractModel) = parameters!(parameter_eltype(x)[], x)
-function parameters!(out, x::AbstractModel)
-    append!(out, get_iparam(x))
-		for x_child in child(x)
-        parameters!(out, x_child)
-    end
-    return out
-end
+get_iparam(m::AbstractModel) = throw(UndefVarError("get_iparam method not defined for $m"))
+child(m::AbstractModel) = throw(UndefVarError("child method not defined for $m"))
+
+parameter_eltype(::Any) = Union{}
 function parameter_eltype(x::AbstractModel)
 	  T = eltype(get_iparam(x))
     for each in child(x)
@@ -21,7 +15,21 @@ function parameter_eltype(x::AbstractModel)
     end
     return T
 end
+
+
+parameters(x::AbstractModel) = parameters!(parameter_eltype(x)[], x)
+parameters!(out, ::Any) = out
+function parameters!(out, x::AbstractModel)
+    append!(out, get_iparam(x))
+		for x_child in child(x)
+        parameters!(out, x_child)
+    end
+    return out
+end
+
+
 get_nparameter(x::AbstractModel) = length(parameters(x))
+
 
 function dispatch!(k::AbstractModel, v::AV)
 	  nθ_k = get_nparameter(k)

@@ -39,9 +39,10 @@ Returns `c` everywhere.
 struct ConstMean{T, cT<:AV{T}} <: MeanFunction
     c::cT
 end
+ConstMean(c::Real) = ConstMean(typeof(c)[c])
 get_iparam(c::ConstMean) = c.c
 child(::ConstMean) = ()
-ew(m::ConstMean, x::AV) = fill(m.c, length(x))
+ew(m::ConstMean, x::AV) = fill(m.c[1], length(x))
 
 
 
@@ -53,4 +54,6 @@ A wrapper around whatever unary function you fancy.
 struct CustomMean{Tf} <: MeanFunction
     f::Tf
 end
+get_iparam(::CustomMean) = Union{}[]
+child(c::CustomMean) = (c.f,)
 ew(f::CustomMean, x::AV) = map(f.f, x)
