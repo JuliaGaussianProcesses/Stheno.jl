@@ -1,4 +1,4 @@
-export LinearLayer, Product, chain
+export LinearLayer, ProductLayer, chain
 
 using Base: tail
 
@@ -17,15 +17,18 @@ function Base.show(io::IO, layer::LinearLayer)
 end
 
 
-struct Product <: AbstractModel
-	list::Tuple{Vararg{AV{Int}}}
-    Product(Is...) = new(Is)
+# when writing ProductLayer, we don't use `prod`, because broadcasting problem will
+# results in gradient evaluation problem.
+struct ProductLayer <: AbstractModel
+	step::Int
 end
-get_iparam(::Product) = Union{}[]
-child(::Product) = ()
-function (p::Product)(x)
-	res = [prod(x[indices, :], dims=1) for indices in p.list]
-	return vcat(res...)
+get_iparam(::ProductLayer) = Union{}[]
+child(::ProductLayer) = ()
+function (p::ProductLayer)(x)
+	m, n = size(x)
+	x1 = reshape(x, p.step, m÷p.step, n)
+	res = .*([x1[i, :, :] for i in 1:p.step]...)
+	return res
 end
 
 

@@ -5,53 +5,6 @@ using LinearAlgebra: isposdef, checksquare
 
 
 abstract type Kernel <: AbstractModel end
-# function get_iparam(::Kernel) end
-# function child(::Kernel) end
-# parameters(x::Kernel) = parameters!(parameter_eltype(x)[], x)
-# parameters(x::Kernel) = parameters!(Params(), x)
-# function parameters!(out, x::Kernel)
-#     append!(out, get_iparam(x))
-# 		# push!(out, get_iparam(x))
-# 		for x_child in child(x)
-#         parameters!(out, x_child)
-#     end
-#     return out
-# end
-# function parameter_eltype(x::Kernel)
-# 	  T = eltype(get_iparam(x))
-#     for each in child(x)
-#         T = promote_type(T, parameter_eltype(each))
-#     end
-#     return T
-# end
-# get_nparameter(x::Kernel) = length(parameters(x)) 
-# 
-# function dispatch!(k::Kernel, v::AV)
-# 	  nθ_k = get_nparameter(k)
-# 		nθ_k == length(v) || throw(DimensionMismatch("expect $(nθ_k) parameters, got $(length(v))"))
-#     θ = get_iparam(k)
-#     copyto!(θ, 1, v, 1, length(θ))
-#     loc = 1 + length(θ)
-#     for k′ in child(k)
-# 			  nθ_k′ = get_nparameter(k′)
-# 			  dispatch!(k′, v[loc:loc+nθ_k′-1])
-#         loc += nθ_k′
-#     end
-#     return k
-# end
-# extract_gradient(k::Kernel, G::NamedTuple) = extract_gradient!(parameter_eltype(k)[], G)
-# function extract_gradient!(out, G::NamedTuple)
-# 	for each in values(G)
-# 		if each isa NamedTuple
-# 			extract_gradient!(out, each)
-# 		elseif each isa AV
-# 			append!(out, each)
-# 		end
-# 	end
-# 	return out
-# end
-
-
 
 """
 Definition of a particular kernel should contains:
@@ -307,7 +260,7 @@ function RQ(α::Real)
     α > 0.0 || throw(ArgumentError("α should be positive"))
     RQ(typeof(α)[log(α)])
 end
-get_paramter(rq::RQ) = rq.logα
+get_iparam(rq::RQ) = rq.logα
 child(::RQ) = ()
 
 _rq(d, α) = (1 + d / (2α))^(-α)
@@ -334,7 +287,7 @@ function Cosine(p::Real)
 	p > 0.0 || throw(ArgumentError("p should be positive"))
 	Cosine(typeof(p)[log(p)])
 end
-get_paramter(c::Cosine) = c.logp
+get_iparam(c::Cosine) = c.logp
 child(::Cosine) = ()
 
 # Binary methods.
@@ -737,24 +690,24 @@ end
 
 # NOTE: `a` is not scalar any more !!!
 # Binary methods (scalar `a`, scalar-valued input)
-ew(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, exp.(k.loga) .* x, exp.(k.loga) .* x′)
-pw(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, exp.(k.loga) .* x, exp.(k.loga) .* x′)
+ew(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, exp.(.-k.loga) .* x, exp.(.-k.loga) .* x′)
+pw(k::Stretched{<:Real}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, exp.(.-k.loga) .* x, exp.(.-k.loga) .* x′)
 
 # Unary methods (scalar)
-ew(k::Stretched{<:Real}, x::AV{<:Real}) = ew(k.k, exp.(k.loga) .* x)
-pw(k::Stretched{<:Real}, x::AV{<:Real}) = pw(k.k, exp.(k.loga) .* x)
+ew(k::Stretched{<:Real}, x::AV{<:Real}) = ew(k.k, exp.(.-k.loga) .* x)
+pw(k::Stretched{<:Real}, x::AV{<:Real}) = pw(k.k, exp.(.-k.loga) .* x)
 
 # Binary methods (scalar and vector `a`, vector-valued input)
 function ew(k::Stretched{<:Real}, x::ColVecs, x′::ColVecs)
-	return ew(k.k, ColVecs(exp.(k.loga) .* x.X), ColVecs(exp.(k.loga) .* x′.X))
+	return ew(k.k, ColVecs(exp.(.-k.loga) .* x.X), ColVecs(exp.(.-k.loga) .* x′.X))
 end
 function pw(k::Stretched{<:Real}, x::ColVecs, x′::ColVecs)
-	return pw(k.k, ColVecs(exp.(k.loga) .* x.X), ColVecs(exp.(k.loga) .* x′.X))
+	return pw(k.k, ColVecs(exp.(.-k.loga) .* x.X), ColVecs(exp.(.-k.loga) .* x′.X))
 end
 
 # Unary methods (scalar and vector `a`, vector-valued input)
-ew(k::Stretched{<:Real}, x::ColVecs) = ew(k.k, ColVecs(exp.(k.loga) .* x.X))
-pw(k::Stretched{<:Real}, x::ColVecs) = pw(k.k, ColVecs(exp.(k.loga) .* x.X))
+ew(k::Stretched{<:Real}, x::ColVecs) = ew(k.k, ColVecs(exp.(.-k.loga) .* x.X))
+pw(k::Stretched{<:Real}, x::ColVecs) = pw(k.k, ColVecs(exp.(.-k.loga) .* x.X))
 
 # Binary methods (matrix `a`, vector-valued input)
 # function ew(k::Stretched{<:AM{<:Real}}, x::ColVecs, x′::ColVecs)

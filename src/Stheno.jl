@@ -36,13 +36,16 @@ module Stheno
     include(joinpath("util", "proper_type_piracy.jl"))
 
     # Supertype for GPs.
-    include("abstract_gp.jl")
 		include("abstract_model.jl")
+    include("abstract_gp.jl")
+
+		# Neural network used in gp
+		include(joinpath("neural_network", "basic.jl"))
 
     # Atomic GP objects.
     include(joinpath("gp", "mean.jl"))
     include(joinpath("gp", "kernel.jl"))
-#		include(joinpath("gp", "neural_kernel_network.jl"))
+		include(joinpath("gp", "neural_kernel_network.jl"))
     include(joinpath("gp", "gp.jl"))
 
     # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.
@@ -56,9 +59,6 @@ module Stheno
     include(joinpath("composite", "compose.jl"))
     # include(joinpath("composite", "gradient.jl"))
     # include(joinpath("composite", "integrate.jl"))
-
-		# Neural network used in gp
-		include(joinpath("neural_network", "basic.jl"))
 
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))

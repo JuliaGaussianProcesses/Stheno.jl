@@ -43,8 +43,12 @@ function extract_gradient!(out, G::NamedTuple)
 			append!(out, val)
 		elseif val isa NamedTuple
 			extract_gradient!(out, val)
-		elseif val isa Tuple && eltype(val) == NamedTuple
-			foreach(x->extract_gradient!(out, x), val)
+		elseif val isa Tuple
+			for each in val
+				if each isa NamedTuple
+					extract_gradient!(out, each)
+				end
+			end
 		end
 	end
 	return out
