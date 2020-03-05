@@ -1,4 +1,8 @@
-
+# Set up the environment to run this example. Make sure you're within the folder that this
+# file lives in.
+using Pkg
+Pkg.activate(@__DIR__)
+Pkg.instantiate()
 
 using LinearAlgebra, Stheno, Flux, Zygote, DelimitedFiles, Statistics
 using Plots; pyplot();
