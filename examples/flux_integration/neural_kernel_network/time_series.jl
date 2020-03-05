@@ -1,28 +1,20 @@
-# Set up the environment to run this example. Make sure you're within the folder that this
-# file lives in.
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
 
 
-using Stheno
+using LinearAlgebra, Stheno, Flux, Zygote, DelimitedFiles, Statistics
 using Plots; pyplot();
 using Random; Random.seed!(4);
-using Flux
-using Zygote
-using DelimitedFiles
-using Statistics
 
-
-# read AirPass data
+######################################################
+# Data loading 
+## read AirPass data
 data = readdlm("AirPassengers.csv", ',')
 year = data[2:end,2]; passengers = data[2:end,3];
-# Split the data into training and testing data
+## Split the data into training and testing data
 oxtrain = year[year.<1958]; oytrain = passengers[year.<1958];
 oxtest = year[year.>=1958]; oytest = passengers[year.>=1958];
 
-#data preprocessing
-## standardize X and y
+##data preprocessing
+### standardize X and y
 xtrain_mean = mean(oxtrain)
 ytrain_mean = mean(oytrain)
 xtrain_std = std(oxtrain)
@@ -34,13 +26,21 @@ xtest = @. (oxtest-xtrain_mean)/xtrain_std
 ytest = @. (oytest-ytrain_mean)/ytrain_std
 
 ## input data
-Xtrain = reshape(xtrain, 1, length(xtrain));
-Xtest = reshape(xtest, 1, length(xtest));
-Year = hcat(Xtrain, Xtest);
+Xtrain = reshape(xtrain, 1, length(xtrain))
+Xtest = reshape(xtest, 1, length(xtest))
+Year = hcat(Xtrain, Xtest)
 Passengers = vcat(ytrain, ytest)
+######################################################
+
+plt = plot(xlabel="Year", ylabel="Airline Passenger number", legend=true)
+scatter!(plt, oxtrain, oytrain, label="Observations(train)", color=:black)
 
 
-# kernel parameter initialization
+
+
+######################################################
+# Build kernel with Neural Kernel Network
+## kernel length scale initialization
 function median_distance_local(x)
     n = length(x)
     dist = []
@@ -53,67 +53,85 @@ function median_distance_local(x)
 end
 l = median_distance_local(xtrain)
 
+## kernel parameter constraint
+g1(x) = exp(-x)
+g2(x) = exp(x)
 
-# construct kernels
-iso_lin_kernel1 = stretch(Linear(), [0.0])
-iso_per_kernel1 = [0.0] * stretch(PerEQ([log(l)]), [log(l)])
-iso_eq_kernel1 = [0.0] * stretch(EQ(), [log(l/4.0)])
-iso_rq_kernel1 = [0.0] * stretch(RQ([log(0.2)]), [log(2.0*l)])
-iso_lin_kernel2 = stretch(Linear(), [0.0])
-iso_rq_kernel2 = [0.0] * stretch(RQ([log(0.1)]), [log(l)])
-iso_eq_kernel2 = [0.0] * stretch(EQ(), [log(l)])
-iso_per_kernel2 = [0.0] * stretch(PerEQ([log(l/4.0)]), [log(l/4.0)])
+## define kernels
+iso_lin_kernel1 = stretch(Linear(), log(1.0), g1)
+iso_per_kernel1 = scale(stretch(PerEQ(log(l), g2), log(l), g1), log(1.0), g2)
+iso_eq_kernel1 = scale(stretch(EQ(), log(l/4.0), g1), log(1.0), g2)
+iso_rq_kernel1 = scale(stretch(RQ(log(0.2), g2), log(2.0*l), g1), log(1.0), g2)
+iso_lin_kernel2 = stretch(Linear(), log(1.0), g1)
+iso_rq_kernel2 = scale(stretch(RQ(log(0.1), g2), log(l), g1), log(1.0), g2)
+iso_eq_kernel2 = scale(stretch(EQ(), log(l), g1), log(1.0), g2)
+iso_per_kernel2 = scale(stretch(PerEQ(log(l/4.0), g2), log(l/4.0), g1), log(1.0), g2)
 
 
-# sum product network
+# define network
 linear1 = LinearLayer(8, 8)
+prod1 = ProductLayer(2)
 linear2 = LinearLayer(4, 4)
+prod2 = ProductLayer(2)
 linear3 = LinearLayer(2, 1)
 
-# NKN
+## NKN
 player = Primitive(iso_lin_kernel1, iso_per_kernel1, iso_eq_kernel1, iso_rq_kernel1,
-                     iso_lin_kernel2, iso_rq_kernel2, iso_eq_kernel2, iso_per_kernel2)
-nn = Chain(linear1, Product, linear2, Product, linear3)
+                   iso_lin_kernel2, iso_rq_kernel2, iso_eq_kernel2, iso_per_kernel2)
+nn = chain(linear1, prod1, linear2, prod2, linear3)
 nkn = NeuralKernelNetwork(player, nn)
+#############################################################
 
 
-# build GP model
-σ²_n = 0.1
-gp = GP(nkn, GPC())
-gp_Xtrain = gp(ColVecs(Xtrain), σ²_n)
-ps = params(nkn)
+# Do some common calculation
+σ²_n = 0.1                                           # specify Gaussian noise
+gp = GP(nkn, GPC())                                  # define GP
+loss(m, x, y) = -logpdf(m(ColVecs(x), σ²_n), y)      # define loss & compute negative log likelihood
+loss(gp, Xtrain, ytrain)
+∂gp, = gradient(m->loss(m, Xtrain, ytrain), gp)      # compute derivative of loss w.r.t GP parameters
 
-# optimize
+# extract all parameters from the GP model
+l_ps = parameters(gp) |> length
+# extract the corresponding gradients from the derivative ( or conjugate of GP model )
+l_∂ps = extract_gradient(gp, ∂gp) |> length
+# make sure parameters and gradients are in one-to-one correspondence
+@assert l_ps == l_∂ps
+
+
+#############################################################
+# Optimize GP parameters w.r.t training data
 using Flux.Optimise: update!
 
 optimizer = ADAM(0.001)
-loss = []
+L = []
 for i in 1:5000
-    ll = .-logpdf(gp_Xtrain, ytrain)
-    push!(loss, ll)
-    if i==1 || i%100 == 0
-        @info "step=$i, loss=$ll"
+    nll = loss(gp, Xtrain, ytrain)
+    push!(L, nll)
+    if i==1 || i%200 == 0
+        @info "step=$i, loss=$nll"
     end
-    gs = gradient(()->.-logpdf(gp_Xtrain, ytrain), ps)
-    for p in ps
-        update!(optimizer, p, gs[p])
-    end
+    ps = parameters(gp)
+    ∂gp, = gradient(m->loss(m, Xtrain, ytrain), gp)
+    
+    Δps = extract_gradient(gp, ∂gp)
+    update!(optimizer, ps, Δps)
+    dispatch!(gp, ps)                                # dispatch! will update the GP model with updated parameters
 end
 
-plt1 = plot(legend=false, xlabel="Epoches", ylabel="Negative log-likelihood")
-plot!(plt1, loss)
-png(plt1, "loss.png")
+# you can view the loss curve
+# plot(L, legend=false)
+#############################################################
 
 
-# predict
-function predict(X, Xtrain, ytrain)
-    gp = GP(nkn, GPC())
+#############################################################
+# make prediction
+function predict(gp, X, Xtrain, ytrain)
     gp_Xtrain = gp(ColVecs(Xtrain), σ²_n)
     posterior = gp | Obs(gp_Xtrain, ytrain)
     posterior(ColVecs(X))
 end
 
-posterior = predict(Year, Xtrain, ytrain)
+posterior = predict(gp, Year, Xtrain, ytrain)
 post_dist = marginals(posterior)
 pred_y = mean.(post_dist)
 var_y = std.(post_dist)
@@ -121,9 +139,15 @@ var_y = std.(post_dist)
 pred_oy = @. pred_y*ytrain_std+ytrain_mean
 pred_oσ = @. var_y*ytrain_std
 
-plt2 = plot(xlabel="Year", ylabel="Airline Passenger number", legend=true)
-plot!(plt2, year, pred_oy, ribbons=3*pred_oσ, title="Time series prediction",label="95% predictive confidence region")
-scatter!(plt2, oxtest, oytest, label="Observations(test)", color=:red)
-scatter!(plt2, oxtrain, oytrain, label="Observations(train)", color=:black)
-png(plt2, "time_series.png")
+plot!(plt, year, pred_oy, ribbons=3*pred_oσ, title="Time series prediction",label="95% predictive confidence region")
+scatter!(plt, oxtest, oytest, label="Observations(test)", color=:red)
+display(plt)
+##############################################################
+
+
+
+
+
+
+
 
