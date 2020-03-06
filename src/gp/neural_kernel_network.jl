@@ -9,7 +9,7 @@ end
 get_iparam(p::Primitive) = Union{}[]
 child(p::Primitive) = p.kernels
 
-# flatten k kernel matrices of size Mk×Nk, and concatenate these 1d array into a k×(Mk*Nk) 2d array
+# flatten k kernel matrices of size Mk×Nk to 1×(Mk_Nk), and concatenate these array into a k×(Mk_Nk) 2d array
 _cat_kernel_array(x) = vcat([reshape(x[i], 1, :) for i in 1:length(x)]...)
 
 # NOTE, though we implement `ew` & `pw` function for Primitive, it isn't a subtype of Kernel type,
@@ -30,7 +30,7 @@ end
 # Neural Kernel Network, since kernel space ( stationary kernel ) is closed under linear combination 
 # ( with positive coefficient ) and element-wise multiplication, we can use a neural network like structure
 # to build composite kernels. This type contains a `Primitive` layer which holds basic kerenls and a specialised
-# nerual network architecture to perform kernel composition. It should function like a normal `Stheno` kernel.
+# nerual network architecture to perform kernel composition. It should work like a normal `Stheno` kernel.
 struct NeuralKernelNetwork{PT<:Primitive, CT<:Chain} <: Kernel
     player::PT
     chain::CT

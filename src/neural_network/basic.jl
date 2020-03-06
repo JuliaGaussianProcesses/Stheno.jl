@@ -2,6 +2,19 @@ export LinearLayer, ProductLayer, chain
 
 using Base: tail
 
+"""
+This file contains components needed by the neural kernel network:
+1. LinearLayer: linear transformation ( no bias term ) with positive weights
+2. ProductLayer: compute element-wise multiplication between specific kernels
+3. Chain: chain `LinearLayer` and `ProductLayer` together to build a sum product network
+
+The reason I don't use Flux's neural network modules is that the type of layer that can
+be used in neural kernel network is limited ( to my knowledge, only linear layer with positive
+weights, product layer & dropout layer are legible ). Therefore, I think we can maintain a
+minimum neural network module specifically for neural kernel network.
+"""
+
+
 
 softplus(x) = log(1+exp(x))
 struct LinearLayer{T, MT<:AM{T}} <: AbstractModel
@@ -17,8 +30,6 @@ function Base.show(io::IO, layer::LinearLayer)
 end
 
 
-# when writing ProductLayer, we don't use `prod`, because broadcasting problem will
-# results in gradient evaluation problem.
 struct ProductLayer <: AbstractModel
 	step::Int
 end

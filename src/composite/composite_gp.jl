@@ -15,13 +15,13 @@ struct CompositeGP{Targs} <: AbstractGP
 end
 get_iparam(::CompositeGP) = Union{}[]
 function child(c::CompositeGP)
-	  models = []
+	models = []
     for i in eachindex(c.args)
-		    if c.args[i] isa AbstractModel
-					  push!(models, c.args[i])
-				end
+	    if c.args[i] isa AbstractModel
+			push!(models, c.args[i])
 		end
-		tuple(models...)
+	end
+	tuple(models...)
 end
 
 CompositeGP(args::Targs, gpc::GPC) where {Targs} = CompositeGP{Targs}(args, gpc)
