@@ -31,21 +31,21 @@ end
 
 
 struct ProductLayer <: AbstractModel
-	step::Int
+    step::Int
 end
 get_iparam(::ProductLayer) = Union{}[]
 child(::ProductLayer) = ()
 function (p::ProductLayer)(x)
-	m, n = size(x)
-	x1 = reshape(x, p.step, m÷p.step, n)
-	res = .*([x1[i, :, :] for i in 1:p.step]...)
-	return res
+    m, n = size(x)
+    x1 = reshape(x, p.step, m÷p.step, n)
+    res = .*([x1[i, :, :] for i in 1:p.step]...)
+    return res
 end
 
 
 struct Chain <: AbstractModel
-	models::Tuple{Vararg{AbstractModel}}
-	Chain(ms...) = new(ms)
+    models::Tuple{Vararg{AbstractModel}}
+    Chain(ms...) = new(ms)
 end
 get_iparam(::Chain) = Union{}[]
 child(c::Chain) = c.models
