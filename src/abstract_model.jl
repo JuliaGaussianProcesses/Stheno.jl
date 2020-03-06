@@ -9,15 +9,15 @@ our model a tree structure, and facilitate for collecting and redistributing par
 Here is an example of how our GP model now looks like:
 
 							     GP
-								/  \
+							    /  \
 							   /    \
-				     ConstantMean   Scaled
-					      (c)         (σ)
-						               |
-								   Stretched
-								      (l)
-									   |
-									  EQ()
+				                 ConstantMean   Scaled
+					             (c)         (σ)
+						                  |
+							       Stretched
+								 (l)
+							          |
+							         EQ()
 
 Parameters for this model are `c`, `σ` & `l`, we can use:
 ```julia
@@ -55,7 +55,7 @@ child(m::AbstractModel) = throw(UndefVarError("child method not defined for $m")
 # it will return `Union{}`.
 parameter_eltype(::Any) = Union{}
 function parameter_eltype(x::AbstractModel)
-	T = eltype(get_iparam(x))
+    T = eltype(get_iparam(x))
     for each in child(x)
         T = promote_type(T, parameter_eltype(each))
     end
@@ -68,7 +68,7 @@ parameters(x::AbstractModel) = parameters!(parameter_eltype(x)[], x)
 parameters!(out, ::Any) = out
 function parameters!(out, x::AbstractModel)
     append!(out, get_iparam(x))
-		for x_child in child(x)
+    for x_child in child(x)
         parameters!(out, x_child)
     end
     return out
@@ -82,14 +82,14 @@ get_nparameter(x::AbstractModel) = length(parameters(x))
 # dispatch! allows us to update parameters inside a model, it accept a model and a 1D
 # array, it will assign values inside the array to the corresponding parameter of the model. 
 function dispatch!(k::AbstractModel, v::AV)
-	nθ_k = get_nparameter(k)
-		nθ_k == length(v) || throw(DimensionMismatch("expect $(nθ_k) parameters, got $(length(v))"))
+    nθ_k = get_nparameter(k)
+    nθ_k == length(v) || throw(DimensionMismatch("expect $(nθ_k) parameters, got $(length(v))"))
     θ = get_iparam(k)
     copyto!(θ, 1, v, 1, length(θ))
     loc = 1 + length(θ)
     for k′ in child(k)
-		nθ_k′ = get_nparameter(k′)
-		dispatch!(k′, v[loc:loc+nθ_k′-1])
+	nθ_k′ = get_nparameter(k′)
+	dispatch!(k′, v[loc:loc+nθ_k′-1])
         loc += nθ_k′
     end
     return k
@@ -111,20 +111,20 @@ end
 # to extract the value of those gradients to a 1D array.
 extract_gradient(k::AbstractModel, G::NamedTuple) = extract_gradient!(parameter_eltype(k)[], G)
 function extract_gradient!(out, G::NamedTuple)
-	for (_, val) in pairs(G)
-		if val isa AVM
-			append!(out, val)
-		elseif val isa NamedTuple
-			extract_gradient!(out, val)
-		elseif val isa Tuple
-			for each in val
-				if each isa NamedTuple
-					extract_gradient!(out, each)
-				end
-			end
+    for (_, val) in pairs(G)
+        if val isa AVM
+	    append!(out, val)
+	elseif val isa NamedTuple
+	    extract_gradient!(out, val)
+	elseif val isa Tuple
+	    for each in val
+		if each isa NamedTuple
+		    extract_gradient!(out, each)
 		end
+	    end
 	end
-	return out
+    end
+    return out
 end
 
 
