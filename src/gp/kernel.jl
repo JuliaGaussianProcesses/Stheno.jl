@@ -9,10 +9,10 @@ abstract type Kernel <: AbstractModel end
 """
 Changes:
     1. Type of kernel parameters are set to vector or matrix, API is maintained by defining
-		additional construction function.
-	2. A new field `f` is added to kernel that contains parameters, `f` is the constraint of
-		the kernel parameters, e.g. σ² in `Scaled` must remain positive during the calculation,
-		we can set `f(x)=exp(x)` to enable this constraint.
+	additional construction function.
+    2. A new field `f` is added to kernel that contains parameters, `f` is the constraint of
+	the kernel parameters, e.g. σ² in `Scaled` must remain positive during the calculation,
+	we can set `f(x)=exp(x)` to enable this constraint.
 """
 
 
@@ -127,8 +127,8 @@ The usual periodic kernel derived by mapping the input domain onto the unit circ
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct PerEQ{T, LT<:AV{T}, fT} <: Kernel
-	l::LT
-	f::fT
+    l::LT
+    f::fT
 end
 PerEQ(l::Real, f) = PerEQ(typeof(l)[l], f)
 PerEQ(l::Real) = PerEQ(l, identity)
@@ -250,7 +250,7 @@ For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct RQ{T, Tα<:AV{T}, fT} <: Kernel
     α::Tα
-	f::fT
+    f::fT
 end
 RQ(α::Real, f) = RQ(typeof(α)[α], f)
 RQ(α::Real) = RQ(α, identity)
@@ -263,11 +263,11 @@ _rq(d, α) = (1 + d / (2α))^(-α)
 # of `_rq` returns a number of Complex type.
 @adjoint function _rq(d::dT, α::αT) where {dT<:Real, αT<:Real}
     y = _rq(d, α)
-	y, function (ȳ)
-		T = promote_type(dT, αT)
-		x = 1 + d / (2α)
-		-0.5*ȳ*y/x, ȳ*y*(d / (x*(2α)) - log(x+eps(T)))
-	end
+    return y, function (ȳ)
+    	T = promote_type(dT, αT)
+    	x = 1 + d / (2α)
+    	-0.5*ȳ*y/x, ȳ*y*(d / (x*(2α)) - log(x+eps(T)))
+    	end
 end
 
 # Binary methods.
@@ -287,7 +287,7 @@ Cosine Kernel with period parameter `p`.
 """
 struct Cosine{T, Tp<:AV{T}, fT} <: Kernel
     p::Tp
-	f::fT
+    f::fT
 end
 Cosine(p::Real, f) = Cosine(typeof(p)[p], f)
 Cosine(p::Real) = Cosine(p, identity)
@@ -338,7 +338,7 @@ k(xl, xr) = (dot(xl, xr) + σ²)^p
 """
 struct Poly{p, T, Tσ²<:AV{T}, fT} <: Kernel
     σ²::Tσ²
-	f::fT
+    f::fT
 end
 Poly(p::Int, σ²::Real, f) = Poly{p, typeof(σ²), AV{typeof(σ²)}, typeof(f)}(typeof(σ²)[σ²], f)
 Poly(p::Int, σ²::Real) = Poly(p, σ², identity)
@@ -371,7 +371,7 @@ The γ-Exponential kernel, 0 < γ ⩽ 2, is given by `k(xl, xr) = exp(-||xl - xr
 """
 struct GammaExp{T, Tγ<:AV{T}, fT} <: Kernel
     γ::Tγ
-	f::fT
+    f::fT
 end
 GammaExp(γ::Real, f) = GammaExp(typeof(γ)[γ], f)
 GammaExp(γ::Real) = GammaExp(γ, identity)
@@ -565,7 +565,7 @@ Scale the variance of `Kernel` `k` by `σ²` s.t. `(σ² * k)(x, x′) = σ² * 
 struct Scaled{T, Tσ²<:AV{T}, Tk<:Kernel, fT} <: Kernel
     σ²::Tσ²
     k::Tk
-	f::fT
+    f::fT
 end
 scale(k::Kernel, σ²::Real, f) = Scaled(typeof(σ²)[σ²], k, f)
 scale(k::Kernel, σ²::Real) = scale(k, σ², identity)
@@ -608,7 +608,7 @@ Apply a length scale to a kernel. Specifically, `k(x, x′) = k(a * x, a * x′)
 struct Stretched{T, Ta<:AVM{T}, Tk<:Kernel, fT} <: Kernel
     a::Ta
     k::Tk
-	f::fT
+    f::fT
 end
 get_iparam(s::Stretched) = s.a
 child(s::Stretched) = (s.k,)
@@ -706,10 +706,10 @@ pw(k::Stretched{<:Real, <:AV{<:Real}}, x::AV{<:Real}) = pw(k.k, k.f.(k.a) .* x)
 
 # Binary methods (scalar and vector `a`, vector-valued input)
 function ew(k::Stretched{<:Real, <:AV{<:Real}}, x::ColVecs, x′::ColVecs)
-	return ew(k.k, ColVecs(k.f.(k.a) .* x.X), ColVecs(k.f.(k.a) .* x′.X))
+    return ew(k.k, ColVecs(k.f.(k.a) .* x.X), ColVecs(k.f.(k.a) .* x′.X))
 end
 function pw(k::Stretched{<:Real, <:AV{<:Real}}, x::ColVecs, x′::ColVecs)
-	return pw(k.k, ColVecs(k.f.(k.a) .* x.X), ColVecs(k.f.(k.a) .* x′.X))
+    return pw(k.k, ColVecs(k.f.(k.a) .* x.X), ColVecs(k.f.(k.a) .* x′.X))
 end
 
 # Unary methods (scalar and vector `a`, vector-valued input)
@@ -718,10 +718,10 @@ pw(k::Stretched{<:Real, <:AV{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(k.f.(k.a) .
 
 # Binary methods (matrix `a`, vector-valued input)
 function ew(k::Stretched{<:Real, <:AM{<:Real}}, x::ColVecs, x′::ColVecs)
-	return ew(k.k, ColVecs(k.f.(k.a) * x.X), ColVecs(k.f.(k.a) * x′.X))
+    return ew(k.k, ColVecs(k.f.(k.a) * x.X), ColVecs(k.f.(k.a) * x′.X))
 end
 function pw(k::Stretched{<:Real, <:AM{<:Real}}, x::ColVecs, x′::ColVecs)
-	return pw(k.k, ColVecs(k.f.(k.a) * x.X), ColVecs(k.f.(k.a) * x′.X))
+    return pw(k.k, ColVecs(k.f.(k.a) * x.X), ColVecs(k.f.(k.a) * x′.X))
 end
 
 # Unary methods (scalar and vector `a`, vector-valued input)
