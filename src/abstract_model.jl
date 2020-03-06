@@ -9,8 +9,8 @@ our model a tree structure, and facilitate for collecting and redistributing par
 Here is an example of how our GP model now looks like:
 
 							     GP
-							    /  \
-							   /    \
+							  |      |
+							  |      | 
 				                 ConstantMean   Scaled
 					             (c)         (σ)
 						                  |
