@@ -13,6 +13,17 @@ struct CompositeGP{Targs} <: AbstractGP
         return gp
     end
 end
+get_iparam(::CompositeGP) = Union{}[]
+function child(c::CompositeGP)
+	  models = []
+    for i in eachindex(c.args)
+		    if c.args[i] isa AbstractModel
+					  push!(models, c.args[i])
+				end
+		end
+		tuple(models...)
+end
+
 CompositeGP(args::Targs, gpc::GPC) where {Targs} = CompositeGP{Targs}(args, gpc)
 
 mean_vector(f::CompositeGP, x::AV) = mean_vector(f.args, x)
