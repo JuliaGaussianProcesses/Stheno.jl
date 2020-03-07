@@ -40,8 +40,6 @@ child(::EQ) = ()
 """
 
 
-const AVM = AbstractVecOrMat
-
 abstract type AbstractModel end
 
 # Return parameters contained inside a model
@@ -112,7 +110,7 @@ end
 extract_gradient(k::AbstractModel, G::NamedTuple) = extract_gradient!(parameter_eltype(k)[], G)
 function extract_gradient!(out, G::NamedTuple)
     for (_, val) in pairs(G)
-        if val isa AVM
+        if val isa AbstractVecOrMat
 	    append!(out, val)
 	elseif val isa NamedTuple
 	    extract_gradient!(out, val)
