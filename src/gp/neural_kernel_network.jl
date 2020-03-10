@@ -15,7 +15,7 @@ LinearLayer(in_dim, out_dim) = LinearLayer(randn(out_dim, in_dim))
 (lin::LinearLayer)(x) = softplus.(lin.W) * x
 
 function Base.show(io::IO, layer::LinearLayer)
-	print(io, "LinearLayer(", size(layer.W, 2), ", ", size(layer.W, 1), ")")
+    print(io, "LinearLayer(", size(layer.W, 2), ", ", size(layer.W, 1), ")")
 end
 
 
@@ -23,10 +23,10 @@ end
 # multiply every m neighboring rows of the array elementwisely to obtain
 # an new array of size (M÷m)×N
 function Product(x, step=2)
-	m, n = size(x)
-	m%step == 0 || error("the first dimension of inputs must be multiple of step")
-	new_x = reshape(x, step, m÷step, n)
-	.*([new_x[i, :, :] for i in 1:step]...)
+    m, n = size(x)
+    m%step == 0 || error("the first dimension of inputs must be multiple of step")
+    new_x = reshape(x, step, m÷step, n)
+    .*([new_x[i, :, :] for i in 1:step]...)
 end
 
 
@@ -49,9 +49,9 @@ ew(p::Primitive, x, x′) = _cat_kernel_array(map(k-ew(k, x, x′), p.kernels))
 pw(p::Primitive, x, x′) = _cat_kernel_array(map(k->pw(k, x, x′), p.kernels))
 
 function Base.show(io::IO, layer::Primitive)
-	print(io, "Primitive(")
-	join(io, layer.kernels, ", ")
-	print(io, ")")
+    print(io, "Primitive(")
+    join(io, layer.kernels, ", ")
+    print(io, ")")
 end
 
 
@@ -76,9 +76,9 @@ ew(nkn::NeuralKernelNetwork, x, x′) = _rebuild_diag(nkn.chain(ew(nkn.player, x
 pw(nkn::NeuralKernelNetwork, x, x′) = _rebuild_kernel(nkn.chain(pw(nkn.player, x, x′)), length(x), length(x′))
 
 function Base.show(io::IO, kernel::NeuralKernelNetwork)
-	print(io, "NeuralKernelNetwork(")
-	join(io, [kernel.player, kernel.chain], ", ")
-	print(io, ")")
+    print(io, "NeuralKernelNetwork(")
+    join(io, [kernel.player, kernel.chain], ", ")
+    print(io, ")")
 end
 
 
