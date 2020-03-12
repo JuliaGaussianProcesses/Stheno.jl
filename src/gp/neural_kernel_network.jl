@@ -80,5 +80,3 @@ function Base.show(io::IO, kernel::NeuralKernelNetwork)
     join(io, [kernel.player, kernel.chain], ", ")
     print(io, ")")
 end
-
-
