@@ -59,9 +59,9 @@ end
 # ( with positive coefficient ) and element-wise multiplication, we can use a neural network like structure
 # to build composite kernels. This type contains a `Primitive` layer which holds basic kerenls and a specialised
 # nerual network architecture to perform kernel composition. It should function like a normal `Stheno` kernel.
-struct NeuralKernelNetwork{PT, CT} <: Kernel
-    player::PT
-    chain::CT
+struct NeuralKernelNetwork{PT, NNT} <: Kernel
+    primitives::PT
+    nn::NNT
 end
 @functor NeuralKernelNetwork
 
@@ -69,14 +69,14 @@ end
 _rebuild_kernel(x, n, m) = reshape(x, n, m)
 _rebuild_diag(x) = reshape(x, :)
 
-ew(nkn::NeuralKernelNetwork, x) = _rebuild_diag(nkn.chain(ew(nkn.player, x)))
-pw(nkn::NeuralKernelNetwork, x) = _rebuild_kernel(nkn.chain(pw(nkn.player, x)), length(x), length(x))
+ew(nkn::NeuralKernelNetwork, x) = _rebuild_diag(nkn.nn(ew(nkn.primitives, x)))
+pw(nkn::NeuralKernelNetwork, x) = _rebuild_kernel(nkn.nn(pw(nkn.primitives, x)), length(x), length(x))
 
-ew(nkn::NeuralKernelNetwork, x, x′) = _rebuild_diag(nkn.chain(ew(nkn.player, x, x′)))
-pw(nkn::NeuralKernelNetwork, x, x′) = _rebuild_kernel(nkn.chain(pw(nkn.player, x, x′)), length(x), length(x′))
+ew(nkn::NeuralKernelNetwork, x, x′) = _rebuild_diag(nkn.nn(ew(nkn.primitives, x, x′)))
+pw(nkn::NeuralKernelNetwork, x, x′) = _rebuild_kernel(nkn.nn(pw(nkn.primitives, x, x′)), length(x), length(x′))
 
 function Base.show(io::IO, kernel::NeuralKernelNetwork)
     print(io, "NeuralKernelNetwork(")
-    join(io, [kernel.player, kernel.chain], ", ")
+    join(io, [kernel.primitives, kernel.nn], ", ")
     print(io, ")")
 end

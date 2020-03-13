@@ -106,22 +106,22 @@ The usual periodic kernel derived by mapping the input domain onto the unit circ
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct PerEQ{T<:AV{<:Real}} <: Kernel
-    l::T
+struct PerEQ{LT<:AV{<:Real}, fT} <: Kernel
+    l::LT
+    f::fT
 end
-
-PerEQ(l::Real) = PerEQ(typeof(l)[l])
+PerEQ(l::Real, f) = PerEQ(typeof(l)[l], f)
+PerEQ(l::Real) = PerEQ(l, identity)
 
 _pereq(d, l) = exp(-2.0*sin(π*d)^2 / l^2)
 
 # Binary methods.
-ew(k::PerEQ, x::AV, x′::AV) = _pereq.(ew(Euclidean(), x, x′), k.l[1]) 
-pw(k::PerEQ, x::AV, x′::AV) = _pereq.(pw(Euclidean(), x, x′), k.l[1])
+ew(k::PerEQ, x::AV, x′::AV) = _pereq.(ew(Euclidean(), x, x′), k.f(k.l[1]))
+pw(k::PerEQ, x::AV, x′::AV) = _pereq.(pw(Euclidean(), x, x′), k.f(k.l[1]))
 
 # Unary methods.
-ew(k::PerEQ, x::AV) = _pereq.(ew(Euclidean(), x), k.l[1])
-pw(k::PerEQ, x::AV) = _pereq.(pw(Euclidean(), x), k.l[1])
-
+ew(k::PerEQ, x::AV) = _pereq.(ew(Euclidean(), x), k.f(k.l[1]))
+pw(k::PerEQ, x::AV) = _pereq.(pw(Euclidean(), x), k.f(k.l[1]))
 
 
 @doc raw"""
@@ -219,11 +219,12 @@ The standardised Rational Quadratic, with kurtosis `α`.
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct RQ{Tα<:AV{<:Real}} <: Kernel
+struct RQ{Tα<:AV{<:Real}, fT} <: Kernel
     α::Tα
+    f::fT
 end
-
-RQ(α::Real) = RQ(typeof(α)[α])
+RQ(α::Real, f) = RQ(typeof(α)[α], f)
+RQ(α::Real) = RQ(α, identity)
 
 _rq(d, α) = (1 + d / (2α))^(-α)
 
@@ -239,13 +240,12 @@ Zygote.@adjoint function _rq(d::dT, α::αT) where {dT<:Real, αT<:Real}
 end
 
 # Binary methods.
-ew(k::RQ, x::AV, x′::AV) = _rq.(ew(SqEuclidean(), x, x′), k.α[1])
-pw(k::RQ, x::AV, x′::AV) = _rq.(pw(SqEuclidean(), x, x′), k.α[1])
+ew(k::RQ, x::AV, x′::AV) = _rq.(ew(SqEuclidean(), x, x′), k.f(k.α[1]))
+pw(k::RQ, x::AV, x′::AV) = _rq.(pw(SqEuclidean(), x, x′), k.f(k.α[1]))
 
 # Unary methods.
-ew(k::RQ, x::AV) = _rq.(ew(SqEuclidean(), x), k.α[1])
-pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), k.α[1])
-
+ew(k::RQ, x::AV) = _rq.(ew(SqEuclidean(), x), k.f(k.α[1]))
+pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), k.f(k.α[1]))
 
 
 """
@@ -253,20 +253,20 @@ pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), k.α[1])
 
 Cosine Kernel with period parameter `p`.
 """
-struct Cosine{Tp<:AV{<:Real}} <: Kernel
+struct Cosine{Tp<:AV{<:Real}, fT} <: Kernel
     p::Tp
+    f::fT
 end
-
-Cosine(p::Real) = Cosine(typeof(p)[p])
+Cosine(p::Real, f) = Cosine(typeof(p)[p], f)
+Cosine(p::Real) = Cosine(p, identity)
 
 # Binary methods.
-ew(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*ew(Euclidean(), x, x′) ./k.p[1])
-pw(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*pw(Euclidean(), x, x′) ./k.p[1])
+ew(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*ew(Euclidean(), x, x′) ./ k.f(k.p[1]))
+pw(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*pw(Euclidean(), x, x′) ./ k.f(k.p[1]))
 
 # Unary methods.
 ew(k::Cosine, x::AV{<:Real}) = 1 .+ ew(Euclidean(), x)
-pw(k::Cosine, x::AV{<:Real}) = cos.(pi .* pw(Euclidean(), x) ./ k.p[1])
-
+pw(k::Cosine, x::AV{<:Real}) = cos.(pi .* pw(Euclidean(), x) ./ k.f(k.p[1]))
 
 
 """
@@ -299,10 +299,12 @@ defined as
 k(xl, xr) = (dot(xl, xr) + σ²)^p
 ```
 """
-struct Poly{p, Tσ²<:AV{<:Real}} <: Kernel
+struct Poly{p, Tσ²<:AV{<:Real}, fT} <: Kernel
     σ²::Tσ²
+    f::fT
 end
-Poly(p::Int, σ²::Real) = Poly{p, AV{typeof(σ²)}}(typeof(σ²)[σ²])
+Poly(p::Int, σ²::Real, f) = Poly{p, AV{typeof(σ²)}, typeof(f)}(typeof(σ²)[σ²], f)
+Poly(p::Int, σ²::Real) = Poly(p, σ², identity)
 
 _poly(k, σ², p) = (σ² + k)^p
 Zygote.@adjoint function _poly(k, σ², p)
@@ -314,13 +316,12 @@ Zygote.@adjoint function _poly(k, σ², p)
 end
 
 # Binary methods
-ew(k::Poly{p}, x::AV, x′::AV) where {p} = _poly.(ew(Linear(), x, x′), k.σ²[1], p)
-pw(k::Poly{p}, x::AV, x′::AV) where {p} = _poly.(pw(Linear(), x, x′), k.σ²[1], p)
+ew(k::Poly{p}, x::AV, x′::AV) where {p} = _poly.(ew(Linear(), x, x′), k.f(k.σ²[1]), p)
+pw(k::Poly{p}, x::AV, x′::AV) where {p} = _poly.(pw(Linear(), x, x′), k.f(k.σ²[1]), p)
 
 # Unary methods
-ew(k::Poly{p}, x::AV) where {p} = _poly.(ew(Linear(), x), k.σ²[1], p)
-pw(k::Poly{p}, x::AV) where {p} = _poly.(pw(Linear(), x), k.σ²[1], p)
-
+ew(k::Poly{p}, x::AV) where {p} = _poly.(ew(Linear(), x), k.f(k.σ²[1]), p)
+pw(k::Poly{p}, x::AV) where {p} = _poly.(pw(Linear(), x), k.f(k.σ²[1]), p)
 
 
 """
@@ -328,20 +329,20 @@ pw(k::Poly{p}, x::AV) where {p} = _poly.(pw(Linear(), x), k.σ²[1], p)
 
 The γ-Exponential kernel, 0 < γ ⩽ 2, is given by `k(xl, xr) = exp(-||xl - xr||^γ)`.
 """
-struct GammaExp{Tγ<:AV{<:Real}} <: Kernel
+struct GammaExp{Tγ<:AV{<:Real}, fT} <: Kernel
     γ::Tγ
+    f::fT
 end
-
-GammaExp(γ::Real) = GammaExp(typeof(γ)[γ])
+GammaExp(γ::Real, f) = GammaExp(typeof(γ)[γ], f)
+GammaExp(γ::Real) = GammaExp(γ, identity)
 
 # Binary methods
-ew(k::GammaExp, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′).^k.γ[1])
-pw(k::GammaExp, x::AV, x′::AV) = exp.(.-pw(Euclidean(), x, x′).^k.γ[1])
+ew(k::GammaExp, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′).^(k.f(k.γ[1])))
+pw(k::GammaExp, x::AV, x′::AV) = exp.(.-pw(Euclidean(), x, x′).^(k.f(k.γ[1])))
 
 # Unary methods
-ew(k::GammaExp, x::AV) = exp.(.-ew(Euclidean(), x).^k.γ[1])
-pw(k::GammaExp, x::AV) = exp.(.-pw(Euclidean(), x).^k.γ[1])
-
+ew(k::GammaExp, x::AV) = exp.(.-ew(Euclidean(), x).^(k.f(k.γ[1])))
+pw(k::GammaExp, x::AV) = exp.(.-pw(Euclidean(), x).^(k.f(k.γ[1])))
 
 
 """
@@ -510,10 +511,13 @@ pw(k::Product, x::AV) = pw(k.kl, x) .* pw(k.kr, x)
 
 Scale the variance of `Kernel` `k` by `σ²` s.t. `(σ² * k)(x, x′) = σ² * k(x, x′)`.
 """
-struct Scaled{Tσ²<:AV{<:Real}, Tk<:Kernel} <: Kernel
+struct Scaled{Tσ²<:AV{<:Real}, Tk<:Kernel, fT} <: Kernel
     σ²::Tσ²
     k::Tk
+    f::fT
 end
+scale(k::Kernel, σ²::Real, f) = Scaled(typeof(σ²)[σ²], k, f)
+scale(k::Kernel, σ²::Real) = scale(k, σ², identity)
 """
     *(σ²::Real, k::Kernel)
     *(k::Kernel, σ²::Real)
@@ -529,17 +533,16 @@ julia> pw(0.5 * k, x) == 0.5 .* Stheno.pw(k, x)
 true
 ```
 """
-*(σ²::Real, k::Kernel) = Scaled(typeof(σ²)[σ²], k)
+*(σ²::Real, k::Kernel) = scale(k, σ²)
 *(k::Kernel, σ²) = σ² * k
 
 # Binary methods.
-ew(k::Scaled, x::AV, x′::AV) = k.σ²[1] .* ew(k.k, x, x′)
-pw(k::Scaled, x::AV, x′::AV) = k.σ²[1] .* pw(k.k, x, x′)
+ew(k::Scaled, x::AV, x′::AV) = k.f(k.σ²[1]) .* ew(k.k, x, x′)
+pw(k::Scaled, x::AV, x′::AV) = k.f(k.σ²[1]) .* pw(k.k, x, x′)
 
 # Unary methods.
-ew(k::Scaled, x::AV) = k.σ²[1] .* ew(k.k, x)
-pw(k::Scaled, x::AV) = k.σ²[1] .* pw(k.k, x)
-
+ew(k::Scaled, x::AV) = k.f(k.σ²[1]) .* ew(k.k, x)
+pw(k::Scaled, x::AV) = k.f(k.σ²[1]) .* pw(k.k, x)
 
 
 """
@@ -547,9 +550,10 @@ pw(k::Scaled, x::AV) = k.σ²[1] .* pw(k.k, x)
 
 Apply a length scale to a kernel. Specifically, `k(x, x′) = k(a * x, a * x′)`.
 """
-struct Stretched{Ta<:Union{AV{<:Real}, AM{<:Real}}, Tk<:Kernel} <: Kernel
+struct Stretched{Ta<:Union{AV{<:Real}, AM{<:Real}}, Tk<:Kernel, fT} <: Kernel
     a::Ta
     k::Tk
+    f::fT
 end
 """
     stretch(k::Kernel, a::Union{Real, AbstractVecOrMat{<:Real})
@@ -629,40 +633,42 @@ K = pairwise(k, xs, ys)
  1.40202e-8   0.293658     0.0808585
 ```
 """
-stretch(k::Kernel, a::Real) = Stretched(typeof(a)[a], k)
-stretch(k::Kernel, a::AVM{<:Real}) = Stretched(a, k)
+stretch(k::Kernel, a::AVM{<:Real}, f) = Stretched(a, k, f)
+stretch(k::Kernel, a::AVM{<:Real}) = stretch(k, a, identity)
+stretch(k::Kernel, a::Real, f) = stretch(k, typeof(a)[a], f)
+stretch(k::Kernel, a::Real) = stretch(k, a, identity)
 
 # Binary methods (vector `a`, scalar-valued input)
-ew(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, k.a .* x, k.a .* x′)
-pw(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, k.a .* x, k.a .* x′)
+ew(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, k.f.(k.a) .* x, k.f.(k.a) .* x′)
+pw(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, k.f.(k.a) .* x, k.f.(k.a) .* x′)
 
 # Unary methods (vector `a`, scalar-valued input)
-ew(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}) = ew(k.k, k.a .* x)
-pw(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}) = pw(k.k, k.a .* x)
+ew(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}) = ew(k.k, k.f.(k.a) .* x)
+pw(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}) = pw(k.k, k.f.(k.a) .* x)
 
 # Binary methods (vector `a`, vector-valued input)
 function ew(k::Stretched{<:AV{<:Real}}, x::ColVecs, x′::ColVecs)
-	return ew(k.k, ColVecs(k.a .* x.X), ColVecs(k.a .* x′.X))
+    return ew(k.k, ColVecs(k.f.(k.a) .* x.X), ColVecs(k.f.(k.a) .* x′.X))
 end
 function pw(k::Stretched{<:AV{<:Real}}, x::ColVecs, x′::ColVecs)
-	return pw(k.k, ColVecs(k.a .* x.X), ColVecs(k.a .* x′.X))
+    return pw(k.k, ColVecs(k.f.(k.a) .* x.X), ColVecs(k.f.(k.a) .* x′.X))
 end
 
 # Unary methods (vector `a`, vector-valued input)
-ew(k::Stretched{<:AV{<:Real}}, x::ColVecs) = ew(k.k, ColVecs(k.a .* x.X))
-pw(k::Stretched{<:AV{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(k.a .* x.X))
+ew(k::Stretched{<:AV{<:Real}}, x::ColVecs) = ew(k.k, ColVecs(k.f.(k.a) .* x.X))
+pw(k::Stretched{<:AV{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(k.f.(k.a) .* x.X))
 
 # Binary methods (matrix `a`, vector-valued input)
 function ew(k::Stretched{<:AM{<:Real}}, x::ColVecs, x′::ColVecs)
-    return ew(k.k, ColVecs(k.a * x.X), ColVecs(k.a * x′.X))
+    return ew(k.k, ColVecs(k.f.(k.a) * x.X), ColVecs(k.f.(k.a) * x′.X))
 end
 function pw(k::Stretched{<:AM{<:Real}}, x::ColVecs, x′::ColVecs)
-	return pw(k.k, ColVecs(k.a * x.X), ColVecs(k.a * x′.X))
+    return pw(k.k, ColVecs(k.f.(k.a) * x.X), ColVecs(k.f.(k.a) * x′.X))
 end
 
 # Unary methods (scalar and vector `a`, vector-valued input)
-ew(k::Stretched{<:AM{<:Real}}, x::ColVecs) = ew(k.k, ColVecs(k.a * x.X))
-pw(k::Stretched{<:AM{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(k.a * x.X))
+ew(k::Stretched{<:AM{<:Real}}, x::ColVecs) = ew(k.k, ColVecs(k.f.(k.a) * x.X))
+pw(k::Stretched{<:AM{<:Real}}, x::ColVecs) = pw(k.k, ColVecs(k.f.(k.a) * x.X))
 
 
 
