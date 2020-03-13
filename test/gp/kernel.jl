@@ -226,10 +226,10 @@ using LinearAlgebra
                 @test pw(nkn_add_kernel, x0, x1) ≈ pw(sum_k, x0, x1)
 
                 # ColVecs input
-                @test ew(nkn_add_kernel, ColVecs(X0)) ≈ ew(sum_k, ColVecs(X0))
-                @test ew(nkn_add_kernel, ColVecs(X0), ColVecs(X1)) ≈ ew(sum_k, ColVecs(X0), ColVecs(X1))
-                @test pw(nkn_add_kernel, ColVecs(X0)) ≈ pw(sum_k, ColVecs(X0))
-                @test pw(nkn_add_kernel, ColVecs(X0), ColVecs(X1)) ≈ pw(sum_k, ColVecs(X0), ColVecs(X1))
+                @test ew(nkn_add_kernel, X0) ≈ ew(sum_k, X0)
+                @test ew(nkn_add_kernel, X0, X1) ≈ ew(sum_k, X0, X1)
+                @test pw(nkn_add_kernel, X0) ≈ pw(sum_k, X0)
+                @test pw(nkn_add_kernel, X0, X1) ≈ pw(sum_k, X0, X1)
             end
         end
 
