@@ -23,10 +23,10 @@ end
 # multiply every m neighboring rows of the array elementwisely to obtain
 # an new array of size (M÷m)×N
 function product(x, step=2)
-	m, n = size(x)
-	m%step == 0 || error("the first dimension of inputs must be multiple of step")
-	new_x = reshape(x, step, m÷step, n)
-	.*([new_x[i, :, :] for i in 1:step]...)
+    m, n = size(x)
+    m%step == 0 || error("the first dimension of inputs must be multiple of step")
+    new_x = reshape(x, step, m÷step, n)
+    .*([new_x[i, :, :] for i in 1:step]...)
 end
 
 
