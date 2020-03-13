@@ -42,7 +42,6 @@ module Stheno
     include(joinpath("gp", "mean.jl"))
     include(joinpath("gp", "kernel.jl"))
     include(joinpath("gp", "gp.jl"))
-    
     # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.
     include(joinpath("composite", "composite_gp.jl"))
     include(joinpath("composite", "indexing.jl"))
