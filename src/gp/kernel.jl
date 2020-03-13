@@ -558,7 +558,6 @@ julia> pw(0.5 * k, x) == 0.5 .* Stheno.pw(k, x)
 true
 ```
 """
-# NOTE: σ² is in log scale !!!
 *(σ²::Real, k::Kernel) = scale(k, σ²)
 *(k::Kernel, σ²) = σ² * k
 
