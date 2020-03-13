@@ -17,11 +17,10 @@ minimum neural network module specifically for neural kernel network.
 
 
 softplus(x) = log(1+exp(x))
-struct LinearLayer{T, MT<:AM{T}} <: AbstractModel
+struct LinearLayer{T, MT<:AM{T}}
     W::MT
 end
 get_iparam(l::LinearLayer) = l.W
-child(l::LinearLayer) = ()
 LinearLayer(in_dim, out_dim) = LinearLayer(randn(out_dim, in_dim))
 (lin::LinearLayer)(x) = softplus.(lin.W) * x
 
@@ -30,11 +29,9 @@ function Base.show(io::IO, layer::LinearLayer)
 end
 
 
-struct ProductLayer <: AbstractModel
+struct ProductLayer
     step::Int
 end
-get_iparam(::ProductLayer) = Union{}[]
-child(::ProductLayer) = ()
 function (p::ProductLayer)(x)
     m, n = size(x)
     x1 = reshape(x, p.step, m÷p.step, n)
@@ -43,11 +40,10 @@ function (p::ProductLayer)(x)
 end
 
 
-struct Chain <: AbstractModel
-    models::Tuple{Vararg{AbstractModel}}
+struct Chain
+    models::Tuple
     Chain(ms...) = new(ms)
 end
-get_iparam(::Chain) = Union{}[]
 child(c::Chain) = c.models
 applychain(::Tuple{}, x) = x
 applychain(fs::Tuple, x) = applychain(tail(fs), first(fs)(x))

@@ -13,16 +13,8 @@ struct CompositeGP{Targs} <: AbstractGP
         return gp
     end
 end
-get_iparam(::CompositeGP) = Union{}[]
-function child(c::CompositeGP)
-    models = []
-    for i in eachindex(c.args)
-	if c.args[i] isa AbstractModel
-	    push!(models, c.args[i])
-	end
-    end
-    tuple(models...)
-end
+get_iparam(::CompositeGP) = throw(UndefVarError("get_iparam method currently not defined for composite GP"))
+child(::CompositeGP) = throw(UndefVarError("child method currently not defined for composite GP"))
 
 CompositeGP(args::Targs, gpc::GPC) where {Targs} = CompositeGP{Targs}(args, gpc)
 

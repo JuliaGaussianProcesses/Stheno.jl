@@ -192,6 +192,47 @@ using LinearAlgebra
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
         end
+
+        @timedtestset "NeuralKernelNetwork" begin
+            @timedtestset "general test" begin
+                k1 = 0.5 * stretch(EQ(), 0.1)
+                k2 = 1.0 * stretch(PerEQ(1.0), 0.2)
+                prim_layer = Primitive(k1, k2)
+
+                lin = LinearLayer(2, 2)
+                prod = ProductLayer(2)
+                nn = chain(lin, prod)
+
+                nkn = NeuralKernelNetwork(prim_layer, nn)
+                differentiable_kernel_tests(nkn, ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-7, rtol=1e-7)
+                differentiable_kernel_tests(nkn, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
+            end
+            @timedtestset "kernel composition test" begin
+                k1 = 0.5 * stretch(EQ(), 0.1)
+                k2 = 1.0 * stretch(PerEQ(1.0), 0.2)
+                prim_layer = Primitive(k1, k2)
+                lin = LinearLayer(ones(1, 2))
+                prod = ProductLayer(2)
+                nkn_add_kernel = NeuralKernelNetwork(prim_layer, lin)
+                nkn_prod_kernel = NeuralKernelNetwork(prim_layer, prod)
+
+                sum_k = Stheno.softplus(1.0)*k1 + Stheno.softplus(1.0)*k2
+                prod_k = k1 * k2
+                
+                # vector input
+                @test ew(nkn_add_kernel, x0) ≈ ew(sum_k, x0)
+                @test ew(nkn_add_kernel, x0, x1) ≈ ew(sum_k, x0, x1)
+                @test pw(nkn_add_kernel, x0) ≈ pw(sum_k, x0)
+                @test pw(nkn_add_kernel, x0, x1) ≈ pw(sum_k, x0, x1)
+
+                # ColVecs input
+                @test ew(nkn_add_kernel, ColVecs(X0)) ≈ ew(sum_k, ColVecs(X0))
+                @test ew(nkn_add_kernel, ColVecs(X0), ColVecs(X1)) ≈ ew(sum_k, ColVecs(X0), ColVecs(X1))
+                @test pw(nkn_add_kernel, ColVecs(X0)) ≈ pw(sum_k, ColVecs(X0))
+                @test pw(nkn_add_kernel, ColVecs(X0), ColVecs(X1)) ≈ pw(sum_k, ColVecs(X0), ColVecs(X1))
+            end
+        end
+
         @timedtestset "kernel" begin
             x = randn(11)
             @test pw(EQ(), x) == pw(kernel(EQ()), x)

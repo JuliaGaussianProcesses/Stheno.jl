@@ -4,7 +4,7 @@ using Base.Broadcast: broadcast_shape
 using LinearAlgebra: isposdef, checksquare
 
 
-abstract type Kernel <: AbstractModel end
+abstract type Kernel end
 
 """
 Changes:
@@ -37,8 +37,6 @@ A rank 0 `Kernel` that always returns zero.
 struct ZeroKernel{T<:Real} <: Kernel end
 ZeroKernel() = ZeroKernel{Float64}()
 zero(::Kernel) = ZeroKernel()
-get_iparam(::ZeroKernel) = Union{}[] 
-child(::ZeroKernel) = ()
 
 # Binary methods.
 ew(k::ZeroKernel{T}, x::AV, x′::AV) where {T} = zeros(T, broadcast_shape(size(x), size(x′)))
@@ -58,8 +56,6 @@ but (almost certainly) shouldn't be used as a base `Kernel`.
 """
 struct OneKernel{T<:Real} <: Kernel end
 OneKernel() = OneKernel{Float64}()
-get_iparam(::OneKernel) = Union{}[]
-child(::OneKernel) = ()
 
 # Binary methods.
 ew(k::OneKernel{T}, x::AV, x′::AV) where {T} = ones(T, broadcast_shape(size(x), size(x′)))
@@ -81,7 +77,6 @@ struct ConstKernel{T, cT<:AV{T}} <: Kernel
 end
 ConstKernel(c::Real) = ConstKernel(typeof(c)[c])
 get_iparam(c::ConstKernel) = c.c
-child(::ConstKernel) = ()
 
 # Binary methods.
 ew(k::ConstKernel, x::AV, x′::AV) = fill(k.c[1], broadcast_shape(size(x), size(x′))...)
@@ -104,8 +99,6 @@ Squared Exponential kernel.
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct EQ <: Kernel end
-get_iparam(::EQ) = Union{}[]
-child(::EQ) = ()
 
 # Binary methods.
 ew(::EQ, x::AV, x′::AV) = exp.(.-ew(SqEuclidean(), x, x′) ./ 2)
@@ -133,7 +126,6 @@ end
 PerEQ(l::Real, f) = PerEQ(typeof(l)[l], f)
 PerEQ(l::Real) = PerEQ(l, identity)
 get_iparam(per::PerEQ) = per.l
-child(::PerEQ) = ()
 
 _pereq(d, l) = exp(-2.0*sin(π*d)^2 / l^2)
 
@@ -157,8 +149,6 @@ The standardised Matern-1/2 / Exponential kernel:
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct Matern12 <: Kernel end
-get_iparam(::Matern12) = Union{}[] 
-child(::Matern12) = ()
 
 # Binary methods
 ew(k::Matern12, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′))
@@ -189,8 +179,6 @@ The standardised Matern kernel with ν = 3 / 2.
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct Matern32 <: Kernel end
-get_iparam(::Matern32) = Union{}[] 
-child(::Matern32) = ()
 
 function _matern32(d::Real)
     d = sqrt(3) * d
@@ -215,8 +203,6 @@ The standardised Matern kernel with ν = 5 / 2.
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
 struct Matern52 <: Kernel end
-get_iparam(::Matern52) = Union{}[] 
-child(::Matern52) = ()
 
 function _Matern52(d::Real)
     λ = sqrt(5) * d
@@ -255,7 +241,6 @@ end
 RQ(α::Real, f) = RQ(typeof(α)[α], f)
 RQ(α::Real) = RQ(α, identity)
 get_iparam(rq::RQ) = rq.α
-child(::RQ) = ()
 
 _rq(d, α) = (1 + d / (2α))^(-α)
 
@@ -292,7 +277,6 @@ end
 Cosine(p::Real, f) = Cosine(typeof(p)[p], f)
 Cosine(p::Real) = Cosine(p, identity)
 get_iparam(c::Cosine) = c.p
-child(::Cosine) = ()
 
 # Binary methods.
 ew(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*ew(Euclidean(), x, x′) ./ k.f(k.p[1]))
@@ -310,8 +294,6 @@ pw(k::Cosine, x::AV{<:Real}) = cos.(pi .* pw(Euclidean(), x) ./ k.f(k.p[1]))
 The standardised linear kernel / dot-product kernel.
 """
 struct Linear <: Kernel end
-get_iparam(::Linear) = Union{}[] 
-child(::Linear) = ()
 
 # Binary methods
 ew(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′
@@ -343,7 +325,6 @@ end
 Poly(p::Int, σ²::Real, f) = Poly{p, typeof(σ²), AV{typeof(σ²)}, typeof(f)}(typeof(σ²)[σ²], f)
 Poly(p::Int, σ²::Real) = Poly(p, σ², identity)
 get_iparam(p::Poly) = p.σ²
-child(::Poly) = ()
 
 _poly(k, σ², p) = (σ² + k)^p
 Zygote.@adjoint function _poly(k, σ², p)
@@ -376,7 +357,6 @@ end
 GammaExp(γ::Real, f) = GammaExp(typeof(γ)[γ], f)
 GammaExp(γ::Real) = GammaExp(γ, identity)
 get_iparam(g::GammaExp) = g.γ
-child(::GammaExp) = ()
 
 # Binary methods
 ew(k::GammaExp, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′).^(k.f(k.γ[1])))
@@ -394,8 +374,6 @@ pw(k::GammaExp, x::AV) = exp.(.-pw(Euclidean(), x).^(k.f(k.γ[1])))
 The standardised stationary Wiener-process kernel.
 """
 struct Wiener <: Kernel end
-get_iparam(::Wiener) = Union{}[]
-child(::Wiener) = ()
 
 _wiener(x::Real, x′::Real) = min(x, x′)
 
@@ -415,8 +393,6 @@ pw(k::Wiener, x::AV{<:Real}) = pw(k, x, x)
 The standardised WienerVelocity kernel.
 """
 struct WienerVelocity <: Kernel end
-get_iparam(::WienerVelocity) = Union{}[] 
-child(::WienerVelocity) = ()
 
 _wiener_vel(x::Real, x′::Real) = min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
 
@@ -437,8 +413,6 @@ The standardised aleatoric white-noise kernel. Isn't really a kernel, but never 
 """
 struct Noise{T<:Real} <: Kernel end
 Noise() = Noise{Int}()
-get_iparam(::Noise) = Union{}[]
-child(::Noise) = ()
 
 # Binary methods.
 ew(k::Noise{T}, x::AV, x′::AV) where {T} = zeros(T, broadcast_shape(size(x), size(x′))...)
@@ -492,7 +466,6 @@ struct Sum{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
     kl::Tkl
     kr::Tkr
 end
-get_iparam(::Sum) = Union{}[] 
 child(s::Sum) = (s.kl, s.kr)
 """
     +(kl::Kernel, kr::Kernel)
@@ -529,7 +502,6 @@ struct Product{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
     kl::Tkl
     kr::Tkr
 end
-get_iparam(::Product) = Union{}[] 
 child(p::Product) = (p.kl, p.kr)
 """
     +(kl::Kernel, kr::Kernel)
