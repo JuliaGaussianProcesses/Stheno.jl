@@ -1,6 +1,8 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched, Scaled
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Cosine, Sum, Product, stretch,
     Poly, GammaExp, Wiener, WienerVelocity, Precomputed
+using Flux
+using Stheno: LinearLayer, Primitive, product, NeuralKernelNetwork
 using LinearAlgebra
 
 @timedtestset "kernel" begin
@@ -42,7 +44,7 @@ using LinearAlgebra
         end
 
         @timedtestset "PerEQ" begin
-            differentiable_kernel_tests(PerEQ(), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
+            differentiable_kernel_tests(PerEQ(1.0), ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-6)
         end
 
         @timedtestset "Exp" begin
@@ -170,9 +172,9 @@ using LinearAlgebra
         end
 
         @timedtestset "Scaled" begin
-            differentiable_kernel_tests(Scaled(0.5, EQ()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
-            differentiable_kernel_tests(Scaled(0.5, EQ()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
-            adjoint_test(σ²->pw(Scaled(σ², EQ()), X0), Ȳ_sq, 0.5)
+            differentiable_kernel_tests(Scaled([0.5], EQ()), ȳ, Ȳ, Ȳ_sq, x0, x1, x2)
+            differentiable_kernel_tests(Scaled([0.5], EQ()), ȳ, Ȳ, Ȳ_sq, X0, X1, X2)
+            adjoint_test(σ²->pw(Scaled(typeof(σ²)[σ²], EQ()), X0), Ȳ_sq, 0.5)
             @test 0.5 * EQ() isa Scaled
             @test EQ() * 0.5 isa Scaled
         end
@@ -192,6 +194,19 @@ using LinearAlgebra
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
         end
+        
+        @timedtestset "NeuralKernelNetwork" begin
+            k1 = 0.5 * stretch(EQ(), 0.1)
+            k2 = 1.0 * stretch(PerEQ(1.0), 0.2)
+            prim_layer = Primitive(k1, k2)
+
+            lin = LinearLayer(2, 2)
+            nn = Chain(lin, product)
+
+            nkn = NeuralKernelNetwork(prim_layer, nn)
+            differentiable_kernel_tests(nkn, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
+        end
+        
         @timedtestset "kernel" begin
             x = randn(11)
             @test pw(EQ(), x) == pw(kernel(EQ()), x)

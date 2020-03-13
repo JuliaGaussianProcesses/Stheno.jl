@@ -1,8 +1,8 @@
-export LinearLayer, Product, Primitive, NeuralKernelNetwork, ew, pw
+export LinearLayer, product, Primitive, NeuralKernelNetwork
 
-using Flux
-using Flux: softplus, @functor
-import Flux: functor
+using .Flux
+using .Flux: softplus, @functor
+
 
 
 # Linear layer, perform linear transformation to input array
@@ -22,7 +22,7 @@ end
 # Product function, given an 2d array whose size is M×N, product layer will
 # multiply every m neighboring rows of the array elementwisely to obtain
 # an new array of size (M÷m)×N
-function Product(x, step=2)
+function product(x, step=2)
 	m, n = size(x)
 	m%step == 0 || error("the first dimension of inputs must be multiple of step")
 	new_x = reshape(x, step, m÷step, n)
@@ -35,7 +35,7 @@ struct Primitive{T}
     kernels::T
     Primitive(ks...) = new{typeof(ks)}(ks)
 end
-functor(p::Primitive) = p.kernels, ks -> Primitive(ks...)
+@functor Primitive
 
 # flatten k kernel matrices of size Mk×Nk, and concatenate these 1d array into a k×(Mk*Nk) 2d array
 _cat_kernel_array(x) = vcat([reshape(x[i], 1, :) for i in 1:length(x)]...)
@@ -45,7 +45,7 @@ _cat_kernel_array(x) = vcat([reshape(x[i], 1, :) for i in 1:length(x)]...)
 ew(p::Primitive, x) = _cat_kernel_array(map(k->ew(k, x), p.kernels))
 pw(p::Primitive, x) = _cat_kernel_array(map(k->pw(k, x), p.kernels))
 
-ew(p::Primitive, x, x′) = _cat_kernel_array(map(k-ew(k, x, x′), p.kernels))
+ew(p::Primitive, x, x′) = _cat_kernel_array(map(k->ew(k, x, x′), p.kernels))
 pw(p::Primitive, x, x′) = _cat_kernel_array(map(k->pw(k, x, x′), p.kernels))
 
 function Base.show(io::IO, layer::Primitive)
