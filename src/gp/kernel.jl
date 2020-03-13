@@ -6,7 +6,7 @@ using LinearAlgebra: isposdef, checksquare
 abstract type Kernel end
 
 # API exports
-export Kernel, kernel, elementwise, pairwise, ew, pw
+export Kernel, kernel, elementwise, pairwise, ew, pw, stretch, scale
 
 # Kernel exports
 export EQ, Exp, PerEQ, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp, Wiener,
