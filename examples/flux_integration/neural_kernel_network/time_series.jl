@@ -54,28 +54,28 @@ end
 l = median_distance_local(xtrain)
 
 
-
-# construct kernels
-iso_lin_kernel1 = stretch(Linear(), [0.0])
-iso_per_kernel1 = [log(1.0)] * stretch(PerEQ([log(l)]), [log(l)])
-iso_eq_kernel1 = [log(1.0)] * stretch(EQ(), [log(l/4.0)])
-iso_rq_kernel1 = [log(1.0)] * stretch(RQ([log(0.2)]), [log(2.0*l)])
-iso_lin_kernel2 = stretch(Linear(), [0.0])
-iso_rq_kernel2 = [log(1.0)] * stretch(RQ([log(0.1)]), [log(l)])
-iso_eq_kernel2 = [log(1.0)] * stretch(EQ(), [log(l)])
-iso_per_kernel2 = [log(1.0)] * stretch(PerEQ([log(l/4.0)]), [log(l/4.0)])
-
-
-# sum product network
+# neural network
 linear1 = LinearLayer(8, 8)
 linear2 = LinearLayer(4, 4)
 linear3 = LinearLayer(2, 1)
 
 # NKN
-player = Primitive(iso_lin_kernel1, iso_per_kernel1, iso_eq_kernel1, iso_rq_kernel1,
-                     iso_lin_kernel2, iso_rq_kernel2, iso_eq_kernel2, iso_per_kernel2)
-nn = Chain(linear1, Product, linear2, Product, linear3)
-nkn = NeuralKernelNetwork(player, nn)
+# NOTE: the numerical values are in log-scale
+# therefore, stretch(Linear(), 0.0, exp) ≡ stretch(Linear(), 1.0)
+# `exp` is a constraint added to the kernel parameters to maintain
+# their positiveness during the computation
+primitives = Primitive(
+    stretch(Linear(), 0.0, x->exp(-x)),
+    stretch(PerEQ(log(l), exp), log(l), x->exp(-x)),
+    stretch(EQ(), log(l/4.0), x->exp(-x)),
+    stretch(RQ(log(0.2), exp), log(2.0*l), x->exp(-x)),
+    stretch(Linear(), 0.0, x->exp(-x)),
+    stretch(RQ(log(0.1), exp), log(l), x->exp(-x)),
+    stretch(EQ(), log(l), x->exp(-x)),
+    stretch(PerEQ(log(l/4.0), exp), log(l/4.0), x->exp(-x))
+)
+nn = Chain(linear1, product, linear2, product, linear3)
+nkn = NeuralKernelNetwork(primitives, nn)
 
 
 # build GP model
@@ -101,7 +101,7 @@ for i in 1:5000
     end
 end
 
-display(plot(loss))
+png(plot(loss), "loss.png")
 
 
 # predict
@@ -112,12 +112,15 @@ function predict(X, Xtrain, ytrain)
 end
 
 posterior = predict(Year, Xtrain, ytrain)
-pred_y = mean(posterior)
+post_dist = marginals(posterior)
+pred_y = mean.(post_dist)
+var_y = std.(post_dist)
 pred_oy = @. pred_y*ytrain_std+ytrain_mean
+pred_oσ = @. var_y*ytrain_std
 
 plt = plot(xlabel="Year", ylabel="Airline Passenger number", legend=true)
-plot!(plt, year, pred_oy, title="Time series prediction",label="95% predictive confidence region")
+plot!(plt, year, pred_oy, ribbons=3*pred_oσ, title="Time series prediction",label="95% predictive confidence region")
 scatter!(plt, oxtest, oytest, label="Observations(test)", color=:red)
 scatter!(plt, oxtrain, oytrain, label="Observations(train)", color=:black)
-display(plt)
+png(plt, "predict.png")
 
