@@ -63,7 +63,7 @@ linear3 = LinearLayer(2, 1)
 # NOTE: the numerical values are in log-scale
 # therefore, stretch(Linear(), 0.0, exp) ≡ stretch(Linear(), 1.0)
 # `exp` is a constraint added to the kernel parameters to maintain
-# their positiveness during the computation
+# their positiveness during the optimisation.
 primitives = Primitive(
     stretch(Linear(), 0.0, x->exp(-x)),
     stretch(PerEQ(log(l), exp), log(l), x->exp(-x)),
