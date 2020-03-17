@@ -209,10 +209,11 @@ using LinearAlgebra
                 differentiable_kernel_tests(nkn, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
             @timedtestset "kernel composition test" begin
+                rng = MersenneTwister(123456)
                 k1 = 0.5 * stretch(EQ(), 0.1)
                 k2 = 1.0 * stretch(PerEQ(1.0), 0.2)
                 prim_layer = Primitive(k1, k2)
-                weights = rand(_rng, 1, 2)
+                weights = rand(rng, 1, 2)
                 # Note: the actual weights used in calculation ≠ weights, instead it equals to softplus.(weights)
                 lin = LinearLayer(weights)
                 nkn_add_kernel = NeuralKernelNetwork(prim_layer, lin)
