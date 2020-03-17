@@ -6,7 +6,7 @@ activation function. A similar thing can be done with kernels as well. In partic
 
 2. The product $k_1k_2$ is a kernel function
 
-Therefore, we can introduce a neural network like structure, which consists superposition, product and nonlinear activation operations ( similar to the idea fo sum and product network ). Acting such a network on top of some basic kernels, e.g. exponential quardratic kernel, periodic kernel, linear kernel, etc., will results in a new kernel function which is able to extract more complicated features. In addition, the neural kernel network is differentiable w.r.t it's parameters, which enables us to determine it via gradient based optimization methods. This also illuminates previous black-box kernel formation process.
+We can use these to specify a neural network like structure, which consists of linear transformations, products, and nonlinear activation operations (similar to Sum-Product networks). Such a structure is called the Neural Kernel Network (NKN) [1]. Building such a network on top of some basic kernels, e.g. exponentiated-quadratic, periodic, linear, etc., will result in a new kernel function which is able to extract more complicated features. In addition, the neural kernel network is differentiable w.r.t it's parameters, which enables these to be found via gradient based optimisation methods. This is distinct from previous compositional kernel search methods eg. [2], which search over an unbounded space of possible kernel structures.
 
 ## Reference
 ---
