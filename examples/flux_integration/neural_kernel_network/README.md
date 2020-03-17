@@ -1,7 +1,6 @@
 # Neural kernel network
 When applying a neural network to data, we compute different linear features of data and pass the result to a nonlinear
-activation function. Similar things can be done to kernel functions ( stationary kernels ) as well, and combination of the kernel functions follows
-the rules ( $k_1,\,k_2$ are kernel functions ):
+activation function. A similar thing can be done with kernels as well. In particular, kernels can be combined according to the following rules ( $k_1,\,k_2$ are kernel functions ):
 
 1. For $\lambda_1,\,\lambda_2\in\mathbb{R}^+$, $\lambda_1 k_1+\lambda_2 k_2$ is also a valid kernel function
 
