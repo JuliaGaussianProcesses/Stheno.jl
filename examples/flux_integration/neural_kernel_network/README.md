@@ -1,5 +1,5 @@
 # Neural kernel network
-When apply neural network to data, we are essentially superpose different features of data and pass the result to a nonlinear
+When applying a neural network to data, we compute different linear features of data and pass the result to a nonlinear
 activation function. Similar things can be done to kernel functions ( stationary kernels ) as well, and combination of the kernel functions follows
 the rules ( $k_1,\,k_2$ are kernel functions ):
 
@@ -14,4 +14,3 @@ Therefore, we can introduce a neural network like structure, which consists supe
 [1] Shengyang Sun, Guodong Zhang, Chaoqi Wang, Wenyuan Zeng, Jiaman Li, Roger Grosse (2018) [Differentiable Compositional Kernel Learning for Gaussian Processes](https://arxiv.org/pdf/1806.04326.pdf)
 
 [2] Duvenaud, D., Lloyd, J. R., Grosse, R., Tenenbaum, J. B., and Ghahramani, Z. (2013) [Structure discovery in nonparametric regression through compositional kernel search](https://arxiv.org/abs/1302.4922)
-
