@@ -74,7 +74,13 @@ primitives = Primitive(
     stretch(EQ(), log(l), x->exp(-x)),
     stretch(PerEQ(log(l/4.0), exp), log(l/4.0), x->exp(-x))
 )
-nn = Chain(linear1, product, linear2, product, linear3)
+nn = Chain(
+    LinearLayer(8, 8),
+    product,
+    LinearLayer(4, 4),
+    product,
+    LinearLayer(2, 1),
+)
 nkn = NeuralKernelNetwork(primitives, nn)
 
 
