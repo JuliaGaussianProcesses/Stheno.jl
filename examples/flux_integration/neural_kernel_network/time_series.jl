@@ -112,7 +112,7 @@ function predict(X, Xtrain, ytrain)
 end
 
 posterior = predict(Year, Xtrain, ytrain)
-post_dist = marginals(posterior)
+post_marginals = marginals(posterior)
 pred_y = mean.(post_dist)
 var_y = std.(post_dist)
 pred_oy = @. pred_y*ytrain_std+ytrain_mean
@@ -123,4 +123,3 @@ plot!(plt, year, pred_oy, ribbons=3*pred_oσ, title="Time series prediction",lab
 scatter!(plt, oxtest, oytest, label="Observations(test)", color=:red)
 scatter!(plt, oxtrain, oytrain, label="Observations(train)", color=:black)
 png(plt, "predict.png")
-
