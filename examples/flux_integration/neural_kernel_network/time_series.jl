@@ -113,8 +113,8 @@ end
 
 posterior = predict(Year, Xtrain, ytrain)
 post_marginals = marginals(posterior)
-pred_y = mean.(post_dist)
-var_y = std.(post_dist)
+pred_y = mean.(post_marginals)
+var_y = std.(post_marginals)
 pred_oy = @. pred_y*ytrain_std+ytrain_mean
 pred_oσ = @. var_y*ytrain_std
 
