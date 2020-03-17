@@ -54,10 +54,6 @@ end
 l = median_distance_local(xtrain)
 
 
-# neural network
-linear1 = LinearLayer(8, 8)
-linear2 = LinearLayer(4, 4)
-linear3 = LinearLayer(2, 1)
 
 # NKN
 # NOTE: the numerical values are in log-scale
