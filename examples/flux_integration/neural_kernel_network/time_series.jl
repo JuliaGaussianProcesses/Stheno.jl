@@ -119,7 +119,11 @@ pred_oy = @. pred_y*ytrain_std+ytrain_mean
 pred_oσ = @. var_y*ytrain_std
 
 plt = plot(xlabel="Year", ylabel="Airline Passenger number", legend=true)
-plot!(plt, year, pred_oy, ribbons=3*pred_oσ, title="Time series prediction",label="95% predictive confidence region")
+plot!(plt, year, pred_oy;
+    ribbons=3*pred_oσ,
+    title="Time series prediction",
+    label="95% predictive confidence region",
+)
 scatter!(plt, oxtest, oytest, label="Observations(test)", color=:red)
 scatter!(plt, oxtrain, oytrain, label="Observations(train)", color=:black)
 png(plt, "predict.png")
