@@ -54,16 +54,12 @@ end
 l = median_distance_local(xtrain)
 
 
-# neural network
-linear1 = LinearLayer(8, 8)
-linear2 = LinearLayer(4, 4)
-linear3 = LinearLayer(2, 1)
 
 # NKN
 # NOTE: the numerical values are in log-scale
 # therefore, stretch(Linear(), 0.0, exp) ≡ stretch(Linear(), 1.0)
 # `exp` is a constraint added to the kernel parameters to maintain
-# their positiveness during the computation
+# their positiveness during the optimisation.
 primitives = Primitive(
     stretch(Linear(), 0.0, x->exp(-x)),
     stretch(PerEQ(log(l), exp), log(l), x->exp(-x)),
@@ -74,7 +70,13 @@ primitives = Primitive(
     stretch(EQ(), log(l), x->exp(-x)),
     stretch(PerEQ(log(l/4.0), exp), log(l/4.0), x->exp(-x))
 )
-nn = Chain(linear1, product, linear2, product, linear3)
+nn = Chain(
+    LinearLayer(8, 8),
+    product,
+    LinearLayer(4, 4),
+    product,
+    LinearLayer(2, 1),
+)
 nkn = NeuralKernelNetwork(primitives, nn)
 
 
@@ -112,15 +114,18 @@ function predict(X, Xtrain, ytrain)
 end
 
 posterior = predict(Year, Xtrain, ytrain)
-post_dist = marginals(posterior)
-pred_y = mean.(post_dist)
-var_y = std.(post_dist)
+post_marginals = marginals(posterior)
+pred_y = mean.(post_marginals)
+var_y = std.(post_marginals)
 pred_oy = @. pred_y*ytrain_std+ytrain_mean
 pred_oσ = @. var_y*ytrain_std
 
 plt = plot(xlabel="Year", ylabel="Airline Passenger number", legend=true)
-plot!(plt, year, pred_oy, ribbons=3*pred_oσ, title="Time series prediction",label="95% predictive confidence region")
+plot!(plt, year, pred_oy;
+    ribbons=3*pred_oσ,
+    title="Time series prediction",
+    label="95% predictive confidence region",
+)
 scatter!(plt, oxtest, oytest, label="Observations(test)", color=:red)
 scatter!(plt, oxtrain, oytrain, label="Observations(train)", color=:black)
 png(plt, "predict.png")
-
