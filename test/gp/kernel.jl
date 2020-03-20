@@ -194,48 +194,7 @@ using LinearAlgebra
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
         end
-        
-        @timedtestset "NeuralKernelNetwork" begin
-            @timedtestset "general test" begin
-                k1 = 0.5 * stretch(EQ(), 0.1)
-                k2 = 1.0 * stretch(PerEQ(1.0), 0.2)
-                prim_layer = Primitive(k1, k2)
 
-                lin = LinearLayer(2, 2)
-                nn = Chain(lin, product)
-
-                nkn = NeuralKernelNetwork(prim_layer, nn)
-                differentiable_kernel_tests(nkn, ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-7, rtol=1e-7)
-                differentiable_kernel_tests(nkn, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
-            end
-            @timedtestset "kernel composition test" begin
-                rng = MersenneTwister(123456)
-                k1 = 0.5 * stretch(EQ(), 0.1)
-                k2 = 1.0 * stretch(PerEQ(1.0), 0.2)
-                prim_layer = Primitive(k1, k2)
-                weights = rand(rng, 1, 2)
-                # Note: the actual weights used in calculation ≠ weights, instead it equals to softplus.(weights)
-                lin = LinearLayer(weights)
-                nkn_add_kernel = NeuralKernelNetwork(prim_layer, lin)
-                nkn_prod_kernel = NeuralKernelNetwork(prim_layer, product)
-
-                sum_k = Stheno.softplus(weights[1])*k1 + Stheno.softplus(weights[2])*k2
-                prod_k = k1 * k2
-
-                # vector input
-                @test ew(nkn_add_kernel, x0) ≈ ew(sum_k, x0)
-                @test ew(nkn_add_kernel, x0, x1) ≈ ew(sum_k, x0, x1)
-                @test pw(nkn_add_kernel, x0) ≈ pw(sum_k, x0)
-                @test pw(nkn_add_kernel, x0, x1) ≈ pw(sum_k, x0, x1)
-
-                # ColVecs input
-                @test ew(nkn_add_kernel, X0) ≈ ew(sum_k, X0)
-                @test ew(nkn_add_kernel, X0, X1) ≈ ew(sum_k, X0, X1)
-                @test pw(nkn_add_kernel, X0) ≈ pw(sum_k, X0)
-                @test pw(nkn_add_kernel, X0, X1) ≈ pw(sum_k, X0, X1)
-            end
-        end
-        
         @timedtestset "kernel" begin
             x = randn(11)
             @test pw(EQ(), x) == pw(kernel(EQ()), x)
