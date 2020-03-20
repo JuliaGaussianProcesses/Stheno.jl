@@ -11,10 +11,10 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 ZygoteRules = "700de1a5-db45-46bc-99cf-38207098b444"
-Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 
 [compat]
 BlockArrays = "0.9, 0.10"
@@ -22,19 +22,20 @@ Distances = "0.8"
 Distributions = "0.19, 0.20, 0.21, 0.22, 0.23"
 FillArrays = "0.7, 0.8"
 FiniteDifferences = "0.9"
+Flux = "0.9, 0.10"
 MacroTools = "0.4, 0.5"
 RecipesBase = "0.7, 0.8"
+Requires = "1.0"
 Zygote = "0.4.6"
 ZygoteRules = "0.2"
 julia = "1.1.1"
-Flux = "0.9, 0.10"
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
-Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 
 [targets]
 test = ["Documenter", "FiniteDifferences", "Test", "TimerOutputs", "Flux"]
