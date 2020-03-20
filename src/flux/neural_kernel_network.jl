@@ -70,10 +70,14 @@ _rebuild_kernel(x, n, m) = reshape(x, n, m)
 _rebuild_diag(x) = reshape(x, :)
 
 ew(nkn::NeuralKernelNetwork, x) = _rebuild_diag(nkn.nn(ew(nkn.primitives, x)))
-pw(nkn::NeuralKernelNetwork, x) = _rebuild_kernel(nkn.nn(pw(nkn.primitives, x)), length(x), length(x))
+function pw(nkn::NeuralKernelNetwork, x)
+    return _rebuild_kernel(nkn.nn(pw(nkn.primitives, x)), length(x), length(x))
+end
 
 ew(nkn::NeuralKernelNetwork, x, x′) = _rebuild_diag(nkn.nn(ew(nkn.primitives, x, x′)))
-pw(nkn::NeuralKernelNetwork, x, x′) = _rebuild_kernel(nkn.nn(pw(nkn.primitives, x, x′)), length(x), length(x′))
+function pw(nkn::NeuralKernelNetwork, x, x′)
+    return _rebuild_kernel(nkn.nn(pw(nkn.primitives, x, x′)), length(x), length(x′))
+end
 
 function Base.show(io::IO, kernel::NeuralKernelNetwork)
     print(io, "NeuralKernelNetwork(")
