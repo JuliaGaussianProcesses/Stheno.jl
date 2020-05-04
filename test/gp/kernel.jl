@@ -1,6 +1,8 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched, Scaled
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Cosine, Sum, Product, stretch,
+using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Cosine, Sum, Product, scale, stretch,
     Poly, GammaExp, Wiener, WienerVelocity, Precomputed
+using Flux
+using Stheno: LinearLayer, Primitive, product, NeuralKernelNetwork
 using LinearAlgebra
 
 @timedtestset "kernel" begin
@@ -192,7 +194,7 @@ using LinearAlgebra
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
         end
-
+        
         @timedtestset "NeuralKernelNetwork" begin
             @timedtestset "general test" begin
                 k1 = 0.5 * stretch(EQ(), 0.1)
@@ -200,25 +202,26 @@ using LinearAlgebra
                 prim_layer = Primitive(k1, k2)
 
                 lin = LinearLayer(2, 2)
-                prod = ProductLayer(2)
-                nn = chain(lin, prod)
+                nn = Chain(lin, product)
 
                 nkn = NeuralKernelNetwork(prim_layer, nn)
                 differentiable_kernel_tests(nkn, ȳ, Ȳ, Ȳ_sq, x0, x1, x2; atol=1e-7, rtol=1e-7)
                 differentiable_kernel_tests(nkn, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
             @timedtestset "kernel composition test" begin
+                rng = MersenneTwister(123456)
                 k1 = 0.5 * stretch(EQ(), 0.1)
                 k2 = 1.0 * stretch(PerEQ(1.0), 0.2)
                 prim_layer = Primitive(k1, k2)
-                lin = LinearLayer(ones(1, 2))
-                prod = ProductLayer(2)
+                weights = rand(rng, 1, 2)
+                # Note: the actual weights used in calculation ≠ weights, instead it equals to softplus.(weights)
+                lin = LinearLayer(weights)
                 nkn_add_kernel = NeuralKernelNetwork(prim_layer, lin)
-                nkn_prod_kernel = NeuralKernelNetwork(prim_layer, prod)
+                nkn_prod_kernel = NeuralKernelNetwork(prim_layer, product)
 
-                sum_k = Stheno.softplus(1.0)*k1 + Stheno.softplus(1.0)*k2
+                sum_k = Stheno.softplus(weights[1])*k1 + Stheno.softplus(weights[2])*k2
                 prod_k = k1 * k2
-                
+
                 # vector input
                 @test ew(nkn_add_kernel, x0) ≈ ew(sum_k, x0)
                 @test ew(nkn_add_kernel, x0, x1) ≈ ew(sum_k, x0, x1)

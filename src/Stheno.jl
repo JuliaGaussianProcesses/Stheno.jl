@@ -1,7 +1,7 @@
 module Stheno
 
     using Distributions, Distances, BlockArrays, Statistics, Random, FillArrays,
-        LinearAlgebra, Zygote
+       LinearAlgebra, Zygote, Requires
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
     import Statistics: mean, cov
@@ -45,9 +45,7 @@ module Stheno
     # Atomic GP objects
     include(joinpath("gp", "mean.jl"))
     include(joinpath("gp", "kernel.jl"))
-    include(joinpath("gp", "neural_kernel_network.jl"))
     include(joinpath("gp", "gp.jl"))
-    
     # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.
     include(joinpath("composite", "composite_gp.jl"))
     include(joinpath("composite", "indexing.jl"))
@@ -63,4 +61,12 @@ module Stheno
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))
     include(joinpath("util", "plotting.jl"))
+
+    function __init__()
+        @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" begin
+            include(joinpath("gp", "add_functor.jl"))
+            include(joinpath("gp", "neural_kernel_network.jl"))
+        end
+    end
+
 end # module
