@@ -198,9 +198,10 @@ end
 # Misc
 #
 
-# Because Base is dumb and hasn't implemented `logabsdet` for `Diagonal` matrices.
-logabsdet(d::Diagonal) = logabsdet(UpperTriangular(d))
-
+# Legacy version of logabsdet for pre-1.4.
+if VERSION < v"1.4.0"
+    logabsdet(d::Diagonal) = logabsdet(UpperTriangular(d))
+end
 
 #
 # BlockDiagonal mul! and *

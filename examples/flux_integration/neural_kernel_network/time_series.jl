@@ -4,21 +4,24 @@ using Pkg
 Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
-using LinearAlgebra, Stheno, Flux, Zygote, DelimitedFiles, Statistics
+using Stheno
 using Plots; pyplot();
 using Random; Random.seed!(4);
+using Flux
+using Zygote
+using DelimitedFiles
+using Statistics
 
-######################################################
-# Data loading 
-## read AirPass data
+
+# read AirPass data
 data = readdlm("AirPassengers.csv", ',')
 year = data[2:end,2]; passengers = data[2:end,3];
-## Split the data into training and testing data
+# Split the data into training and testing data
 oxtrain = year[year.<1958]; oytrain = passengers[year.<1958];
 oxtest = year[year.>=1958]; oytest = passengers[year.>=1958];
 
-##data preprocessing
-### standardize X and y
+#data preprocessing
+## standardize X and y
 xtrain_mean = mean(oxtrain)
 ytrain_mean = mean(oytrain)
 xtrain_std = std(oxtrain)
@@ -30,21 +33,13 @@ xtest = @. (oxtest-xtrain_mean)/xtrain_std
 ytest = @. (oytest-ytrain_mean)/ytrain_std
 
 ## input data
-Xtrain = reshape(xtrain, 1, length(xtrain))
-Xtest = reshape(xtest, 1, length(xtest))
-Year = hcat(Xtrain, Xtest)
+Xtrain = reshape(xtrain, 1, length(xtrain));
+Xtest = reshape(xtest, 1, length(xtest));
+Year = hcat(Xtrain, Xtest);
 Passengers = vcat(ytrain, ytest)
-######################################################
-
-plt = plot(xlabel="Year", ylabel="Airline Passenger number", legend=true)
-scatter!(plt, oxtrain, oytrain, label="Observations(train)", color=:black)
 
 
-
-
-######################################################
-# Build kernel with Neural Kernel Network
-## kernel length scale initialization
+# kernel parameter initialization
 function median_distance_local(x)
     n = length(x)
     dist = []
@@ -57,9 +52,6 @@ function median_distance_local(x)
 end
 l = median_distance_local(xtrain)
 
-## kernel parameter constraint
-g1(x) = exp(-x)
-g2(x) = exp(x)
 
 # NKN
 # NOTE: the numerical values are in log-scale
@@ -111,11 +103,10 @@ end
 png(plot(loss), "loss.png")
 
 
-#############################################################
-# make prediction
-function predict(gp, X, Xtrain, ytrain)
-    gp_Xtrain = gp(ColVecs(Xtrain), σ²_n)
-    posterior = gp | Obs(gp_Xtrain, ytrain)
+# predict
+function predict(X, Xtrain, ytrain)
+    noisy_prior = gp(ColVecs(Xtrain), σ²_n)
+    posterior = gp | Obs(noisy_prior, ytrain)
     posterior(ColVecs(X))
 end
 

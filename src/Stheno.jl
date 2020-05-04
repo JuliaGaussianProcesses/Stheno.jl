@@ -64,8 +64,8 @@ module Stheno
 
     function __init__()
         @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" begin
-            include(joinpath("gp", "add_functor.jl"))
-            include(joinpath("gp", "neural_kernel_network.jl"))
+            include(joinpath("flux", "add_functor.jl"))
+            include(joinpath("flux", "neural_kernel_network.jl"))
         end
     end
 

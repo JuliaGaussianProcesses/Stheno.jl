@@ -5,22 +5,14 @@ using LinearAlgebra: isposdef, checksquare
 
 abstract type Kernel end
 
-"""
-Changes:
-    1. Type of kernel parameters are set to vector or matrix, API is maintained by defining
-	additional construction function.
-    2. A new field `f` is added to kernel that contains parameters, `f` is the constraint of
-	the kernel parameters, e.g. σ² in `Scaled` must remain positive during the calculation,
-	we can set `f(x)=exp(x)` to enable this constraint.
-"""
-
+abstract type BaseKernel <: Kernel end
 
 # API exports
 export Kernel, kernel, elementwise, pairwise, ew, pw, stretch, scale
 
 # Kernel exports
-export EQ, Exp, PerEQ, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp, Wiener,
-    WienerVelocity, Precomputed
+export EQ, Exp, PerEQ, Matern12, Matern32, Matern52, RQ, Cosine, Linear, Poly, GammaExp,
+    Wiener, WienerVelocity, Precomputed
 
 export scale, stretch
 
@@ -29,11 +21,11 @@ export scale, stretch
 #
 
 """
-    ZeroKernel <: Kernel
+    ZeroKernel <: BaseKernel
 
 A rank 0 `Kernel` that always returns zero.
 """
-struct ZeroKernel{T<:Real} <: Kernel end
+struct ZeroKernel{T<:Real} <: BaseKernel end
 ZeroKernel() = ZeroKernel{Float64}()
 zero(::Kernel) = ZeroKernel()
 
@@ -48,12 +40,12 @@ pw(k::ZeroKernel{T}, x::AV) where {T} = zeros(T, length(x), length(x))
 
 
 """
-    OneKernel{T<:Real} <: Kernel
+    OneKernel{T<:Real} <: BaseKernel
 
-A rank 1 constant `Kernel`. Useful for consistency when creating composite Kernels,
-but (almost certainly) shouldn't be used as a base `Kernel`.
+A rank 1 constant `BaseKernel`. Useful for consistency when creating composite Kernels,
+but (almost certainly) shouldn't be used as a base `BaseKernel`.
 """
-struct OneKernel{T<:Real} <: Kernel end
+struct OneKernel{T<:Real} <: BaseKernel end
 OneKernel() = OneKernel{Float64}()
 
 # Binary methods.
@@ -67,12 +59,12 @@ pw(k::OneKernel{T}, x::AV) where {T} = ones(T, length(x), length(x))
 
 
 """
-    ConstKernel{T} <: Kernel
+    ConstKernel{T} <: BaseKernel
 
 A rank 1 kernel that returns the same value `c` everywhere.
 """
-struct ConstKernel{T, cT<:AV{T}} <: Kernel
-    c::cT
+struct ConstKernel{T} <: BaseKernel
+    c::T
 end
 ConstKernel(c::Real) = ConstKernel(typeof(c)[c])
 get_iparam(c::ConstKernel) = c.c
@@ -88,7 +80,7 @@ pw(k::ConstKernel, x::AV) = pw(k, x, x)
 
 
 @doc raw"""
-    EQ() <: Kernel
+    EQ() <: BaseKernel
 
 The standardised Exponentiated Quadratic kernel. a.k.a. the Radial Basis Function (RBF), or
 Squared Exponential kernel.
@@ -97,7 +89,7 @@ Squared Exponential kernel.
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct EQ <: Kernel end
+struct EQ <: BaseKernel end
 
 # Binary methods.
 ew(::EQ, x::AV, x′::AV) = exp.(.-ew(SqEuclidean(), x, x′) ./ 2)
@@ -110,7 +102,7 @@ pw(::EQ, x::AV) = exp.(.-pw(SqEuclidean(), x) ./ 2)
 
 
 @doc raw"""
-    PerEQ
+    PerEQ <: BaseKernel
 
 The usual periodic kernel derived by mapping the input domain onto the unit circle.
 
@@ -118,12 +110,11 @@ The usual periodic kernel derived by mapping the input domain onto the unit circ
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct PerEQ{LT<:AV{<:Real}, fT} <: Kernel
+struct PerEQ{LT<:AV{<:Real}, fT} <: BaseKernel
     l::LT
     f::fT
 end
-PerEQ(l::Real, f) = PerEQ(typeof(l)[l], f)
-PerEQ(l::Real) = PerEQ(l, identity)
+PerEQ(l::Real, f=identity) = PerEQ([l], f)
 
 _pereq(d, l) = exp(-2.0*sin(π*d)^2 / l^2)
 
@@ -137,7 +128,7 @@ pw(k::PerEQ, x::AV) = _pereq.(pw(Euclidean(), x), k.f(k.l[1]))
 
 
 @doc raw"""
-    Matern12 <: Kernel
+    Matern12 <: BaseKernel
 
 The standardised Matern-1/2 / Exponential kernel:
 
@@ -145,7 +136,7 @@ The standardised Matern-1/2 / Exponential kernel:
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct Matern12 <: Kernel end
+struct Matern12 <: BaseKernel end
 
 # Binary methods
 ew(k::Matern12, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′))
@@ -169,13 +160,13 @@ const Exp = Matern12
 
 
 """
-    Matern32 <: Kernel
+    Matern32 <: BaseKernel
 
 The standardised Matern kernel with ν = 3 / 2.
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct Matern32 <: Kernel end
+struct Matern32 <: BaseKernel end
 
 function _matern32(d::Real)
     d = sqrt(3) * d
@@ -193,13 +184,13 @@ pw(k::Matern32, x::AV) = _matern32.(pw(Euclidean(), x))
 
 
 """
-    Matern52 <: Kernel
+    Matern52 <: BaseKernel
 
 The standardised Matern kernel with ν = 5 / 2.
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct Matern52 <: Kernel end
+struct Matern52 <: BaseKernel end
 
 function _Matern52(d::Real)
     λ = sqrt(5) * d
@@ -225,18 +216,17 @@ pw(k::Matern52, x::AV) = _Matern52(pw(Euclidean(), x))
 
 
 """
-    RQ <: Kernel
+    RQ <: BaseKernel
 
 The standardised Rational Quadratic, with kurtosis `α`.
 
 For length scales etc see [`stretch`](@ref), for variance see [`*`](@ref).
 """
-struct RQ{Tα<:AV{<:Real}, fT} <: Kernel
+struct RQ{Tα<:AV{<:Real}, fT} <: BaseKernel
     α::Tα
     f::fT
 end
-RQ(α::Real, f) = RQ(typeof(α)[α], f)
-RQ(α::Real) = RQ(α, identity)
+RQ(α::Real, f=identity) = RQ([α], f)
 
 _rq(d, α) = (1 + d / (2α))^(-α)
 
@@ -260,32 +250,35 @@ ew(k::RQ, x::AV) = _rq.(ew(SqEuclidean(), x), k.f(k.α[1]))
 pw(k::RQ, x::AV) = _rq.(pw(SqEuclidean(), x), k.f(k.α[1]))
 
 """
-    Cosine <: Kernel
+    Cosine <: BaseKernel
 
-Cosine Kernel with period parameter `p`.
+Cosine BaseKernel with period parameter `p`.
 """
-struct Cosine{Tp<:AV{<:Real}, fT} <: Kernel
+struct Cosine{Tp<:AV{<:Real}, fT} <: BaseKernel
     p::Tp
     f::fT
 end
-Cosine(p::Real, f) = Cosine(typeof(p)[p], f)
-Cosine(p::Real) = Cosine(p, identity)
+Cosine(p::Real, f=identity) = Cosine([p], f)
 
 # Binary methods.
-ew(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*ew(Euclidean(), x, x′) ./ k.f(k.p[1]))
-pw(k::Cosine, x::AV{<:Real}, x′::AV{<:Real}) = cos.(pi.*pw(Euclidean(), x, x′) ./ k.f(k.p[1]))
+function ew(k::Cosine, x::AV{<:Real}, x′::AV{<:Real})
+    return cos.(π .* ew(Euclidean(), x, x′) ./ k.f(k.p[1]))
+end
+function pw(k::Cosine, x::AV{<:Real}, x′::AV{<:Real})
+    return cos.(π .* pw(Euclidean(), x, x′) ./ k.f(k.p[1]))
+end
 
 # Unary methods.
 ew(k::Cosine, x::AV{<:Real}) = 1 .+ ew(Euclidean(), x)
-pw(k::Cosine, x::AV{<:Real}) = cos.(pi .* pw(Euclidean(), x) ./ k.f(k.p[1]))
+pw(k::Cosine, x::AV{<:Real}) = cos.(π .* pw(Euclidean(), x) ./ k.f(k.p[1]))
 
 
 """
-    Linear{T<:Real} <: Kernel
+    Linear{T<:Real} <: BaseKernel
 
 The standardised linear kernel / dot-product kernel.
 """
-struct Linear <: Kernel end
+struct Linear <: BaseKernel end
 
 # Binary methods
 ew(k::Linear, x::AV{<:Real}, x′::AV{<:Real}) = x .* x′
@@ -302,7 +295,7 @@ pw(k::Linear, x::ColVecs) = x.X' * x.X
 
 
 """
-    Poly{Tσ<:Real} <: Kernel
+    Poly{Tσ<:Real} <: BaseKernel
 
 Inhomogeneous Polynomial kernel. `Poly(p, σ²)` creates a `Poly{p}` with variance σ²,
 defined as
@@ -310,12 +303,11 @@ defined as
 k(xl, xr) = (dot(xl, xr) + σ²)^p
 ```
 """
-struct Poly{p, Tσ²<:AV{<:Real}, fT} <: Kernel
+struct Poly{p, Tσ²<:AV{<:Real}, fT} <: BaseKernel
     σ²::Tσ²
     f::fT
 end
-Poly(p::Int, σ²::Real, f) = Poly{p, AV{typeof(σ²)}, typeof(f)}(typeof(σ²)[σ²], f)
-Poly(p::Int, σ²::Real) = Poly(p, σ², identity)
+Poly(p::Int, σ²::Real, f=identity) = Poly{p, AV{typeof(σ²)}, typeof(f)}([σ²], f)
 
 _poly(k, σ², p) = (σ² + k)^p
 Zygote.@adjoint function _poly(k, σ², p)
@@ -336,16 +328,15 @@ pw(k::Poly{p}, x::AV) where {p} = _poly.(pw(Linear(), x), k.f(k.σ²[1]), p)
 
 
 """
-    GammaExp
+    GammaExp <: BaseKernel
 
 The γ-Exponential kernel, 0 < γ ⩽ 2, is given by `k(xl, xr) = exp(-||xl - xr||^γ)`.
 """
-struct GammaExp{Tγ<:AV{<:Real}, fT} <: Kernel
+struct GammaExp{Tγ<:AV{<:Real}, fT} <: BaseKernel
     γ::Tγ
     f::fT
 end
-GammaExp(γ::Real, f) = GammaExp(typeof(γ)[γ], f)
-GammaExp(γ::Real) = GammaExp(γ, identity)
+GammaExp(γ::Real, f=identity) = GammaExp([γ], f)
 
 # Binary methods
 ew(k::GammaExp, x::AV, x′::AV) = exp.(.-ew(Euclidean(), x, x′).^(k.f(k.γ[1])))
@@ -357,11 +348,11 @@ pw(k::GammaExp, x::AV) = exp.(.-pw(Euclidean(), x).^(k.f(k.γ[1])))
 
 
 """
-    Wiener <: Kernel
+    Wiener <: BaseKernel
 
 The standardised stationary Wiener-process kernel.
 """
-struct Wiener <: Kernel end
+struct Wiener <: BaseKernel end
 
 _wiener(x::Real, x′::Real) = min(x, x′)
 
@@ -376,11 +367,11 @@ pw(k::Wiener, x::AV{<:Real}) = pw(k, x, x)
 
 
 """
-    WienerVelocity <: Kernel
+    WienerVelocity <: BaseKernel
 
 The standardised WienerVelocity kernel.
 """
-struct WienerVelocity <: Kernel end
+struct WienerVelocity <: BaseKernel end
 
 _wiener_vel(x::Real, x′::Real) = min(x, x′)^3 / 3 + abs(x - x′) * min(x, x′)^2 / 2
 
@@ -395,11 +386,11 @@ pw(k::WienerVelocity, x::AV{<:Real}) = pw(k, x, x)
 
 
 """
-    Noise{T<:Real} <: Kernel
+    Noise{T<:Real} <: BaseKernel
 
 The standardised aleatoric white-noise kernel. Isn't really a kernel, but never mind...
 """
-struct Noise{T<:Real} <: Kernel end
+struct Noise{T<:Real} <: BaseKernel end
 Noise() = Noise{Int}()
 
 # Binary methods.
@@ -424,7 +415,7 @@ struct Precomputed{M<:AbstractMatrix{<:Real}} <: Kernel
     function Precomputed(K::AbstractMatrix{<:Real}; checkpd=false)
         checksquare(K)
         checkpd && @assert isposdef(K) "M is not positive definite"
-        new{typeof(K)}(K)
+        return new{typeof(K)}(K)
     end
 end
 
@@ -492,7 +483,7 @@ struct Product{Tkl<:Kernel, Tkr<:Kernel} <: Kernel
 end
 child(p::Product) = (p.kl, p.kr)
 """
-    +(kl::Kernel, kr::Kernel)
+    *(kl::Kernel, kr::Kernel)
 
 Construct the kernel whose value is given by the product of those of `kl` and `kr`.
 
@@ -527,8 +518,8 @@ struct Scaled{Tσ²<:AV{<:Real}, Tk<:Kernel, fT} <: Kernel
     k::Tk
     f::fT
 end
-scale(k::Kernel, σ²::Real, f) = Scaled(typeof(σ²)[σ²], k, f)
-scale(k::Kernel, σ²::Real) = scale(k, σ², identity)
+scale(k::Kernel, σ²::Real, f=identity) = Scaled([σ²], k, f)
+
 """
     *(σ²::Real, k::Kernel)
     *(k::Kernel, σ²::Real)
@@ -644,14 +635,16 @@ K = pairwise(k, xs, ys)
  1.40202e-8   0.293658     0.0808585
 ```
 """
-stretch(k::Kernel, a::AVM{<:Real}, f) = Stretched(a, k, f)
-stretch(k::Kernel, a::AVM{<:Real}) = stretch(k, a, identity)
-stretch(k::Kernel, a::Real, f) = stretch(k, typeof(a)[a], f)
-stretch(k::Kernel, a::Real) = stretch(k, a, identity)
+stretch(k::Kernel, a::AVM{<:Real}, f=identity) = Stretched(a, k, f)
+stretch(k::Kernel, a::Real, f=identity) = stretch(k, [a], f)
 
 # Binary methods (vector `a`, scalar-valued input)
-ew(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}, x′::AV{<:Real}) = ew(k.k, k.f.(k.a) .* x, k.f.(k.a) .* x′)
-pw(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}, x′::AV{<:Real}) = pw(k.k, k.f.(k.a) .* x, k.f.(k.a) .* x′)
+function ew(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}, x′::AV{<:Real})
+    return ew(k.k, k.f.(k.a) .* x, k.f.(k.a) .* x′)
+end
+function pw(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}, x′::AV{<:Real})
+    return pw(k.k, k.f.(k.a) .* x, k.f.(k.a) .* x′)
+end
 
 # Unary methods (vector `a`, scalar-valued input)
 ew(k::Stretched{<:AV{<:Real}}, x::AV{<:Real}) = ew(k.k, k.f.(k.a) .* x)
