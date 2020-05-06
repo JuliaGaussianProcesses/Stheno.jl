@@ -32,12 +32,10 @@ ew(::OneMean{T}, x::AV) where T = ones(T, length(x))
 
 Returns `c` everywhere.
 """
-struct ConstMean{T, cT<:AV{T}} <: MeanFunction
-    c::cT
+struct ConstMean{T} <: MeanFunction
+    c::T
 end
-ConstMean(c::Real) = ConstMean(typeof(c)[c])
-get_iparam(c::ConstMean) = c.c
-ew(m::ConstMean, x::AV) = fill(m.c[1], length(x))
+ew(m::ConstMean, x::AV) = fill(m.c, length(x))
 
 
 
@@ -49,5 +47,4 @@ A wrapper around whatever unary function you fancy.
 struct CustomMean{Tf} <: MeanFunction
     f::Tf
 end
-child(c::CustomMean) = (c.f,)
 ew(f::CustomMean, x::AV) = map(f.f, x)

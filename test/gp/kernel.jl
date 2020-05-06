@@ -186,11 +186,11 @@ using LinearAlgebra
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
             @timedtestset "Vector a" begin
-                k = stretch(EQ(), randn(rng, D))
+                k = stretch(EQ(), rand(rng, D))        # randn → rand, since `l` for stretch should be positive
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
             @timedtestset "Matrix a" begin
-                k = stretch(EQ(), randn(rng, D, D))
+                k = stretch(EQ(), rand(rng, D, D))     # same reason as above
                 differentiable_kernel_tests(k, ȳ, Ȳ, Ȳ_sq, X0, X1, X2; atol=1e-7, rtol=1e-7)
             end
         end

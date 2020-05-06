@@ -1,7 +1,7 @@
 module Stheno
 
     using Distributions, Distances, BlockArrays, Statistics, Random, FillArrays,
-       LinearAlgebra, Zygote, Requires
+       LinearAlgebra, Zygote, Requires, Bijectors
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
     import Statistics: mean, cov
@@ -9,6 +9,7 @@ module Stheno
     using ZygoteRules: @adjoint
     using Zygote: @nograd
     using BlockArrays: _BlockArray
+    using Bijectors: Bijector, Identity, Logit
     import LinearAlgebra: cholesky, cross
     import Distances: pairwise, colwise
     
@@ -34,14 +35,12 @@ module Stheno
     include(joinpath("util", "abstract_data_set.jl"))
     include(joinpath("util", "distances.jl"))
     include(joinpath("util", "proper_type_piracy.jl"))
-    include(joinpath("util", "parameter_handler.jl"))
     
     # Supertype for GPs.
     include("abstract_gp.jl")
-    
-    # Neural network used for building neural kernel network 
-    include(joinpath("neural_network", "basic.jl"))
-    
+    # Supertype for parameter
+    include("abstract_param.jl")
+
     # Atomic GP objects
     include(joinpath("gp", "mean.jl"))
     include(joinpath("gp", "kernel.jl"))

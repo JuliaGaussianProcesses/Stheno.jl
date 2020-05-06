@@ -1,6 +1,3 @@
-# Should parameters inside `stretch`, `periodic` & `shift` be optimized ?
-# Or these are just treated as data preprocessing ?
-
 import Base: ∘
 export ∘, select, stretch, periodic, shift
 

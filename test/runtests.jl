@@ -51,6 +51,11 @@ include("test_util.jl")
         include("abstract_gp.jl")
     end
 
+    println("abstract_param:")
+    @timedtestset "abstract_param" begin
+        include("abstract_param.jl")
+    end
+
     println("flux:")
     @timedtestset "flux" begin
         include(joinpath("flux", "neural_kernel_network.jl"))

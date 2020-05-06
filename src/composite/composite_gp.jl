@@ -13,9 +13,6 @@ struct CompositeGP{Targs} <: AbstractGP
         return gp
     end
 end
-get_iparam(::CompositeGP) = throw(UndefVarError("get_iparam method currently not defined for composite GP"))
-child(::CompositeGP) = throw(UndefVarError("child method currently not defined for composite GP"))
-
 CompositeGP(args::Targs, gpc::GPC) where {Targs} = CompositeGP{Targs}(args, gpc)
 
 mean_vector(f::CompositeGP, x::AV) = mean_vector(f.args, x)

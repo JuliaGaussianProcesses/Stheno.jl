@@ -62,7 +62,7 @@ using Base.Broadcast: broadcast_shape
         Y = X .+ 1e-8
         adjoint_test(
             (X, Y)->pairwise(Euclidean(Stheno.dtol), X, Y; dims=2), D̄, X, Y;
-            rtol=1e-3, atol=1e-3, fdm=FiniteDifferences.Forward(2, 1)
+            rtol=0.1, atol=0.5, fdm=FiniteDifferences.Forward(2, 1)
         ) # relaxed test because of machine precision concerns with finite differences
     end
     @timedtestset "ldiv(::Diagonal, ::Matrix)" begin

@@ -31,8 +31,8 @@ using Flux
         rng = MersenneTwister(123456)
 
         # Specify primitives.
-        k1 = randn(rng) * stretch(EQ(), randn(rng))
-        k2 = randn(rng) * stretch(PerEQ(randn(rng)), randn(rng))
+        k1 = rand(rng) * stretch(EQ(), rand(rng))
+        k2 = rand(rng) * stretch(PerEQ(rand(rng)), rand(rng))
         primitives = Primitive(k1, k2)
 
         @timedtestset "LinearLayer" begin
