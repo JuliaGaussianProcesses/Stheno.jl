@@ -1,7 +1,6 @@
 using BlockArrays, LinearAlgebra, FiniteDifferences, Zygote, Random
 using Stheno: MeanFunction, Kernel, AV, pairwise, ew, pw, BlockData, blocks
 using Stheno: block_diagonal, AbstractGP
-using LinearAlgebra: AbstractTriangular
 using FiniteDifferences: j′vp
 import FiniteDifferences: to_vec
 
