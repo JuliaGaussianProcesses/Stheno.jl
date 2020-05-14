@@ -1,14 +1,13 @@
 module Stheno
 
     using Distributions, Distances, BlockArrays, Statistics, Random, FillArrays,
-       LinearAlgebra, Zygote, Requires
+       LinearAlgebra, Zygote, ZygoteRules, Requires
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
     import Statistics: mean, cov
     using LinearAlgebra: AbstractTriangular
     using ZygoteRules: @adjoint
     using Zygote: @nograd
-    using BlockArrays: _BlockArray
     import LinearAlgebra: cholesky, cross
     import Distances: pairwise, colwise
 

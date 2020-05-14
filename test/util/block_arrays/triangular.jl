@@ -1,5 +1,4 @@
 using Random, LinearAlgebra, BlockArrays
-using BlockArrays: _BlockArray
 using Stheno: BlockLowerTriangular, BlockUpperTriangular
 using LinearAlgebra: ldiv!, \
 
@@ -11,7 +10,7 @@ function solve_BlockTriangular_Vector_tests(rng, T, x, TriangleType)
     @test T \ x isa BlockVector
     @test ldiv!(T, copy(x)) == T \ x
 
-    z̄ = _BlockArray([randn(rng, P) for P in Ps], Ps)
+    z̄ = mortar([randn(rng, P) for P in Ps], Ps)
 
     z, back = Zygote.pullback(\, T, x)
     L̄, x̄ = back(z̄)
@@ -34,7 +33,7 @@ function solve_BlockTriangular_Matrix_tests(rng, T, X, TriangleType)
     @test T \ X isa BlockMatrix
     @test ldiv!(T, copy(X)) == T \ X
 
-    Z̄ = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+    Z̄ = mortar([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
 
     Z, back = Zygote.pullback(\, T, X)
     T̄, X̄ = back(Z̄)
@@ -51,7 +50,7 @@ end
 @testset "triangular" begin
     @testset "adjoint / transpose" begin
         rng, Ps = MersenneTwister(123456), [5, 4]
-        X = _BlockArray([randn(rng, P, P′) for P in Ps, P′ in Ps], Ps, Ps)
+        X = mortar([randn(rng, P, P′) for P in Ps, P′ in Ps], Ps, Ps)
         Xmat = Matrix(X)
         for foo in [adjoint, transpose]
             @test foo(UpperTriangular(X)) isa BlockLowerTriangular
@@ -90,10 +89,10 @@ end
     end
     @testset "mul! / *" begin
         rng, Ps, Qs = MersenneTwister(123456), [5, 4, 3], [7, 6, 5]
-        A = _BlockArray([randn(rng, P, P′) for P in Ps, P′ in Ps], Ps, Ps)
+        A = mortar([randn(rng, P, P′) for P in Ps, P′ in Ps], Ps, Ps)
         L, U = LowerTriangular(A), UpperTriangular(A)
-        x = _BlockArray([randn(rng, P) for P in Ps], Ps)
-        X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+        x = mortar([randn(rng, P) for P in Ps], Ps)
+        X = mortar([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
 
         @testset "LowerTriangular" begin
             @testset "Matrix-Vector" begin
@@ -114,10 +113,10 @@ end
     end
     @testset "ldiv! / \\" begin
         rng, Ps, Qs = MersenneTwister(123456), [5, 4, 3], [7, 6, 5]
-        A = _BlockArray([randn(rng, P, P′) for P in Ps, P′ in Ps], Ps, Ps)
+        A = mortar([randn(rng, P, P′) for P in Ps, P′ in Ps], Ps, Ps)
         L, U = LowerTriangular(A), UpperTriangular(A)
-        x = _BlockArray([randn(rng, P) for P in Ps], Ps)
-        X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+        x = mortar([randn(rng, P) for P in Ps], Ps)
+        X = mortar([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
 
         @testset "LowerTriangular" begin
             @testset "Matrix-Vector" begin

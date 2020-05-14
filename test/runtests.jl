@@ -1,5 +1,4 @@
 using Stheno, Test, Random, BlockArrays, TimerOutputs, Documenter
-using BlockArrays: _BlockArray
 
 using Stheno: ew, pw, mean_vector, cov, cov_diag
 using Stheno: EQ

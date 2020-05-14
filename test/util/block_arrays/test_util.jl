@@ -1,9 +1,8 @@
 using Random, LinearAlgebra, BlockArrays
-using BlockArrays: _BlockArray
 
 function dense_BlockMatrix_BlockVector_mul_tests(rng, X, y)
     Ps = blocksizes(X, 1)
-    z = _BlockArray([randn(rng, P) for P in Ps], Ps)
+    z = mortar([randn(rng, P) for P in Ps], Ps)
 
     @test mul!(z, X, y) isa AbstractBlockVector
     @test Vector(mul!(z, X, y)) ≈ Matrix(X) * Vector(y)
@@ -11,7 +10,7 @@ function dense_BlockMatrix_BlockVector_mul_tests(rng, X, y)
     @test X * y isa AbstractBlockVector
     @test Vector(X * y) ≈ Matrix(X) * Vector(y)
 
-    z̄ = _BlockArray([randn(rng, P) for P in Ps], Ps)
+    z̄ = mortar([randn(rng, P) for P in Ps], Ps)
     z, back = Zygote.pullback(*, X, y)
     X̄, ȳ = back(z̄)
     @test X̄ isa AbstractBlockMatrix
@@ -30,7 +29,7 @@ end
 
 function dense_BlockMatrix_BlockMatrix_mul_tests(rng, X, Y)
     Ps, Qs = blocksizes(X, 1), blocksizes(Y, 2)
-    Z = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+    Z = mortar([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
 
     @test mul!(Z, X, Y) isa AbstractBlockMatrix
     @test Matrix(mul!(Z, X, Y)) ≈ Matrix(X) * Matrix(Y)
@@ -38,7 +37,7 @@ function dense_BlockMatrix_BlockMatrix_mul_tests(rng, X, Y)
     @test X * Y isa AbstractBlockMatrix
     @test Matrix(X * Y) ≈ Matrix(X) * Matrix(Y)
 
-    Z̄ = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+    Z̄ = mortar([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
     Z, back = Zygote.pullback(*, X, Y)
     X̄, Ȳ = back(Z̄)
     @test X̄ isa AbstractBlockMatrix
@@ -57,7 +56,7 @@ end
 
 @testset "fdm stuff" begin
     rng, Ps, Qs = MersenneTwister(123456), [5, 4], [3, 2, 1]
-    X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+    X = mortar([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
     vec_X, from_vec = FiniteDifferences.to_vec(X)
     @test vec_X isa Vector
     @test from_vec(vec_X) == X
