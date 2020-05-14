@@ -1,7 +1,6 @@
 using BlockArrays, LinearAlgebra, FiniteDifferences, Zygote, Random
 using Stheno: MeanFunction, Kernel, AV, pairwise, ew, pw, BlockData, blocks
 using Stheno: block_diagonal, AbstractGP
-using LinearAlgebra: AbstractTriangular
 using FiniteDifferences: j′vp
 import FiniteDifferences: to_vec
 
@@ -31,7 +30,17 @@ function to_vec(x::ColVecs{<:Real})
     x_vec, back = to_vec(x.X)
     return x_vec, x_vec -> ColVecs(back(x_vec))
 end
-to_vec(x::BlockArray) = vec(Array(x)), x_->BlockArray(reshape(x_, size(x)), blocksizes(x))
+
+function to_vec(X::BlockArray)
+    X_Array = Array(X)
+    x, X_Array_from_vec = to_vec(X_Array)
+    function BlockArray_from_vec(x::Vector)
+        X_Array = X_Array_from_vec(x)
+        return BlockArray(X_Array, axes(X))
+    end
+    return x, BlockArray_from_vec
+end
+
 function to_vec(x::BlockData)
     x_vecs, x_backs = zip(map(to_vec, blocks(x))...)
     sz = cumsum([map(length, x_vecs)...])
@@ -40,6 +49,7 @@ function to_vec(x::BlockData)
             for n in 1:length(blocks(x))])
     end
 end
+
 function to_vec(X::T) where T<:Union{Adjoint,Transpose}
     U = T.name.wrapper
     return vec(Matrix(X)), x_vec->U(permutedims(reshape(x_vec, size(X))))

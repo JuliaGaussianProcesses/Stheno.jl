@@ -19,36 +19,36 @@ const cross_args{T<:AbstractVector{<:AbstractGP}} = Tuple{typeof(cross), T}
 
 function mean_vector((_, fs)::cross_args, x::BlockData)
     blks = map((f, blk)->mean_vector(f, blk), fs, blocks(x))
-    return Vector(_BlockArray(blks, _get_block_sizes(blks)...))
+    return Array(mortar(blks))
 end
 
 function cov((_, fs)::cross_args, x::BlockData)
     Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x), fs, blocks(x)), :, 1)
-    return Matrix(_BlockArray(reshape(Cs, :, 1), _get_block_sizes(Cs)...))
+    return Array(mortar(reshape(Cs, :, 1)))
 end
 
 function cov_diag((_, fs)::cross_args, x::BlockData)
     cs = map(cov_diag, fs, blocks(x))
-    return Vector(_BlockArray(cs, _get_block_sizes(cs)...))
+    return Array(mortar(cs))
 end
 
 function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
     Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x′), fs, blocks(x)), :, 1)
-    return Matrix(_BlockArray(reshape(Cs, :, 1), _get_block_sizes(Cs)...))
+    return Array(mortar(reshape(Cs, :, 1)))
 end
 
 function cov_diag((_, fs)::cross_args, x::BlockData, x′::BlockData)
     cs = map(cov_diag, fs, blocks(x), blocks(x′))
-    return Vector(_BlockArray(cs, _get_block_sizes(cs)...))
+    return Array(mortar(cs))
 end
 
 function cov((_, fs)::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
     Cs = reshape(map((f, x)->cov(f, f′, x, x′), fs, blocks(x)), :, 1)
-    return Matrix(_BlockArray(Cs, _get_block_sizes(Cs)...))
+    return Array(mortar(Cs))
 end
 function cov(f::AbstractGP, (_, fs)::cross_args, x::AV, x′::BlockData)
     Cs = reshape(map((f′, x′)->cov(f, f′, x, x′), fs, blocks(x′)), 1, :)
-    return Matrix(_BlockArray(Cs, _get_block_sizes(Cs)...))
+    return Array(mortar(Cs))
 end
 
 function cov_diag(args::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
@@ -72,7 +72,7 @@ function finites_to_block(fs::AV{<:FiniteGP})
     )
 end
 
-make_block_noise(Σys::Vector{<:Diagonal}) = Diagonal(Vector(BlockVector(diag.(Σys))))
+make_block_noise(Σys::Vector{<:Diagonal}) = Diagonal(Vector(mortar(diag.(Σys))))
 make_block_noise(Σys::Vector) = block_diagonal(Σys)
 
 function _get_indices(fs)
@@ -111,11 +111,11 @@ logpdf(fs::Vector{<:Observation}) = logpdf(get_f.(fs), get_y.(fs))
 #
 
 function elbo(fs::Vector{<:FiniteGP}, ys::Vector{<:AV{<:Real}}, us::Vector{<:FiniteGP})
-    return elbo(finites_to_block(fs), Vector(BlockVector(ys)), finites_to_block(us))
+    return elbo(finites_to_block(fs), Vector(mortar(ys)), finites_to_block(us))
 end
 
 function elbo(fs::Vector{<:FiniteGP}, ys::Vector{<:AV{<:Real}}, u::FiniteGP)
-    return elbo(finites_to_block(fs), Vector(BlockVector(ys)), u)
+    return elbo(finites_to_block(fs), Vector(mortar(ys)), u)
 end
 
 elbo(f::FiniteGP, y::AV{<:Real}, us::Vector{<:FiniteGP}) = elbo(f, y, finites_to_block(us))

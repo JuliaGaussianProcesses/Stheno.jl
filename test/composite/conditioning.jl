@@ -20,8 +20,8 @@ end
         @test get_y(c1) === y && get_y(c2) === y′
 
         c = merge((c1, c2))
-        @test get_y(c) == BlockVector([y, y′])
-        @test get_y(Obs((c1, c2))) == BlockVector([y, y′])
+        @test get_y(c) == mortar([y, y′])
+        @test get_y(Obs((c1, c2))) == mortar([y, y′])
     end
     @timedtestset "condition once" begin
         rng, N, N′, D = MersenneTwister(123456), 10, 3, 2

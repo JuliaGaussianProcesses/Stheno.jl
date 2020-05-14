@@ -49,7 +49,7 @@ using Stheno: ColVecs, BlockData
         @test view(DxX, 2, 1) == view(DX, 1)
         @test view(DxX, 2, N) == view(DX, N)
         @test eachindex(DxX) isa BlockVector
-        @test eachindex(DxX) == _BlockArray([1:N, N+1:2N], [N, N])
+        @test eachindex(DxX) == mortar([1:N, N+1:2N], [N, N])
 
         # Test iteration.
         @test [x for x in DxX][1] == x[1]

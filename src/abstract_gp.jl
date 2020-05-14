@@ -290,6 +290,7 @@ function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
     return sum(cov_diag(f.f, f.x) ./ diag(Σy))
 end
 tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky) = tr(chol_Σy \ cov(f))
+
 # function tr_Cf_invΣy(f::FiniteGP, Σy::BlockDiagonal, chol_Σy::Cholesky)
 #     C = cholesky(Symmetric(_get_kernel_block_diag(f, cumulsizes(Σy, 1))))
 #     return tr_At_A(chol_Σy.U' \ C.U')

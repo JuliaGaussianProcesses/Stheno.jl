@@ -1,4 +1,4 @@
-using Stheno: block_diagonal, BlockDiagonal, tr_At_A
+using Stheno: block_diagonal, BlockDiagonal, tr_At_A, blocksizes
 
 function general_BlockDiagonal_tests(rng, blocks)
     d = block_diagonal(blocks)
@@ -24,7 +24,7 @@ function BlockDiagonal_mul_tests(rng, blocks)
     U = UpperTriangular(D)
 
     xs, ys = [randn(rng, P) for P in Ps], [randn(rng, P) for P in Ps]
-    y, x = _BlockArray(ys, Ps), _BlockArray(xs, Ps)
+    y, x = mortar(ys), mortar(xs)
 
     # Matrix-Vector product
     @test mul!(y, D, x) ≈ Dmat * Vector(x)
@@ -33,8 +33,8 @@ function BlockDiagonal_mul_tests(rng, blocks)
     @test mul!(y, U, x) == U * x
 
     Qs = [3, 4]
-    X = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
-    Y = _BlockArray([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+    X = mortar([randn(rng, P, Q) for P in Ps, Q in Qs])
+    Y = mortar([randn(rng, P, Q) for P in Ps, Q in Qs])
 
     # Matrix-Matrix product
     @test mul!(Y, D, X) ≈ Dmat * X
@@ -291,7 +291,8 @@ end
         @test_broken Matrix(Ā_diag) ≈ Ā_dens # we're not checking the right bits of the matrix here
         @test B̄_diag ≈ B̄_dens
         @test Ā_diag isa BlockDiagonal
-        @test blocksizes(Ā_diag) == blocksizes(A)
+        @test blocksizes(Ā_diag, 1) == blocksizes(A, 1)
+        @test blocksizes(Ā_diag, 2) == blocksizes(A, 2)
     end
     @timedtestset "ldiv(BlockDiagonal, Vector)" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]
@@ -309,54 +310,7 @@ end
         @test_broken Matrix(Ā_diag) ≈ Ā_dens # we're not checking the right bits of the matrix here
         @test B̄_diag ≈ B̄_dens
         @test Ā_diag isa BlockDiagonal
-        @test blocksizes(Ā_diag) == blocksizes(A)
-    end
-    @timedtestset "TriangularBlockDiagonal under BlockDiagonal" begin
-        # Stuff isn't triangular anymore, but this should really just work...
-        rng, Ps = MersenneTwister(123456), [4, 5]
-        U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
-        X = block_diagonal([randn(rng, P, P) for P in Ps])
-        @test U \ X ≈ UpperTriangular(Matrix(U)) \ Matrix(X)
-
-        A_diag, back_diag = Zygote.pullback(\, U, X)
-        A_dens, back_dens = Zygote.pullback(\, Matrix(U), Matrix(X))
-
-        Ā = block_diagonal([randn(rng, P, P) for P in Ps])
-        Ū_diag, X̄_diag = back_diag(Ā)
-        Ū_dens, X̄_dens = back_dens(Ā)
-
-        # Correctness testing
-        @test Matrix(A_diag) ≈ Matrix(A_dens)
-        @test Matrix(Ū_diag) ≈ Matrix(Ū_dens)
-        @test Matrix(X̄_diag) ≈ Matrix(X̄_dens)
-
-        # Correct type (i.e. efficiency) testing
-        @test A_diag isa BlockDiagonal
-        @test Ū_diag isa BlockDiagonal
-        @test X̄_diag isa BlockDiagonal
-    end
-    @timedtestset "adjoint(TriangularBlockDiagonal) under BlockDiagonal" begin
-        # Legacy test. Should really be doing exactly the same as the block above.
-        rng, Ps = MersenneTwister(123456), [4, 5]
-        U = UpperTriangular(block_diagonal([randn(rng, P, P) for P in Ps]))
-        X = block_diagonal([randn(rng, P, P) for P in Ps])
-        @test U' \ X ≈ UpperTriangular(Matrix(U))' \ Matrix(X)
-
-        A_diag, back_diag = Zygote.pullback((U, X)->U' \ X, U, X)
-        A_dens, back_dens = Zygote.pullback((U, X)->U' \ X, Matrix(U), Matrix(X))
-
-        Ā = block_diagonal([randn(rng, P, P) for P in Ps])
-        Ū_diag, X̄_diag = back_diag(Ā)
-        Ū_dens, X̄_dens = back_dens(Matrix(Ā))
-
-        # Correctness testing
-        @test Matrix(A_diag) ≈ Matrix(A_dens)
-        @test Matrix(Ū_diag) ≈ Matrix(Ū_dens)
-        @test Matrix(X̄_diag) ≈ Matrix(X̄_dens)
-
-        # Correct type (i.e. efficiency) testing
-        @test A_diag isa BlockDiagonal
-        @test Ū_diag isa BlockDiagonal
-        @test X̄_diag isa BlockDiagonal
+        @test blocksizes(Ā_diag, 1) == blocksizes(A, 1)
+        @test blocksizes(Ā_diag, 2) == blocksizes(A, 2)
     end
 end
