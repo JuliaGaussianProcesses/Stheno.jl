@@ -72,7 +72,7 @@ function finites_to_block(fs::AV{<:FiniteGP})
     )
 end
 
-make_block_noise(Σys::Vector{<:Diagonal}) = Diagonal(Vector(mortar(diag.(Σys))))
+make_block_noise(Σys::Vector{<:Diagonal}) = Diagonal(Array(mortar(diag.(Σys))))
 make_block_noise(Σys::Vector) = block_diagonal(Σys)
 
 function _get_indices(fs)
