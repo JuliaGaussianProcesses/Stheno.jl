@@ -5,6 +5,7 @@
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://willtebbutt.github.io/Stheno.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://willtebbutt.github.io/Stheno.jl/dev)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
+[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 
 Stheno is designed to make doing non-standard things with Gaussian processes straightforward. It has an intuitive modeling syntax, is inherently able to handle both multi-input and multi-output problems, and trivially supports interdomain pseudo-point approximations. We call this Gaussian process Probabilistic Programming (GPPP).
 
