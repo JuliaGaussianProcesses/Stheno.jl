@@ -1,7 +1,18 @@
-"""
-    (f::AbstractGP)(x::AbstractVector)
+@static if VERSION >= v"1.3"
 
-Construct a `FiniteGP` representing the projection of `f` at `x`.
-"""
-(f::GP)(x...) = FiniteGP(f, x...)
-(f::CompositeGP)(x...) = FiniteGP(f, x...)
+    """
+        (f::AbstractGP)(x::AbstractVector)
+
+    Construct a `FiniteGP` representing the projection of `f` at `x`.
+    """
+    (f::AbstractGP)(x...) = FiniteGP(f, x...)
+else
+
+    """
+        (f::Union{GP, CompositeGP})(x::AbstractVector)
+
+    Construct a `FiniteGP` representing the projection of `f` at `x`.
+    """
+    (f::GP)(x...) = FiniteGP(f, x...)
+    (f::CompositeGP)(x...) = FiniteGP(f, x...)
+end
