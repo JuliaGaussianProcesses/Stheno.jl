@@ -58,10 +58,10 @@ using Stheno: GPC, EQ
         @timedtestset "Diff Tests" begin
             standard_1D_tests(
                 MersenneTwister(123456),
-                Dict(:σ=>2.3),
+                [2.3],
                 θ->begin
                     f = GP(0.5, EQ(), GPC())
-                    return θ[:σ] * f, f
+                    return only(θ) * f, f
                 end,
                 X, X′,
             )
@@ -125,10 +125,10 @@ using Stheno: GPC, EQ
         @timedtestset "Diff Tests" begin
             standard_1D_tests(
                 MersenneTwister(123456),
-                Dict(:σ=>2.3, :c=>1.3),
+                [2.3, 1.3],
                 θ->begin
-                    f = GP(θ[:c], EQ(), GPC())
-                    return (x->θ[:σ] * x) * f, f
+                    f = GP(θ[2], EQ(), GPC())
+                    return (x->θ[1] * x) * f, f
                 end,
                 collect(range(-2.0, 2.0; length=N)),
                 collect(range(-1.5, 2.5; length=N′)),
