@@ -61,7 +61,7 @@ using Stheno: GPC, EQ
                 [2.3],
                 θ->begin
                     f = GP(0.5, EQ(), GPC())
-                    return only(θ) * f, f
+                    return θ[1] * f, f
                 end,
                 X, X′,
             )
