@@ -197,10 +197,13 @@ end
 
 _Matern52(d::AbstractArray{<:Real}) = _Matern52.(d)
 
-@adjoint function _Matern52(d::AbstractArray{<:Real})
+function rrule(::typeof(_Matern52), d::AbstractArray{<:Real})
     λ = sqrt(5) .* d
     b = exp.(-λ)
-    return (1 .+ λ .+ λ.^2 ./ 3) .* b, Δ->(.-Δ .* sqrt(5) .* b .* λ .* (1 .+ λ) ./ 3,)
+    function _Matern52_pullback(Δ)
+        return (NO_FIELDS, .-Δ .* sqrt(5) .* b .* λ .* (1 .+ λ) ./ 3,)
+    end
+    return (1 .+ λ .+ λ.^2 ./ 3) .* b, _Matern52_pullback
 end
 
 # Binary methods
@@ -228,15 +231,13 @@ RQ(α::Real, f=identity) = RQ([α], f)
 
 _rq(d, α) = (1 + d / (2α))^(-α)
 
-# I redefine adjoint function for `_rq`, since on my computer, Zygote's gradient 
-# of `_rq` returns a number of Complex type.
-Zygote.@adjoint function _rq(d::dT, α::αT) where {dT<:Real, αT<:Real}
+function rrule(::typeof(_rq), d::dT, α::αT) where {dT<:Real, αT<:Real}
     y = _rq(d, α)
     return y, function (ȳ)
     	T = promote_type(dT, αT)
     	x = 1 + d / (2α)
-    	-0.5*ȳ*y/x, ȳ*y*(d / (x*(2α)) - log(x+eps(T)))
-    	end
+    	return NO_FIELDS, -0.5 * ȳ * y / x, ȳ * y * (d / (x * 2α) - log(x + eps(T)))
+	end
 end
 
 # Binary methods.
@@ -309,11 +310,12 @@ end
 Poly(p::Int, σ²::Real, f=identity) = Poly{p, AV{typeof(σ²)}, typeof(f)}([σ²], f)
 
 _poly(k, σ², p) = (σ² + k)^p
-Zygote.@adjoint function _poly(k, σ², p)
+
+function rrule(::typeof(_poly), k, σ², p)
     y = _poly(k, σ², p)
     return y, function(Δ)
         d = Δ * p * y / (σ² + k)
-        return (d, d, nothing)
+        return (NO_FIELDS, d, d, DoesNotExist())
     end
 end
 

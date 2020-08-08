@@ -30,9 +30,9 @@ result is itself straightforwardly representable as `BlockVecOrMat`.
 """
 are_conformal(A::AVM, B::AVM) = blocksizes(A, 2) == blocksizes(B, 1)
 
-ZygoteRules.@adjoint function BlockArrays.mortar(_blocks::AbstractArray)
-    function mortar_pullback(Δ::NamedTuple{(:blocks, :axes)})
-        return (Δ.blocks, )
+function rrule(::typeof(BlockArrays.mortar), _blocks::AbstractArray)
+    function mortar_pullback(Δ::Composite)
+        return (NO_FIELDS, Δ.blocks, )
     end
     function mortar_pullback(Δ::BlockArray)
         return mortar_pullback((blocks = Δ.blocks, axes=nothing))
@@ -42,7 +42,8 @@ end
 
 ZygoteRules.@adjoint function BlockArrays.Array(X::BlockArray)
     function Array_pullback(Δ::Array)
-        return ((blocks=BlockArray(Δ, axes(X)).blocks, axes=nothing), )
+        ΔX = (blocks=BlockArray(Δ, axes(X)).blocks, axes=nothing)
+        return (ΔX,)
     end
     return Array(X), Array_pullback
 end

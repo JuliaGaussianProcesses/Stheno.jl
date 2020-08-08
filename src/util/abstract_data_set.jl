@@ -13,9 +13,9 @@ struct ColVecs{T, TX<:AbstractMatrix{T}} <: AbstractVector{Vector{T}}
     ColVecs(X::TX) where {T, TX<:AbstractMatrix{T}} = new{T, TX}(X)
 end
 
-@adjoint function ColVecs(X::AbstractMatrix)
-    back(Δ::NamedTuple) = (Δ.X,)
-    back(Δ::AbstractMatrix) = (Δ,)
+function rrule(::typeof(ColVecs), X::AbstractMatrix)
+    back(Δ::Composite) = (NO_FIELDS, Δ.X,)
+    back(Δ::AbstractMatrix) = (NO_FIELDS, Δ,)
     function back(Δ::AbstractVector{<:AbstractVector{<:Real}})
         throw(error("In slow method"))
     end
