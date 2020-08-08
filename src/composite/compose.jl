@@ -69,9 +69,11 @@ function broadcasted(f::Select, x::AbstractVector{<:CartesianIndex})
     end
     return ColVecs(out)
 end
-@adjoint function broadcasted(f::Select, x::AV{<:CartesianIndex})
-    return broadcasted(f, x), Δ->(nothing, nothing)
+
+function rrule(::typeof(broadcasted), f::Select, x::AV{<:CartesianIndex})
+    return broadcasted(f, x), Δ->(NO_FIELDS, DoesNotExist(), Zero())
 end
+
 function broadcasted(f::Select{<:Integer}, x::AV{<:CartesianIndex})
     out = Matrix{Int}(undef, length(x))
     for n in eachindex(x)

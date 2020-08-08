@@ -19,12 +19,12 @@ for (d, D) in [(:sqeuclidean, :SqEuclidean), (:euclidean, :Euclidean)]
     end
 end
 
-@adjoint function pairwise(::Euclidean, X::AV{<:Real})
-    D, back = Zygote.pullback(X->pairwise(SqEuclidean(dtol), X), X)
+function rrule(::typeof(pairwise), ::Euclidean, x::AbstractVector{<:Real})
+    D, back = Zygote.pullback(x->pairwise(SqEuclidean(dtol), x), x)
     D .= sqrt.(D)
     return D, function(Δ)
         Δ = Δ ./ (2 .* D)
         Δ[diagind(Δ)] .= 0
-        return (nothing, first(back(Δ)))
+        return (NO_FIELDS, NO_FIELDS, first(back(Δ)))
     end
 end

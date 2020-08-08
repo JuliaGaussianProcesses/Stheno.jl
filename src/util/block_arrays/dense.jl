@@ -42,7 +42,8 @@ end
 
 ZygoteRules.@adjoint function BlockArrays.Array(X::BlockArray)
     function Array_pullback(Δ::Array)
-        return ((blocks=BlockArray(Δ, axes(X)).blocks, axes=nothing), )
+        ΔX = (blocks=BlockArray(Δ, axes(X)).blocks, axes=nothing)
+        return (ΔX,)
     end
     return Array(X), Array_pullback
 end
