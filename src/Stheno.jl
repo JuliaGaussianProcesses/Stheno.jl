@@ -11,7 +11,7 @@ module Stheno
         Random,
         Requires,
         Zygote,
-        ZygoteRules,
+        ZygoteRules
 
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
