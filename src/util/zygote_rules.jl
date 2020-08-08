@@ -15,48 +15,8 @@ end
 accum(A::AbstractMatrix, D::Diagonal) = accum(D, A)
 accum(A::Diagonal, B::Diagonal) = Diagonal(accum(diag(A), diag(B)))
 
-@adjoint function colwise(s::SqEuclidean, x::AbstractMatrix, y::AbstractMatrix)
-    return colwise(s, x, y), function (Δ::AbstractVector)
-        x̄ = 2 .* Δ' .* (x .- y)
-        return nothing, x̄, -x̄
-    end
-end
-
-@adjoint function pairwise(s::SqEuclidean, X::AbstractMatrix; dims=2)
-    D = pairwise(s, X; dims=dims)
-    return D, function(Δ)
-        d1, d2 = Diagonal(vec(sum(Δ; dims=1))), Diagonal(vec(sum(Δ; dims=2)))
-        return (nothing, X * (2 .* (d1 .+ d2 .- Δ .- Δ')))
-    end
-end
-
-@adjoint function colwise(s::Euclidean, x::AbstractMatrix, y::AbstractMatrix)
-    d = colwise(s, x, y)
-    return d, function (Δ::AbstractVector)
-        x̄ = (Δ ./ d)' .* (x .- y)
-        return nothing, x̄, -x̄
-    end
-end
-
-@adjoint function pairwise(::Euclidean, X::AbstractMatrix, Y::AbstractMatrix; dims=2)
-    @assert dims == 2
-    D, back = Zygote.pullback((X, Y)->pairwise(SqEuclidean(dtol), X, Y; dims=2), X, Y)
-    D .= sqrt.(D)
-    return D, Δ -> (nothing, back(Δ ./ (2 .* D))...)
-end
-
-@adjoint function pairwise(::Euclidean, X::AbstractMatrix; dims=2)
-    @assert dims == 2
-    D, back = Zygote.pullback(X->pairwise(SqEuclidean(dtol), X; dims=2), X)
-    D .= sqrt.(D)
-    return D, function(Δ)
-        Δ = Δ ./ (2 .* D)
-        Δ[diagind(Δ)] .= 0
-        return (nothing, first(back(Δ)))
-    end
-end
-
-@adjoint function literal_getproperty(C::Cholesky, ::Val{:factors})
+function rrule(::typeof(ZygoteRules.literal_getproperty), C::Cholesky, ::Val{:factors})
+    println("doing f")
     error("@adjoint not implemented for :factors as is unsafe.")
     return literal_getproperty(C, Val(:factors)), function(Δ)
         error("@adjoint not implemented for :factors. (I couldn't make it work...)")
@@ -79,19 +39,14 @@ cholesky(A::HermOrSym{T, <:Diagonal{T}} where T) = cholesky(Diagonal(diag(A)))
 
 import Base.Broadcast: broadcasted
 
-@adjoint broadcasted(::typeof(-), x::AbstractArray) = .-x, Δ->(nothing, .-Δ,)
-
-@adjoint function broadcasted(::typeof(exp), x::AbstractArray)
-    y = exp.(x)
-    return y, Δ->(nothing, Δ .* y)
+function rrule(::typeof(broadcasted), ::typeof(-), x::AbstractArray)
+    function broadcasted_minus_pullback(Δ)
+        return (NO_FIELDS, DoesNotExist(), .-Δ)
+    end
+    return .-x, broadcasted_minus_pullback
 end
 
-@adjoint function \(D::Diagonal{<:Real}, B::AbstractVecOrMat{<:Real})
-    Y = D \ B
-    function ldiv_Diagonal_pullback(Ȳ::AbstractVecOrMat{<:Real})
-        B̄ = D' \ Ȳ
-        D̄ = Diagonal(-vec(sum(B̄ .* Y; dims=2)))
-        return (D̄, B̄)
-    end
-    return Y, ldiv_Diagonal_pullback
+function rrule(::typeof(broadcasted), ::typeof(exp), x::AbstractArray)
+    y = exp.(x)
+    return y, Δ->(NO_FIELDS, DoesNotExist(), Δ .* y)
 end

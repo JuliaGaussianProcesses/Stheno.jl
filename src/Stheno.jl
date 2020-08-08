@@ -15,6 +15,7 @@ module Stheno
 
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
+    import ChainRulesCore: rrule
     import Statistics: mean, cov
     using ZygoteRules: @adjoint
     using Zygote: @nograd

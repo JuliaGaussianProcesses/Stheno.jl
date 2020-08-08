@@ -19,7 +19,7 @@ for (d, D) in [(:sqeuclidean, :SqEuclidean), (:euclidean, :Euclidean)]
     end
 end
 
-function ChainRulesCore.rrule(::typeof(pairwise), ::Euclidean, x::AbstractVector{<:Real})
+function rrule(::typeof(pairwise), ::Euclidean, x::AbstractVector{<:Real})
     D, back = Zygote.pullback(x->pairwise(SqEuclidean(dtol), x), x)
     D .= sqrt.(D)
     return D, function(Δ)
