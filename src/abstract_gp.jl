@@ -17,7 +17,7 @@ next_index(gpc::GPC) = gpc.n + 1
 #
 
 import Base: rand, length
-import Distributions: logpdf, ContinuousMultivariateDistribution
+import Distributions: logpdf, AbstractMvNormal
 
 export mean, std, cov, marginals, rand, logpdf, elbo, dtc
 
@@ -26,7 +26,7 @@ export mean, std, cov, marginals, rand, logpdf, elbo, dtc
 
 The finite-dimensional projection of the AbstractGP `f` at `x`.
 """
-struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: ContinuousMultivariateDistribution
+struct FiniteGP{Tf<:AbstractGP, Tx<:AV, TΣy} <: AbstractMvNormal
     f::Tf
     x::Tx 
     Σy::TΣy
