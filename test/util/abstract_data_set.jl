@@ -1,4 +1,3 @@
-using Random, LinearAlgebra, Zygote
 using Stheno: ColVecs, BlockData
 
 @timedtestset "abstract_data_set" begin

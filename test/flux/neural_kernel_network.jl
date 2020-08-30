@@ -1,5 +1,3 @@
-using Flux
-
 @timedtestset "neural_kernel_network" begin
 
     rng, N, N′, D = MersenneTwister(123456), 5, 6, 2

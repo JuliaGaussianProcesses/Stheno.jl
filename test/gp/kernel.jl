@@ -1,9 +1,7 @@
 using Stheno: ZeroKernel, OneKernel, ConstKernel, CustomMean, pw, Stretched, Scaled
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, Matern32, Matern52, RQ, Cosine, Sum, Product, scale, stretch,
     Poly, GammaExp, Wiener, WienerVelocity, Precomputed
-using Flux
 using Stheno: LinearLayer, Primitive, product, NeuralKernelNetwork
-using LinearAlgebra
 
 @timedtestset "kernel" begin
 

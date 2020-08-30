@@ -1,5 +1,3 @@
-using Random, LinearAlgebra, BlockArrays
-
 @timedtestset "dense" begin
 
     @testset "Array ∘ mortar" begin
