@@ -1,7 +1,6 @@
 using Stheno: FiniteGP, GPC, pw, ConstMean, GP
 using Stheno: EQ, Exp, Linear, Noise, PerEQ, block_diagonal, tr_Cf_invΣy
-using Statistics
-using Distributions: MvNormal, PDMat
+using Distributions: MvNormal
 
 _rng() = MersenneTwister(123456)
 

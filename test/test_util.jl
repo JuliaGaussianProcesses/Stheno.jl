@@ -1,4 +1,3 @@
-using BlockArrays, LinearAlgebra, FiniteDifferences, Zygote, Random
 using Stheno: MeanFunction, Kernel, AV, pairwise, ew, pw, BlockData, blocks
 using Stheno: block_diagonal, AbstractGP
 using FiniteDifferences: j′vp

@@ -1,4 +1,3 @@
-using LinearAlgebra
 using Stheno: GPC, optimal_q, PseudoObs
 
 # Test Titsias implementation by checking that it (approximately) recovers exact inference

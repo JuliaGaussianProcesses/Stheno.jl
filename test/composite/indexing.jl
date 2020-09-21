@@ -1,4 +1,3 @@
-using Random, LinearAlgebra
 using Stheno: GPC
 
 @timedtestset "indexing" begin

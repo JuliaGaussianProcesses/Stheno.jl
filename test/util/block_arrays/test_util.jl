@@ -1,5 +1,3 @@
-using Random, LinearAlgebra, BlockArrays
-
 function dense_BlockMatrix_BlockVector_mul_tests(rng, X, y)
     Ps = blocksizes(X, 1)
     z = mortar([randn(rng, P) for P in Ps], Ps)

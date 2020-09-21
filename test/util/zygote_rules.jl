@@ -1,4 +1,3 @@
-using FiniteDifferences, Zygote, Distances, Random, LinearAlgebra
 using Base.Broadcast: broadcast_shape
 
 @timedtestset "zygote_rules" begin
