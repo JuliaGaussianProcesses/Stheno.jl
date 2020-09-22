@@ -20,12 +20,13 @@ for (d, D) in [(:sqeuclidean, :SqEuclidean), (:euclidean, :Euclidean)]
 end
 
 function rrule(::typeof(pairwise), ::Euclidean, x::AbstractVector{<:Real})
-    D, back = Zygote.pullback(x->pairwise(SqEuclidean(dtol), x), x)
-    D .= sqrt.(D)
-    return D, function(Δ)
-        Δ = Δ ./ (2 .* max.(D, eps(eltype(D))))
-        # Δ = Δ ./ (2 .* D)
-        Δ[diagind(Δ)] .= 0
-        return (NO_FIELDS, NO_FIELDS, first(back(Δ)))
+    D, pb = Zygote.pullback(
+        x->sqrt.(max.(pairwise(SqEuclidean(dtol), x), eps(eltype(x))^2)), x,
+    )
+
+    function pairwise_Euclidean_pullback(Δ)
+        return (NO_FIELDS, DoesNotExist(), first(pb(Δ)))
     end
+
+    return D, pairwise_Euclidean_pullback
 end
