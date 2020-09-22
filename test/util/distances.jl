@@ -76,6 +76,6 @@ end
         x_ = randn(N)
         x = vcat(x_, x_)
         ΔD = randn(2N, 2N)
-        adjoint_test(x -> pairwise(Euclidean(), x), ΔD, x; atol=1e-9, rtol=1e-9)
+        adjoint_test(x -> pairwise(Euclidean(), x), ΔD, x; atol=1e-8, rtol=1e-8)
     end
 end
