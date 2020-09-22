@@ -23,7 +23,8 @@ function rrule(::typeof(pairwise), ::Euclidean, x::AbstractVector{<:Real})
     D, back = Zygote.pullback(x->pairwise(SqEuclidean(dtol), x), x)
     D .= sqrt.(D)
     return D, function(Δ)
-        Δ = Δ ./ (2 .* D)
+        Δ = Δ ./ (2 .* max.(D, eps(eltype(D))))
+        # Δ = Δ ./ (2 .* D)
         Δ[diagind(Δ)] .= 0
         return (NO_FIELDS, NO_FIELDS, first(back(Δ)))
     end

@@ -70,4 +70,24 @@ end
             )
         end
     end
+
+    @testset "Euclidean with repeated inputs" begin
+        x_ = randn(5)
+        x = vcat(x_, x_)
+        ΔD = randn(10, 10)
+
+        # Compute forwards-pass and j′vp.
+        f = x -> pairwise(Euclidean(), x)
+        D, back = Zygote.pullback(f, x)
+        @timeit to "adj_ad" adj_ad = back(ΔD)
+        @timeit to "adj_fd" adj_fd = j′vp(central_fdm(5, 1), f, ΔD, x)
+
+        # Check that forwards-pass agrees with plain forwards-pass.
+        @test D ≈ f(x)
+
+        # Check that ad and fd adjoints (approximately) agree.
+        # print_results && print_adjoints(adj_ad, adj_fd, rtol, atol)
+        @test fd_isapprox(adj_ad, adj_fd, 1e-6, 1e-6)
+        # adjoint_test(, ΔD, x; print_results=true)
+    end
 end
