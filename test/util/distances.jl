@@ -72,7 +72,7 @@ end
     end
 
     @testset "Euclidean with repeated inputs" begin
-        N = 25
+        N = 5
         x_ = randn(N)
         x = vcat(x_, x_)
         ΔD = randn(2N, 2N)
