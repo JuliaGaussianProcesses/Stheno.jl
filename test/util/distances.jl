@@ -70,4 +70,12 @@ end
             )
         end
     end
+
+    @testset "Euclidean with repeated inputs" begin
+        N = 5
+        x_ = randn(N)
+        x = vcat(x_, x_)
+        ΔD = randn(2N, 2N)
+        adjoint_test(x -> pairwise(Euclidean(), x), ΔD, x; atol=1e-6, rtol=1e-6, print_results=true)
+    end
 end
