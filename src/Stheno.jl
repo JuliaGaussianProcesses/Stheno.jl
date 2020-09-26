@@ -1,17 +1,17 @@
 module Stheno
 
-    using
-        BlockArrays,
-        ChainRulesCore,
-        Distributions,
-        Distances,
-        FillArrays,
-        LinearAlgebra,
-        Statistics,
-        Random,
-        Requires,
-        Zygote,
-        ZygoteRules
+    using BlockArrays
+    using ChainRulesCore
+    using Distributions
+    using Distances
+    using FillArrays
+    using KernelFunctions
+    using LinearAlgebra
+    using Statistics
+    using Random
+    using Requires
+    using Zygote
+    using ZygoteRules
 
     import Base: length, map
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
