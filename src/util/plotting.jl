@@ -13,7 +13,7 @@ using RecipesBase
         σ = std.(ms)
         ribbon := 3σ
         fillalpha --> 0.3
-        width --> 2
+        linewidth --> 2
         x, μ
     end
 

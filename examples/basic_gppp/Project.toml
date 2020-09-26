@@ -8,6 +8,6 @@ Stheno = "8188c328-b5d6-583d-959b-9690869a5511"
 [compat]
 ColorTypes = "= 0.9.1"
 FixedPointNumbers = "= 0.6.1"
-Plots = "= 0.28.4"
+Plots = "1"
 Stheno = "0.6"
 julia = "1"
