@@ -38,37 +38,10 @@ elbo(::Stheno.FiniteGP, y::AbstractVector{<:Real}, ::Stheno.FiniteGP)
 
 ## Kernels
 
-This is an ever-growing list. Implementing another kernel would make an excellent first PR...
-
-```@docs
-EQ
-Matern12
-Exp
-Matern32
-Matern52
-RQ
-Cosine
-Linear
-Poly
-GammaExp
-Wiener
-WienerVelocity
-```
-
-## Transformations of Kernels
-
-```@docs
-stretch(::Stheno.Kernel, ::Union{Real, AbstractVecOrMat{<:Real}})
-*(::Real, ::Stheno.Kernel)
-+(::Stheno.Kernel, ::Stheno.Kernel)
-*(::Stheno.Kernel, ::Stheno.Kernel)
-```
-
-## Kernel Convenience
-
-```@docs
-kernel
-```
+Stheno.jl used to maintain its own collection of kernes. Fortunately, the maintainers of
+various Gaussian process-related pakages decided to come together and create
+[KernelFunctions.jl](https://github.com/JuliaGaussianProcesses/KernelFunctions.jl), which is
+now the home for all things kernel-related.
 
 ## MeanFunctions
 These are implicit. Please refer to the `GP` documentation for details.

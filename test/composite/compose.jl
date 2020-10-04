@@ -1,10 +1,10 @@
-using Stheno: GPC, EQ, Exp
-
 @timedtestset "compose" begin
     @timedtestset "general" begin
         rng, N, N′, gpc = MersenneTwister(123456), 5, 3, GPC()
         x, x′ = randn(rng, N), randn(rng, N′)
-        f, g, h = GP(sin, EQ(), gpc), cos, GP(exp, Exp(), gpc)
+        f = GP(sin, SqExponentialKernel(), gpc)
+        g = cos
+        h = GP(exp, ExponentialKernel(), gpc)
         fg = f ∘ g
 
         # Check marginals statistics inductively.
@@ -26,7 +26,7 @@ using Stheno: GPC, EQ, Exp
             abstractgp_interface_tests(fg, f, x0, x1, x2, x3)
             abstractgp_interface_tests(stretch(f, 0.1), f, x0, x1, x2, x3)
 
-            # f = GP(EQ(), GPC())
+            # f = GP(SqExponentialKernel(), GPC())
             # abstractgp_interface_tests(periodic(f, 0.1), f, x0, x1, x2, x3)
         end
         @timedtestset "Diff Tests" begin
@@ -34,7 +34,7 @@ using Stheno: GPC, EQ, Exp
                 MersenneTwister(123456),
                 Dict(:σ=>0.5),
                 θ->begin
-                    f = θ[:σ] * GP(sin, EQ(), GPC())
+                    f = θ[:σ] * GP(sin, SqExponentialKernel(), GPC())
                     return stretch(f, 0.5), f
                 end,
                 collect(range(-2.0, 2.0; length=N)),
@@ -46,7 +46,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "scalar stretch" begin
             rng, N, λ = MersenneTwister(123456), 3, 0.51
             x = randn(rng)
-            f = GP(1.3, EQ(), GPC())
+            f = GP(1.3, SqExponentialKernel(), GPC())
             g = stretch(f, λ)
 
             @timedtestset "scalar input" begin
@@ -56,7 +56,7 @@ using Stheno: GPC, EQ, Exp
                     MersenneTwister(123456),
                     Dict(:σ=>0.5, :l=>0.32),
                     θ->begin
-                        f_ = θ[:σ] * GP(sin, EQ(), GPC())
+                        f_ = θ[:σ] * GP(sin, SqExponentialKernel(), GPC())
                         return stretch(f_, θ[:l]), f_
                     end,
                     collect(range(-2.0, 2.0; length=N)),
@@ -73,7 +73,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "Vector stretch" begin
             rng, N, D = MersenneTwister(123456), 3, 7
             λ = randn(rng, D)
-            f = GP(1.0, EQ(), GPC())
+            f = GP(1.0, SqExponentialKernel(), GPC())
             g = stretch(f, λ)
 
             X = randn(rng, D, 1)
@@ -83,7 +83,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "Matrix stretch" begin
             rng, N, D = MersenneTwister(123456), 3, 7
             A = randn(rng, D, D)
-            f = GP(1.0, EQ(), GPC())
+            f = GP(1.0, SqExponentialKernel(), GPC())
             g = stretch(f, A)
 
             X = randn(rng, D, 1)
@@ -94,7 +94,7 @@ using Stheno: GPC, EQ, Exp
     @timedtestset "Select" begin
         rng, N, D = MersenneTwister(123456), 3, 6
         idx = [1, 3]
-        f = GP(1.3, EQ(), GPC())
+        f = GP(1.3, SqExponentialKernel(), GPC())
         g = select(f, idx)
 
         X = randn(rng, D, N)
@@ -107,7 +107,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "Shift{Float64}" begin
             rng, N, D = MersenneTwister(123456), 3, 6
             a = randn(rng)
-            f = GP(1.3, EQ(), GPC())
+            f = GP(1.3, SqExponentialKernel(), GPC())
             g = shift(f, a)
 
             x = randn(rng, N)
@@ -125,7 +125,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "Shift{Vector{Float64}}" begin
             rng, N, D = MersenneTwister(123456), 3, 6
             a = randn(rng, D)
-            f = GP(1.3, EQ(), GPC())
+            f = GP(1.3, SqExponentialKernel(), GPC())
             g = shift(f, a)
 
             X = randn(rng, D, N)

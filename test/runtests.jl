@@ -11,8 +11,7 @@ using Test
 using TimerOutputs
 using Zygote
 
-using Stheno: ew, pw, mean_vector, cov, cov_diag
-using Stheno: EQ
+using Stheno: elementwise, mean_vector, cov, cov_diag, GPC
 
 const to = TimerOutput()
 
@@ -34,13 +33,11 @@ include("test_util.jl")
             include(joinpath("util", "block_arrays", "diagonal.jl"))
         end
         include(joinpath("util", "abstract_data_set.jl"))
-        include(joinpath("util", "distances.jl"))
     end
 
     println("gp:")
     @timedtestset "gp" begin
         include(joinpath("gp", "mean.jl"))
-        include(joinpath("gp", "kernel.jl"))
         include(joinpath("gp", "gp.jl"))
     end
 

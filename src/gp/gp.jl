@@ -10,14 +10,14 @@ also required, but only matters when composing `GP`s together.
 
 If only two arguments are provided, assume the mean to be zero everywhere:
 ```jldoctest
-julia> f = GP(Matern32(), GPC());
+julia> f = GP(Matern32Kernel(), GPC());
 
 julia> x = randn(5);
 
 julia> mean(f(x)) == zeros(5)
 true
 
-julia> cov(f(x)) == Stheno.pw(Matern32(), x)
+julia> cov(f(x)) == kernelmatrix(Matern32Kernel(), x)
 true
 ```
 
@@ -26,14 +26,14 @@ true
 If a `Real` is provided as the first argument, assume the mean function is constant with
 that value
 ```jldoctest
-julia> f = GP(5.0, EQ(), GPC());
+julia> f = GP(5.0, SqExponentialKernel(), GPC());
 
 julia> x = randn(5);
 
 julia> mean(f(x)) == 5.0 .* ones(5)
 true
 
-julia> cov(f(x)) == Stheno.pw(EQ(), x)
+julia> cov(f(x)) == kernelmatrix(SqExponentialKernel(), x)
 true
 ```
 
@@ -42,14 +42,14 @@ true
 Provide an arbitrary function to compute the mean:
 
 ```jldoctest
-julia> f = GP(x -> sin(x) + cos(x / 2), RQ(3.2), GPC());
+julia> f = GP(x -> sin(x) + cos(x / 2), RationalQuadraticKernel(α=3.2), GPC());
 
 julia> x = randn(5);
 
 julia> mean(f(x)) == sin.(x) .+ cos.(x ./ 2)
 true
 
-julia> cov(f(x)) == Stheno.pw(RQ(3.2), x)
+julia> cov(f(x)) == kernelmatrix(RationalQuadraticKernel(α=3.2), x)
 true
 ```
 """
@@ -71,13 +71,13 @@ GP(m::Real, k::Kernel, gpc::GPC) = GP(ConstMean(m), k, gpc)
 GP(k::Kernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
 GP(k::Kernel, m, gpc::GPC) = GP(m, k, gpc)
 
-mean_vector(f::GP, x::AV) = ew(f.m, x)
+mean_vector(f::GP, x::AV) = elementwise(f.m, x)
 
-cov(f::GP, x::AV) = pw(f.k, x)
-cov_diag(f::GP, x::AV) = ew(f.k, x)
+cov(f::GP, x::AV) = kernelmatrix(f.k, x)
+cov_diag(f::GP, x::AV) = kerneldiagmatrix(f.k, x)
 
-cov(f::GP, x::AV, x′::AV) = pw(f.k, x, x′)
-cov_diag(f::GP, x::AV, x′::AV) = ew(f.k, x, x′)
+cov(f::GP, x::AV, x′::AV) = kernelmatrix(f.k, x, x′)
+cov_diag(f::GP, x::AV, x′::AV) = kerneldiagmatrix(f.k, x, x′)
 
 function cov(f::GP, f′::GP, x::AV, x′::AV)
     return f === f′ ? cov(f, x, x′) : zeros(length(x), length(x′))

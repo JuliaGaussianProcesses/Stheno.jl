@@ -1,3 +1,4 @@
+import KernelFunctions: kernelmatrix, kerneldiagmatrix
 export LinearLayer, product, Primitive, NeuralKernelNetwork
 
 using .Flux
@@ -24,7 +25,7 @@ end
 # an new array of size (M÷m)×N
 function product(x, step=2)
     m, n = size(x)
-    m%step == 0 || error("the first dimension of inputs must be multiple of step")
+    m % step == 0 || error("the first dimension of inputs must be multiple of step")
     new_x = reshape(x, step, m÷step, n)
     .*([new_x[i, :, :] for i in 1:step]...)
 end
@@ -40,13 +41,13 @@ end
 # flatten k kernel matrices of size Mk×Nk, and concatenate these 1d array into a k×(Mk*Nk) 2d array
 _cat_kernel_array(x) = vcat([reshape(x[i], 1, :) for i in 1:length(x)]...)
 
-# NOTE, though we implement `ew` & `pw` function for Primitive, it isn't a subtype of Kernel type,
-# I do this because it will facilitate writing NeuralKernelNetwork
-ew(p::Primitive, x) = _cat_kernel_array(map(k->ew(k, x), p.kernels))
-pw(p::Primitive, x) = _cat_kernel_array(map(k->pw(k, x), p.kernels))
+# NOTE, though we implement `ew` & `pw` function for Primitive, it isn't a subtype of Kernel
+# type, I do this because it will facilitate writing NeuralKernelNetwork
+ew(p::Primitive, x) = _cat_kernel_array(map(k->kerneldiagmatrix(k, x), p.kernels))
+pw(p::Primitive, x) = _cat_kernel_array(map(k->kernelmatrix(k, x), p.kernels))
 
-ew(p::Primitive, x, x′) = _cat_kernel_array(map(k->ew(k, x, x′), p.kernels))
-pw(p::Primitive, x, x′) = _cat_kernel_array(map(k->pw(k, x, x′), p.kernels))
+ew(p::Primitive, x, x′) = _cat_kernel_array(map(k->kerneldiagmatrix(k, x, x′), p.kernels))
+pw(p::Primitive, x, x′) = _cat_kernel_array(map(k->kernelmatrix(k, x, x′), p.kernels))
 
 function Base.show(io::IO, layer::Primitive)
     print(io, "Primitive(")
@@ -69,13 +70,19 @@ end
 _rebuild_kernel(x, n, m) = reshape(x, n, m)
 _rebuild_diag(x) = reshape(x, :)
 
-ew(nkn::NeuralKernelNetwork, x) = _rebuild_diag(nkn.nn(ew(nkn.primitives, x)))
-function pw(nkn::NeuralKernelNetwork, x)
+function kerneldiagmatrix(nkn::NeuralKernelNetwork, x::AbstractVector)
+    return _rebuild_diag(nkn.nn(ew(nkn.primitives, x)))
+end
+
+function kernelmatrix(nkn::NeuralKernelNetwork, x::AbstractVector)
     return _rebuild_kernel(nkn.nn(pw(nkn.primitives, x)), length(x), length(x))
 end
 
-ew(nkn::NeuralKernelNetwork, x, x′) = _rebuild_diag(nkn.nn(ew(nkn.primitives, x, x′)))
-function pw(nkn::NeuralKernelNetwork, x, x′)
+function kerneldiagmatrix(nkn::NeuralKernelNetwork, x::AbstractVector, x′::AbstractVector)
+    return _rebuild_diag(nkn.nn(ew(nkn.primitives, x, x′)))
+end
+
+function kernelmatrix(nkn::NeuralKernelNetwork, x::AbstractVector, x′::AbstractVector)
     return _rebuild_kernel(nkn.nn(pw(nkn.primitives, x, x′)), length(x), length(x′))
 end
 

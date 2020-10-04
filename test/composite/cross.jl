@@ -1,11 +1,11 @@
-using Stheno: BlockData, GPC, cross
+using Stheno: BlockData, cross
 
 @timedtestset "cross" begin
     @timedtestset "Correctness tests" begin
         rng, P, Q, gpc = MersenneTwister(123456), 2, 3, GPC()
 
-        f1 = GP(sin, EQ(), gpc)
-        f2 = GP(cos, EQ(), gpc)
+        f1 = GP(sin, SqExponentialKernel(), gpc)
+        f2 = GP(cos, SqExponentialKernel(), gpc)
         f3 = cross([f1, f2])
         f4 = cross([f1])
         f5 = cross([f2])
@@ -80,7 +80,7 @@ using Stheno: BlockData, GPC, cross
         x2, x3 = randn(rng, P), randn(2P)
 
         gpc = GPC()
-        f1, f2 = GP(sin, EQ(), gpc), GP(cos, EQ(), gpc)
+        f1, f2 = GP(sin, SqExponentialKernel(), gpc), GP(cos, SqExponentialKernel(), gpc)
         f3 = cross([f1, f2])
         abstractgp_interface_tests(f3, f1, x0, x1, x2, x3)
 
@@ -91,8 +91,8 @@ using Stheno: BlockData, GPC, cross
         #     Dict(:l1=>0.5, :l2=>2.3),
         #     θ->begin
         #         gpc = GPC()
-        #         f1 = θ[:l1] * GP(sin, EQ(), gpc)
-        #         f2 = θ[:l2] * GP(cos, EQ(), gpc)
+        #         f1 = θ[:l1] * GP(sin, SqExponentialKernel(), gpc)
+        #         f2 = θ[:l2] * GP(cos, SqExponentialKernel(), gpc)
         #         f3 = cross([f1, f2])
         #         return f3, f3
         #     end,
@@ -104,7 +104,7 @@ using Stheno: BlockData, GPC, cross
         rng, P, Q = MersenneTwister(123456), 3, 5
         xp, xq = randn(rng, P), randn(rng, Q)
         gpc = GPC()
-        f_, g_ = GP(sin, EQ(), gpc), GP(cos, EQ(), gpc)
+        f_, g_ = GP(sin, SqExponentialKernel(), gpc), GP(cos, SqExponentialKernel(), gpc)
         h_x = Stheno.finites_to_block([f_(xp, 1.0), g_(xq, 1.0)])
     end
 end
