@@ -12,7 +12,7 @@ f(x, σ²)
 ```
 or computing the covariance matrix associated with a kernel:
 ```julia
-pw(EQ(), x)
+kernelmatrix(SqExponentialKernel(), x)
 ```
 When computing the cross-covariance matrix between two GPs
 ```julia
@@ -29,7 +29,7 @@ For example, this means that when handling multi-dimensional inputs stored in a 
 When constructing a GP whose domain is the real-line, for example when using a GP to solve some kind of time-series problem, it is sufficient to work with `Vector{<:Real}`s of inputs. As such, the following is completely valid:
 ```julia
 using Stheno: GPC
-f = GP(EQ(), GPC())
+f = GP(SqExponentialKernel(), GPC())
 x = randn(10)
 f(x)
 ```
@@ -59,29 +59,3 @@ Future plans include a `RowVecs` type, which would instead treat each row of `X_
 Consider a rectilinear grid of points in D-dimensional Euclidean space. Such grids of points can be represented in a more memory-efficient manner than can arbitrarily locate sets of points. Moreover, this structure can be exploited to accelerate inference for certain types of problems dramatically. Other such examples exist e.g., uniform grids in N-dimensions, and can be exploited to more efficiently represent input data and to accelerate inference.
 
 Work to exploit these kinds of structures is on-going at the time of writing and will be documented before merging.
-
-
-## Worked Example
-
-As discussed, `ColVecs` is already supported for inputs in D-dimensional Euclidean space, where `Matrix` stores a collection of inputs, and each **column** is an input. The following example presents `RowVecs`, which represents collections inputs residing in D-dimensional Euclidean space, but the interpretation is different: each **row** of the matrix corresponds to an input.
-
-Firstly, the new data structure is specified:
-```julia
-struct RowVecs{T<:Real} <: AbstractVector{Vector{T}}
-    X::Matrix{T}
-end
-```
-Observe that it subtypes `AbstractVector`, and each element is a `Vector{T<:Real}`. It has a single field `X`, which is a matrix of elements. It is necessary to implement some parts of the [AbstractArray interface](https://docs.julialang.org/en/v1/manual/interfaces/index.html#man-interface-array-1) to ensure printing and various consistency checks inside the package work as intended:
-```julia
-Base.length(x::RowVecs) = size(x.X, 1)
-Base.size(x::RowVecs) = (length(x),)
-Base.getindex(x::RowVecs, n::Int) = x.X[n, :]
-```
-This structure prints nicely and pass some consistency checks, but none of the base `Kernel`s in the package know how to treat it. This means that, for example, new `pw` and `ew` methods that are specialised to `RowVec` must be added:
-```julia
-import Stheno: pw
-using Distances: SqEuclidean
-pw(k::EQ, x::RowVecs, x′::RowVecs) = exp.(.-pw(SqEuclidean(), x.X, x′.X; dims=1) ./ 2)
-# insert implementations for the unary pw and the two ew methods
-```
-In the worst case, this means that every `Kernel` needs four new methods to handle a new data structure. Fortunately, this case isn't typical. Most of the `Kernel`s in `src/kernels.jl` are implemented in terms of the `SqEuclidean` and `Euclidean` distances, and are generically typed. As such it is sufficient to add new `ew` and `pw` methods involving those types, without the need to re-implement those methods for kernels. See [src/util/distances.jl](https://github.com/willtebbutt/Stheno.jl/blob/master/src/util/distances.jl) for examples.
