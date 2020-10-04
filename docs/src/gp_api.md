@@ -38,8 +38,8 @@ elbo(::Stheno.FiniteGP, y::AbstractVector{<:Real}, ::Stheno.FiniteGP)
 
 ## Kernels
 
-Stheno.jl used to maintain its own collection of kernes. Fortunately, the maintainers of
-various Gaussian process-related pakages decided to come together and create
+Stheno.jl used to maintain its own collection of kernels. Fortunately, the maintainers of
+various Gaussian process-related packages decided to come together and create
 [KernelFunctions.jl](https://github.com/JuliaGaussianProcesses/KernelFunctions.jl), which is
 now the home for all things kernel-related.
 
