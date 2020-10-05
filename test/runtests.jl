@@ -24,6 +24,7 @@ include("test_util.jl")
 
 @testset "Stheno" begin
 
+    include(joinpath("gp", "sparse_gp.jl"))
     println("util:")
     @timedtestset "util" begin
         include(joinpath("util", "zygote_rules.jl"))
