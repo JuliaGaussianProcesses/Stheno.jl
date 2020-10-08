@@ -10,7 +10,9 @@ f = GP(Matern32(), GPC())
     xu = 0:10
     σ = 1.0
     σu = 1e-3
-    covariance_error = "The covariance matrix of a sparse GP can often be dense and can cause the computer to run out of memory. If you are sure you have enough memory, you can use `cov(f.fobs)`."
+    covariance_error = "The covariance matrix of a sparse GP can often be dense and " *
+        "can cause the computer to run out of memory. If you are sure you have enough " *
+        "memory, you can use `cov(f.fobs)`."
 
     @timedtestset "SparseFiniteGP Constructors" begin
         f = GP(Matern32(), GPC())

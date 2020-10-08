@@ -14,7 +14,9 @@ mean(f::SparseFiniteGP) = mean(f.fobs)
 # in Base, trying to instantiate a large dense matrix through e.g.
 # inv(A::SparseArrays.AbstractSparseMatrixCSC) raises an error, since the resulting dense
 # matrix will often be enormous and use up all available memory. Doing something similar here.
-covariance_error = "The covariance matrix of a sparse GP can often be dense and can cause the computer to run out of memory. If you are sure you have enough memory, you can use `cov(f.fobs)`."
+covariance_error = "The covariance matrix of a sparse GP can often be dense and " *
+    "can cause the computer to run out of memory. If you are sure you have enough " *
+    "memory, you can use `cov(f.fobs)`."
 cov(f::SparseFiniteGP) = error(covariance_error) #cov(f.fobs)
 # Not sure how to implement the following...
 # cov(fx::FiniteGP, gx::FiniteGP) = cov(fx.f, gx.f, fx.x, gx.x)
