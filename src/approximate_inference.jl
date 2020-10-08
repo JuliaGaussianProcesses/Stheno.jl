@@ -9,21 +9,6 @@ struct SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP} <: AbstractMvNormal
     finducing::T2
 end
 
-function SparseFiniteGP(f::AbstractGP, x, xu, σ=1e-18, σu=σ)
-    return SparseFiniteGP(f(x, σ), f(xu, σu))
-end
-
-# The below convenience constructor conflicts with the constructor for a FiniteGP with
-# diagonal covariance matrix (in src/abstract_gp.jl, line 34)
-# """
-#     (f::AbstractGP)(x::AbstractVector, xu::AbstractVector, σ=1e-18, σu=σ)
-#
-# Construct a `SparseFiniteGP` representing the projection of `f` at `x` with inducing points at `xu`.
-# """
-# (f::AbstractGP)(x::AbstractVector, xu::AbstractVector, σ=1e-18, σu=σ) = SparseFiniteGP(f, x, xu, σ, σu)
-#
-
-
 length(f::SparseFiniteGP) = length(f.fobs)
 mean(f::SparseFiniteGP) = mean(f.fobs)
 # in Base, trying to instantiate a large dense matrix through e.g.

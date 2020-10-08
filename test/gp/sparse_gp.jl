@@ -14,18 +14,13 @@ f = GP(Matern32(), GPC())
 
     @timedtestset "SparseFiniteGP Constructors" begin
         f = GP(Matern32(), GPC())
-        @test SparseFiniteGP(f(x), f(xu)) == SparseFiniteGP(f, x,  xu)
-        # @test SparseFiniteGP(f(x), f(xu)) == f(x, xu)
-        @test SparseFiniteGP(f(x, σ), f(xu, σ)) == SparseFiniteGP(f, x, xu, σ)
-        # @test SparseFiniteGP(f(x, σ), f(xu, σ)) == f(x, xu, σ)
-        @test SparseFiniteGP(f(x, σ), f(xu, σu)) == SparseFiniteGP(f, x,  xu, σ, σu)
-        # @test SparseFiniteGP(f(x, σ), f(xu, σu)) == f(x, xu, σ, σu)
+        @test SparseFiniteGP(f(x), f(xu)) == SparseFiniteGP(f(x, 1e-18), f(xu, 1e-18))
     end
 
     @timedtestset "SparseFiniteGP methods" begin
         f = GP(Matern32(), GPC())
         fx = f(x)
-        fxu = SparseFiniteGP(f, x, xu)
+        fxu = SparseFiniteGP(f(x), f(xu))
         @test mean(fxu) == mean(fx)
         @test rand(MersenneTwister(12345), fxu) == rand(MersenneTwister(12345), fx)
         @test_throws ErrorException(covariance_error) cov(fxu)
@@ -35,7 +30,7 @@ f = GP(Matern32(), GPC())
     @timedtestset "SparseFiniteGP inference" begin
         f = GP(Matern32(), GPC())
         fx = f(x, σ)
-        fxu = SparseFiniteGP(f, x, xu, σ, σu)
+        fxu = SparseFiniteGP(f(x, σ), f(xu,σu))
         y = rand(MersenneTwister(12345), fxu)
 
         fpost1 = f | Stheno.PseudoObs(Obs(fxu.fobs, y), fxu.finducing)
