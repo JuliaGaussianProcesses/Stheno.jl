@@ -1,6 +1,3 @@
-using Stheno
-using Random
-using Test
 
 x = 0:0.1:10
 xu = 0:10
