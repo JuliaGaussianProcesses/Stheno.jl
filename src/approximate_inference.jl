@@ -40,9 +40,7 @@ rand(f::SparseFiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 rand(rng::AbstractRNG, f::SparseFiniteGP) = vec(rand(rng, f, 1))
 rand(f::SparseFiniteGP) = vec(rand(f, 1))
 
-function elbo(f::SparseFiniteGP, y::AV{<:Real})
-    elbo(f.fobs, y, f.finducing)
-end
+elbo(f::SparseFiniteGP, y::AV{<:Real}) = elbo(f.fobs, y, f.finducing)
 logpdf(f::SparseFiniteGP, y::AV{<:Real}) = elbo(f, y)
 logpdf(f::SparseFiniteGP, Y::AbstractMatrix{<:Real}) = map(y -> logpdf(f, y), eachcol(Y))
 
