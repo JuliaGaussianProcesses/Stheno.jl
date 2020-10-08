@@ -24,7 +24,6 @@ include("test_util.jl")
 
 @testset "Stheno" begin
 
-    include(joinpath("gp", "sparse_gp.jl"))
     println("util:")
     @timedtestset "util" begin
         include(joinpath("util", "zygote_rules.jl"))
@@ -60,6 +59,7 @@ include("test_util.jl")
     println("abstract_gp:")
     @timedtestset "abstract_gp" begin
         include("abstract_gp.jl")
+        include("approximate_inference.jl")
     end
 
     println("flux:")
