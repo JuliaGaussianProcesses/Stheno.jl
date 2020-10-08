@@ -1,15 +1,9 @@
-
-x = 0:0.1:10
-xu = 0:10
-σ = 1.0
-σu = 1e-3
-f = GP(Matern32(), GPC())
-
 @timedtestset "sparse gp" begin
     x = 0:0.1:10
     xu = 0:10
     σ = 1.0
     σu = 1e-3
+    f = GP(Matern32(), GPC())
     covariance_error = "The covariance matrix of a sparse GP can often be dense and " *
         "can cause the computer to run out of memory. If you are sure you have enough " *
         "memory, you can use `cov(f.fobs)`."
