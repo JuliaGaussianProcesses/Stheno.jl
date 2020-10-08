@@ -1,7 +1,7 @@
 import Base: rand, length
 import Distributions: logpdf, AbstractMvNormal
 
-export mean, std, cov, marginals, rand, logpdf, elbo, dtc
+export elbo, dtc
 export SparseFiniteGP
 
 struct SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP} <: AbstractMvNormal
