@@ -4,6 +4,36 @@ import Distributions: logpdf, AbstractMvNormal
 export elbo, dtc
 export SparseFiniteGP
 
+"""
+    SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP}
+
+A finite-dimensional projection of an `AbstractGP` `f` at locations `x`, which uses a second
+`FiniteGP` defined at a sparse set of inducing points [1] to do approximate inference.
+
+This object has similar methods to an ordinary `FiniteGP`, but note that the methods for
+`logpdf` and `←` are just convenience wrappers around `elbo` and `PseudoObs`.
+
+[1] - M. K. Titsias. "Variational learning of inducing variables in sparse Gaussian
+processes". In: Proceedings of the Twelfth International Conference on Artificial
+Intelligence and Statistics. 2009.
+
+```jldoctest
+julia> f = GP(Matern32(), GPC());
+
+julia> fobs = f(rand(100));
+
+julia> finducing = f(0:0.1:1);
+
+julia> fxu = SparseFiniteGP(fobs, finducing);
+
+julia> y = rand(fxu);
+
+julia> logpdf(fxu, y) < logpdf(fobs, y)
+true
+
+julia> fpost = f | (fxu ← y);
+```
+"""
 struct SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP} <: AbstractMvNormal
     fobs::T1
     finducing::T2
