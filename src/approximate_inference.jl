@@ -17,7 +17,7 @@ covariance_error = "The covariance matrix of a sparse GP can often be dense and 
 cov(f::SparseFiniteGP) = error(covariance_error) #cov(f.fobs)
 # Not sure how to implement the following...
 # cov(fx::FiniteGP, gx::FiniteGP) = cov(fx.f, gx.f, fx.x, gx.x)
-marginals(f::SparseFiniteGP) = Normal.(mean(f), sqrt.(cov_diag(f.fobs.f, f.fobs.x) .+ diag(f.fobs.Σy)))
+marginals(f::SparseFiniteGP) = marginals(f.fobs)
 
 rand(rng::AbstractRNG, f::SparseFiniteGP, N::Int) = rand(rng, f.fobs, N)
 rand(f::SparseFiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)

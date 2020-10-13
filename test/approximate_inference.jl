@@ -26,7 +26,7 @@
     @timedtestset "SparseFiniteGP inference" begin
         f = GP(Matern32(), GPC())
         fx = f(x, σ)
-        fxu = SparseFiniteGP(f(x, σ), f(xu,σu))
+        fxu = SparseFiniteGP(f(x, σ), f(xu, σu))
         y = rand(MersenneTwister(12345), fxu)
 
         fpost1 = f | Stheno.PseudoObs(Obs(fxu.fobs, y), fxu.finducing)
