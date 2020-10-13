@@ -35,7 +35,6 @@
         @test elbo(fxu, y) == logpdf(fxu, y)
         @test logpdf(fxu, y) == elbo(fxu.fobs, y, fxu.finducing)
         yy = rand(fxu, 10)
-        logpdf(fx, yy)
-        logpdf(fxu, yy)
+        @test all(logpdf(fx, yy) .> logpdf(fxu, yy))
     end
 end
