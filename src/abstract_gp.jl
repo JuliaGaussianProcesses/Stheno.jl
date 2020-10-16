@@ -192,13 +192,23 @@ julia> logpdf(f(x), Y) isa AbstractVector{<:Real}
 true
 ```
 """
-logpdf(f::FiniteGP, y::AbstractVector{<:Real}) = first(logpdf(f, reshape(y, :, 1)))
+function Distributions.logpdf(f::FiniteGP, y::AbstractVector{<:Real})
+    display(y)
+    println()
+    println("foo")
+    display(logpdf(f, reshape(y, :, 1)))
+    println()
+    return first(logpdf(f, reshape(y, :, 1)))
+end
 
-function logpdf(f::FiniteGP, Y::AbstractMatrix{<:Real})
+function Distributions.logpdf(f::FiniteGP, Y::AbstractMatrix{<:Real})
+    println("Inside inner thing")
     μ, C = mean(f), cholesky(Symmetric(cov(f)))
     T = promote_type(eltype(μ), eltype(C), eltype(Y))
     return -((size(Y, 1) * T(log(2π)) + logdet(C)) .+ diag_Xt_invA_X(C, Y .- μ)) ./ 2
 end
+
+Distributions.loglikelihood(f::FiniteGP, y::AbstractVecOrMat{<:Real}) = logpdf(f, y)
 
 """
    elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP)
