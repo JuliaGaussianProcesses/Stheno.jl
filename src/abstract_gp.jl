@@ -200,8 +200,8 @@ function logpdf(f::FiniteGP, Y::AbstractMatrix{<:Real})
     return -((size(Y, 1) * T(log(2π)) + logdet(C)) .+ diag_Xt_invA_X(C, Y .- μ)) ./ 2
 end
 
-Distributions.loglikelihood(f::FiniteGP, y::AbstractVecOrMat{<:Real}) = logpdf(f, y)
-
+Distributions.loglikelihood(f::FiniteGP, y::AbstractVector{<:Real}) = logpdf(f, y)
+Distributions.loglikelihood(f::FiniteGP, y::AbstractMatrix{<:Real}) = sum(logpdf(f, y))
 """
    elbo(f::FiniteGP, y::AbstractVector{<:Real}, u::FiniteGP)
 
