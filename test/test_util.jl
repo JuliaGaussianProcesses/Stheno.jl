@@ -83,7 +83,7 @@ function adjoint_test(
     f, ȳ, x...;
     rtol=_rtol,
     atol=_atol,
-    fdm=FiniteDifferences.Central(5, 1),
+    fdm=FiniteDifferences.central_fdm(5, 1),
     print_results=false,
 )
     # Compute forwards-pass and j′vp.
