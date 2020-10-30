@@ -3,6 +3,7 @@ using Distances
 using Documenter
 using FiniteDifferences
 using Flux
+using ForwardDiff
 using LinearAlgebra
 using Random
 using Statistics
