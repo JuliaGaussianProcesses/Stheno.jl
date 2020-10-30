@@ -25,7 +25,7 @@ using Base.Broadcast: broadcast_shape
     @timedtestset "colwise(::Euclidean, X, Y; dims=2)" begin
         rng, D, P = MersenneTwister(123456), 2, 3
         X, Y, D̄ = randn(rng, D, P), randn(rng, D, P), randn(rng, P)
-        adjoint_test((X, Y)->colwise(Euclidean(), X, Y), D̄, X, Y)
+        adjoint_test((X, Y)->colwise(Euclidean(), X, Y), D̄, X, Y; rtol=1e-6, atol=1e-6)
     end
     @timedtestset "pairwise(::Euclidean, X, Y; dims=2)" begin
         rng, D, P, Q = MersenneTwister(123456), 2, 3, 5
@@ -61,7 +61,7 @@ using Base.Broadcast: broadcast_shape
         Y = X .+ 1e-3
         adjoint_test(
             (X, Y)->pairwise(Euclidean(Stheno.dtol), X, Y; dims=2), D̄, X, Y;
-            rtol=1e-3, atol=1e-3, fdm=FiniteDifferences.Forward(2, 1)
+            rtol=1e-3, atol=1e-3, fdm=FiniteDifferences.forward_fdm(2, 1)
         ) # relaxed test because of machine precision concerns with finite differences
     end
     @timedtestset "ldiv(::Diagonal, ::Matrix)" begin
