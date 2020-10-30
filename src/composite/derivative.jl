@@ -12,7 +12,7 @@ end
 const diff_gp = Tuple{typeof(differentiate), AbstractGP, Any}
 
 function mean_vector((_, f, ∂)::diff_gp, x::AV{<:Real})
-    return map(xn -> ∂(x -> only(mean_vector(f, [x])), xn), x)
+    return map(xn -> ∂(x -> first(mean_vector(f, [x])), xn), x)
 end
 
 cov(f::diff_gp, x::AV{<:Real}) = cov(f, x, x)
@@ -21,7 +21,7 @@ cov_diag(f::diff_gp, x::AV{<:Real}) = diag(cov(f, x))
 function cov((_, f, ∂)::diff_gp, x::AV{<:Real}, x′::AV{<:Real})
     cols = map(x′) do x′n
         return map(x) do xn
-            ∂(x′ -> ∂(x -> only(cov(f, [x], [x′])), xn), x′n)
+            ∂(x′ -> ∂(x -> first(cov(f, [x], [x′])), xn), x′n)
         end
     end
     return hcat(cols...)
@@ -30,7 +30,7 @@ cov_diag(f::diff_gp, x::AV{<:Real}, x′::AV{<:Real}) = diag(cov(f, x, x′))
 
 function cov((_, f, ∂)::diff_gp, f′::AbstractGP, x::AV{<:Real}, x′::AV{<:Real})
     cols = map(x′) do x′n
-        return map(xn -> ∂(x -> only(cov(f, f′, [x], [x′n])), xn), x)
+        return map(xn -> ∂(x -> first(cov(f, f′, [x], [x′n])), xn), x)
     end
     return hcat(cols...)
 end
@@ -40,7 +40,7 @@ end
 
 function cov(f::AbstractGP, (_, f′, ∂)::diff_gp, x::AV{<:Real}, x′::AV{<:Real})
     cols = map(x′) do x′n
-        return map(xn -> ∂(x′ -> only(cov(f, f′, [xn], [x′])), x′n), x)
+        return map(xn -> ∂(x′ -> first(cov(f, f′, [xn], [x′])), x′n), x)
     end
     return hcat(cols...)
 end
