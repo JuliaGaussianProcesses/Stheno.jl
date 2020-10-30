@@ -57,8 +57,7 @@ module Stheno
     include(joinpath("composite", "product.jl"))
     include(joinpath("composite", "addition.jl"))
     include(joinpath("composite", "compose.jl"))
-    # include(joinpath("composite", "gradient.jl"))
-    # include(joinpath("composite", "integrate.jl"))
+    include(joinpath("composite", "derivative.jl"))
 
     # approximate inference
     include("approximate_inference.jl")

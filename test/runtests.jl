@@ -53,6 +53,7 @@ include("test_util.jl")
         include(joinpath("composite", "product.jl"))
         include(joinpath("composite", "addition.jl"))
         include(joinpath("composite", "compose.jl"))
+        include(joinpath("composite", "derivative.jl"))
         include(joinpath("composite", "approximate_conditioning.jl"))
     end
 
