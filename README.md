@@ -14,7 +14,7 @@ Please open issues liberally -- if there's anything that's unclear or doesn't wo
 
 __Installation__ - `] add Stheno`.
 
-
+[JuliaCon 2019 Talk](https://www.youtube.com/watch?v=OO3BBkGEMV8)
 
 ## A Couple of Examples
 
