@@ -16,6 +16,8 @@ __Installation__ - `] add Stheno`.
 
 [JuliaCon 2019 Talk](https://www.youtube.com/watch?v=OO3BBkGEMV8)
 
+[Go faster with TemporalGPs.jl](https://github.com/willtebbutt/TemporalGPs.jl/)
+
 ## A Couple of Examples
 
 The primary sources of information regarding this package are the [documentation](https://willtebbutt.github.io/Stheno.jl/stable) and the examples folder, but here are a couple of flashy examples to get started with.
