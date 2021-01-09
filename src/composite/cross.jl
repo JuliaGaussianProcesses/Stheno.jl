@@ -119,3 +119,14 @@ function elbo(fs::Vector{<:FiniteGP}, ys::Vector{<:AV{<:Real}}, u::FiniteGP)
 end
 
 elbo(f::FiniteGP, y::AV{<:Real}, us::Vector{<:FiniteGP}) = elbo(f, y, finites_to_block(us))
+
+
+function dtc(fs::Vector{<:FiniteGP}, ys::Vector{<:AV{<:Real}}, us::Vector{<:FiniteGP})
+    return dtc(finites_to_block(fs), Vector(mortar(ys)), finites_to_block(us))
+end
+
+function dtc(fs::Vector{<:FiniteGP}, ys::Vector{<:AV{<:Real}}, u::FiniteGP)
+    return dtc(finites_to_block(fs), Vector(mortar(ys)), u)
+end
+
+dtc(f::FiniteGP, y::AV{<:Real}, us::Vector{<:FiniteGP}) = dtc(f, y, finites_to_block(us))
