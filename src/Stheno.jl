@@ -25,7 +25,7 @@ module Stheno
     import Distances: pairwise, colwise
 
     using AbstractGPs: AbstractGP, GP, FiniteGP
-    import AbstractGPs: cov_diag
+    import AbstractGPs: cov_diag, rand, logpdf, elbo, dtc
 
     using ZygoteRules: @adjoint
     using Zygote: @nograd
@@ -52,7 +52,6 @@ module Stheno
 
     # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.
     include(joinpath("composite", "composite_gp.jl"))
-    include(joinpath("composite", "indexing.jl"))
     include(joinpath("composite", "cross.jl"))
     include(joinpath("composite", "conditioning.jl"))
     include(joinpath("composite", "approximate_conditioning.jl"))
@@ -67,7 +66,6 @@ module Stheno
 
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))
-    include(joinpath("util", "plotting.jl"))
 
     function __init__()
         @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" begin
