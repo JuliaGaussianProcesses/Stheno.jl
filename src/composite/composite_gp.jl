@@ -27,7 +27,7 @@ function cov(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     @assert f.gpc === f′.gpc
     if f.n === f′.n
         return cov(f.args, x, x′)
-    elseif f isa GP && f.n > f′.n || f′ isa GP && f′.n > f.n
+    elseif f isa WrappedGP && f.n > f′.n || f′ isa WrappedGP && f′.n > f.n
         return zeros(length(x), length(x′))
     elseif f.n >= f′.n
         return cov(f.args, f′, x, x′)
@@ -39,7 +39,7 @@ function cov_diag(f::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     @assert f.gpc === f′.gpc
     if f.n === f′.n
         return cov_diag(f.args, x, x′)
-    elseif f isa GP && f.n > f′.n || f′ isa GP && f′.n > f.n
+    elseif f isa WrappedGP && f.n > f′.n || f′ isa WrappedGP && f′.n > f.n
         return zeros(length(x))
     elseif f.n >= f′.n
         return cov_diag(f.args, f′, x, x′)
