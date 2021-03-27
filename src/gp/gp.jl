@@ -1,5 +1,5 @@
 """
-    WrappedGP{Tgp<:AbstractGP} <: AbstractGP
+    WrappedGP{Tgp<:AbstractGP} <: SthenoAbstractGP
 
 A thin wrapper around an AbstractGP that does some book-keeping.
 
@@ -8,7 +8,7 @@ f = wrap(GP(SEKernel()), GPC())
 ```
 builds a `WrappedGP` that `Stheno` knows how to work with.
 """
-struct WrappedGP{Tgp<:AbstractGP} <: AbstractGP
+struct WrappedGP{Tgp<:AbstractGP} <: SthenoAbstractGP
     gp::Tgp
     n::Int
     gpc::GPC
@@ -34,16 +34,4 @@ function cov(f::WrappedGP, f′::WrappedGP, x::AbstractVector, x′::AbstractVec
 end
 function cov_diag(f::WrappedGP, f′::WrappedGP, x::AbstractVector, x′::AbstractVector)
     return f === f′ ? cov_diag(f, x, x′) : zeros(length(x))
-end
-
-mean_and_cov(f::WrappedGP, x::AbstractVector) = (mean(f, x), cov(f, x))
-
-mean_and_cov_diag(f::WrappedGP, x::AbstractVector) = (mean(f, x), cov_diag(f, x))
-
-# Ensure that cross-covariance computations are handled by this package for the WrappedGPs.
-cov(fx::FiniteGP{<:WrappedGP}, gx::FiniteGP{<:WrappedGP}) = cov(fx.f, gx.f, fx.x, gx.x)
-
-# TYPE-PIRACY
-function AbstractGPs.cov_diag(f::GP, x::AbstractVector, x′::AbstractVector)
-    return kernelmatrix_diag(f.kernel, x, x′)
 end

@@ -19,7 +19,7 @@ optimal_q(c::Observation, u::FiniteGP) = optimal_q(c.f, c.y, u)
 # routines to compute approximate posterior quantities know how to exploit properly. This
 # essentially stems from the lack of a "precision" function, which we need in this case
 # sometimes.
-struct PPGP{Tm<:AV{<:Real}, TΛ<:Cholesky{<:Real}, Tz<:AV} <: AbstractGP
+struct PPGP{Tm<:AV{<:Real}, TΛ<:Cholesky{<:Real}, Tz<:AV} <: SthenoAbstractGP
     m::Tm
     Λ::TΛ
     z::Tz

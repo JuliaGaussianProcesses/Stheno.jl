@@ -4,7 +4,7 @@
 A GP derived from other GPs via an affine transformation. Specification given by `args`.
 You should generally _not_ construct this object manually.
 """
-struct CompositeGP{Targs} <: AbstractGP
+struct CompositeGP{Targs} <: SthenoAbstractGP
     args::Targs
     n::Int
     gpc::GPC
@@ -25,10 +25,7 @@ cov(f::CompositeGP, x::AbstractVector, x′::AbstractVector) = cov(f.args, x, x�
 cov_diag(f::CompositeGP, x::AbstractVector, x′::AbstractVector) = cov_diag(f.args, x, x′)
 
 function cov(
-    f::Union{WrappedGP, CompositeGP, PPGP},
-    f′::Union{WrappedGP, CompositeGP, PPGP},
-    x::AbstractVector,
-    x′::AbstractVector,
+    f::SthenoAbstractGP, f′::SthenoAbstractGP, x::AbstractVector, x′::AbstractVector,
 )
     @assert f.gpc === f′.gpc
     if f.n === f′.n
@@ -43,10 +40,7 @@ function cov(
 end
 
 function cov_diag(
-    f::Union{WrappedGP, CompositeGP, PPGP},
-    f′::Union{WrappedGP, CompositeGP, PPGP},
-    x::AbstractVector,
-    x′::AbstractVector,
+    f::SthenoAbstractGP, f′::SthenoAbstractGP, x::AbstractVector, x′::AbstractVector,
 )
     @assert f.gpc === f′.gpc
     if f.n === f′.n
@@ -58,16 +52,4 @@ function cov_diag(
     else
         return cov_diag(f, f′.args, x, x′)
     end
-end
-
-mean_and_cov(f::CompositeGP, x::AbstractVector) = (mean(f, x), cov(f, x))
-
-mean_and_cov_diag(f::CompositeGP, x::AbstractVector) = (mean(f, x), cov_diag(f, x))
-
-# Ensure that cross-covariance computations are handled by this package for CompositeGPs.
-function cov(
-    fx::FiniteGP{<:Union{WrappedGP, CompositeGP}},
-    gx::FiniteGP{<:Union{WrappedGP, CompositeGP}},
-)
-    return cov(fx.f, gx.f, fx.x, gx.x)
 end

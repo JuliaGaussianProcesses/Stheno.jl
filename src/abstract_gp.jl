@@ -1,4 +1,23 @@
-export GPC
+# The thing that most internal types should probably subtype.
+abstract type SthenoAbstractGP <: AbstractGP end
+
+# TYPE-PIRACY
+function AbstractGPs.cov_diag(f::GP, x::AbstractVector, x′::AbstractVector)
+    return kernelmatrix_diag(f.kernel, x, x′)
+end
+
+# Implement some of the AbstractGPs API for all of the GPs in this package.
+mean_and_cov(f::SthenoAbstractGP, x::AbstractVector) = (mean(f, x), cov(f, x))
+
+mean_and_cov_diag(f::SthenoAbstractGP, x::AbstractVector) = (mean(f, x), cov_diag(f, x))
+
+# Ensure that this package gets to handle the covariance between its own GPs.
+# AbstractGPs doesn't support this in general because it's unclear how it ought to be
+# implemented, but we have a clear way to implement it here.
+function cov(fx::FiniteGP{<:SthenoAbstractGP}, gx::FiniteGP{<:SthenoAbstractGP})
+    return cov(fx.f, gx.f, fx.x, gx.x)
+end
+
 
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of GPs.
 mutable struct GPC
@@ -10,67 +29,8 @@ end
 
 next_index(gpc::GPC) = gpc.n + 1
 
-# """
-#     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
-
-# Obtain `N` independent samples from the marginals `f` using `rng`. Single-sample methods
-# produce a `length(f)` vector. Multi-sample methods produce a `length(f)` x `N` `Matrix`.
-
-# ```jldoctest
-# julia> f = wrap(GP(Matern32Kernel()), GPC());
-
-# julia> x = randn(11);
-
-# julia> rand(f(x)) isa Vector{Float64}
-# true
-
-# julia> rand(MersenneTwister(123456), f(x)) isa Vector{Float64}
-# true
-
-# julia> rand(f(x), 3) isa Matrix{Float64}
-# true
-
-# julia> rand(MersenneTwister(123456), f(x), 3) isa Matrix{Float64}
-# true
-# ```
-# """
-# function rand(rng::AbstractRNG, f::FiniteGP, N::Int)
-#     μ, C = mean(f), cholesky(Symmetric(cov(f)))
-#     return μ .+ C.U' * randn(rng, promote_type(eltype(μ), eltype(C)), length(μ), N)
-# end
-# rand(f::FiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
-# rand(rng::AbstractRNG, f::FiniteGP) = vec(rand(rng, f, 1))
-# rand(f::FiniteGP) = vec(rand(f, 1))
-
 # TYPE PIRACY!
 LinearAlgebra.cholesky(D::Diagonal{<:Real, <:Fill}) = AbstractGPs._cholesky(D)
-
-
-# function consistency_check(f, y, u)
-#     @assert length(f) == size(y, 1)
-# end
-# Zygote.@nograd consistency_check
-
-# import Base: \ 
-# \(A::AbstractMatrix, B::Diagonal) = A \ Matrix(B)
-
-# \(A::Union{LowerTriangular, UpperTriangular}, B::Diagonal) = A \ Matrix(B)
-# \(A::Adjoint{<:Any, <:Union{LowerTriangular, UpperTriangular}}, B::Diagonal) = A \ Matrix(B)
-
-
-# # Compute tr(Cf / Σy) efficiently for different types of Σy. For dense Σy you obviously need
-# # to compute the entirety of Cf, which is bad, but for particular structured Σy one requires
-# # only a subset of the elements. Σy isa UniformScaling is version usually considered.
-# function tr_Cf_invΣy(f::FiniteGP, Σy::UniformScaling, chol_Σy::Cholesky)
-#     return sum(cov_diag(f.f, f.x)) / Σy.λ
-# end
-# function tr_Cf_invΣy(f::FiniteGP, Σy::Diagonal, chol_Σy::Cholesky)
-#     return sum(cov_diag(f.f, f.x) ./ diag(Σy))
-# end
-# tr_Cf_invΣy(f::FiniteGP, Σy::Matrix, chol_Σy::Cholesky) = tr(chol_Σy \ cov(f))
-
-_test_block_consistency(ids, f) = length.(ids) == length.(blocks(f.x))
-Zygote.@nograd _test_block_consistency
 
 import Base: |, merge
 export ←, |, Obs
