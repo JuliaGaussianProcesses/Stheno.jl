@@ -10,7 +10,7 @@ also required, but only matters when composing `GP`s together.
 
 If only two arguments are provided, assume the mean to be zero everywhere:
 ```jldoctest
-julia> f = GP(Matern32Kernel(), GPC());
+julia> f = wrap(GP(Matern32Kernel()), GPC());
 
 julia> x = randn(5);
 
@@ -26,7 +26,7 @@ true
 If a `Real` is provided as the first argument, assume the mean function is constant with
 that value
 ```jldoctest
-julia> f = GP(5.0, SqExponentialKernel(), GPC());
+julia> f = wrap(GP(5.0, SEKernel()), GPC());
 
 julia> x = randn(5);
 
@@ -42,7 +42,7 @@ true
 Provide an arbitrary function to compute the mean:
 
 ```jldoctest
-julia> f = GP(x -> sin(x) + cos(x / 2), RationalQuadraticKernel(α=3.2), GPC());
+julia> f = wrap(GP(x -> sin(x) + cos(x / 2), RationalQuadraticKernel(α=3.2)), GPC());
 
 julia> x = randn(5);
 
