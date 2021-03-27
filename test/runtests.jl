@@ -4,6 +4,7 @@ using Documenter
 using FiniteDifferences
 using Flux
 using LinearAlgebra
+using KernelFunctions
 using Random
 using Statistics
 using Stheno

@@ -122,15 +122,15 @@ function cross_kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     @assert length(x0) ≠ length(x2)
 
     # Check that elementwise basically works.
-    @test kerneldiagmatrix(k, x0, x1) isa AbstractVector
-    @test length(kerneldiagmatrix(k, x0, x1)) == length(x0)
+    @test kernelmatrix_diag(k, x0, x1) isa AbstractVector
+    @test length(kernelmatrix_diag(k, x0, x1)) == length(x0)
 
     # Check that pairwise basically works.
     @test kernelmatrix(k, x0, x2) isa AbstractMatrix
     @test size(kernelmatrix(k, x0, x2)) == (length(x0), length(x2))
 
     # Check that elementwise is consistent with pairwise.
-    @test kerneldiagmatrix(k, x0, x1) ≈ diag(kernelmatrix(k, x0, x1)) atol=atol
+    @test kernelmatrix_diag(k, x0, x1) ≈ diag(kernelmatrix(k, x0, x1)) atol=atol
 end
 
 """
@@ -147,12 +147,12 @@ function kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     cross_kernel_tests(k, x0, x1, x2)
 
     # Check additional binary elementwise properties for kernels.
-    @test kerneldiagmatrix(k, x0, x1) ≈ kerneldiagmatrix(k, x1, x0)
+    @test kernelmatrix_diag(k, x0, x1) ≈ kernelmatrix_diag(k, x1, x0)
     @test kernelmatrix(k, x0, x2) ≈ kernelmatrix(k, x2, x0)' atol=atol
 
     # Check that unary elementwise basically works.
-    @test kerneldiagmatrix(k, x0) isa AbstractVector
-    @test length(kerneldiagmatrix(k, x0)) == length(x0)
+    @test kernelmatrix_diag(k, x0) isa AbstractVector
+    @test length(kernelmatrix_diag(k, x0)) == length(x0)
 
     # Check that unary pairwise basically works.
     @test kernelmatrix(k, x0) isa AbstractMatrix
@@ -160,13 +160,13 @@ function kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     @test kernelmatrix(k, x0) ≈ kernelmatrix(k, x0)' atol=atol
 
     # Check that unary elementwise is consistent with unary pairwise.
-    @test kerneldiagmatrix(k, x0) ≈ diag(kernelmatrix(k, x0)) atol=atol
+    @test kernelmatrix_diag(k, x0) ≈ diag(kernelmatrix(k, x0)) atol=atol
 
     # Check that unary pairwise produces a positive definite matrix (approximately).
     @test all(eigvals(Matrix(kernelmatrix(k, x0))) .> -atol)
 
     # Check that unary elementwise / pairwise are consistent with the binary versions.
-    @test kerneldiagmatrix(k, x0) ≈ kerneldiagmatrix(k, x0, x0) atol=atol
+    @test kernelmatrix_diag(k, x0) ≈ kernelmatrix_diag(k, x0, x0) atol=atol
     @test kernelmatrix(k, x0) ≈ kernelmatrix(k, x0, x0) atol=atol
 end
 
@@ -250,7 +250,7 @@ function differentiable_cross_kernel_tests(
     @assert size(Ȳ) == (length(x0), length(x2))
 
     # Binary elementwise.
-    adjoint_test((x, x′)->kerneldiagmatrix(k, x, x′), ȳ, x0, x1; rtol=rtol, atol=atol)
+    adjoint_test((x, x′)->kernelmatrix_diag(k, x, x′), ȳ, x0, x1; rtol=rtol, atol=atol)
 
     # Binary pairwise.
     adjoint_test((x, x′)->kernelmatrix(k, x, x′), Ȳ, x0, x2; rtol=rtol, atol=atol)
@@ -308,7 +308,7 @@ function differentiable_kernel_tests(
     differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
 
     # Unary elementwise tests.
-    adjoint_test(x->kerneldiagmatrix(k, x), ȳ, x0; rtol=rtol, atol=atol)
+    adjoint_test(x->kernelmatrix_diag(k, x), ȳ, x0; rtol=rtol, atol=atol)
 
     # Unary pairwise test.
     adjoint_test(x->kernelmatrix(k, x), Ȳ_sq, x0; rtol=rtol, atol=atol)

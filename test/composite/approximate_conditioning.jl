@@ -2,7 +2,7 @@ using Stheno: optimal_q, PseudoObs
 
 # Test Titsias implementation by checking that it (approximately) recovers exact inference
 # when M = N and Z = X.
-@timedtestset "Titsias" begin
+@timedtestset "approximate_conditioning" begin
     @timedtestset "optimal_q (single conditioning)" begin
         @timedtestset "σ²" begin
             rng, N, σ², gpc = MersenneTwister(123456), 10, 1e-1, GPC()

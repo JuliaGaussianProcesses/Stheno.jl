@@ -10,8 +10,8 @@ gr()
 # Define model.
 σ², ω, T = 1e0, 1.0, 25.0
 gpc = GPC()
-f₁ = periodic(GP(EQ(), gpc), ω)
-f₂ = GP(0.1 * EQ(), gpc)
+f₁ = periodic(GP(SEKernel(), gpc), ω)
+f₂ = GP(0.1 * SEKernel(), gpc)
 f₃ = f₁ + f₂
 
 # Sample from marginal process to generate toy data.

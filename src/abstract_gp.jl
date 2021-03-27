@@ -253,10 +253,24 @@ Artificial Intelligence and Statistics. 2003
 """
 dtc(f::FiniteGP, y::AV{<:Real}, u::FiniteGP) = first(_compute_intermediates(f, y, u))
 
+# Small bit of indirection to work around a cholesky-related bug whereby the interaction
+# between `FillArrays` and `Diagonal` and `Cholesky` causes problems.
+# Copied over from AbstractGPs while refactoring Stheno.
+_cholesky(X) = cholesky(X)
+function _cholesky(X::Diagonal{<:Real, <:FillArrays.AbstractFill})
+    return cholesky(Diagonal(collect(diag(X))))
+end
+
+# TYPE PIRACY!
+LinearAlgebra.cholesky(D::Diagonal{<:Real, <:Fill}) = _cholesky(D)
+
+_symmetric(X) = Symmetric(X)
+_symmetric(X::Diagonal) = X
+
 # Factor out computations common to the `elbo` and `dtc`.
 function _compute_intermediates(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     consistency_check(f, y, u)
-    chol_Σy = cholesky(f.Σy)
+    chol_Σy = _cholesky(f.Σy)
 
     A = cholesky(Symmetric(cov(u))).U' \ (chol_Σy.U' \ cov(f, u))'
     Λ_ε = cholesky(Symmetric(A * A' + I))

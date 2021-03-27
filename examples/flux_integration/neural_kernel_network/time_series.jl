@@ -63,11 +63,11 @@ l = median_distance_local(xtrain)
 primitives = Primitive(
     stretch(Linear(), 0.0, x->exp(-x)),
     stretch(PerEQ(log(l), exp), log(l), x->exp(-x)),
-    stretch(EQ(), log(l/4.0), x->exp(-x)),
+    stretch(SEKernel(), log(l/4.0), x->exp(-x)),
     stretch(RQ(log(0.2), exp), log(2.0*l), x->exp(-x)),
     stretch(Linear(), 0.0, x->exp(-x)),
     stretch(RQ(log(0.1), exp), log(l), x->exp(-x)),
-    stretch(EQ(), log(l), x->exp(-x)),
+    stretch(SEKernel(), log(l), x->exp(-x)),
     stretch(PerEQ(log(l/4.0), exp), log(l/4.0), x->exp(-x))
 )
 nn = Chain(

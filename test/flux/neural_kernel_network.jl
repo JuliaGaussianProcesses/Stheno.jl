@@ -43,12 +43,12 @@
     #         sum_k = Stheno.softplus(weights[1]) * k1 + Stheno.softplus(weights[2]) * k2
 
     #         # Vector input.
-    #         @test kerneldiagmatrix(nkn_add_kernel, x0) ≈ kerneldiagmatrix(sum_k, x0)
-    #         @test kerneldiagmatrix(nkn_add_kernel, x0, x1) ≈ kerneldiagmatrix(sum_k, x0, x1)
+    #         @test kernelmatrix_diag(nkn_add_kernel, x0) ≈ kernelmatrix_diag(sum_k, x0)
+    #         @test kernelmatrix_diag(nkn_add_kernel, x0, x1) ≈ kernelmatrix_diag(sum_k, x0, x1)
 
     #         # ColVecs input.
-    #         @test kerneldiagmatrix(nkn_add_kernel, X0) ≈ kerneldiagmatrix(sum_k, X0)
-    #         @test kerneldiagmatrix(nkn_add_kernel, X0, X1) ≈ kerneldiagmatrix(sum_k, X0, X1)
+    #         @test kernelmatrix_diag(nkn_add_kernel, X0) ≈ kernelmatrix_diag(sum_k, X0)
+    #         @test kernelmatrix_diag(nkn_add_kernel, X0, X1) ≈ kernelmatrix_diag(sum_k, X0, X1)
     #     end
     #     @timedtestset "product" begin
     #         nkn_prod_kernel = NeuralKernelNetwork(primitives, product)

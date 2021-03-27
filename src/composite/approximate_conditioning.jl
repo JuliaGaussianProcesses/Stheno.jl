@@ -3,7 +3,8 @@
 #
 
 function optimal_q(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-    U_y, U = cholesky(Symmetric(f.Σy)).U, cholesky(Symmetric(cov(u))).U
+    U_y = _cholesky(_symmetric(f.Σy)).U
+    U = cholesky(Symmetric(cov(u))).U
     B_εf, b_y = U' \ (U_y' \ cov(f, u))', U_y' \ (y - mean(f))
     Λ_ε = cholesky(Symmetric(B_εf * B_εf' + I))
     m_ε = Λ_ε \ (B_εf * b_y)

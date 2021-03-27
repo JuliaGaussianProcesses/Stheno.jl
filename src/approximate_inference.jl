@@ -18,7 +18,7 @@ processes". In: Proceedings of the Twelfth International Conference on Artificia
 Intelligence and Statistics. 2009.
 
 ```jldoctest
-julia> f = GP(Matern32(), GPC());
+julia> f = GP(Matern32Kernel(), GPC());
 
 julia> fobs = f(rand(100));
 

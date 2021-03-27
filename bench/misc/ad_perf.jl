@@ -7,7 +7,7 @@ const x2 = randn(25)
 
 θ = (m=5.0, l=1.3);
 
-@model foo(θ) = GP(ConstMean(θ.m), kernel(EQ(); l=θ.l));
+@model foo(θ) = GP(ConstMean(θ.m), kernel(SEKernel(); l=θ.l));
 
 
 
@@ -76,4 +76,3 @@ end
 
 @code_warntype test_multi_logpdf(θ, x1, x2, y1, y2)
 @benchmark test_multi_logpdf($θ, $x1, $x2, $y1, $y2)
-

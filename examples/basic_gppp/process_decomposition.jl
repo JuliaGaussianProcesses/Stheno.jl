@@ -4,7 +4,7 @@ Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
 using Random, Plots, Stheno
-using Stheno: @model, EQ
+using Stheno: @model, SEKernel
 
 
 
@@ -12,8 +12,8 @@ using Stheno: @model, EQ
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 @model function model()
-    f₁ = GP(randn(), EQ())
-    f₂ = GP(EQ())
+    f₁ = GP(randn(), SEKernel())
+    f₂ = GP(SEKernel())
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
 end

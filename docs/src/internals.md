@@ -87,7 +87,7 @@ We consider each method in turn.
 - Unary elementwise: compute `k(x[p], x[p])` for `p in eachindex(x)`. Returns a subtype of `AbstractVector{<:Real}` of the same length as `x`.
 - Unary pairwise: compute `k(x[p], x[q])` for `p in eachindex(x)` and `q in eachindex(x)`. Returns a subtype of `AbstractMatrix{<:Real}` whose size is `(length(x), length(x))`. Crucially, output must be positive definite and (approximately) symmetric.
 
-Example implementations can be found below. Often you'll find that multiple versions of each method are implemented, specialised to different input types. For example, the `EQ` kernel has (at the time of writing) two implementations of each method, one for inputs `AbstractVector{<:Real}`, and one for `ColVecs <: AbstractVector` inputs. These specialisations are for performance purposes.
+Example implementations can be found below. Often you'll find that multiple versions of each method are implemented, specialised to different input types. For example, the `SEKernel` kernel has (at the time of writing) two implementations of each method, one for inputs `AbstractVector{<:Real}`, and one for `ColVecs <: AbstractVector` inputs. These specialisations are for performance purposes.
 
 ### Example Kernel implementation
 

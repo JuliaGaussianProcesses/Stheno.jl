@@ -21,7 +21,7 @@ y is the addition of f and rough temporally-correlated "noise".
 =#
 @model function model()
     g1, g2 = x->x / 4, cos
-    w1, w2 = stretch(GP(EQ()), 0.2), stretch(GP(EQ()), 1)
+    w1, w2 = stretch(GP(SEKernel()), 0.2), stretch(GP(SEKernel()), 1)
     f = g1 * w1 + g2 * w2
     y = f + 0.3 * GP(Matern12())
     return w1, w2, f, y

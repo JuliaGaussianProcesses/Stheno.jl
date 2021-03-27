@@ -74,10 +74,10 @@ GP(k::Kernel, m, gpc::GPC) = GP(m, k, gpc)
 mean_vector(f::GP, x::AV) = elementwise(f.m, x)
 
 cov(f::GP, x::AV) = kernelmatrix(f.k, x)
-cov_diag(f::GP, x::AV) = kerneldiagmatrix(f.k, x)
+cov_diag(f::GP, x::AV) = kernelmatrix_diag(f.k, x)
 
 cov(f::GP, x::AV, x′::AV) = kernelmatrix(f.k, x, x′)
-cov_diag(f::GP, x::AV, x′::AV) = kerneldiagmatrix(f.k, x, x′)
+cov_diag(f::GP, x::AV, x′::AV) = kernelmatrix_diag(f.k, x, x′)
 
 function cov(f::GP, f′::GP, x::AV, x′::AV)
     return f === f′ ? cov(f, x, x′) : zeros(length(x), length(x′))

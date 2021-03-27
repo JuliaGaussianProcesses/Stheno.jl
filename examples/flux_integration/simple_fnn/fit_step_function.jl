@@ -39,14 +39,14 @@ mlp = Chain(Dense(1, 6, relu), Dense(6, 2, relu)) |> (T==Float32 ? f32 : f64)
 θ_mlp = params(mlp)
 
 # Build a GP model with Stheno
-# here we consider using anisotropic EQ kernel, this kernel contains to hyperparameters: length scale l & scaling factor γ
+# here we consider using anisotropic SEKernel kernel, this kernel contains to hyperparameters: length scale l & scaling factor γ
 # these hyperparameters are positive, we add on this restriction by resetting them in log-scale
 # for Stheno usage, please refer to: https://github.com/willtebbutt/Stheno.jl/tree/wct/example-revamp/examples/getting_started
 logl = randn(rng, T, 2)
 logγ = T[0.0]
 
 function build_gp(logl, logγ)
-    ard_eq_kernel = exp(T(2.0) * logγ[1]) * stretch(EQ(), exp.(-logl))
+    ard_eq_kernel = exp(T(2.0) * logγ[1]) * stretch(SEKernel(), exp.(-logl))
     return GP(T(0.0), ard_eq_kernel, GPC())
 end
 
