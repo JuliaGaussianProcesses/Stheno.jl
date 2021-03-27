@@ -1,4 +1,4 @@
-using Stheno: FiniteGP, ConstMean, block_diagonal, tr_Cf_invΣy
+using Stheno: FiniteGP, block_diagonal
 using Distributions: MvNormal
 
 _rng() = MersenneTwister(123456)
@@ -15,7 +15,7 @@ end
         f = wrap(GP(sin, SEKernel()), GPC())
         fx, fx′ = FiniteGP(f, x, Σy), FiniteGP(f, x′, Σy′)
 
-        @test mean(fx) == mean_vector(f, x)
+        @test mean(fx) == mean(f, x)
         @test cov(fx) == cov(f, x)
         @test cov(fx, fx′) == cov(f, x, x′)
         @test mean.(marginals(fx)) == mean(f(x))
@@ -76,53 +76,6 @@ end
             atol=1e-9, rtol=1e-9,
         )
     end
-    # @testset "tr_Cf_invΣy" begin
-    #     N = 11
-    #     x = collect(range(-3.0, 3.0; length=N))
-    #     @testset "dense" begin
-    #         rng = MersenneTwister(123456)
-    #         A = randn(rng, N, N - 2)
-    #         adjoint_test(
-    #             (x, A)->begin
-    #                 f = GP(sin, SqExponentialKernel(), GPC())
-    #                 Σy = _to_psd(A)
-    #                 C = cholesky(Σy)
-    #                 return tr_Cf_invΣy(FiniteGP(f, x, Σy), Σy, C)
-    #             end,
-    #             randn(rng), x, A,
-    #         )
-    #     end
-    #     @testset "Diagonal" begin
-    #         rng = MersenneTwister(123456)
-    #         a = 0.01 .* randn(rng, N)
-    #         adjoint_test(
-    #             (x, a)->begin
-    #                 f = GP(sin, SqExponentialKernel(), GPC())
-    #                 Σy = Diagonal(exp.(a .+ 1))
-    #                 C = cholesky(Σy)
-    #                 return tr_Cf_invΣy(FiniteGP(f, x, Σy), Σy, C)
-    #             end,
-    #             randn(rng), x, a,
-    #         )
-    #     end
-    #     # @testset "BlockDiagonal" begin
-    #     #     rng = MersenneTwister(123456)
-    #     #     A1, A2 = randn(rng, N, 4), randn(rng, N+1, 5)
-    #     #     x = collect(range(-5.0, 5.0; length=size(A1, 1) + size(A2, 1)))
-    #     #     Nx = length(x)
-    #     #     adjoint_test(
-    #     #         (x, A1, A2)->begin
-    #     #             f = GP(sin, SqExponentialKernel(), GPC())
-    #     #             Σ1, Σ2 = _to_psd(A1), _to_psd(A2)
-    #     #             Σy = block_diagonal([Σ1, Σ2])
-    #     #             C = cholesky(Σy)
-    #     #             return tr_Cf_invΣy(FiniteGP(f, x, Σy), Σy, C)
-    #     #         end,
-    #     #         randn(rng), x, A1, A2;
-    #     #         atol=1e-6, rtol=1e-6,
-    #     #     )
-    #     # end
-    # end
     @testset "logpdf / elbo / dtc" begin
         rng, N, S, σ, gpc = MersenneTwister(123456), 10, 11, 1e-1, GPC()
         x = collect(range(-3.0, stop=3.0, length=N))

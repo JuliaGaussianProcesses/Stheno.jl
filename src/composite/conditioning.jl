@@ -12,8 +12,8 @@ end
 
 const cond_data = Tuple{typeof(|), AbstractGP, Cholesky, AV{<:Real}, FiniteGP, AV{<:Real}}
 
-function mean_vector((_, g, _, α, fx, _)::cond_data, x::AV)
-    return mean_vector(g, x) + cov(g, fx.f, x, fx.x) * α
+function mean((_, g, _, α, fx, _)::cond_data, x::AV)
+    return mean(g, x) + cov(g, fx.f, x, fx.x) * α
 end
 
 function cov((_, g, C_ff, _, fx, _)::cond_data, x::AV)

@@ -3,7 +3,7 @@
 #
 
 function optimal_q(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
-    U_y = _cholesky(_symmetric(f.Σy)).U
+    U_y = AbstractGPs._cholesky(AbstractGPs._symmetric(f.Σy)).U
     U = cholesky(Symmetric(cov(u))).U
     B_εf, b_y = U' \ (U_y' \ cov(f, u))', U_y' \ (y - mean(f))
     Λ_ε = cholesky(Symmetric(B_εf * B_εf' + I))
@@ -19,7 +19,7 @@ optimal_q(c::Observation, u::FiniteGP) = optimal_q(c.f, c.y, u)
 # routines to compute approximate posterior quantities know how to exploit properly. This
 # essentially stems from the lack of a "precision" function, which we need in this case
 # sometimes.
-struct PPGP{Tm<:AV{<:Real}, TΛ<:Cholesky{<:Real}, Tz<:AV} <: AbstractGP
+struct PPGP{Tm<:AV{<:Real}, TΛ<:Cholesky{<:Real}, Tz<:AV} <: SthenoAbstractGP
     m::Tm
     Λ::TΛ
     z::Tz
@@ -35,7 +35,7 @@ function PPGP(m::Tm, Λ::TΛ, z::Tz, gpc::GPC) where {Tm, TΛ, Tz}
     return PPGP{Tm, TΛ, Tz}(m, Λ, z, gpc)
 end
 
-mean_vector(u::PPGP, z::AV) = z === u.z ? u.m : throw(ArgumentError("Bad z"))
+mean(u::PPGP, z::AV) = z === u.z ? u.m : throw(ArgumentError("Bad z"))
 cov(u::PPGP, z::AV) = z === u.z ? u.Λ : throw(ArgumentError("Bad z"))
 cov(u::PPGP, z::AV, z′::AV) = z === z′ ? cov(u, z) : throw(ArgumentError("Bad z"))
 function cov(u::PPGP, u′::PPGP, z::AV, z′::AV)
@@ -86,7 +86,7 @@ Condition `f` on approximate observations `ỹ`.
 
 const approx_cond = Tuple{typeof(|), AbstractGP, PseudoObs}
 
-mean_vector((_, f, ỹ)::approx_cond, x::AV) = mean(f(x)) + cov(f(x), ỹ.u(ỹ.z)) * ỹ.α
+mean((_, f, ỹ)::approx_cond, x::AV) = mean(f(x)) + cov(f(x), ỹ.u(ỹ.z)) * ỹ.α
 
 function cov((_, f, ỹ)::approx_cond, x::AV)
     u, z, U, Λ = ỹ.u, ỹ.z, ỹ.U, ỹ.û.Λ

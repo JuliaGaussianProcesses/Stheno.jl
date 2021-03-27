@@ -17,7 +17,7 @@ end
 
 const add_args = Tuple{typeof(+), AbstractGP, AbstractGP}
 
-mean_vector((_, fa, fb)::add_args, x::AV) = mean_vector(fa, x) .+ mean_vector(fb, x)
+mean((_, fa, fb)::add_args, x::AV) = mean(fa, x) .+ mean(fb, x)
 
 function cov((_, fa, fb)::add_args, x::AV)
     return cov(fa, x) .+ cov(fb, x) .+ cov(fa, fb, x, x) .+ cov(fb, fa, x, x)
@@ -65,8 +65,8 @@ end
 
 const add_known{T} = Tuple{typeof(+), T, AbstractGP}
 
-mean_vector((_, b, f)::add_known, x::AV) = b.(x) .+ mean_vector(f, x)
-mean_vector((_, b, f)::add_known{<:Real}, x::AV) = b .+ mean_vector(f, x)
+mean((_, b, f)::add_known, x::AV) = b.(x) .+ mean(f, x)
+mean((_, b, f)::add_known{<:Real}, x::AV) = b .+ mean(f, x)
 
 cov((_, b, f)::add_known, x::AV) = cov(f, x)
 cov_diag((_, b, f)::add_known, x::AV) = cov_diag(f, x)
