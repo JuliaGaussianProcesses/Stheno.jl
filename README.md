@@ -32,7 +32,7 @@ In this first example we define a simple Gaussian process, make observations of 
 # constructing the posterior processes produced by conditioning on these observations.
 #
 
-using Stheno, Random, Plots
+using AbstractGPs, Stheno, Random, Plots
 using Stheno: @model
 
 # Create a pseudo random number generator for reproducibility.
@@ -97,9 +97,12 @@ plotly();
 posterior_plot = plot();
 
 # Plot posteriors.
-plot!(posterior_plot, f₁′(Xp); samples=S, color=:red, label="f1");
-plot!(posterior_plot, f₂′(Xp); samples=S, color=:green, label="f2");
-plot!(posterior_plot, f₃′(Xp); samples=S, color=:blue, label="f3");
+plot!(posterior_plot, f₁′(Xp); color=:red, label="f1");
+sampleplot!(posterior_plot, f₁′(Xp), S; color=:red, label="");
+plot!(posterior_plot, f₂′(Xp); color=:green, label="f2");
+sampleplot!(posterior_plot, f₂′(Xp), S; color=:green, label="");
+plot!(posterior_plot, f₃′(Xp); color=:blue, label="f3");
+sampleplot!(posterior_plot, f₃′(Xp), S; color=:blue, label="");
 
 # Plot observations.
 scatter!(posterior_plot, X₁, ŷ₁;
@@ -108,14 +111,16 @@ scatter!(posterior_plot, X₁, ŷ₁;
     markerstrokewidth=0.0,
     markersize=4,
     markeralpha=0.7,
-    label="");
+    label="",
+);
 scatter!(posterior_plot, X₃, ŷ₃;
     markercolor=:blue,
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
     markeralpha=0.7,
-    label="");
+    label="",
+);
 
 display(posterior_plot);
 ```
@@ -128,8 +133,8 @@ This example can also be found in `examples/basic_gppp/process_decomposition.jl`
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
 ```julia
-using Stheno, Random, Plots
-using Stheno: @model, Noise
+using AbstractGPs, Stheno, Random, Plots
+using Stheno: @model, WhiteKernel
 
 # Create a pseudo random number generator for reproducibility.
 rng = MersenneTwister(123456);
@@ -140,8 +145,8 @@ rng = MersenneTwister(123456);
     f = GP(SEKernel())
 
     # Define the two noise processes described.
-    noise1 = sqrt(1e-2) * GP(Noise()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
-    noise2 = sqrt(1e-1) * GP(3.5, Noise())
+    noise1 = sqrt(1e-2) * GP(WhiteKernel()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
+    noise2 = sqrt(1e-1) * GP(3.5, WhiteKernel())
 
     # Define the processes that we get to observe.
     y1 = f + noise1
@@ -175,9 +180,12 @@ plotly();
 posterior_plot = plot();
 
 # Plot posteriors
-plot!(posterior_plot, y₁′(Xp); samples=S, sample_seriestype=:scatter, color=:red, label="");
-plot!(posterior_plot, y₂′(Xp); samples=S, sample_seriestype=:scatter, color=:green, label="");
-plot!(posterior_plot, f′(Xp); samples=S, color=:blue, label="Latent Function");
+plot!(posterior_plot, y₁′(Xp); color=:red, label="");
+sampleplot!(posterior_plot, y₁′(Xp), S; seriestype=:scatter, color=:red, label="");
+plot!(posterior_plot, y₂′(Xp); color=:green, label="");
+sampleplot!(posterior_plot, y₂′(Xp), S; seriestype=:scatter, color=:green, label="");
+plot!(posterior_plot, f′(Xp); color=:blue, label="Latent Function");
+sampleplot!(posterior_plot, f′(Xp), S; color=:blue, label="");
 
 # Plot observations
 scatter!(posterior_plot, X₁, ŷ₁;
@@ -196,6 +204,7 @@ scatter!(posterior_plot, X₂, ŷ₂;
     label="Sensor 2");
 
 display(posterior_plot);
+
 ```
 ![](https://github.com/willtebbutt/stheno_models/blob/master/exact/simple_sensor_fusion.png)
 
