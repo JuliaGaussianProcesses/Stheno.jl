@@ -31,8 +31,6 @@ module Stheno
     using ZygoteRules: @adjoint
 
     const AV{T} = AbstractVector{T}
-    const AM{T} = AbstractMatrix{T}
-    const AVM{T} = AbstractVecOrMat{T}
 
     # Various bits of utility that aren't inherently GP-related. Often very type-piratic.
     include(joinpath("util", "zygote_rules.jl"))

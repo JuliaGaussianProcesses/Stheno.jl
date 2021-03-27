@@ -133,18 +133,6 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
     # )
 end
 
-# inputs(k::Kernel, N::Int) = collect(range(-5.0, 5.0; length=N))
-# function inputs(k::BlockKernel, N::Int)
-#     if size(k.ks, 1) == 1
-#         return BlockData(collect(range(-5.0, 5.0; length=N)))
-#     elseif size(k.ks, 1) == 2
-#         x = collect(range(-5.0, 5.0; length=N))
-#         return BlockData([x[1:div(N, 2)], x[div(N, 2) + 1:end]])
-#     else
-#         error("Incorrectly-sized block kernel")
-#     end
-# end
-
 function standard_1D_dense_test(rng::AbstractRNG, θ, f, x::AV, z::AV)
     g, u = f(θ)
     N, M = length(x), length(z)

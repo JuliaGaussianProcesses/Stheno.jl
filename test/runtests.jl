@@ -1,6 +1,5 @@
 using AbstractGPs
 using BlockArrays
-using Distances
 using Documenter
 using FiniteDifferences
 using Flux

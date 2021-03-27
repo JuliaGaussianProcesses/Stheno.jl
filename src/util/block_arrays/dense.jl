@@ -1,10 +1,6 @@
 # This file contains a number of additions to BlockArrays.jl. These are completely
 # independent of Stheno.jl, and will (hopefully) move over to BlockArrays.jl at some point.
 
-import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
-import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
-    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!, logdet, ldiv!, mul!, logabsdet
-
 """
     blocksizes(X::AbstractBlockVecOrMat)
     blocksizes(X::AbstractArray, d::Int)
@@ -28,7 +24,7 @@ that for general matrices / vectors as we additionally require that each block b
 with block of the other matrix with which it will be multiplied. This ensures that the
 result is itself straightforwardly representable as `BlockVecOrMat`.
 """
-are_conformal(A::AVM, B::AVM) = blocksizes(A, 2) == blocksizes(B, 1)
+are_conformal(A::BlockVecOrMat, B::BlockVecOrMat) = blocksizes(A, 2) == blocksizes(B, 1)
 
 ZygoteRules.@adjoint function BlockArrays.mortar(_blocks::AbstractArray)
     function mortar_pullback(Δ::NamedTuple{(:blocks, :axes)})

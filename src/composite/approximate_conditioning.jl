@@ -55,12 +55,8 @@ function cov(f::WrappedGP, u′::PPGP, x::AV, z′::AV)
     return zeros(length(x), length(z′))
 end
 
-"""
-    PseudoObs(u::AbstractGP, z::AV, m::AV{<:Real}, Λ::AM{<:Real}, U::AM)
 
-Construct approximate observations of `u` at `z`, with mean and cov. `m` and `Λ`
-"""
-struct PseudoObs{Tu<:AbstractGP, Tû<:PPGP, Tz<:AV, TU<:AM, Tα<:AV}
+struct PseudoObs{Tu<:AbstractGP, Tû<:PPGP, Tz<:AV, TU<:AbstractMatrix, Tα<:AV}
     u::Tu
     û::Tû
     z::Tz
@@ -68,7 +64,12 @@ struct PseudoObs{Tu<:AbstractGP, Tû<:PPGP, Tz<:AV, TU<:AM, Tα<:AV}
     α::Tα
 end
 
-function PseudoObs(u::AbstractGP, z::AV, m::AV, Λ::Cholesky, U::AM)
+"""
+    PseudoObs(u::AbstractGP, z::AV, m::AV, Λ::Cholesky, U::AbstractMatrix)
+
+Construct approximate observations of `u` at `z`, with mean and cov. `m` and `Λ`
+"""
+function PseudoObs(u::AbstractGP, z::AV, m::AV, Λ::Cholesky, U::AbstractMatrix)
     return PseudoObs(u, PPGP(m, Λ, z, u.gpc), z, U, U \ m)
 end
 

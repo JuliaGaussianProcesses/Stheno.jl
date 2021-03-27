@@ -45,7 +45,7 @@ using Stheno: BlockData, cross
         @test cov(f3(x3), f4(x4)) == cov(f3(x3), f1(x1))
         @test cov(f5(x5), f3(x3)) == cov(f2(x2), f3(x3))
 
-        @timedtestset "rand, logpdf, elbo" begin
+        @timedtestset "rand, logpdf, elbo, dtc" begin
 
             # Single-sample rand
             y1, y2 = rand([f1(x1), f2(x2)])
@@ -70,6 +70,16 @@ using Stheno: BlockData, cross
                 Stheno.finites_to_block([f1(x1), f2(x2)]),
             ) ≈ logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
             @test elbo(f1(x1, 1e-3), y1, [f1(x1), f2(x2)]) ≈ logpdf(f1(x1, 1e-3), y1)
+
+            # dtc
+            @test dtc([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2], [f1(x1), f2(x2)]) ≈
+                logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
+            @test dtc(
+                [f1(x1, 1e-3), f2(x2, 1e-3)],
+                [y1, y2],
+                Stheno.finites_to_block([f1(x1), f2(x2)]),
+            ) ≈ logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
+            @test dtc(f1(x1, 1e-3), y1, [f1(x1), f2(x2)]) ≈ logpdf(f1(x1, 1e-3), y1)
         end
     end
     @timedtestset "Standardised Tests" begin
