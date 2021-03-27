@@ -34,8 +34,6 @@ module Stheno
     const AM{T} = AbstractMatrix{T}
     const AVM{T} = AbstractVecOrMat{T}
 
-    function elementwise end
-
     # Various bits of utility that aren't inherently GP-related. Often very type-piratic.
     include(joinpath("util", "zygote_rules.jl"))
     include(joinpath("util", "covariance_matrices.jl"))
@@ -73,6 +71,6 @@ module Stheno
         end
     end
 
-    export wrap
+    export wrap, GP
 
 end # module
