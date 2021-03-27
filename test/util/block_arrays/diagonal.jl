@@ -8,12 +8,12 @@ function general_BlockDiagonal_tests(rng, blocks)
         @test blocksizes(d, 1) == Ps
         @test blocksizes(d, 2) == Qs
 
-        @test getblock(d, 1, 1) == blocks[1]
-        @test getblock(d, 2, 2) == blocks[2]
-        @test getblock(d, 1, 2) == zeros(Ps[1], Qs[2])
-        @test getblock(d, 2, 1) == zeros(Ps[2], Qs[1])
+        @test view(d, Block(1, 1)) == blocks[1]
+        @test view(d, Block(2, 2)) == blocks[2]
+        @test view(d, Block(1, 2)) == zeros(Ps[1], Qs[2])
+        @test view(d, Block(2, 1)) == zeros(Ps[2], Qs[1])
 
-        @test d[Block(1, 1)] == getblock(d, 1, 1)
+        @test d[Block(1, 1)] == view(d, Block(1, 1))
     end
 end
 

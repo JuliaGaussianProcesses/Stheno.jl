@@ -173,7 +173,6 @@ ZygoteRules.@adjoint function LinearAlgebra.cholesky(A::BlockDiagonal{<:Real})
     Cs_backs = map(A->Zygote.pullback(A->cholesky(A).U, A), diag(A.blocks))
     Cs, backs = first.(Cs_backs), last.(Cs_backs)
     function back(Ū::BlockDiagonal)
-        # @show typeof(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs))
         return (block_diagonal(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs)),)
     end
     return Cholesky(block_diagonal(Cs), :U, 0), Δ->back(Δ.factors)
@@ -198,11 +197,6 @@ end
 # Misc
 #
 
-# Legacy version of logabsdet for pre-1.4.
-if VERSION < v"1.4.0"
-    LinearAlgebra.logabsdet(d::Diagonal) = logabsdet(UpperTriangular(d))
-end
-
 #
 # BlockDiagonal mul! and *
 #
@@ -214,7 +208,7 @@ function LinearAlgebra.mul!(y::BlockVector, D::BlockDiagonal, x::BlockVector)
     @assert are_conformal(D, x) && are_conformal(D, y)
     blocks = D.blocks.diag
     for r in 1:nblocks(D, 1)
-        mul!(getblock(y, r), blocks[r], getblock(x, r))
+        mul!(view(y, Block(r)), blocks[r], view(x, Block(r)))
     end
     return y
 end
@@ -234,7 +228,7 @@ function LinearAlgebra.mul!(Y::BlockMatrix, D::BlockDiagonal, X::BlockMatrix)
     blocks = D.blocks.diag
     for r in 1:nblocks(D, 1)
         for c in 1:nblocks(X, 2)
-            mul!(getblock(Y, r, c), blocks[r], getblock(X, r, c))
+            mul!(view(Y, Block(r, c)), blocks[r], view(X, Block(r, c)))
         end
     end
     return Y
