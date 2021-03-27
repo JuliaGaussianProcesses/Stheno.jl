@@ -1,82 +1,9 @@
-export GP
-
 """
-    GP{Tm<:MeanFunction, Tk<:Kernel}
-
-A Gaussian Process (GP) with known mean `m` and kernel `k`. A book-keeping object `gpc` is
-also required, but only matters when composing `GP`s together.
-
-# Zero Mean
-
-If only two arguments are provided, assume the mean to be zero everywhere:
-```jldoctest
-julia> f = wrap(GP(Matern32Kernel()), GPC());
-
-julia> x = randn(5);
-
-julia> mean(f(x)) == zeros(5)
-true
-
-julia> cov(f(x)) == kernelmatrix(Matern32Kernel(), x)
-true
-```
-
-### Constant Mean
-
-If a `Real` is provided as the first argument, assume the mean function is constant with
-that value
-```jldoctest
-julia> f = wrap(GP(5.0, SEKernel()), GPC());
-
-julia> x = randn(5);
-
-julia> mean(f(x)) == 5.0 .* ones(5)
-true
-
-julia> cov(f(x)) == kernelmatrix(SqExponentialKernel(), x)
-true
-```
-
-### Custom Mean
-
-Provide an arbitrary function to compute the mean:
-
-```jldoctest
-julia> f = wrap(GP(x -> sin(x) + cos(x / 2), RationalQuadraticKernel(α=3.2)), GPC());
-
-julia> x = randn(5);
-
-julia> mean(f(x)) == sin.(x) .+ cos.(x ./ 2)
-true
-
-julia> cov(f(x)) == kernelmatrix(RationalQuadraticKernel(α=3.2), x)
-true
-```
-"""
-struct GP{Tm<:MeanFunction, Tk<:Kernel} <: AbstractGP
-    m::Tm
-    k::Tk
-end
-
-GP(f, k::Kernel) = GP(CustomMean(f), k)
-GP(m::Real, k::Kernel) = GP(ConstMean(m), k)
-GP(k::Kernel) = GP(ZeroMean(), k)
-GP(k::Kernel, m) = GP(m, k)
-
-mean_vector(f::GP, x::AV) = elementwise(f.m, x)
-
-cov(f::GP, x::AV) = kernelmatrix(f.k, x)
-cov_diag(f::GP, x::AV) = kernelmatrix_diag(f.k, x)
-
-cov(f::GP, x::AV, x′::AV) = kernelmatrix(f.k, x, x′)
-cov_diag(f::GP, x::AV, x′::AV) = kernelmatrix_diag(f.k, x, x′)
-
-"""
-    WrappedGP{Tgp} <: AbstractGP
+    WrappedGP{Tgp<:AbstractGP} <: AbstractGP
 
 A thin wrapper around a GP that does some book-keeping.
 """
-struct WrappedGP{Tgp} <: AbstractGP
+struct WrappedGP{Tgp<:AbstractGP} <: AbstractGP
     gp::Tgp
     n::Int
     gpc::GPC
