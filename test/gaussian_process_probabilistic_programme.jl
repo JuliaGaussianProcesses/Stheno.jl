@@ -76,5 +76,7 @@
         x1 = GPPPInput(:f3, randn(4))
         cov(f(x0), f(x1))
 
+        y = rand(f(x0, 0.1))
+        @show logpdf(f(x0, 0.1), y)
     end
 end

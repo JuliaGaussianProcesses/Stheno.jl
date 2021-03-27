@@ -1,6 +1,7 @@
 """
     
 
+The definition of a GPPP here is essentially any kind of mapping between 
 """
 struct GaussianProcessProbabilisticProgramme{Tfs<:Dict} <: AbstractGP
     fs::Tfs
