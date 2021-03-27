@@ -17,8 +17,8 @@ Zygote.@nograd consistency_checks
 
 const cross_args{T<:AbstractVector{<:AbstractGP}} = Tuple{typeof(cross), T}
 
-function mean_vector((_, fs)::cross_args, x::BlockData)
-    blks = map((f, blk)->mean_vector(f, blk), fs, blocks(x))
+function mean((_, fs)::cross_args, x::BlockData)
+    blks = map((f, blk)->mean(f, blk), fs, blocks(x))
     return Array(mortar(blks))
 end
 
@@ -86,21 +86,21 @@ Zygote.@nograd _get_indices
 # multi-process `rand`
 #
 
-function rand(rng::AbstractRNG, fs::AV{<:FiniteGP}, N::Int)
+function rand(rng::AbstractRNG, fs::AbstractVector{<:FiniteGP}, N::Int)
     Y = rand(rng, finites_to_block(fs), N)
     idx = _get_indices(fs)
     return map(n->Y[idx[n], :], eachindex(fs))
 end
-rand(rng::AbstractRNG, fs::AV{<:FiniteGP}) = vec.(rand(rng, fs, 1))
-rand(fs::AV{<:FiniteGP}, N::Int) = rand(Random.GLOBAL_RNG, fs, N)
-rand(fs::AV{<:FiniteGP}) = vec.(rand(Random.GLOBAL_RNG, fs))
+rand(rng::AbstractRNG, fs::AbstractVector{<:FiniteGP}) = vec.(rand(rng, fs, 1))
+rand(fs::AbstractVector{<:FiniteGP}, N::Int) = rand(Random.GLOBAL_RNG, fs, N)
+rand(fs::AbstractVector{<:FiniteGP}) = vec.(rand(Random.GLOBAL_RNG, fs))
 
 
 #
 # multi-process `logpdf`
 #
 
-function logpdf(fs::AV{<:FiniteGP}, ys::Vector{<:AV{<:Real}})
+function logpdf(fs::AbstractVector{<:FiniteGP}, ys::Vector{<:AbstractVector{<:Real}})
     return logpdf(finites_to_block(fs), vcat(ys...))
 end
 logpdf(fs::Vector{<:Observation}) = logpdf(get_f.(fs), get_y.(fs))

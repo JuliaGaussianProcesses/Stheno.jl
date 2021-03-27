@@ -342,7 +342,7 @@ function abstractgp_interface_tests(
     f::AbstractGP, f′::AbstractGP, x0::AV, x1::AV, x2::AV, x3::AV;
     atol=1e-9, rtol=1e-9,
 )
-    m = mean_vector(f, x0)
+    m = mean(f, x0)
     @test m isa AbstractVector{<:Real}
     @test length(m) == length(x0)
 

@@ -11,7 +11,7 @@ Constructs the GP f′ given by f′(x) := f(g(x))
 
 const comp_args = Tuple{typeof(∘), AbstractGP, Any}
 
-mean_vector((_, f, g)::comp_args, x::AV) = mean_vector(f, g.(x))
+mean((_, f, g)::comp_args, x::AV) = mean(f, g.(x))
 
 cov((_, f, g)::comp_args, x::AV) = cov(f, g.(x))
 cov_diag((_, f, g)::comp_args, x::AV) = cov_diag(f, g.(x))

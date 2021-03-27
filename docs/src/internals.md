@@ -14,7 +14,7 @@ The `AbstractGP` interface enables one to compute quantities required when worki
 
 | Function | Brief description |
 |:--------------------- |:---------------------- |
-| `mean_vector(f, x)` | The mean vector of `f` at inputs `x` |
+| `mean(f, x)` | The mean vector of `f` at inputs `x` |
 | `cov(f, x)` | covariance matrix of `f` at inputs `x` |
 | `cov(f, x, x′)` | covariance matrix between `f` at `x` and `x′` |
 | `cov(f, f′, x, x′)` | cross-covariance matrix between `f` at `x` and `f′` at `x′` |
@@ -95,7 +95,7 @@ It's straightforward to implement a new kernel yourself: simply following the in
 
 ### AbstractGP Interface Implementation
 
-Given the above, the `AbstractGP` interface is straightforward to implement for `GPsme`, as each method of `mean_vector` and `cov` can be implemented in terms of `ew` and `pw`. See [here](https://github.com/willtebbutt/Stheno.jl/blob/master/src/gp/gp.jl) for the implementation.
+Given the above, the `AbstractGP` interface is straightforward to implement for `GPsme`, as each method of `mean` and `cov` can be implemented in terms of `ew` and `pw`. See [here](https://github.com/willtebbutt/Stheno.jl/blob/master/src/gp/gp.jl) for the implementation.
 
 If you are interested just in working with a single `GP` object, with a known `MeanFunction` and `Kernel`, this is probably as far as you need to go. Simply implement you own fancy `Mean` and `Kernel` objects, or approximations to them, and have some fun / do some research.
 

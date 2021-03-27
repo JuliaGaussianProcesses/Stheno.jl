@@ -15,7 +15,7 @@ end
         f = wrap(GP(sin, SEKernel()), GPC())
         fx, fx′ = FiniteGP(f, x, Σy), FiniteGP(f, x′, Σy′)
 
-        @test mean(fx) == mean_vector(f, x)
+        @test mean(fx) == mean(f, x)
         @test cov(fx) == cov(f, x)
         @test cov(fx, fx′) == cov(f, x, x′)
         @test mean.(marginals(fx)) == mean(f(x))

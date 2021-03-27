@@ -118,7 +118,7 @@ using Stheno: optimal_q, PseudoObs
         x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
         abstractgp_interface_tests(f′_approx, f, x0, x1, x2, x3)
 
-        @test_throws ArgumentError Stheno.mean_vector(ỹ.û, randn(rng, P))
+        @test_throws ArgumentError Stheno.mean(ỹ.û, randn(rng, P))
         @test_throws ArgumentError cov(ỹ.û, PseudoObs(f, z, m_ε, Λ_ε, U).û, x0, x1)
     end
     @timedtestset "accuracy tests" begin
