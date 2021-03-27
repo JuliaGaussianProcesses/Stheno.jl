@@ -60,6 +60,9 @@ module Stheno
     # approximate inference
     include("approximate_inference.jl")
 
+    # Gaussian Process Probabilistic Programme object which implements the AbstractGPs API.
+    include("gaussian_process_probabilistic_programme.jl")
+
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))
 
@@ -69,6 +72,6 @@ module Stheno
         end
     end
 
-    export wrap, GPC
+    export wrap, GPC, GaussianProcessProbabilisticProgramme, GPPP, GPPPInput
 
 end # module

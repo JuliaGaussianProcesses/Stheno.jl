@@ -58,6 +58,9 @@ include("test_util.jl")
         include("approximate_inference.jl")
     end
 
+    println("gaussian_process_probabilistic_programme:")
+    include("gaussian_process_probabilistic_programme.jl")
+
     println("flux:")
     @timedtestset "flux" begin
         include(joinpath("flux", "neural_kernel_network.jl"))
