@@ -35,10 +35,6 @@ function LinearAlgebra.UpperTriangular(A::BlockDiagonal)
     return block_diagonal(UpperTriangular.(A.blocks.diag))
 end
 
-function LinearAlgebra.LowerTriangular(A::BlockDiagonal)
-    return block_diagonal(LowerTriangular.(A.blocks.diag))
-end
-
 
 
 #
