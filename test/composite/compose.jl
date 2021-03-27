@@ -2,9 +2,9 @@
     @timedtestset "general" begin
         rng, N, N′, gpc = MersenneTwister(123456), 5, 3, GPC()
         x, x′ = randn(rng, N), randn(rng, N′)
-        f = GP(sin, SqExponentialKernel(), gpc)
+        f = wrap(GP(sin, SEKernel()), gpc)
         g = cos
-        h = GP(exp, ExponentialKernel(), gpc)
+        h = wrap(GP(exp, ExponentialKernel()), gpc)
         fg = f ∘ g
 
         # Check marginals statistics inductively.
@@ -34,7 +34,7 @@
                 MersenneTwister(123456),
                 Dict(:σ=>0.5),
                 θ->begin
-                    f = θ[:σ] * GP(sin, SqExponentialKernel(), GPC())
+                    f = θ[:σ] * wrap(GP(sin, SEKernel()), GPC())
                     return stretch(f, 0.5), f
                 end,
                 collect(range(-2.0, 2.0; length=N)),
@@ -46,7 +46,7 @@
         @timedtestset "scalar stretch" begin
             rng, N, λ = MersenneTwister(123456), 3, 0.51
             x = randn(rng)
-            f = GP(1.3, SqExponentialKernel(), GPC())
+            f = wrap(GP(1.3, SEKernel()), GPC())
             g = stretch(f, λ)
 
             @timedtestset "scalar input" begin
@@ -56,7 +56,7 @@
                     MersenneTwister(123456),
                     Dict(:σ=>0.5, :l=>0.32),
                     θ->begin
-                        f_ = θ[:σ] * GP(sin, SqExponentialKernel(), GPC())
+                        f_ = θ[:σ] * wrap(GP(sin, SEKernel()), GPC())
                         return stretch(f_, θ[:l]), f_
                     end,
                     collect(range(-2.0, 2.0; length=N)),
@@ -73,7 +73,7 @@
         @timedtestset "Vector stretch" begin
             rng, N, D = MersenneTwister(123456), 3, 7
             λ = randn(rng, D)
-            f = GP(1.0, SqExponentialKernel(), GPC())
+            f = wrap(GP(1.0, SEKernel()), GPC())
             g = stretch(f, λ)
 
             X = randn(rng, D, 1)
@@ -83,7 +83,7 @@
         @timedtestset "Matrix stretch" begin
             rng, N, D = MersenneTwister(123456), 3, 7
             A = randn(rng, D, D)
-            f = GP(1.0, SqExponentialKernel(), GPC())
+            f = wrap(GP(1.0, SEKernel()), GPC())
             g = stretch(f, A)
 
             X = randn(rng, D, 1)
@@ -94,7 +94,7 @@
     @timedtestset "Select" begin
         rng, N, D = MersenneTwister(123456), 3, 6
         idx = [1, 3]
-        f = GP(1.3, SqExponentialKernel(), GPC())
+        f = wrap(GP(1.3, SEKernel()), GPC())
         g = select(f, idx)
 
         X = randn(rng, D, N)
@@ -107,7 +107,7 @@
         @timedtestset "Shift{Float64}" begin
             rng, N, D = MersenneTwister(123456), 3, 6
             a = randn(rng)
-            f = GP(1.3, SqExponentialKernel(), GPC())
+            f = wrap(GP(1.3, SEKernel()), GPC())
             g = shift(f, a)
 
             x = randn(rng, N)
@@ -125,7 +125,7 @@
         @timedtestset "Shift{Vector{Float64}}" begin
             rng, N, D = MersenneTwister(123456), 3, 6
             a = randn(rng, D)
-            f = GP(1.3, SqExponentialKernel(), GPC())
+            f = wrap(GP(1.3, SEKernel()), GPC())
             g = shift(f, a)
 
             X = randn(rng, D, N)
