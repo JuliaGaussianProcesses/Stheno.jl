@@ -12,7 +12,7 @@ end
     @testset "statistics" begin
         rng, N, N′ = MersenneTwister(123456), 1, 9
         x, x′, Σy, Σy′ = randn(rng, N), randn(rng, N′), zeros(N, N), zeros(N′, N′)
-        f = GP(sin, SqExponentialKernel(), GPC())
+        f = wrap(GP(sin, SEKernel()), GPC())
         fx, fx′ = FiniteGP(f, x, Σy), FiniteGP(f, x′, Σy′)
 
         @test mean(fx) == mean_vector(f, x)
@@ -26,8 +26,8 @@ end
         rng, N, D = MersenneTwister(123456), 10, 2
         X, x, Σy = ColVecs(randn(rng, D, N)), randn(rng, N), zeros(N, N)
         Σy = generate_noise_matrix(rng, N)
-        fX = FiniteGP(GP(1, SqExponentialKernel(), GPC()), X, Σy)
-        fx = FiniteGP(GP(1, SqExponentialKernel(), GPC()), x, Σy)
+        fX = FiniteGP(wrap(GP(1, SEKernel()), GPC()), X, Σy)
+        fx = FiniteGP(wrap(GP(1, SEKernel()), GPC()), x, Σy)
 
         # Check that single-GP samples have the correct dimensions.
         @test length(rand(rng, fX)) == length(X)
@@ -39,7 +39,7 @@ end
     @testset "rand (statistical)" begin
         rng, N, D, μ0, S = MersenneTwister(123456), 10, 2, 1, 100_000
         X, Σy = ColVecs(randn(rng, D, N)), 1e-12
-        f = FiniteGP(GP(1, SqExponentialKernel(), GPC()), X, Σy)
+        f = FiniteGP(wrap(GP(1, SEKernel()), GPC()), X, Σy)
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.
         f̂ = rand(rng, f, S)
@@ -57,7 +57,7 @@ end
         adjoint_test(
             x->rand(
                 MersenneTwister(123456),
-                FiniteGP(GP(sin, SqExponentialKernel(), GPC()), x, Σy),
+                FiniteGP(wrap(GP(sin, SEKernel()), GPC()), x, Σy),
             ),
             randn(rng, N),
             x;
@@ -68,7 +68,7 @@ end
         adjoint_test(
             x->rand(
                 MersenneTwister(123456),
-                FiniteGP(GP(sin, SqExponentialKernel(), GPC()), x, Σy),
+                FiniteGP(wrap(GP(sin, SEKernel()), GPC()), x, Σy),
                 S,
             ),
             randn(rng, N, S),
@@ -126,7 +126,7 @@ end
     @testset "logpdf / elbo / dtc" begin
         rng, N, S, σ, gpc = MersenneTwister(123456), 10, 11, 1e-1, GPC()
         x = collect(range(-3.0, stop=3.0, length=N))
-        f = GP(1, SqExponentialKernel(), gpc)
+        f = wrap(GP(1, SEKernel()), gpc)
         fx, y = FiniteGP(f, x, 0), FiniteGP(f, x, σ^2)
         ŷ = rand(rng, y)
 
@@ -206,7 +206,7 @@ end
         rng = MersenneTwister(123456)
         x = randn(rng, T, 123)
         z = randn(rng, T, 13)
-        f = GP(T(0), SqExponentialKernel(), GPC())
+        f = wrap(GP(T(0), SEKernel()), GPC())
 
         fx = f(x, T(0.1))
         u = f(z, T(1e-4))
