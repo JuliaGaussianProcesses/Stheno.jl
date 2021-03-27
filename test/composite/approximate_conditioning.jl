@@ -7,7 +7,7 @@ using Stheno: optimal_q, PseudoObs
         @timedtestset "σ²" begin
             rng, N, σ², gpc = MersenneTwister(123456), 10, 1e-1, GPC()
             x = collect(range(-3.0, 3.0, length=N))
-            f = GP(sin, SqExponentialKernel(), gpc)
+            f = wrap(GP(sin, SEKernel()), gpc)
 
             for σ² in [1e-2, 1e-1, 1e0, 1e1]
                 @timedtestset "σ² = $σ²" begin
@@ -28,7 +28,7 @@ using Stheno: optimal_q, PseudoObs
         @timedtestset "Diagonal" begin
             rng, N, gpc = MersenneTwister(123456), 11, GPC()
             x = collect(range(-3.0, 3.0, length=N))
-            f = GP(sin, SqExponentialKernel(), gpc)
+            f = wrap(GP(sin, SEKernel()), gpc)
             Σ = Diagonal(exp.(0.1 * randn(rng, N)) .+ 1)
             y = rand(rng, f(x, Σ))
 
@@ -45,7 +45,7 @@ using Stheno: optimal_q, PseudoObs
         @timedtestset "Dense" begin
             rng, N, gpc = MersenneTwister(123456), 10, GPC()
             x = collect(range(-3.0, 3.0, length=N))
-            f = GP(sin, SqExponentialKernel(), gpc)
+            f = wrap(GP(sin, SEKernel()), gpc)
             A = 0.1 * randn(rng, N, N)
             Σ = Symmetric(A * A' + I)
             y = rand(rng, f(x, Σ))
@@ -68,7 +68,7 @@ using Stheno: optimal_q, PseudoObs
         idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
         x, x′ = xx′[idx_1], xx′[idx_2]
 
-        f = GP(sin, SqExponentialKernel(), gpc)
+        f = wrap(GP(sin, SEKernel()), gpc)
         y, y′ = rand(rng, [f(x, σ²), f(x′, σ²)])
 
         # Compute approximate posterior suff. stats.
@@ -106,7 +106,7 @@ using Stheno: optimal_q, PseudoObs
         z = randn(rng, M)
 
         # Generate toy problem.
-        f = GP(sin, SqExponentialKernel(), gpc)
+        f = wrap(GP(sin, SEKernel()), gpc)
         y = rand(f(x, σ²))
 
         # Generate approximate posterior
@@ -128,7 +128,7 @@ using Stheno: optimal_q, PseudoObs
         z = x
 
         # Generate toy problem.
-        f = GP(sin, SqExponentialKernel(), gpc)
+        f = wrap(GP(sin, SEKernel()), gpc)
         y = rand(f(x, σ²))
 
         # Exact conditioning.
