@@ -1,3 +1,4 @@
+using AbstractGPs
 using BlockArrays
 using Distances
 using Documenter
@@ -12,7 +13,7 @@ using Test
 using TimerOutputs
 using Zygote
 
-using Stheno: elementwise, mean_vector, cov, cov_diag, GPC
+using Stheno: mean, cov, cov_diag, GPC, AV
 
 const to = TimerOutput()
 
@@ -44,7 +45,6 @@ include("test_util.jl")
     println("composite:")
     @timedtestset "composite" begin
         include(joinpath("composite", "test_util.jl"))
-        include(joinpath("composite", "indexing.jl"))
         include(joinpath("composite", "cross.jl"))
         include(joinpath("composite", "conditioning.jl"))
         include(joinpath("composite", "product.jl"))
@@ -69,7 +69,7 @@ include("test_util.jl")
         DocMeta.setdocmeta!(
             Stheno,
             :DocTestSetup,
-            :(using Stheno, Random, Documenter, LinearAlgebra);
+            :(using AbstractGPs, Stheno, Random, Documenter, LinearAlgebra);
             recursive=true,
         )
         doctest(Stheno)
