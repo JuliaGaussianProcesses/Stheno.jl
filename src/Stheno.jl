@@ -25,6 +25,8 @@ module Stheno
     import Distances: pairwise, colwise
 
     using AbstractGPs: AbstractGP, GP, FiniteGP
+    import AbstractGPs: cov_diag
+
     using ZygoteRules: @adjoint
     using Zygote: @nograd
 

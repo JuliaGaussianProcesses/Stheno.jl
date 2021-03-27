@@ -10,33 +10,6 @@ end
 
 next_index(gpc::GPC) = gpc.n + 1
 
-#
-# Projecting AbstractGPs onto a finite dimensional marginal
-#
-
-import Base: rand, length
-import Distributions: logpdf, AbstractMvNormal
-
-export mean, std, cov, marginals, rand, logpdf, elbo, dtc
-
-"""
-    cov(fx::FiniteGP, gx::FiniteGP)
-
-Compute the cross-covariance matrix between `fx` and `gx`.
-
-```jldoctest
-julia> f = wrap(GP(Matern32Kernel()), GPC());
-
-julia> x1 = randn(11);
-
-julia> x2 = randn(13);
-
-julia> cov(f(x1), f(x2)) == kernelmatrix(Matern32Kernel(), x1, x2)
-true
-```
-"""
-cov(fx::FiniteGP, gx::FiniteGP) = cov(fx.f, gx.f, fx.x, gx.x)
-
 # """
 #     rand(rng::AbstractRNG, f::FiniteGP, N::Int=1)
 

@@ -1,4 +1,5 @@
-using Stheno: MeanFunction, Kernel, AV, pairwise, elementwise, BlockData, blocks
+using AbstractGPs: MeanFunction
+using Stheno: Kernel, AV, pairwise, elementwise, BlockData, blocks
 using Stheno: block_diagonal, AbstractGP
 using FiniteDifferences: j′vp
 import FiniteDifferences: to_vec
