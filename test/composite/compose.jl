@@ -62,6 +62,10 @@
                     collect(range(-2.0, 2.0; length=N)),
                     collect(range(-1.5, 2.2; length=5)),
                 )
+                @testset "StepRangeLen" begin
+                    v = range(-2.0, 2.0; length=N)
+                    @test cov(g(v)) ≈ cov(g(collect(v)))
+                end
             end
             @timedtestset "vector input" begin
                 D = 11
@@ -93,15 +97,28 @@
     end
     @timedtestset "Select" begin
         rng, N, D = MersenneTwister(123456), 3, 6
-        idx = [1, 3]
-        f = wrap(GP(1.3, SEKernel()), GPC())
-        g = select(f, idx)
+        @testset "idx isa Integer" begin
+            idx = 1
+            f = wrap(GP(1.3, SEKernel()), GPC())
+            g = select(f, idx)
 
-        X = randn(rng, D, N)
-        X_f = ColVecs(X[idx, :])
-        X_g = ColVecs(X)
-        @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
-        @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
+            X = randn(rng, D, N)
+            X_f = X[idx, :]
+            X_g = ColVecs(X)
+            @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
+            @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
+        end
+        @testset "idx isa Vector" begin
+            idx = [1, 3]
+            f = wrap(GP(1.3, SEKernel()), GPC())
+            g = select(f, idx)
+
+            X = randn(rng, D, N)
+            X_f = ColVecs(X[idx, :])
+            X_g = ColVecs(X)
+            @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
+            @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
+        end
     end
     @timedtestset "Shift" begin
         @timedtestset "Shift{Float64}" begin
