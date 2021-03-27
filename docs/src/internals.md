@@ -48,47 +48,6 @@ where `m` is its `MeanFunction`, `k` its `Kernel`. `gpc` is a `GPC` object that 
 
 The `AbstractGP` interface is implemented for `GP`s via operations on their `MeanFunction` and `Kernel`. It is therefore straightforward to extend the range of functionality offered by `Stheno.jl` by simply implementing a new `MeanFunction` or `Kernel` that satisfies their interface, which we detail below.
 
-### MeanFunctions
-
-`MeanFunction`s are unary functions with `Real`-valued outputs with a single-method interface. They must implement `elementwise` (aliased to `ew` for brevity) with the signature
-```julia
-ew(m::MyMeanFunction, x::AbstractVector)
-```
-This function applies the `MeanFunction` to each element of `x`, and should return an `AbstractVector{<:Real}` of the same length as `x`. Note that `x` represents a vector of observations, not a single feature vector. Some example implementations can be found [here](https://github.com/willtebbutt/Stheno.jl/blob/master/src/gp/mean.jl).
-
-Note that while `MeanFunction`s are in principle functions, their interface does not require that we can evaluate `m(x[p])`, only that the "vectorised" `elementwise` function be implemented. This is due to the fact that, in practice, we only ever need the result of `elementwise`.
-
-There are a couple of methods of `GP` which are specialised to particular `MeanFunction`s:
-```julia
-GP(k::Kernel, gpc::GPC) == GP(ZeroMean(), k, gpc)
-GP(c::Real, k::Kernel, gpc::GPC) == GP(ConstMean(c), k, gpc)
-```
-
-### Kernels
-
-A `Kernel` is a binary function, returning a `Real`-valued result. `Kernel`s are only slightly more complicated than `MeanFunction`s, having a four-method interface:
-```julia
-# Binary methods
-ew(k::MyKernel, x::AbstractVector, x′::AbstractVector) # "Binary elementwise"
-pw(k::MyKernel, x::AbstractVector, x′::AbstractVector) # "Binary pairwise"
-
-# Unary methods
-ew(k::MyKernel, x::AbstractVector) # "Unary elementwise"
-pw(k::MyKernel, x::AbstractVector) # "Unary pairwise"
-```
-Again, `ew === elementwise` and `pw === pairwise`.
-
-Note that, as with `MeanFunction`s, the `Kernel` interface does not require that one can actually evaluate `k(x[p], x′[q])`, as in practice this functionality is never _really_ required and would otherwise be extra code to maintain.
-
-We consider each method in turn.
-
-- Binary elementwise: compute `k(x[p], x′[p])` for `p in eachindex(x)`. `x` and `x′` are assumed to be of the same length. Returns a subtype of `AbstractVector{<:Real}`, of the same length as `x` and `x′`.
-- Binary pairwise: compute `k(x[p], x′[q])` for `p in eachindex(x)` and `q in eachindex(x′)`. `x` and `x′` need not be of the same length. Returns a subtype of `AbstractMatrix{<:Real}` whose size is `(length(x), length(x′))`.
-- Unary elementwise: compute `k(x[p], x[p])` for `p in eachindex(x)`. Returns a subtype of `AbstractVector{<:Real}` of the same length as `x`.
-- Unary pairwise: compute `k(x[p], x[q])` for `p in eachindex(x)` and `q in eachindex(x)`. Returns a subtype of `AbstractMatrix{<:Real}` whose size is `(length(x), length(x))`. Crucially, output must be positive definite and (approximately) symmetric.
-
-Example implementations can be found below. Often you'll find that multiple versions of each method are implemented, specialised to different input types. For example, the `SEKernel` kernel has (at the time of writing) two implementations of each method, one for inputs `AbstractVector{<:Real}`, and one for `ColVecs <: AbstractVector` inputs. These specialisations are for performance purposes.
-
 ### Example Kernel implementation
 
 It's straightforward to implement a new kernel yourself: simply following the instructions in [KernelFunctions.jl](https://github.com/JuliaGaussianProcesses/KernelFunctions.jl) and it'll work fine with GPs in Stheno.jl!
