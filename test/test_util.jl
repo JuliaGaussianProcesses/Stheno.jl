@@ -1,7 +1,5 @@
-using Stheno: BlockData, blocks
-using Stheno: block_diagonal, AbstractGP
+using Stheno: AbstractGP, BlockData, blocks
 using FiniteDifferences: j′vp
-import FiniteDifferences: to_vec
 
 const _rtol = 1e-10
 const _atol = 1e-10
@@ -9,7 +7,6 @@ const _atol = 1e-10
 _to_psd(A::Matrix{<:Real}) = A * A' + I
 _to_psd(a::Vector{<:Real}) = exp.(a) .+ 1
 _to_psd(σ::Real) = exp(σ) + 1
-_to_psd(As::Vector{<:Matrix{<:Real}}) = block_diagonal(_to_psd.(As))
 
 Base.length(::Nothing) = 0
 
@@ -25,12 +22,12 @@ function print_adjoints(adjoint_ad, adjoint_fd, rtol, atol)
 end
 
 # AbstractArrays.
-function to_vec(x::ColVecs{<:Real})
+function FiniteDifferences.to_vec(x::ColVecs{<:Real})
     x_vec, back = to_vec(x.X)
     return x_vec, x_vec -> ColVecs(back(x_vec))
 end
 
-function to_vec(X::BlockArray)
+function FiniteDifferences.to_vec(X::BlockArray)
     X_Array = Array(X)
     x, X_Array_from_vec = to_vec(X_Array)
     function BlockArray_from_vec(x::Vector)
@@ -40,7 +37,7 @@ function to_vec(X::BlockArray)
     return x, BlockArray_from_vec
 end
 
-function to_vec(x::BlockData)
+function FiniteDifferences.to_vec(x::BlockData)
     x_vecs, x_backs = zip(map(to_vec, blocks(x))...)
     sz = cumsum([map(length, x_vecs)...])
     return vcat(x_vecs...), function(v)
@@ -49,7 +46,7 @@ function to_vec(x::BlockData)
     end
 end
 
-function to_vec(X::T) where T<:Union{Adjoint,Transpose}
+function FiniteDifferences.to_vec(X::T) where T<:Union{Adjoint,Transpose}
     U = T.name.wrapper
     return vec(Matrix(X)), x_vec->U(permutedims(reshape(x_vec, size(X))))
 end

@@ -25,7 +25,7 @@ mutable struct GPC
     GPC() = new(0)
 end
 
-@nograd GPC
+ChainRulesCore.@non_differentiable GPC()
 
 next_index(gpc::GPC) = gpc.n + 1
 

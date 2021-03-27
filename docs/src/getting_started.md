@@ -244,7 +244,7 @@ results = Optim.optimize(nlj, θ0, NelderMead());
 
 ```
 # Hack to make Zygote play nicely with a particular thing in Distributions.
-Zygote.@nograd Distributions.insupport
+ChainRulesCore.@non_differentiable Distributions.insupport(::Any...)
 
 # Point estimate of parameters via BFGS.
 θ0 = randn(3);

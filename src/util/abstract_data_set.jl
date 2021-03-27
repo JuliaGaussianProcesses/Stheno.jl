@@ -1,5 +1,4 @@
 import Base: size, eachindex, getindex, view, ==, eltype, convert, zero, getproperty
-import Distances: pairwise
 import Zygote: literal_getproperty, accum
 
 ################################ Fancy block data set type #################################

@@ -6,29 +6,29 @@ module Stheno
     using BlockArrays
     using ChainRulesCore
     using Distributions
-    using Distances
     using FillArrays
     @reexport using KernelFunctions
     using LinearAlgebra
-    using Statistics
     using Random
     using Requires
     using Zygote
     using ZygoteRules
 
-    import Base: length, map
-    import Base.Broadcast: broadcasted, materialize, broadcast_shape
-    import ChainRulesCore: rrule
-    import Statistics: mean, cov
+    import Base.Broadcast: broadcasted
 
-    import LinearAlgebra: cholesky, cross
-    import Distances: pairwise, colwise
-
-    using AbstractGPs: AbstractGP, GP, FiniteGP
-    import AbstractGPs: cov_diag, rand, logpdf, elbo, dtc, mean_and_cov, mean_and_cov_diag
+    using AbstractGPs: AbstractGP, FiniteGP, GP
+    import AbstractGPs:
+        mean,
+        cov,
+        cov_diag,
+        mean_and_cov,
+        mean_and_cov_diag,
+        rand,
+        logpdf,
+        elbo,
+        dtc
 
     using ZygoteRules: @adjoint
-    using Zygote: @nograd
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}

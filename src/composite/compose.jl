@@ -70,7 +70,7 @@ function broadcasted(f::Select, x::AbstractVector{<:CartesianIndex})
     return ColVecs(out)
 end
 
-function rrule(::typeof(broadcasted), f::Select, x::AV{<:CartesianIndex})
+function ChainRulesCore.rrule(::typeof(broadcasted), f::Select, x::AV{<:CartesianIndex})
     return broadcasted(f, x), Δ->(NO_FIELDS, DoesNotExist(), Zero())
 end
 

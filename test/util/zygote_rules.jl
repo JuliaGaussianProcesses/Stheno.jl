@@ -1,5 +1,3 @@
-using Base.Broadcast: broadcast_shape
-
 @timedtestset "zygote_rules" begin
     @timedtestset "Cholesky (getproperty)" begin
         rng, N = MersenneTwister(123456), 5

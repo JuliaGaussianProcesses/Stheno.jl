@@ -39,7 +39,7 @@ struct SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP} <: AbstractMvNormal
     finducing::T2
 end
 
-length(f::SparseFiniteGP) = length(f.fobs)
+Base.length(f::SparseFiniteGP) = length(f.fobs)
 mean(f::SparseFiniteGP) = mean(f.fobs)
 covariance_error = "The covariance matrix of a sparse GP can often be dense and " *
     "can cause the computer to run out of memory. If you are sure you have enough " *
