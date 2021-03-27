@@ -1,5 +1,4 @@
 using Zygote
-using Zygote: @adjoint, literal_getproperty
 import Zygote: accum
 
 const dtol = 1e-12 # threshold value for precise recalculation of distances
@@ -14,7 +13,7 @@ accum(A::Diagonal, B::Diagonal) = Diagonal(accum(diag(A), diag(B)))
 
 @adjoint function ZygoteRules.literal_getproperty(C::Cholesky, ::Val{:factors})
     error("@adjoint not implemented for :factors as is unsafe.")
-    return literal_getproperty(C, Val(:factors)), function(Δ)
+    return ZygoteRules.literal_getproperty(C, Val(:factors)), function(Δ)
         error("@adjoint not implemented for :factors. (I couldn't make it work...)")
     end
 end
