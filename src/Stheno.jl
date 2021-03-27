@@ -15,7 +15,6 @@ module Stheno
     using ZygoteRules
 
     import Base.Broadcast: broadcasted
-    import ChainRulesCore: rrule
 
     using AbstractGPs: AbstractGP, FiniteGP, GP
     import AbstractGPs:

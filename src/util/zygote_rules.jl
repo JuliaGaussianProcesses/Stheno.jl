@@ -34,14 +34,14 @@ LinearAlgebra.cholesky(A::HermOrSym{T, <:Diagonal{T}} where T) = cholesky(Diagon
 
 import Base.Broadcast: broadcasted
 
-function rrule(::typeof(broadcasted), ::typeof(-), x::AbstractArray)
+function ChainRulesCore.rrule(::typeof(broadcasted), ::typeof(-), x::AbstractArray)
     function broadcasted_minus_pullback(Δ)
         return (NO_FIELDS, DoesNotExist(), .-Δ)
     end
     return .-x, broadcasted_minus_pullback
 end
 
-function rrule(::typeof(broadcasted), ::typeof(exp), x::AbstractArray)
+function ChainRulesCore.rrule(::typeof(broadcasted), ::typeof(exp), x::AbstractArray)
     y = exp.(x)
     return y, Δ->(NO_FIELDS, DoesNotExist(), Δ .* y)
 end
