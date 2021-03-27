@@ -18,16 +18,6 @@ accum(A::Diagonal, B::Diagonal) = Diagonal(accum(diag(A), diag(B)))
     end
 end
 
-import LinearAlgebra: HermOrSym, diag, Diagonal
-
-diag(S::Symmetric{T, <:Diagonal{T}} where T) = S.data.diag
-Zygote._symmetric_back(Δ::Diagonal) = Δ
-
-# Diagonal matrices are always symmetric...
-LinearAlgebra.cholesky(A::HermOrSym{T, <:Diagonal{T}} where T) = cholesky(Diagonal(diag(A)))
-
-
-
 #
 # Some very specific broadcasting hacks while Zygote has crappy broadcasting.
 #
