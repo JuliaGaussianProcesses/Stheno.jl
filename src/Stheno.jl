@@ -71,6 +71,6 @@ module Stheno
         end
     end
 
-    export wrap, GP
+    export wrap, GPC
 
 end # module
