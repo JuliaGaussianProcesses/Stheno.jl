@@ -3,7 +3,7 @@
 
 Creates a multi-output GP from an `AbstractVector` of `GP`s.
 """
-function cross(fs::AbstractVector{<:AbstractGP})
+function LinearAlgebra.cross(fs::AbstractVector{<:AbstractGP})
     consistency_checks(fs)
     return CompositeGP((cross, fs), first(fs).gpc)
 end

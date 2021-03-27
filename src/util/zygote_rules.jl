@@ -2,10 +2,9 @@ using Zygote
 using Zygote: @adjoint, literal_getproperty
 import Zygote: accum
 
-import Distances: pairwise, colwise
 const dtol = 1e-12 # threshold value for precise recalculation of distances
 
-@nograd MersenneTwister, propertynames, broadcast_shape
+@nograd MersenneTwister, propertynames, Broadcast.broadcast_shape
 
 function accum(D::Diagonal{T}, B::AbstractMatrix) where {T}
     A = Matrix{Union{T, Nothing}}(undef, size(D))
@@ -28,7 +27,7 @@ diag(S::Symmetric{T, <:Diagonal{T}} where T) = S.data.diag
 Zygote._symmetric_back(Δ::Diagonal) = Δ
 
 # Diagonal matrices are always symmetric...
-cholesky(A::HermOrSym{T, <:Diagonal{T}} where T) = cholesky(Diagonal(diag(A)))
+LinearAlgebra.cholesky(A::HermOrSym{T, <:Diagonal{T}} where T) = cholesky(Diagonal(diag(A)))
 
 
 

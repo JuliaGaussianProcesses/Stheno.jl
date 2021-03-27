@@ -29,7 +29,6 @@ using Stheno: GPC
         m1, m2 = AbstractGPs.ZeroMean(), AbstractGPs.ConstMean(5)
         k1, k2 = SqExponentialKernel(), SqExponentialKernel()
         f1, f2 = wrap(GP(m1, k1), gpc), wrap(GP(m2, k2), gpc)
-        @show typeof(f1)
 
         @test mean(f1, x) == AbstractGPs._map(m1, x)
         @test mean(f2, x) == AbstractGPs._map(m2, x)
