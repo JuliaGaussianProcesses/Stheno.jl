@@ -1,5 +1,4 @@
-using AbstractGPs: MeanFunction
-using Stheno: Kernel, AV, BlockData, blocks
+using Stheno: Kernel, BlockData, blocks
 using Stheno: block_diagonal, AbstractGP
 using FiniteDifferences: j′vp
 import FiniteDifferences: to_vec
@@ -104,7 +103,12 @@ end
 
 """
     abstractgp_interface_tests(
-        f::AbstractGP, f′::AbstractGP, x0::AV, x1::AV, x2::AV, x3::AV;
+        f::AbstractGP,
+        f′::AbstractGP,
+        x0::AbstractVector,
+        x1::AbstractVector,
+        x2::AbstractVector,
+        x3::AbstractVector;
         atol=1e-9, rtol=1e-9,
     )
 
@@ -113,7 +117,12 @@ self-consistent. `x0` and `x1` must be valid inputs for `f`. `x2` and `x3` must 
 input for `f′`.
 """
 function abstractgp_interface_tests(
-    f::AbstractGP, f′::AbstractGP, x0::AV, x1::AV, x2::AV, x3::AV;
+    f::AbstractGP,
+    f′::AbstractGP,
+    x0::AbstractVector,
+    x1::AbstractVector,
+    x2::AbstractVector,
+    x3::AbstractVector;
     atol=1e-9, rtol=1e-9,
 )
     m = mean(f, x0)
