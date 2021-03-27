@@ -46,11 +46,11 @@ function cov(u::PPGP, u′::PPGP, z::AV, z′::AV)
     end
 end
 
-function cov(u::PPGP, f′::GP, z::AV, x′::AV)
+function cov(u::PPGP, f′::WrappedGP, z::AV, x′::AV)
     @assert u.z === z
     return zeros(length(z), length(x′))
 end
-function cov(f::GP, u′::PPGP, x::AV, z′::AV)
+function cov(f::WrappedGP, u′::PPGP, x::AV, z′::AV)
     @assert u′.z === z′
     return zeros(length(x), length(z′))
 end

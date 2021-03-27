@@ -10,7 +10,7 @@ also required, but only matters when composing `GP`s together.
 
 If only two arguments are provided, assume the mean to be zero everywhere:
 ```jldoctest
-julia> f = GP(Matern32Kernel(), GPC());
+julia> f = wrap(GP(Matern32Kernel()), GPC());
 
 julia> x = randn(5);
 
@@ -26,7 +26,7 @@ true
 If a `Real` is provided as the first argument, assume the mean function is constant with
 that value
 ```jldoctest
-julia> f = GP(5.0, SqExponentialKernel(), GPC());
+julia> f = wrap(GP(5.0, SEKernel()), GPC());
 
 julia> x = randn(5);
 
@@ -42,7 +42,7 @@ true
 Provide an arbitrary function to compute the mean:
 
 ```jldoctest
-julia> f = GP(x -> sin(x) + cos(x / 2), RationalQuadraticKernel(α=3.2), GPC());
+julia> f = wrap(GP(x -> sin(x) + cos(x / 2), RationalQuadraticKernel(α=3.2)), GPC());
 
 julia> x = randn(5);
 
@@ -56,20 +56,12 @@ true
 struct GP{Tm<:MeanFunction, Tk<:Kernel} <: AbstractGP
     m::Tm
     k::Tk
-    n::Int
-    gpc::GPC
-    function GP{Tm, Tk}(m::Tm, k::Tk, gpc::GPC) where {Tm, Tk}
-        gp = new{Tm, Tk}(m, k, next_index(gpc), gpc)
-        gpc.n += 1
-        return gp
-    end
 end
-GP(m::Tm, k::Tk, gpc::GPC) where {Tm<:MeanFunction, Tk<:Kernel} = GP{Tm, Tk}(m, k, gpc)
 
-GP(f, k::Kernel, gpc::GPC) = GP(CustomMean(f), k, gpc)
-GP(m::Real, k::Kernel, gpc::GPC) = GP(ConstMean(m), k, gpc)
-GP(k::Kernel, gpc::GPC) = GP(ZeroMean(), k, gpc)
-GP(k::Kernel, m, gpc::GPC) = GP(m, k, gpc)
+GP(f, k::Kernel) = GP(CustomMean(f), k)
+GP(m::Real, k::Kernel) = GP(ConstMean(m), k)
+GP(k::Kernel) = GP(ZeroMean(), k)
+GP(k::Kernel, m) = GP(m, k)
 
 mean_vector(f::GP, x::AV) = elementwise(f.m, x)
 
@@ -79,9 +71,35 @@ cov_diag(f::GP, x::AV) = kernelmatrix_diag(f.k, x)
 cov(f::GP, x::AV, x′::AV) = kernelmatrix(f.k, x, x′)
 cov_diag(f::GP, x::AV, x′::AV) = kernelmatrix_diag(f.k, x, x′)
 
-function cov(f::GP, f′::GP, x::AV, x′::AV)
+"""
+    WrappedGP{Tgp} <: AbstractGP
+
+A thin wrapper around a GP that does some book-keeping.
+"""
+struct WrappedGP{Tgp} <: AbstractGP
+    gp::Tgp
+    n::Int
+    gpc::GPC
+    function WrappedGP{Tgp}(gp::Tgp, gpc::GPC) where {Tgp<:GP}
+        wgp = new{Tgp}(gp, next_index(gpc), gpc)
+        gpc.n += 1
+        return wgp
+    end
+end
+
+wrap(gp::Tgp, gpc::GPC) where {Tgp<:GP} = WrappedGP{Tgp}(gp, gpc)
+
+mean_vector(f::WrappedGP, x::AV) = mean_vector(f.gp, x)
+
+cov(f::WrappedGP, x::AV) = cov(f.gp, x)
+cov_diag(f::WrappedGP, x::AV) = cov_diag(f.gp, x)
+
+cov(f::WrappedGP, x::AV, x′::AV) = cov(f.gp, x, x′)
+cov_diag(f::WrappedGP, x::AV, x′::AV) = cov_diag(f.gp, x, x′)
+
+function cov(f::WrappedGP, f′::WrappedGP, x::AV, x′::AV)
     return f === f′ ? cov(f, x, x′) : zeros(length(x), length(x′))
 end
-function cov_diag(f::GP, f′::GP, x::AV, x′::AV)
+function cov_diag(f::WrappedGP, f′::WrappedGP, x::AV, x′::AV)
     return f === f′ ? cov_diag(f, x, x′) : zeros(length(x))
 end

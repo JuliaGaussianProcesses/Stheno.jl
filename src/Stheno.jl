@@ -70,4 +70,6 @@ module Stheno
         end
     end
 
+    export wrap
+
 end # module

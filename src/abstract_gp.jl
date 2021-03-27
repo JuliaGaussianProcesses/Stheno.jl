@@ -43,7 +43,7 @@ length(f::FiniteGP) = length(f.x)
 Compute the mean vector of `fx`.
 
 ```jldoctest
-julia> f = GP(Matern52Kernel(), GPC());
+julia> f = wrap(GP(Matern52Kernel()), GPC());
 
 julia> x = randn(11);
 
@@ -61,7 +61,7 @@ Compute the covariance matrix of `fx`.
 ## Noise-free observations
 
 ```jldoctest cov_finitegp
-julia> f = GP(Matern52Kernel(), GPC());
+julia> f = wrap(GP(Matern52Kernel()), GPC());
 
 julia> x = randn(11);
 
@@ -104,7 +104,7 @@ cov(f::FiniteGP) = cov(f.f, f.x) + f.Σy
 Compute the cross-covariance matrix between `fx` and `gx`.
 
 ```jldoctest
-julia> f = GP(Matern32Kernel(), GPC());
+julia> f = wrap(GP(Matern32Kernel()), GPC());
 
 julia> x1 = randn(11);
 
@@ -123,7 +123,7 @@ Compute a vector of Normal distributions representing the marginals of `f` effic
 In particular, the off-diagonal elements of `cov(f(x))` are never computed.
 
 ```jldoctest
-julia> f = GP(Matern32Kernel(), GPC());
+julia> f = wrap(GP(Matern32Kernel()), GPC());
 
 julia> x = randn(11);
 
@@ -145,7 +145,7 @@ Obtain `N` independent samples from the marginals `f` using `rng`. Single-sample
 produce a `length(f)` vector. Multi-sample methods produce a `length(f)` x `N` `Matrix`.
 
 ```jldoctest
-julia> f = GP(Matern32Kernel(), GPC());
+julia> f = wrap(GP(Matern32Kernel()), GPC());
 
 julia> x = randn(11);
 
@@ -177,7 +177,7 @@ The logpdf of `y` under `f` if is `y isa AbstractVector`. logpdf of each column 
 `y isa Matrix`.
 
 ```jldoctest
-julia> f = GP(Matern32Kernel(), GPC());
+julia> f = wrap(GP(Matern32Kernel()), GPC());
 
 julia> x = randn(11);
 
@@ -207,7 +207,7 @@ The saturated Titsias Evidence LOwer Bound (ELBO) [1]. `y` are observations of `
 are pseudo-points.
 
 ```jldoctest
-julia> f = GP(Matern52Kernel(), GPC());
+julia> f = wrap(GP(Matern52Kernel()), GPC());
 
 julia> x = randn(1000);
 
@@ -235,7 +235,7 @@ The Deterministic Training Conditional (DTC) [1]. `y` are observations of `f`, a
 are pseudo-points.
 
 ```jldoctest
-julia> f = GP(Matern52Kernel(), GPC());
+julia> f = wrap(GP(Matern52Kernel()), GPC());
 
 julia> x = randn(1000);
 
