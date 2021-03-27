@@ -152,4 +152,9 @@
             @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
         end
     end
+    @timedtestset "Periodic" begin
+        f = wrap(GP(SEKernel()), GPC())
+        g = periodic(f, 2.0)
+        @test cov(g([0.0]), g([1.0])) ≈ cov(g([0.0]), g([3.0]))
+    end
 end
