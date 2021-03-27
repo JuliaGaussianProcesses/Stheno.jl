@@ -11,13 +11,6 @@ end
 accum(A::AbstractMatrix, D::Diagonal) = accum(D, A)
 accum(A::Diagonal, B::Diagonal) = Diagonal(accum(diag(A), diag(B)))
 
-@adjoint function ZygoteRules.literal_getproperty(C::Cholesky, ::Val{:factors})
-    error("@adjoint not implemented for :factors as is unsafe.")
-    return ZygoteRules.literal_getproperty(C, Val(:factors)), function(Δ)
-        error("@adjoint not implemented for :factors. (I couldn't make it work...)")
-    end
-end
-
 #
 # Some very specific broadcasting hacks while Zygote has crappy broadcasting.
 #
