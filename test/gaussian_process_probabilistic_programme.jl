@@ -72,9 +72,9 @@
             f3 = f1 + f2
         end
 
-        x0 = GPPPInput(f.f1, randn(5))
-        x1 = GPPPInput(f.f3, randn(4))
+        x0 = GPPPInput(:f1, randn(5))
+        x1 = GPPPInput(:f3, randn(4))
         cov(f(x0), f(x1))
-        
+
     end
 end

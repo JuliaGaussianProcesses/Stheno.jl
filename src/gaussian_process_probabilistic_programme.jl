@@ -13,7 +13,7 @@ const GPPP = GaussianProcessProbabilisticProgramme
 
 
 """
-struct GPPPInput{Tp<:Integer, T, Tx<:AbstractVector{T}} <: AbstractVector{Tuple{Tp, T}}
+struct GPPPInput{Tp, T, Tx<:AbstractVector{T}} <: AbstractVector{Tuple{Tp, T}}
     p::Tp
     x::Tx
 end
