@@ -25,7 +25,7 @@ module Stheno
     import Distances: pairwise, colwise
 
     using AbstractGPs: AbstractGP, GP, FiniteGP
-    import AbstractGPs: cov_diag, rand, logpdf, elbo, dtc
+    import AbstractGPs: cov_diag, rand, logpdf, elbo, dtc, mean_and_cov, mean_and_cov_diag
 
     using ZygoteRules: @adjoint
     using Zygote: @nograd
