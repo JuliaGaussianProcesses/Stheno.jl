@@ -57,6 +57,9 @@ module Stheno
     # include(joinpath("composite", "gradient.jl"))
     # include(joinpath("composite", "integrate.jl"))
 
+    # approximate inference
+    include("approximate_inference.jl")
+
     # Various stuff for convenience.
     include(joinpath("util", "model.jl"))
     include(joinpath("util", "plotting.jl"))

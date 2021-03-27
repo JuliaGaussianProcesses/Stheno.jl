@@ -1,6 +1,6 @@
 # Stheno
 
-[![Build Status](https://travis-ci.org/willtebbutt/Stheno.jl.svg?branch=master)](https://travis-ci.org/willtebbutt/Stheno.jl)
+[![Build Status](https://github.com/willtebbutt/Stheno.jl/workflows/CI/badge.svg)](https://github.com/willtebbutt/Stheno.jl/actions)
 [![codecov.io](http://codecov.io/github/willtebbutt/Stheno.jl/coverage.svg?branch=master)](http://codecov.io/github/willtebbutt/Stheno.jl?branch=master)
 [![](https://img.shields.io/badge/docs-blue.svg)](https://willtebbutt.github.io/Stheno.jl/dev)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
@@ -14,7 +14,9 @@ Please open issues liberally -- if there's anything that's unclear or doesn't wo
 
 __Installation__ - `] add Stheno`.
 
+[JuliaCon 2019 Talk](https://www.youtube.com/watch?v=OO3BBkGEMV8)
 
+[Go faster with TemporalGPs.jl](https://github.com/willtebbutt/TemporalGPs.jl/)
 
 ## A Couple of Examples
 
