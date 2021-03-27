@@ -17,10 +17,14 @@
         f = wrap(GP(Matern32Kernel()), GPC())
         fx = f(x)
         fxu = SparseFiniteGP(f(x), f(xu))
+        @test length(fxu) == length(fx)
         @test mean(fxu) == mean(fx)
         @test rand(MersenneTwister(12345), fxu) == rand(MersenneTwister(12345), fx)
         @test_throws ErrorException(covariance_error) cov(fxu)
         @test cov(fxu.fobs) == cov(fx)
+
+        @test mean.(marginals(fxu)) == mean(fxu)
+        @test var.(marginals(fxu)) == diag(cov(fxu.fobs))
     end
 
     @timedtestset "SparseFiniteGP inference" begin
