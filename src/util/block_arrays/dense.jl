@@ -1,10 +1,6 @@
 # This file contains a number of additions to BlockArrays.jl. These are completely
 # independent of Stheno.jl, and will (hopefully) move over to BlockArrays.jl at some point.
 
-import Base: +, *, size, getindex, eltype, copy, \, vec, getproperty, zero
-import LinearAlgebra: UpperTriangular, LowerTriangular, logdet, Symmetric, transpose,
-    adjoint, AdjOrTrans, AdjOrTransAbsMat, cholesky!, logdet, ldiv!, mul!, logabsdet
-
 """
     blocksizes(X::AbstractBlockVecOrMat)
     blocksizes(X::AbstractArray, d::Int)
