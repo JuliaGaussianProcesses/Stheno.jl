@@ -89,17 +89,6 @@ Base.:-(A::BlockDiagonal) = block_diagonal([-a for a in A.blocks.diag])
 
 
 #
-# tr_At_A
-#
-
-tr_At_A(A::BlockDiagonal) = sum(tr_At_A.(A.blocks.diag))
-
-ZygoteRules.@adjoint function tr_At_A(A::BlockDiagonal)
-    return tr_At_A(A), Δ::Real->(block_diagonal(2Δ .* A.blocks.diag),)
-end
-
-
-#
 # BlockDiagonal multiplication
 #
 

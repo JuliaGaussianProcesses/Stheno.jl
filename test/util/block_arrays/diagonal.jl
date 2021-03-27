@@ -1,4 +1,4 @@
-using Stheno: block_diagonal, BlockDiagonal, tr_At_A, blocksizes
+using Stheno: block_diagonal, BlockDiagonal, blocksizes
 
 function general_BlockDiagonal_tests(rng, blocks)
     d = block_diagonal(blocks)
@@ -201,21 +201,6 @@ end
         S_diag, back_diag = Zygote.pullback(Symmetric, A)
         S_dens, back_dens = Zygote.pullback(Symmetric, Matrix(A))
         @test S_diag ≈ S_dens
-    end
-    @timedtestset "tr_At_A" begin
-        rng, Ps = MersenneTwister(123456), [4, 5, 6]
-        A = block_diagonal([randn(rng, P, P) for P in Ps])
-
-        @test tr_At_A(A) ≈ tr_At_A(Matrix(A))
-
-        b_diag, back_diag = Zygote.pullback(tr_At_A, A)
-        b_dens, back_dens = Zygote.pullback(tr_At_A, Matrix(A))
-        @test b_diag ≈ b_dens
-
-        b̄ = randn(rng)
-        Ā_diag, Ā_dens = first(back_diag(b̄)), first(back_dens(b̄))
-        @test Matrix(Ā_diag) ≈ Ā_dens
-        @test Ā_diag isa BlockDiagonal
     end
     @timedtestset "BlockDiagonal * BlockDiagonal" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]

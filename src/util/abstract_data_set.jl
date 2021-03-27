@@ -1,7 +1,4 @@
-import Base: size, eachindex, getindex, view, ==, eltype, convert, zero, getproperty
-import Zygote: literal_getproperty, accum
-
-################################ Fancy block data set type #################################
+import Base: size, eachindex, getindex, view, ==, eltype
 
 """
     BlockData{T, TV<:AbstractVector{T}, TX<:AbstractVector{TV}} <: AbstractVector{T}
