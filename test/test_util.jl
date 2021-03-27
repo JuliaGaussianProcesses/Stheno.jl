@@ -1,4 +1,4 @@
-using Stheno: Kernel, BlockData, blocks
+using Stheno: BlockData, blocks
 using Stheno: block_diagonal, AbstractGP
 using FiniteDifferences: j′vp
 import FiniteDifferences: to_vec
