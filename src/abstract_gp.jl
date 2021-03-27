@@ -43,7 +43,7 @@ length(f::FiniteGP) = length(f.x)
 Compute the mean vector of `fx`.
 
 ```jldoctest
-julia> f = GP(Matern52(), GPC());
+julia> f = GP(Matern52Kernel(), GPC());
 
 julia> x = randn(11);
 
@@ -61,20 +61,20 @@ Compute the covariance matrix of `fx`.
 ## Noise-free observations
 
 ```jldoctest cov_finitegp
-julia> f = GP(Matern52(), GPC());
+julia> f = GP(Matern52Kernel(), GPC());
 
 julia> x = randn(11);
 
 julia> # Noise-free
 
-julia> cov(f(x)) == Stheno.pw(Matern52(), x)
+julia> cov(f(x)) == kernelmatrix(Matern52Kernel(), x)
 true
 ```
 
 ## Isotropic observation noise
 
 ```jldoctest cov_finitegp
-julia> cov(f(x, 0.1)) == Stheno.pw(Matern52(), x) + 0.1 * I
+julia> cov(f(x, 0.1)) == kernelmatrix(Matern52Kernel(), x) + 0.1 * I
 true
 ```
 
@@ -83,7 +83,7 @@ true
 ```jldoctest cov_finitegp
 julia> s = rand(11);
 
-julia> cov(f(x, s)) == Stheno.pw(Matern52(), x) + Diagonal(s)
+julia> cov(f(x, s)) == kernelmatrix(Matern52Kernel(), x) + Diagonal(s)
 true
 ```
 
@@ -92,7 +92,7 @@ true
 ```jldoctest cov_finitegp
 julia> A = randn(11, 11); S = A'A;
 
-julia> cov(f(x, S)) == Stheno.pw(Matern52(), x) + S
+julia> cov(f(x, S)) == kernelmatrix(Matern52Kernel(), x) + S
 true
 ```
 """
@@ -104,13 +104,13 @@ cov(f::FiniteGP) = cov(f.f, f.x) + f.Σy
 Compute the cross-covariance matrix between `fx` and `gx`.
 
 ```jldoctest
-julia> f = GP(Matern32(), GPC());
+julia> f = GP(Matern32Kernel(), GPC());
 
 julia> x1 = randn(11);
 
 julia> x2 = randn(13);
 
-julia> cov(f(x1), f(x2)) == pw(Matern32(), x1, x2)
+julia> cov(f(x1), f(x2)) == kernelmatrix(Matern32Kernel(), x1, x2)
 true
 ```
 """
@@ -123,7 +123,7 @@ Compute a vector of Normal distributions representing the marginals of `f` effic
 In particular, the off-diagonal elements of `cov(f(x))` are never computed.
 
 ```jldoctest
-julia> f = GP(Matern32(), GPC());
+julia> f = GP(Matern32Kernel(), GPC());
 
 julia> x = randn(11);
 
@@ -145,7 +145,7 @@ Obtain `N` independent samples from the marginals `f` using `rng`. Single-sample
 produce a `length(f)` vector. Multi-sample methods produce a `length(f)` x `N` `Matrix`.
 
 ```jldoctest
-julia> f = GP(Matern32(), GPC());
+julia> f = GP(Matern32Kernel(), GPC());
 
 julia> x = randn(11);
 
@@ -177,7 +177,7 @@ The logpdf of `y` under `f` if is `y isa AbstractVector`. logpdf of each column 
 `y isa Matrix`.
 
 ```jldoctest
-julia> f = GP(Matern32(), GPC());
+julia> f = GP(Matern32Kernel(), GPC());
 
 julia> x = randn(11);
 
@@ -207,7 +207,7 @@ The saturated Titsias Evidence LOwer Bound (ELBO) [1]. `y` are observations of `
 are pseudo-points.
 
 ```jldoctest
-julia> f = GP(Matern52(), GPC());
+julia> f = GP(Matern52Kernel(), GPC());
 
 julia> x = randn(1000);
 
@@ -235,7 +235,7 @@ The Deterministic Training Conditional (DTC) [1]. `y` are observations of `f`, a
 are pseudo-points.
 
 ```jldoctest
-julia> f = GP(Matern52(), GPC());
+julia> f = GP(Matern52Kernel(), GPC());
 
 julia> x = randn(1000);
 
@@ -253,10 +253,24 @@ Artificial Intelligence and Statistics. 2003
 """
 dtc(f::FiniteGP, y::AV{<:Real}, u::FiniteGP) = first(_compute_intermediates(f, y, u))
 
+# Small bit of indirection to work around a cholesky-related bug whereby the interaction
+# between `FillArrays` and `Diagonal` and `Cholesky` causes problems.
+# Copied over from AbstractGPs while refactoring Stheno.
+_cholesky(X) = cholesky(X)
+function _cholesky(X::Diagonal{<:Real, <:FillArrays.AbstractFill})
+    return cholesky(Diagonal(collect(diag(X))))
+end
+
+# TYPE PIRACY!
+LinearAlgebra.cholesky(D::Diagonal{<:Real, <:Fill}) = _cholesky(D)
+
+_symmetric(X) = Symmetric(X)
+_symmetric(X::Diagonal) = X
+
 # Factor out computations common to the `elbo` and `dtc`.
 function _compute_intermediates(f::FiniteGP, y::AV{<:Real}, u::FiniteGP)
     consistency_check(f, y, u)
-    chol_Σy = cholesky(f.Σy)
+    chol_Σy = _cholesky(f.Σy)
 
     A = cholesky(Symmetric(cov(u))).U' \ (chol_Σy.U' \ cov(f, u))'
     Λ_ε = cholesky(Symmetric(A * A' + I))

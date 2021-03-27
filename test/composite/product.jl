@@ -1,15 +1,14 @@
-using Stheno: GPC, EQ
-
 @timedtestset "product" begin
     @timedtestset "GP mul errors" begin
         gpc = GPC()
-        f1, f2 = GP(EQ(), gpc), GP(EQ(), gpc)
+        f1 = GP(SqExponentialKernel(), gpc)
+        f2 = GP(SqExponentialKernel(), gpc)
         @test_throws ArgumentError f1 * f2
     end
     @timedtestset "multiply by constant" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
-        g1, c, c′ = GP(1, EQ(), GPC()), -4.3, 2.1
+        g1, c, c′ = GP(1, SqExponentialKernel(), GPC()), -4.3, 2.1
         g2, g2′ = c * g1, g1 * c′
         g3, g3′ = c * g2, g2′ * c′
         g4, g4′ = c * g3, g3′ * c′
@@ -51,7 +50,7 @@ using Stheno: GPC, EQ
             x2, x3 = randn(rng, Q), randn(rng, P)
 
             gpc = GPC()
-            f1 = GP(cos, EQ(), gpc)
+            f1 = GP(cos, SqExponentialKernel(), gpc)
             f2 = 5 * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
@@ -60,7 +59,7 @@ using Stheno: GPC, EQ
                 MersenneTwister(123456),
                 [2.3],
                 θ->begin
-                    f = GP(0.5, EQ(), GPC())
+                    f = GP(0.5, SqExponentialKernel(), GPC())
                     return θ[1] * f, f
                 end,
                 X, X′,
@@ -70,7 +69,7 @@ using Stheno: GPC, EQ
     @timedtestset "multiply by function" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
-        g1, f, f′ = GP(1, EQ(), GPC()), x->sum(sin, x), x->sum(cos, x)
+        g1, f, f′ = GP(1, SqExponentialKernel(), GPC()), x->sum(sin, x), x->sum(cos, x)
         g2, g2′ = f * g1, g1 * f′
         g3, g3′ = f * g2, g2′ * f′
         g4, g4′ = f * g3, g3′ * f′
@@ -118,7 +117,7 @@ using Stheno: GPC, EQ
             x2, x3 = randn(rng, Q), randn(rng, P)
 
             gpc = GPC()
-            f1 = GP(cos, EQ(), gpc)
+            f1 = GP(cos, SqExponentialKernel(), gpc)
             f2 = sin * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
@@ -127,7 +126,7 @@ using Stheno: GPC, EQ
                 MersenneTwister(123456),
                 [2.3, 1.3],
                 θ->begin
-                    f = GP(θ[2], EQ(), GPC())
+                    f = GP(θ[2], SqExponentialKernel(), GPC())
                     return (x->θ[1] * x) * f, f
                 end,
                 collect(range(-2.0, 2.0; length=N)),

@@ -4,7 +4,7 @@ Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
 using Stheno, Random, Plots, Statistics
-using Stheno: @model, EQ, Noise
+using Stheno: @model, SEKernel, Noise
 
 ###########################  Define and inspect our model  ###########################
 
@@ -22,7 +22,7 @@ bias is known to be 3.5. The model below specifies a model for this scenario.
 @model function model()
 
     # Define a smooth latent process that we wish to infer.
-    f = GP(EQ())
+    f = GP(SEKernel())
 
     # Define the two noise processes described.
     noise1 = sqrt(1e-2) * GP(Noise()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))

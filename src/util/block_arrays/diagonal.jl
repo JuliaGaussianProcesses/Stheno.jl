@@ -8,9 +8,6 @@ const BlockDiagonal{T, TM} = BlockMatrix{T, <:Diagonal{TM}} where {TM <: Abstrac
 
 block_diagonal(vs::AbstractVector{<:AbstractMatrix}) = mortar(Diagonal(vs))
 
-function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T}
-    return zeros(T, size(D.diag[r], 1), size(D.diag[c], 2))
-end
 
 
 #

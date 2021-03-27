@@ -40,8 +40,8 @@ rng = MersenneTwister(123456);
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 @model function model()
-    f₁ = GP(randn(rng), EQ())
-    f₂ = GP(EQ())
+    f₁ = GP(randn(rng), SEKernel())
+    f₂ = GP(SEKernel())
     f₃ = f₁ + f₂
     return f₁, f₂, f₃
 end
@@ -137,7 +137,7 @@ rng = MersenneTwister(123456);
 @model function model()
 
     # Define a smooth latent process that we wish to infer.
-    f = GP(EQ())
+    f = GP(SEKernel())
 
     # Define the two noise processes described.
     noise1 = sqrt(1e-2) * GP(Noise()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))

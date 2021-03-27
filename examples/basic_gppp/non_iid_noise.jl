@@ -11,7 +11,7 @@ using Stheno: @model, Noise
 #=
 We wish to perform inference in some latent process `f`, but it is corrupted by both some
 iid noise, and some non-iid noise. Specifically, ω is some periodic behaviour in which we
-are uninterested. Similarly, g is also drawn from a GP with an EQ kernel, but with a much
+are uninterested. Similarly, g is also drawn from a GP with an SEKernel kernel, but with a much
 shorter length-scale. We wish to use observations of
 `f + ω + g + GP(Noise(0.1))` to infer `f`. In this context, `ω + g + GP(Noise(0.1))` is
 regarded as our "noise process".
@@ -22,13 +22,13 @@ function rather than `model` to see the results of this. Note the example of seq
 conditioning.
 =#
 @model function model()
-    f = GP(EQ())
-    ω = periodic(GP(EQ()), 1)
+    f = GP(SEKernel())
+    ω = periodic(GP(SEKernel()), 1)
     return f, ω, ω + f, ω + f + GP(0.1 * Noise())
 end
 @model function model_identifiable()
-    f = GP(EQ())
-    t = periodic(GP(EQ()), 1.0)
+    f = GP(SEKernel())
+    t = periodic(GP(SEKernel()), 1.0)
     ω = t | (t([0])←[0.0])
     return f, ω, ω + f, ω + f + GP(0.001 * Noise())
 end

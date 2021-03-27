@@ -1,38 +1,6 @@
 import Base: size, eachindex, getindex, view, ==, eltype, convert, zero, getproperty
 import Distances: pairwise
 import Zygote: literal_getproperty, accum
-export ColVecs
-
-"""
-    ColVecs{T, TX<:AbstractMatrix}
-
-A lightweight box for an `AbstractMatrix` to make it behave like a vector of vectors.
-"""
-struct ColVecs{T, TX<:AbstractMatrix{T}} <: AbstractVector{Vector{T}}
-    X::TX
-    ColVecs(X::TX) where {T, TX<:AbstractMatrix{T}} = new{T, TX}(X)
-end
-
-function rrule(::typeof(ColVecs), X::AbstractMatrix)
-    back(Δ::Composite) = (NO_FIELDS, Δ.X,)
-    back(Δ::AbstractMatrix) = (NO_FIELDS, Δ,)
-    function back(Δ::AbstractVector{<:AbstractVector{<:Real}})
-        throw(error("In slow method"))
-    end
-    return ColVecs(X), back
-end
-
-==(D1::ColVecs, D2::ColVecs) = D1.X == D2.X
-size(D::ColVecs) = (size(D.X, 2),)
-getindex(D::ColVecs, n::Int) = D.X[:, n]
-getindex(D::ColVecs, n::CartesianIndex{1}) = getindex(D, n[1])
-getindex(D::ColVecs, n) = ColVecs(D.X[:, n])
-view(D::ColVecs, n::Int) = view(D.X, :, n)
-view(D::ColVecs, n) = ColVecs(view(D.X, :, n))
-eltype(D::ColVecs{T}) where T = Vector{T}
-zero(D::ColVecs) = ColVecs(zero(D.X))
-
-
 
 ################################ Fancy block data set type #################################
 

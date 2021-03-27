@@ -1,4 +1,4 @@
-using Stheno: MeanFunction, Kernel, AV, pairwise, ew, pw, BlockData, blocks
+using Stheno: MeanFunction, Kernel, AV, pairwise, elementwise, BlockData, blocks
 using Stheno: block_diagonal, AbstractGP
 using FiniteDifferences: j′vp
 import FiniteDifferences: to_vec
@@ -56,6 +56,8 @@ end
 
 Base.zero(d::Dict) = Dict([(key, zero(val)) for (key, val) in d])
 Base.zero(x::Array) = zero.(x)
+Base.zero(x::SubArray) = zero.(x)
+Base.zero(x::ColVecs) = ColVecs(zero(x.X))
 
 # My version of isapprox
 function fd_isapprox(x_ad::Nothing, x_fd, rtol, atol)
@@ -105,8 +107,8 @@ end
 Test _very_ basic consistency properties of the mean function `m`.
 """
 function mean_function_tests(m::MeanFunction, x::AbstractVector)
-    @test ew(m, x) isa AbstractVector
-    @test length(ew(m, x)) == length(x)
+    @test elementwise(m, x) isa AbstractVector
+    @test length(elementwise(m, x)) == length(x)
 end
 
 """
@@ -120,15 +122,15 @@ function cross_kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     @assert length(x0) ≠ length(x2)
 
     # Check that elementwise basically works.
-    @test ew(k, x0, x1) isa AbstractVector
-    @test length(ew(k, x0, x1)) == length(x0)
+    @test kernelmatrix_diag(k, x0, x1) isa AbstractVector
+    @test length(kernelmatrix_diag(k, x0, x1)) == length(x0)
 
     # Check that pairwise basically works.
-    @test pw(k, x0, x2) isa AbstractMatrix
-    @test size(pw(k, x0, x2)) == (length(x0), length(x2))
+    @test kernelmatrix(k, x0, x2) isa AbstractMatrix
+    @test size(kernelmatrix(k, x0, x2)) == (length(x0), length(x2))
 
     # Check that elementwise is consistent with pairwise.
-    @test ew(k, x0, x1) ≈ diag(pw(k, x0, x1)) atol=atol
+    @test kernelmatrix_diag(k, x0, x1) ≈ diag(kernelmatrix(k, x0, x1)) atol=atol
 end
 
 """
@@ -145,27 +147,27 @@ function kernel_tests(k::Kernel, x0::AV, x1::AV, x2::AV; atol=1e-9)
     cross_kernel_tests(k, x0, x1, x2)
 
     # Check additional binary elementwise properties for kernels.
-    @test ew(k, x0, x1) ≈ ew(k, x1, x0)
-    @test pw(k, x0, x2) ≈ pw(k, x2, x0)' atol=atol
+    @test kernelmatrix_diag(k, x0, x1) ≈ kernelmatrix_diag(k, x1, x0)
+    @test kernelmatrix(k, x0, x2) ≈ kernelmatrix(k, x2, x0)' atol=atol
 
     # Check that unary elementwise basically works.
-    @test ew(k, x0) isa AbstractVector
-    @test length(ew(k, x0)) == length(x0)
+    @test kernelmatrix_diag(k, x0) isa AbstractVector
+    @test length(kernelmatrix_diag(k, x0)) == length(x0)
 
     # Check that unary pairwise basically works.
-    @test pw(k, x0) isa AbstractMatrix
-    @test size(pw(k, x0)) == (length(x0), length(x0))
-    @test pw(k, x0) ≈ pw(k, x0)' atol=atol
+    @test kernelmatrix(k, x0) isa AbstractMatrix
+    @test size(kernelmatrix(k, x0)) == (length(x0), length(x0))
+    @test kernelmatrix(k, x0) ≈ kernelmatrix(k, x0)' atol=atol
 
     # Check that unary elementwise is consistent with unary pairwise.
-    @test ew(k, x0) ≈ diag(pw(k, x0)) atol=atol
+    @test kernelmatrix_diag(k, x0) ≈ diag(kernelmatrix(k, x0)) atol=atol
 
     # Check that unary pairwise produces a positive definite matrix (approximately).
-    @test all(eigvals(Matrix(pw(k, x0))) .> -atol)
+    @test all(eigvals(Matrix(kernelmatrix(k, x0))) .> -atol)
 
     # Check that unary elementwise / pairwise are consistent with the binary versions.
-    @test ew(k, x0) ≈ ew(k, x0, x0) atol=atol
-    @test pw(k, x0) ≈ pw(k, x0, x0) atol=atol
+    @test kernelmatrix_diag(k, x0) ≈ kernelmatrix_diag(k, x0, x0) atol=atol
+    @test kernelmatrix(k, x0) ≈ kernelmatrix(k, x0, x0) atol=atol
 end
 
 """
@@ -185,7 +187,7 @@ function differentiable_mean_function_tests(
 
     # Check adjoint.
     @assert length(ȳ) == length(x)
-    adjoint_test(x->ew(m, x), ȳ, x; rtol=rtol, atol=atol)
+    adjoint_test(x->elementwise(m, x), ȳ, x; rtol=rtol, atol=atol)
 end
 function differentiable_mean_function_tests(
     m::MeanFunction,
@@ -198,7 +200,7 @@ function differentiable_mean_function_tests(
     mean_function_tests(m, x)
 
     @assert length(ȳ) == length(x)
-    adjoint_test(X->ew(m, ColVecs(X)), ȳ, x.X; rtol=rtol, atol=atol)  
+    adjoint_test(X->elementwise(m, ColVecs(X)), ȳ, x.X; rtol=rtol, atol=atol)  
 end
 function differentiable_mean_function_tests(
     rng::AbstractRNG,
@@ -248,10 +250,10 @@ function differentiable_cross_kernel_tests(
     @assert size(Ȳ) == (length(x0), length(x2))
 
     # Binary elementwise.
-    adjoint_test((x, x′)->ew(k, x, x′), ȳ, x0, x1; rtol=rtol, atol=atol)
+    adjoint_test((x, x′)->kernelmatrix_diag(k, x, x′), ȳ, x0, x1; rtol=rtol, atol=atol)
 
     # Binary pairwise.
-    adjoint_test((x, x′)->pw(k, x, x′), Ȳ, x0, x2; rtol=rtol, atol=atol)
+    adjoint_test((x, x′)->kernelmatrix(k, x, x′), Ȳ, x0, x2; rtol=rtol, atol=atol)
 end
 function differentiable_cross_kernel_tests(
     rng::AbstractRNG,
@@ -306,10 +308,10 @@ function differentiable_kernel_tests(
     differentiable_cross_kernel_tests(k, ȳ, Ȳ, x0, x1, x2; rtol=rtol, atol=atol)
 
     # Unary elementwise tests.
-    adjoint_test(x->ew(k, x), ȳ, x0; rtol=rtol, atol=atol)
+    adjoint_test(x->kernelmatrix_diag(k, x), ȳ, x0; rtol=rtol, atol=atol)
 
     # Unary pairwise test.
-    adjoint_test(x->pw(k, x), Ȳ_sq, x0; rtol=rtol, atol=atol)
+    adjoint_test(x->kernelmatrix(k, x), Ȳ_sq, x0; rtol=rtol, atol=atol)
 end
 function differentiable_kernel_tests(
     rng::AbstractRNG,

@@ -1,5 +1,4 @@
-using Stheno: FiniteGP, GPC, pw, ConstMean, GP
-using Stheno: EQ, Exp, Linear, Noise, PerEQ, block_diagonal, tr_Cf_invΣy
+using Stheno: FiniteGP, ConstMean, block_diagonal, tr_Cf_invΣy
 using Distributions: MvNormal
 
 _rng() = MersenneTwister(123456)
@@ -13,7 +12,7 @@ end
     @testset "statistics" begin
         rng, N, N′ = MersenneTwister(123456), 1, 9
         x, x′, Σy, Σy′ = randn(rng, N), randn(rng, N′), zeros(N, N), zeros(N′, N′)
-        f = GP(sin, EQ(), GPC())
+        f = GP(sin, SqExponentialKernel(), GPC())
         fx, fx′ = FiniteGP(f, x, Σy), FiniteGP(f, x′, Σy′)
 
         @test mean(fx) == mean_vector(f, x)
@@ -27,8 +26,8 @@ end
         rng, N, D = MersenneTwister(123456), 10, 2
         X, x, Σy = ColVecs(randn(rng, D, N)), randn(rng, N), zeros(N, N)
         Σy = generate_noise_matrix(rng, N)
-        fX = FiniteGP(GP(1, EQ(), GPC()), X, Σy)
-        fx = FiniteGP(GP(1, EQ(), GPC()), x, Σy)
+        fX = FiniteGP(GP(1, SqExponentialKernel(), GPC()), X, Σy)
+        fx = FiniteGP(GP(1, SqExponentialKernel(), GPC()), x, Σy)
 
         # Check that single-GP samples have the correct dimensions.
         @test length(rand(rng, fX)) == length(X)
@@ -40,7 +39,7 @@ end
     @testset "rand (statistical)" begin
         rng, N, D, μ0, S = MersenneTwister(123456), 10, 2, 1, 100_000
         X, Σy = ColVecs(randn(rng, D, N)), 1e-12
-        f = FiniteGP(GP(1, EQ(), GPC()), X, Σy)
+        f = FiniteGP(GP(1, SqExponentialKernel(), GPC()), X, Σy)
 
         # Check mean + covariance estimates approximately converge for single-GP sampling.
         f̂ = rand(rng, f, S)
@@ -56,7 +55,10 @@ end
 
         # Check that the gradient w.r.t. the samples is correct (single-sample).
         adjoint_test(
-            x->rand(MersenneTwister(123456), FiniteGP(GP(sin, EQ(), GPC()), x, Σy)),
+            x->rand(
+                MersenneTwister(123456),
+                FiniteGP(GP(sin, SqExponentialKernel(), GPC()), x, Σy),
+            ),
             randn(rng, N),
             x;
             atol=1e-9, rtol=1e-9,
@@ -64,7 +66,11 @@ end
 
         # Check that the gradient w.r.t. the samples is correct (multisample).
         adjoint_test(
-            x->rand(MersenneTwister(123456), FiniteGP(GP(sin, EQ(), GPC()), x, Σy), S),
+            x->rand(
+                MersenneTwister(123456),
+                FiniteGP(GP(sin, SqExponentialKernel(), GPC()), x, Σy),
+                S,
+            ),
             randn(rng, N, S),
             x;
             atol=1e-9, rtol=1e-9,
@@ -78,7 +84,7 @@ end
     #         A = randn(rng, N, N - 2)
     #         adjoint_test(
     #             (x, A)->begin
-    #                 f = GP(sin, EQ(), GPC())
+    #                 f = GP(sin, SqExponentialKernel(), GPC())
     #                 Σy = _to_psd(A)
     #                 C = cholesky(Σy)
     #                 return tr_Cf_invΣy(FiniteGP(f, x, Σy), Σy, C)
@@ -91,7 +97,7 @@ end
     #         a = 0.01 .* randn(rng, N)
     #         adjoint_test(
     #             (x, a)->begin
-    #                 f = GP(sin, EQ(), GPC())
+    #                 f = GP(sin, SqExponentialKernel(), GPC())
     #                 Σy = Diagonal(exp.(a .+ 1))
     #                 C = cholesky(Σy)
     #                 return tr_Cf_invΣy(FiniteGP(f, x, Σy), Σy, C)
@@ -106,7 +112,7 @@ end
     #     #     Nx = length(x)
     #     #     adjoint_test(
     #     #         (x, A1, A2)->begin
-    #     #             f = GP(sin, EQ(), GPC())
+    #     #             f = GP(sin, SqExponentialKernel(), GPC())
     #     #             Σ1, Σ2 = _to_psd(A1), _to_psd(A2)
     #     #             Σy = block_diagonal([Σ1, Σ2])
     #     #             C = cholesky(Σy)
@@ -120,7 +126,7 @@ end
     @testset "logpdf / elbo / dtc" begin
         rng, N, S, σ, gpc = MersenneTwister(123456), 10, 11, 1e-1, GPC()
         x = collect(range(-3.0, stop=3.0, length=N))
-        f = GP(1, EQ(), gpc)
+        f = GP(1, SqExponentialKernel(), gpc)
         fx, y = FiniteGP(f, x, 0), FiniteGP(f, x, σ^2)
         ŷ = rand(rng, y)
 
@@ -200,7 +206,7 @@ end
         rng = MersenneTwister(123456)
         x = randn(rng, T, 123)
         z = randn(rng, T, 13)
-        f = GP(T(0), EQ(), GPC())
+        f = GP(T(0), SqExponentialKernel(), GPC())
 
         fx = f(x, T(0.1))
         u = f(z, T(1e-4))
@@ -273,10 +279,10 @@ end
 #     σs = log.([1e-1, 1e0, 1e1])
 #     for (k, name, atol, rtol) in vcat(
 #         [
-#             (EQ(), "EQ", 1e-6, 1e-6),
-#             (Linear(), "Linear", 1e-6, 1e-6),
-#             (PerEQ(), "PerEQ", 5e-5, 1e-8),
-#             (Exp(), "Exp", 1e-6, 1e-6),
+#             (SqExponentialKernel(), "SqExponentialKernel", 1e-6, 1e-6),
+#             (LinearKernel(), "Linear", 1e-6, 1e-6),
+#             (PerSqExponentialKernel(), "PerSqExponentialKernel", 5e-5, 1e-8),
+#             (ExponentialKernel(), "Exp", 1e-6, 1e-6),
 #         ],
 #         [(
 #             k(α=α, β=β, l=l), 
@@ -284,7 +290,7 @@ end
 #             1e-6,
 #             1e-6,
 #         )
-#             for (k, k_name) in ((EQ, "EQ"), (Linear, "linear"), (Matern12, "exp"))
+#             for (k, k_name) in ((SqExponentialKernel, "SqExponentialKernel"), (Linear, "linear"), (Matern12, "exp"))
 #             for α in (nothing, randn(rng))
 #             for β in (nothing, exp(randn(rng)))
 #             for l in (nothing, randn(rng))
@@ -305,7 +311,7 @@ end
 #     S = block_diagonal(Ss)
 #     Smat = Matrix(S)
 
-#     f = GP(cos, EQ(), GPC())
+#     f = GP(cos, SqExponentialKernel(), GPC())
 #     y = rand(FiniteGP(f, x, S))
 
 #     @test logpdf(FiniteGP(f, x, S), y) ≈ logpdf(FiniteGP(f, x, Smat), y)

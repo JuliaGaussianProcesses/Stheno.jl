@@ -1,13 +1,13 @@
-using Stheno: GPC, optimal_q, PseudoObs
+using Stheno: optimal_q, PseudoObs
 
 # Test Titsias implementation by checking that it (approximately) recovers exact inference
 # when M = N and Z = X.
-@timedtestset "Titsias" begin
+@timedtestset "approximate_conditioning" begin
     @timedtestset "optimal_q (single conditioning)" begin
         @timedtestset "σ²" begin
             rng, N, σ², gpc = MersenneTwister(123456), 10, 1e-1, GPC()
             x = collect(range(-3.0, 3.0, length=N))
-            f = GP(sin, EQ(), gpc)
+            f = GP(sin, SqExponentialKernel(), gpc)
 
             for σ² in [1e-2, 1e-1, 1e0, 1e1]
                 @timedtestset "σ² = $σ²" begin
@@ -28,7 +28,7 @@ using Stheno: GPC, optimal_q, PseudoObs
         @timedtestset "Diagonal" begin
             rng, N, gpc = MersenneTwister(123456), 11, GPC()
             x = collect(range(-3.0, 3.0, length=N))
-            f = GP(sin, EQ(), gpc)
+            f = GP(sin, SqExponentialKernel(), gpc)
             Σ = Diagonal(exp.(0.1 * randn(rng, N)) .+ 1)
             y = rand(rng, f(x, Σ))
 
@@ -45,7 +45,7 @@ using Stheno: GPC, optimal_q, PseudoObs
         @timedtestset "Dense" begin
             rng, N, gpc = MersenneTwister(123456), 10, GPC()
             x = collect(range(-3.0, 3.0, length=N))
-            f = GP(sin, EQ(), gpc)
+            f = GP(sin, SqExponentialKernel(), gpc)
             A = 0.1 * randn(rng, N, N)
             Σ = Symmetric(A * A' + I)
             y = rand(rng, f(x, Σ))
@@ -68,7 +68,7 @@ using Stheno: GPC, optimal_q, PseudoObs
         idx_1, idx_2 = idx, setdiff(1:length(xx′), idx)
         x, x′ = xx′[idx_1], xx′[idx_2]
 
-        f = GP(sin, EQ(), gpc)
+        f = GP(sin, SqExponentialKernel(), gpc)
         y, y′ = rand(rng, [f(x, σ²), f(x′, σ²)])
 
         # Compute approximate posterior suff. stats.
@@ -106,7 +106,7 @@ using Stheno: GPC, optimal_q, PseudoObs
         z = randn(rng, M)
 
         # Generate toy problem.
-        f = GP(sin, EQ(), gpc)
+        f = GP(sin, SqExponentialKernel(), gpc)
         y = rand(f(x, σ²))
 
         # Generate approximate posterior
@@ -128,7 +128,7 @@ using Stheno: GPC, optimal_q, PseudoObs
         z = x
 
         # Generate toy problem.
-        f = GP(sin, EQ(), gpc)
+        f = GP(sin, SqExponentialKernel(), gpc)
         y = rand(f(x, σ²))
 
         # Exact conditioning.
@@ -153,12 +153,12 @@ using Stheno: GPC, optimal_q, PseudoObs
                 # x_obs = collect(range(-5.0, 5.0; length=N_obs))
                 # z_obs = collect(range(-5.0, 5.0; length=M_obs))
                 # A, B = randn(rng, N_obs, N_obs), randn(rng, M_obs, M_obs)
-                # y = rand(rng, (2.3 * GP(cos, EQ(l=0.5), GPC()))(x_obs, _to_psd(A)))
+                # y = rand(rng, (2.3 * GP(cos, SqExponentialKernel(l=0.5), GPC()))(x_obs, _to_psd(A)))
                 # standard_1D_tests(
                 #     MersenneTwister(123456),
                 #     Dict(:l=>0.5, :σ=>2.3, :z=>z_obs, :x=>x_obs, :A=>A, :B=>B, :y=>y),
                 #     θ->begin
-                #         f = θ[:σ] * GP(cos, EQ(l=θ[:l]), GPC())
+                #         f = θ[:σ] * GP(cos, SqExponentialKernel(l=θ[:l]), GPC())
                 #         u = f(θ[:z], _to_psd(θ[:B]))
                 #         f′ = f | PseudoPoints(f(θ[:x], _to_psd(θ[:A]))←θ[:y], u)
                 #         return f′, f′
@@ -187,7 +187,7 @@ using Stheno: GPC, optimal_q, PseudoObs
     #     xx′, zz′ = vcat(x, x′), vcat(z, z′)
 
     #     # Construct toy problem.
-    #     f = GP(sin, EQ(), gpc)
+    #     f = GP(sin, SqExponentialKernel(), gpc)
     #     y, y′ = rand(rng, [f(x, σ²), f(x′, σ²)])
     #     yy′ = vcat(y, y′)
 
