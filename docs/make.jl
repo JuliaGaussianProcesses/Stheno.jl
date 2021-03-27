@@ -3,7 +3,7 @@ using Documenter, Stheno
 DocMeta.setdocmeta!(
     Stheno,
     :DocTestSetup,
-    :(using Stheno, Random, LinearAlgebra);
+    :(using AbstractGPs, Stheno, Random, LinearAlgebra);
     recursive=true,
 )
 
