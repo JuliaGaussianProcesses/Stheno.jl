@@ -6,6 +6,16 @@ between versions, and discuss new features.
 If you find a breaking change this is not reported here, please either raise an issue or
 make a PR to ammend this document.
 
+## 0.7.0
+
+### Breaking changes
+
+- Stheno's own kernels have been replaced by ones from `KernelFunctions.jl`. This has removed a lot of code from the repo, but completely changes the function calls required to build GPs. To upgrade, consult KernelFunctions.jl for equivalent kernels.
+
+### New Features
+
+- Nothing noteworthy, other than the ability to use any kernels defined using `KernelFunctions.jl`.
+
 ## 0.6.1
 
 - Fixed performance bug in reverse-mode gradient computation for the `ELBO`, whereby an `O(N^3)` computation happened in cases where it shouldn't.
