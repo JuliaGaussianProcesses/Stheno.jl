@@ -38,7 +38,6 @@ include("test_util.jl")
 
     println("gp:")
     @timedtestset "gp" begin
-        include(joinpath("gp", "mean.jl"))
         include(joinpath("gp", "gp.jl"))
     end
 

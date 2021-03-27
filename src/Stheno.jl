@@ -2,6 +2,7 @@ module Stheno
 
     using Reexport
 
+    using AbstractGPs
     using BlockArrays
     using ChainRulesCore
     using Distributions
@@ -19,10 +20,13 @@ module Stheno
     import Base.Broadcast: broadcasted, materialize, broadcast_shape
     import ChainRulesCore: rrule
     import Statistics: mean, cov
-    using ZygoteRules: @adjoint
-    using Zygote: @nograd
+
     import LinearAlgebra: cholesky, cross
     import Distances: pairwise, colwise
+
+    using AbstractGPs: AbstractGP, GP, FiniteGP
+    using ZygoteRules: @adjoint
+    using Zygote: @nograd
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
@@ -42,7 +46,6 @@ module Stheno
     include("abstract_gp.jl")
 
     # Atomic GP objects.
-    include(joinpath("gp", "mean.jl"))
     include(joinpath("gp", "gp.jl"))
 
     # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.
