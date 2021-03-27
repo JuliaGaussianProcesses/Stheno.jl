@@ -13,10 +13,10 @@ Get a vector containing the block sizes over the `d`th dimension of `X`. If `d` 
 specified, returns a `Tuple` over blocksizes over each dimension.
 """
 blocksizes(X::AbstractBlockArray, d::Int) = blocklengths(axes(X, d))
-@nograd blocksizes
+ChainRulesCore.@non_differentiable blocksizes(::Any, ::Any)
 
 cumulsizes(X::AbstractBlockArray, d::Int) = vcat(1, cumsum(blocksizes(X, d)) .+ 1)
-@nograd cumulsizes
+ChainRulesCore.@non_differentiable cumulsizes(::Any, ::Any)
 
 nblocks(X::BlockArray, d::Int) = size(X.blocks, d)
 

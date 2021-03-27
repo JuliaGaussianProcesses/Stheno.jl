@@ -12,7 +12,7 @@ function consistency_checks(fs)
     @assert length(fs) >= 1
     @assert all([f.gpc == first(fs).gpc for f in fs])
 end
-Zygote.@nograd consistency_checks
+ChainRulesCore.@non_differentiable consistency_checks(::Any)
 
 
 const cross_args{T<:AbstractVector{<:AbstractGP}} = Tuple{typeof(cross), T}
@@ -79,7 +79,7 @@ function _get_indices(fs)
     sz = cumsum(map(length, fs))
     return [sz[n] - length(fs[n]) + 1:sz[n] for n in eachindex(fs)]
 end
-Zygote.@nograd _get_indices
+ChainRulesCore.@non_differentiable _get_indices(::Any)
 
 
 #

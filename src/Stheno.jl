@@ -30,7 +30,6 @@ module Stheno
         dtc
 
     using ZygoteRules: @adjoint
-    using Zygote: @nograd
 
     const AV{T} = AbstractVector{T}
     const AM{T} = AbstractMatrix{T}
