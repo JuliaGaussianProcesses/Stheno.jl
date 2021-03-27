@@ -62,4 +62,19 @@
         @test length(K_x0_diag) == length(x0)
         @test K_x0_diag ≈ diag(cov(f, x0)) atol=atol rtol=rtol
     end
+
+    @testset "gppp macro" begin
+
+        # Declare a GPPP using the helper functionality.
+        f = @gppp let
+            f1 = GP(SEKernel())
+            f2 = GP(Matern52Kernel())
+            f3 = f1 + f2
+        end
+
+        x0 = GPPPInput(f.f1, randn(5))
+        x1 = GPPPInput(f.f3, randn(4))
+        cov(f(x0), f(x1))
+        
+    end
 end

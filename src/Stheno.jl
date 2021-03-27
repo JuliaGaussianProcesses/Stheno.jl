@@ -72,6 +72,6 @@ module Stheno
         end
     end
 
-    export wrap, GPC, GaussianProcessProbabilisticProgramme, GPPP, GPPPInput
+    export wrap, GPC, GaussianProcessProbabilisticProgramme, GPPP, GPPPInput, @gppp
 
 end # module
