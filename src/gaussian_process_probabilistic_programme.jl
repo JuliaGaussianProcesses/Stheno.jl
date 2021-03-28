@@ -11,8 +11,11 @@ end
 const GPPP = GaussianProcessProbabilisticProgramme
 
 """
+    GPPPInput(p, x::AbstractVector)
 
-
+An collection of inputs for a GPPP.
+`p` indicates which process the vector `x` should be extracted from.
+The required type of `p` is determined by the type of the keys in the `GPPP` indexed.
 """
 struct GPPPInput{Tp, T, Tx<:AbstractVector{T}} <: AbstractVector{Tuple{Tp, T}}
     p::Tp
@@ -25,30 +28,63 @@ Base.getindex(x::GPPPInput, idx) = map(x_ -> (x.p, x_), x.x[idx])
 
 
 
-# As a first-pass, I'm letting the backend involve integer arithmetic, an planning to build
-# helper functionality on top.
+#
+# Implementation of the AbstractGPs API for the inputs types which are valid for a GPPP.
+# See `AbstractGPs.jl` for details.
+#
 
-AbstractGPs.mean(f::GPPP, x::GPPPInput) = mean(f.fs[x.p], x.x)
+extract_components(f::GPPP, x::GPPPInput) = f.fs[x.p], x.x
 
-AbstractGPs.cov(f::GPPP, x::GPPPInput) = cov(f.fs[x.p], x.x)
-
-AbstractGPs.cov_diag(f::GPPP, x::GPPPInput) = cov_diag(f.fs[x.p], x.x)
-
-function AbstractGPs.cov(f::GPPP, x::GPPPInput, x′::GPPPInput)
-    return cov(f.fs[x.p], f.fs[x′.p], x.x, x′.x)
+function extract_components(f::GPPP, x::BlockData)
+    fs = map(v -> f.fs[v.p], x.X)
+    vs = map(v -> v.x, x.X)
+    return cross(fs), BlockData(vs)
 end
 
-function AbstractGPs.cov_diag(f::GPPP, x::GPPPInput, x′::GPPPInput)
-    return cov_diag(f.fs[x.p], f.fs[x′.p], x.x, x′.x)
+function AbstractGPs.mean(f::GPPP, x::AbstractVector)
+    fs, vs = extract_components(f, x)
+    return mean(fs, vs)
 end
 
-AbstractGPs.mean_and_cov(f::GPPP, x::GPPPInput) = mean_and_cov(f.fs[x.p], x.x)
+function AbstractGPs.cov(f::GPPP, x::AbstractVector)
+    fs, vs = extract_components(f, x)
+    return cov(fs, vs)
+end
 
-AbstractGPs.mean_and_cov_diag(f::GPPP, x::GPPPInput) = mean_and_cov_diag(f.fs[x.p], x.x)
+function AbstractGPs.cov_diag(f::GPPP, x::AbstractVector)
+    fs, vs = extract_components(f, x)
+    return cov_diag(fs, vs)
+end
+
+function AbstractGPs.cov(f::GPPP, x::AbstractVector, x′::AbstractVector)
+    fs_x, vs_x = extract_components(f, x)
+    fs_x′, vs_x′ = extract_components(f, x′)
+    return cov(fs_x, fs_x′, vs_x, vs_x′)
+end
+
+function AbstractGPs.cov_diag(f::GPPP, x::AbstractVector, x′::AbstractVector)
+    fs_x, vs_x = extract_components(f, x)
+    fs_x′, vs_x′ = extract_components(f, x′)
+    return cov_diag(fs_x, fs_x′, vs_x, vs_x′)
+end
+
+function AbstractGPs.mean_and_cov(f::GPPP, x::AbstractVector)
+    fs, vs = extract_components(f, x)
+    return mean_and_cov(fs, vs)
+end
+
+function AbstractGPs.mean_and_cov_diag(f::GPPP, x::AbstractVector)
+    fs, vs = extract_components(f, x)
+    return mean_and_cov_diag(fs, vs)
+end
 
 
-using MacroTools: postwalk, splitdef, combinedef, @capture, prewalk
 
+"""
+    @gppp(model_expression)
+
+Construct a `GaussianProcessProbabilisticProgramme` (`GPPP`) from a code snippet.
+"""
 macro gppp(let_block::Expr)
 
     # Ensure that we're dealing with a let block.

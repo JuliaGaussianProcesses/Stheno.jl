@@ -7,14 +7,14 @@
     f3 = f1 + 3 * f2
 
     # Use them to build a programme.
-    f = GPPP(Dict(f1.n => f1, f2.n => f2, f3.n => f3), gpc)
-
-    # Check for consistency between the two for some pairs of inputs.
-    x0 = GPPPInput(f1.n, randn(4))
-    x1 = GPPPInput(f3.n, randn(3))
+    f = GPPP(Dict(:f1 => f1, :f2 => f2, :f3 => f3), gpc)
 
     # The same answers should be obtained manually or via the GPPP.
     @testset "External Consistency" begin
+
+        x0 = GPPPInput(:f1, randn(4))
+        x1 = GPPPInput(:f3, randn(3))
+
         @test mean(f1, x0.x) == mean(f, x0)
         @test mean(f3, x1.x) == mean(f, x1)
 
@@ -26,7 +26,25 @@
     end
 
     # The GPPP must be self-consistent like any other AbstractGP.
-    @timedtestset "Internal Conistency" begin
+    # This should hold for all of the various permutations of applicable input types.
+    @testset "Internal Conistency ($(typeof(x0)), $(typeof(x1))" for (x0, x1) in [
+        (
+            GPPPInput(:f1, randn(4)),
+            GPPPInput(:f3, randn(3)),
+        ),
+        (
+            GPPPInput(:f1, randn(4)),
+            BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))]),
+        ),
+        (
+            BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))]),
+            GPPPInput(:f1, randn(4)),
+        ),
+        (
+            BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))]),
+            BlockData([GPPPInput(:f1, randn(6))]),
+        ),
+    ]
 
         atol=1e-9
         rtol=1e-9
