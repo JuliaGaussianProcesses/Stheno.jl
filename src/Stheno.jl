@@ -65,9 +65,6 @@ module Stheno
     # Gaussian Process Probabilistic Programme object which implements the AbstractGPs API.
     include("gaussian_process_probabilistic_programme.jl")
 
-    # Various stuff for convenience.
-    include(joinpath("util", "model.jl"))
-
     function __init__()
         @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" begin
             include(joinpath("flux", "neural_kernel_network.jl"))
