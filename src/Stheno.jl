@@ -74,6 +74,8 @@ module Stheno
         end
     end
 
+    include(joinpath("deprecate.jl"))
+
     export wrap, GPC, GaussianProcessProbabilisticProgramme, GPPP, GPPPInput, @gppp
 
 end # module
