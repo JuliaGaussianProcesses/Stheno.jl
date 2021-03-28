@@ -169,7 +169,7 @@ macro gppp(let_block::Expr)
             x->@capture(x, GP(xs__)) ? :(Stheno.wrap(GP($(xs...)), gpc)) : x,
             model_expr,
         ).args...,
-        :(GPPP(Dict($var_mapping), gpc)),
+        :(Stheno.GPPP(Dict($var_mapping), gpc)),
     )
     return esc(wrapped_model)
 end
