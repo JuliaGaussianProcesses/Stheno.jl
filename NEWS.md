@@ -10,7 +10,12 @@ make a PR to ammend this document.
 
 ### Breaking changes
 
+This version contains a large number of _very_ breaking changes -- some of the basics of the package have completely changed. The over-riding concern has been to make Stheno work well with the AbstractGPs API. Of particular note is the new `GPPP` / `GaussianProcessProbabilisticProgramme` type, which represents a collection of processes and treats them as a single `AbstractGP`.
+
+- The `GaussianProcessProbabilisticProgramme` type has been introduced, and is the new recommended way to work with Stheno.jl. See its docstring, README, and the examples directory for details.
+- The `@model` macro is gone, and has been replaced with the `@gppp` macro. This new macro has quite different functionality, and produces a `GPPP` object.
 - Stheno's own kernels have been replaced by ones from `KernelFunctions.jl`. This has removed a lot of code from the repo, but completely changes the function calls required to build GPs. To upgrade, consult KernelFunctions.jl for equivalent kernels.
+- Stheno's internal GP type has been replaced with a wrapper type `WrappedGP` for `AbstractGP`s.
 
 ### New Features
 
