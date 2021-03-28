@@ -63,6 +63,9 @@ include("test_util.jl")
         include(joinpath("flux", "neural_kernel_network.jl"))
     end
 
+    println("sparse_finite_gp:")
+    include("sparse_finite_gp.jl")
+
     println("doctests")
     @timedtestset "doctests" begin
         DocMeta.setdocmeta!(
