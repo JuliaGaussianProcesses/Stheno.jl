@@ -23,6 +23,9 @@
 
         @test cov(f1, f3, x0.x, x1.x) == cov(f, x0, x1)
         @test cov_diag(f3, f1, x1.x, x0.x) == cov_diag(f, x1, x0)
+
+        y = rand(f(x1))
+        @test cov(posterior(f3(x1.x), y)(x1.x)) == cov(posterior(f(x1), y)(x1))
     end
 
     # The GPPP must be self-consistent like any other AbstractGP.
@@ -94,7 +97,5 @@
         x1 = GPPPInput(:f3, randn(4))
         cov(f(x0), f(x1))
 
-        y = rand(f(x0, 0.1))
-        @show logpdf(f(x0, 0.1), y)
     end
 end
