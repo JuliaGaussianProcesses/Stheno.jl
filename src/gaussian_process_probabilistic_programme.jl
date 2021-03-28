@@ -102,6 +102,24 @@ end
     @gppp(model_expression)
 
 Construct a `GaussianProcessProbabilisticProgramme` (`GPPP`) from a code snippet.
+
+```jldoctest
+f = @gppp let
+    f1 = GP(SEKernel())
+    f2 = GP(Matern52Kernel())
+    f3 = f1 + f2
+end
+
+x = GPPPInput(:f3, randn(5))
+
+y = rand(f(x, 0.1))
+
+logpdf(f(x, 0.1), y) ≈ elbo(f(x, 0.1), y, f(x, 1e-9))
+
+# output
+
+true
+```
 """
 macro gppp(let_block::Expr)
 
