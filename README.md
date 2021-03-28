@@ -24,7 +24,7 @@ The primary sources of information regarding this package are the [documentation
 
 Please raise an issue immediately if either of these examples don't work -- they're not currently included in CI, so there's always a higher chance that they'll be outdated than the internals of the package.
 
-In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which is a very non-standard capability.
+In this first example we define a simple Gaussian process, make observations of different bits of it, and visualise the posterior. We are trivially able to condition on both observations of both `f₁` _and_ `f₃`, which isn't something that's typically straightforward.
 ```julia
 
 #
@@ -33,30 +33,46 @@ In this first example we define a simple Gaussian process, make observations of 
 #
 
 using AbstractGPs, Stheno, Random, Plots
-using Stheno: @model
 
 # Create a pseudo random number generator for reproducibility.
 rng = MersenneTwister(123456);
 
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
-@model function model()
+# This `GPPP` object is just an `AbstractGPs.AbstractGP` object.
+f = @gppp let
     f₁ = GP(randn(rng), SEKernel())
     f₂ = GP(SEKernel())
     f₃ = f₁ + f₂
-    return f₁, f₂, f₃
-end
-f₁, f₂, f₃ = model();
+end;
 
 # Sample `N₁` / `N₂` locations at which to measure `f₁` / `f₃`.
 N₁, N₃ = 10, 11;
-X₁, X₃ = rand(rng, N₁) * 10, rand(rng, N₃) * 10;
+X₁ = GPPPInput(:f₁, rand(rng, N₁) * 10);
+X₃ = GPPPInput(:f₃, rand(rng, N₃) * 10);
+X = BlockData(X₁, X₃);
+
+# Pick out the bits of `f` that we're interested in, and the variance
+# of the noise under which we plan to measure them.
+σ² = 1e-2
+fx = f(X, 1e-2);
 
 # Sample toy observations of `f₁` / `f₃` at `X₁` / `X₃`.
-σ² = 1e-2
-ŷ₁, ŷ₃ = rand(rng, [f₁(X₁, σ²), f₃(X₃, σ²)]);
+y = rand(rng, fx);
 
-# Compute the posterior processes. `f₁′`, `f₂′`, `f₃′` are just new processes.
-(f₁′, f₂′, f₃′) = (f₁, f₂, f₃) | (f₁(X₁, σ²)←ŷ₁, f₃(X₃, σ²)←ŷ₃);
+# You could work backwards to figure out which elements of `y` correspond to which
+# of the elements of `X`, but `Stheno.jl` provides methods of `split` to do this for you.
+ŷ₁, ŷ₃ = split(X, y);
+
+# Compute the logpdf of the observations. Notice that this looks exactly like what you would
+# write in AbstractGPs.jl.
+l = logpdf(fx, y)
+
+# Compute the ELBO of the observations, with pseudo-points at the same locations as the
+# observations. Could have placed them in any of the processes in f, even in f₂.
+l ≈ elbo(fx, y, f(X))
+
+# Compute the posterior. This is just an `AbstractGPs.PosteriorGP`.
+f′ = posterior(fx, y);
 
 
 
@@ -64,48 +80,40 @@ ŷ₁, ŷ₃ = rand(rng, [f₁(X₁, σ²), f₃(X₃, σ²)]);
 # The are various things that we can do with a Stheno model.
 #
 
-# Sample jointly from the posterior over each process.
-Np, S = 500, 25;
-Xp = range(-2.5, stop=12.5, length=Np);
-f₁′Xp, f₂′Xp, f₃′Xp = rand(rng, [f₁′(Xp, 1e-9), f₂′(Xp, 1e-9), f₃′(Xp, 1e-9)], S);
+# Sample jointly from the posterior over all of the processes.
+Np, S = 500, 11;
+X_ = range(-2.5, stop=12.5, length=Np);
+Xp1 = GPPPInput(:f₁, X_);
+Xp2 = GPPPInput(:f₂, X_);
+Xp3 = GPPPInput(:f₃, X_);
+Xp = BlockData(Xp1, Xp2, Xp3);
+f′_Xp = rand(rng, f′(Xp, 1e-9), S);
 
-# Compute posterior marginals.
-ms1 = marginals(f₁′(Xp));
-ms2 = marginals(f₂′(Xp));
-ms3 = marginals(f₃′(Xp));
+# Chop up posterior samples using `split`.
+f₁′Xp, f₂′Xp, f₃′Xp = split(Xp, f′_Xp);
 
-# Pull and mean and std of each posterior marginal.
-μf₁′, σf₁′ = mean.(ms1), std.(ms1);
-μf₂′, σf₂′ = mean.(ms2), std.(ms2);
-μf₃′, σf₃′ = mean.(ms3), std.(ms3);
-
-# Compute the logpdf of the observations.
-l = logpdf([f₁(X₁, σ²), f₃(X₃, σ²)], [ŷ₁, ŷ₃])
-
-# Compute the ELBO of the observations, with pseudo-points at the same locations as the
-# observations. Could have placed them anywhere we fancy, even in f₂.
-l ≈ elbo([f₁(X₁, σ²), f₃(X₃, σ²)], [ŷ₁, ŷ₃], [f₁(X₁), f₃(X₃)])
+# Compute posterior marginals and chop them up using `split`.
+ms = marginals(f′(Xp));
+μf₁′, μf₂′, μf₃′ = split(Xp, mean.(ms));
+σf₁′, σf₂′, σf₃′ = split(Xp, std.(ms));
 
 
 
 #
-# Stheno has some convenience plotting functionality for GPs with 1D inputs:
+# The convenience functionality in AbstractGPs.jl isn't quite sufficient to easily plot
+# GPPPs at the minute. Fortunately, it's not much more more effort to visualise the
+# posterior over the processes in our GPPP `f` as we've already computed all of the things
+# that we need.
 #
 
 # Instantiate plot and chose backend.
 plotly();
 posterior_plot = plot();
 
-# Plot posteriors.
-plot!(posterior_plot, f₁′(Xp); color=:red, label="f1");
-sampleplot!(posterior_plot, f₁′(Xp), S; color=:red, label="");
-plot!(posterior_plot, f₂′(Xp); color=:green, label="f2");
-sampleplot!(posterior_plot, f₂′(Xp), S; color=:green, label="");
-plot!(posterior_plot, f₃′(Xp); color=:blue, label="f3");
-sampleplot!(posterior_plot, f₃′(Xp), S; color=:blue, label="");
-
-# Plot observations.
-scatter!(posterior_plot, X₁, ŷ₁;
+# Plot posterior over f1.
+plot!(posterior_plot, X_, μf₁′; ribbon=3σf₁′, color=:red, label="f1", fillalpha=0.3);
+plot!(posterior_plot, X_, f₁′Xp[:, 1:S]; color=:red, label="", alpha=0.2, linewidth=1);
+scatter!(posterior_plot, X₁.x, ŷ₁;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -113,7 +121,15 @@ scatter!(posterior_plot, X₁, ŷ₁;
     markeralpha=0.7,
     label="",
 );
-scatter!(posterior_plot, X₃, ŷ₃;
+
+# Plot posterior over f2.
+plot!(posterior_plot, X_, μf₂′; ribbon=3σf₂′, color=:green, label="f2", fillalpha=0.3);
+plot!(posterior_plot, X_, f₂′Xp[:, 1:S]; color=:green, label="", alpha=0.2, linewidth=1);
+
+# Plot posterior over f3
+plot!(posterior_plot, X_, μf₃′; ribbon=3σf₃′, color=:blue, label="f3", fillalpha=0.3);
+plot!(posterior_plot, X_, f₃′Xp[:, 1:S]; color=:blue, label="", alpha=0.2, linewidth=1);
+scatter!(posterior_plot, X₃.x, ŷ₃;
     markercolor=:blue,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -123,6 +139,7 @@ scatter!(posterior_plot, X₃, ŷ₃;
 );
 
 display(posterior_plot);
+
 ```
 ![](https://github.com/willtebbutt/stheno_models/blob/master/exact/process_decomposition.png)
 
@@ -134,12 +151,12 @@ In this next example we make observations of two different noisy versions of the
 
 ```julia
 using AbstractGPs, Stheno, Random, Plots
-using Stheno: @model, WhiteKernel
 
 # Create a pseudo random number generator for reproducibility.
 rng = MersenneTwister(123456);
 
-@model function model()
+# Construct a Gaussian Process Probabilistic Programme, which is just an AbstractGP.
+f = @gppp let
 
     # Define a smooth latent process that we wish to infer.
     f = GP(SEKernel())
@@ -151,57 +168,64 @@ rng = MersenneTwister(123456);
     # Define the processes that we get to observe.
     y1 = f + noise1
     y2 = f + noise2
-
-    return f, noise1, noise2, y1, y2
-end
-f, noise₁, noise₂, y₁, y₂ = model();
+end;
 
 # Generate some toy observations of `y1` and `y2`.
-X₁, X₂ = rand(rng, 3) * 10, rand(rng, 10) * 10;
-ŷ₁, ŷ₂ = rand(rng, [y₁(X₁), y₂(X₂)]);
+X1 = GPPPInput(:y1, rand(rng, 3) * 10);
+X2 = GPPPInput(:y2, rand(rng, 10) * 10);
+X = BlockData(X1, X2);
+y = rand(rng, f(X));
+ŷ1, ŷ2 = split(X, y);
 
-# Compute the posterior processes.
-(f′, y₁′, y₂′) = (f, y₁, y₂) | (y₁(X₁)←ŷ₁, y₂(X₂)←ŷ₂);
+# Compute the posterior GPPP.
+f′ = posterior(f(X), y);
 
-# Sample jointly from the posterior processes and compute posterior marginals.
-Xp = range(-2.5, stop=12.5, length=500);
-f′Xp, y₁′Xp, y₂′Xp = rand(rng, [f′(Xp, 1e-9), y₁′(Xp, 1e-9), y₂′(Xp, 1e-9)], 100);
+# Sample jointly from the posterior processes.
+X_ = range(-2.5, stop=12.5, length=500);
+Xp_f = GPPPInput(:f, X_);
+Xp_y1 = GPPPInput(:y1, X_);
+Xp_y2 = GPPPInput(:y2, X_);
+Xp = BlockData(Xp_f, Xp_y1, Xp_y2);
 
-ms1 = marginals(f′(Xp));
-ms2 = marginals(y₁′(Xp));
-ms3 = marginals(y₂′(Xp));
+# Sample jointly from posterior over process, and split up the result.
+f′Xp, y1′Xp, y2′Xp = split(Xp, rand(rng, f′(Xp, 1e-9), 11));
 
-μf′, σf′ = mean.(ms1), std.(ms1);
-μy₁′, σy₁′ = mean.(ms2), std.(ms2);
-μy₂′, σy₂′ = mean.(ms3), std.(ms3);
+# Compute and split up posterior marginals.
+ms = marginals(f′(Xp, 1e-9));
+μf′, μy1′, μy2′ = split(Xp, mean.(ms));
+σf′, σy1′, σy2′ = split(Xp, std.(ms));
 
 # Instantiate plot and chose backend
 plotly();
 posterior_plot = plot();
 
-# Plot posteriors
-plot!(posterior_plot, y₁′(Xp); color=:red, label="");
-sampleplot!(posterior_plot, y₁′(Xp), S; seriestype=:scatter, color=:red, label="");
-plot!(posterior_plot, y₂′(Xp); color=:green, label="");
-sampleplot!(posterior_plot, y₂′(Xp), S; seriestype=:scatter, color=:green, label="");
-plot!(posterior_plot, f′(Xp); color=:blue, label="Latent Function");
-sampleplot!(posterior_plot, f′(Xp), S; color=:blue, label="");
-
-# Plot observations
-scatter!(posterior_plot, X₁, ŷ₁;
+# Plot posterior over y1.
+plot!(posterior_plot, X_, μy1′; color=:red, ribbon=3σy1′, label="", fillalpha=0.3);
+plot!(posterior_plot, X_, y1′Xp; color=:red, label="", alpha=0.2, linewidth=1);
+scatter!(posterior_plot, X1.x, ŷ1;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
     markeralpha=0.8,
-    label="Sensor 1");
-scatter!(posterior_plot, X₂, ŷ₂;
+    label="Sensor 1",
+);
+
+# Plot posterior over y2.
+plot!(posterior_plot, X_, μy2′; color=:green, ribbon=3σy2′, label="", fillalpha=0.3);
+plot!(posterior_plot, X_, y2′Xp; color=:green, label="", alpha=0.2, linewidth=1);
+scatter!(posterior_plot, X2.x, ŷ2;
     markercolor=:green,
     markershape=:circle,
     markerstrokewidth=0.0,
     markersize=4,
     markeralpha=0.8,
-    label="Sensor 2");
+    label="Sensor 2",
+);
+
+# Plot posterior over f.
+plot!(posterior_plot, X_, μf′; color=:blue, ribbon=3σf′, label="f", fillalpha=0.3);
+plot!(posterior_plot, X_, f′Xp; color=:blue, label="", alpha=0.2, linewidth=1);
 
 display(posterior_plot);
 
