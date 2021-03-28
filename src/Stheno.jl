@@ -57,9 +57,6 @@ module Stheno
     # include(joinpath("composite", "gradient.jl"))
     # include(joinpath("composite", "integrate.jl"))
 
-    # approximate inference
-    include("approximate_inference.jl")
-
     # Gaussian Process Probabilistic Programme object which implements the AbstractGPs API.
     include("gaussian_process_probabilistic_programme.jl")
 

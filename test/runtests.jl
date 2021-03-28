@@ -53,7 +53,6 @@ include("test_util.jl")
     println("abstract_gp:")
     @timedtestset "abstract_gp" begin
         include("abstract_gp.jl")
-        include("approximate_inference.jl")
     end
 
     println("gaussian_process_probabilistic_programme:")
