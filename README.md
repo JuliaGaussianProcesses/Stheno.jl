@@ -236,27 +236,22 @@ As before, we visualise the posterior distribution through its marginal statisti
 
 As before, this example can also be found in `examples/basic_gppp/process_decomposition.jl`.
 
+
+
 ## Hyperparameter learning and inference
 
-Fortunately, there is really no need for this package to explicitly provide support for hyperparameter optimisation as the functionality is already available elsewhere -- it's sufficient that it plays nicely with other fantastic packages in the ecosystem such as [Zygote.jl](https://github.com/FluxML/Zygote.jl/) (reverse-mode algorithmic differentiation), [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) (non-linear optimisation), [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl/) (Hamiltonian Monte Carlo / NUTS), and [Soss.jl](https://github.com/cscherrer/Soss.jl/) (a probabilistic programming framework that provides some very helpful glue). For concrete examples of the use of each of these packages in conjunction with Stheno, see the `Getting Started` section of the [(dev) docs](https://willtebbutt.github.io/Stheno.jl/dev).
+Fortunately, there is really no need for this package to explicitly provide support for hyperparameter optimisation as the functionality is already available elsewhere -- it's sufficient that it plays nicely with other standard packages in the ecosystem such as [Zygote.jl](https://github.com/FluxML/Zygote.jl/) (reverse-mode algorithmic differentiation), [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) (non-linear optimisation), [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl/) (Hamiltonian Monte Carlo / NUTS), [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl/), [Soss.jl](https://github.com/cscherrer/Soss.jl/) / [Turing.jl](https://github.com/TuringLang/Turing.jl). For concrete examples of the use of each of these packages in conjunction with Stheno, see the `Getting Started` section of the [(dev) docs](https://willtebbutt.github.io/Stheno.jl/dev).
+
 
 
 ## Non-Gaussian problems
 
-Stheno doesn't currently have support for non-Gaussian likelihoods, and as such they're on the up-for-grabs list below. If you would like to see these in this package, please do get in touch (open an issue so that we can discuss where to get started, or open a PR if you're feeling ambitious).
+As with hyperparmeter learning, Stheno doesn't support non-Gaussian likelihoods directly.
+Rather, we expect users to obtain this functionality through the general functionality provided in `AbstractGPs`.
+This part of the JuliaGaussianProcesses ecosystem is broadly under-developed, so please open issues on AbstractGPs if you're keen to help out!
+
 
 
 ## GPs + Deep Learning
 
-The plan is not to support the combination of GPs and Deep Learning explicitly, but rather to ensure that Stheno and [Flux.jl](https://github.com/FluxML/Flux.jl) play nicely with one another. Both packages now work with [Zygote.jl](https://github.com/FluxML/Zygote.jl), so you can use that to sort out gradient information.
-
-
-## Things that are up for grabs
-Obviously, improvements to code documentation are always welcome, and if you want to write some more unit / integration tests, please feel free. In terms of larger items that require some attention, here are some thoughts:
-- An implementation of SVI from [Gaussian Processes for Big Data](https://arxiv.org/abs/1309.6835).
-- Kronecker-factored matrices: this is quite a general issue which might be best be addressed by the creation of a separate package. It would be very helpful to have an implementation of the `AbstractMatrix` interface which implements multiplication, inversion, eigenfactorisation etc, which can then be utilised in Stheno.
-- Primitives for multi-output GPs: although Stheno does fundamentally have support for multi-output GPs, in the same way that it's helpful to implement so-called "fat" nodes in Automatic Differentiation systems, it may well be helpful to implement specialised multi-output processes in Stheno for performance's sake.
-- Some decent benchmarks: development has not focused on performance so far, but it would be extremely helpful to have a wide range of benchmarks so that we can begin to ensure that time is spent optimally. This would involve comparing against [GaussianProcesses.jl](https://github.com/STOR-i/GaussianProcesses.jl), but also some other non-Julia packages.
-- Non-Gaussian likelihoods: there are a _lot_ of approximate inference schemes that have been developed for GPs in particular contexts. [GPML](https://gitlab.com/hnickisch/gpml-matlab) probably has the most mature set of these, and would be a good place to start the transfer from. There's also [Natural Gradients in Practice](https://arxiv.org/abs/1803.09151) that might be a good startin point for a Monte Carlo approximation to natural gradient varitional inference. A good place to start with these would be to just make them for `GP`s, as opposed to any `AbstractGP`, as this is the simplest case.
-
-If you are interested in any of the above, please either open an issue or PR. Better still, if there's something not listed here that you think would be good to see, please open an issue to start a discussion regarding it.
+Again, explicit support not included. Rather just use Stheno in conjunction with [Flux.jl](https://github.com/FluxML/Flux.jl) and related packages.
