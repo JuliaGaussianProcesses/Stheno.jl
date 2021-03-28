@@ -1,5 +1,19 @@
 @timedtestset "gaussian_process_probabilistic_programme" begin
 
+    @timedtestset "split" begin
+        x = BlockData(randn(5), randn(4))
+        @testset "Vector" begin
+            x1, x2 = split(x, randn(9))
+            @test length(x1) == 5
+            @test length(x2) == 4
+        end
+        @testset "Matrix" begin
+            x1, x2 = split(x, randn(9, 3))
+            @test size(x1) == (5, 3)
+            @test size(x2) == (4, 3)
+        end
+    end
+
     # Build a toy collection of processes.
     gpc = GPC()
     f1 = wrap(GP(sin, SEKernel()), gpc)

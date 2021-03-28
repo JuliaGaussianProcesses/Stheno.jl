@@ -98,6 +98,25 @@ end
 
 
 
+# Helper functionality for chopping up data.
+function Base.split(x::BlockData, Y::AbstractMatrix)
+    length(x) == size(Y, 1) || throw(error("Expected length(x) == size(Y, 1)"))
+    return map(idx->Y[idx, :], _get_indices(x))
+end
+
+function Base.split(x::BlockData, y::AbstractVector)
+    length(x) == length(y) || throw(error("Expected length(x) == length(y)"))
+    return map(idx->y[idx], _get_indices(x))
+end
+
+function _get_indices(x::BlockData)
+    sz = cumsum(map(length, x.X))
+    return [sz[n] - length(x.X[n]) + 1:sz[n] for n in eachindex(x.X)]
+end
+ChainRulesCore.@non_differentiable _get_indices(::Any)
+
+
+
 """
     @gppp(model_expression)
 
