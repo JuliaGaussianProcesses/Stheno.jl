@@ -5,7 +5,7 @@ Collects a group of related GPs together and interprets them as a single GP.
 This type isn't part of the user-facing API -- the `@gppp` macro should be used to
 construct a `GaussianProcessProbabilisticProgramme`.
 """
-struct GaussianProcessProbabilisticProgramme{Tfs<:Dict} <: AbstractGP
+struct GaussianProcessProbabilisticProgramme{Tfs} <: AbstractGP
     fs::Tfs
     gpc::GPC
 end
@@ -162,14 +162,16 @@ macro gppp(let_block::Expr)
         end...,
     )
 
+    gpc_sym = gensym("gpc")
+
     # Construct an expression which wraps the GPs, and returns a GPPP.
     wrapped_model = Expr(:block,
-        :(gpc = Stheno.GPC()),
+        :($gpc_sym = Stheno.GPC()),
         postwalk(
-            x->@capture(x, GP(xs__)) ? :(Stheno.wrap(GP($(xs...)), gpc)) : x,
+            x->@capture(x, GP(xs__)) ? :(Stheno.wrap(GP($(xs...)), $gpc_sym)) : x,
             model_expr,
         ).args...,
-        :(Stheno.GPPP(Dict($var_mapping), gpc)),
+        :(Stheno.GPPP(Dict($var_mapping), $gpc_sym)),
     )
     return esc(wrapped_model)
 end

@@ -21,7 +21,7 @@
     f3 = f1 + 3 * f2
 
     # Use them to build a programme.
-    f = Stheno.GPPP(Dict(:f1 => f1, :f2 => f2, :f3 => f3), gpc)
+    f = Stheno.GPPP((f1 = f1, f2 = f2, f3 = f3), gpc)
 
     # The same answers should be obtained manually or via the GPPP.
     @testset "External Consistency" begin
@@ -106,10 +106,13 @@
             f2 = GP(Matern52Kernel())
             f3 = f1 + f2
         end
+    end
 
-        x0 = GPPPInput(:f1, randn(5))
-        x1 = GPPPInput(:f3, randn(4))
-        cov(f(x0), f(x1))
-
+    # No custom rules to worry about, just need to make sure that nothing errors.
+    @timedtestset "Zygote" begin
+        x = GPPPInput(:f3, randn(5))
+        s = 0.1
+        y = rand(f(x, s))
+        Zygote.gradient((x, y, f, s) -> logpdf(f(x, s), y), x, y, f, s)
     end
 end
