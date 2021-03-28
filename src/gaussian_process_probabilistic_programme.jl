@@ -156,9 +156,9 @@ macro gppp(let_block::Expr)
     # Construct expression which specifies mappings between symbolic names and GPs.
     # The resulting expression is of the form [:f1 => f1, :f2 => f2].
     var_mapping = Expr(
-        :vect,
+        :tuple,
         map(variable_names) do var_name
-            Expr(:call, :(=>), QuoteNode(var_name), var_name)
+            Expr(:(=), var_name, var_name)
         end...,
     )
 
@@ -171,7 +171,7 @@ macro gppp(let_block::Expr)
             x->@capture(x, GP(xs__)) ? :(Stheno.wrap(GP($(xs...)), $gpc_sym)) : x,
             model_expr,
         ).args...,
-        :(Stheno.GPPP(Dict($var_mapping), $gpc_sym)),
+        :(Stheno.GPPP($var_mapping, $gpc_sym)),
     )
     return esc(wrapped_model)
 end
