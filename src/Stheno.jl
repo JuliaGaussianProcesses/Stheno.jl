@@ -66,6 +66,9 @@ module Stheno
         end
     end
 
+    # Sparse GP hack to make pseudo-point approximations play nicely with Turing.jl.
+    include("sparse_finite_gp.jl")
+
     include(joinpath("deprecate.jl"))
 
     export wrap, BlockData, GPC, GPPPInput, @gppp
