@@ -21,7 +21,7 @@
     f3 = f1 + 3 * f2
 
     # Use them to build a programme.
-    f = GPPP(Dict(:f1 => f1, :f2 => f2, :f3 => f3), gpc)
+    f = Stheno.GPPP(Dict(:f1 => f1, :f2 => f2, :f3 => f3), gpc)
 
     # The same answers should be obtained manually or via the GPPP.
     @testset "External Consistency" begin
