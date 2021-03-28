@@ -73,7 +73,7 @@ module Stheno
 
     include(joinpath("deprecate.jl"))
 
-    export wrap, GPC, GPPPInput, @gppp
+    export BlockData, GPC, GPPPInput, @gppp
     export ←, |, Obs
     export elbo, dtc
     export SparseFiniteGP
