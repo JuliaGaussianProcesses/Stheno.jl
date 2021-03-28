@@ -6,7 +6,8 @@
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 
-Stheno is designed to make doing non-standard things with Gaussian processes straightforward. It has an intuitive modeling syntax, is inherently able to handle both multi-input and multi-output problems, and trivially supports interdomain pseudo-point approximations. We call this Gaussian process Probabilistic Programming (GPPP).
+Stheno is designed to make doing some kinds of non-standard things with Gaussian processes straightforward.
+It has a simple modeling syntax, is inherently able to handle both multi-input and multi-output problems, and trivially supports interdomain pseudo-point approximations.
 
 [We also have a Python version of the package](https://github.com/wesselb/stheno)
 
@@ -17,6 +18,10 @@ __Installation__ - `] add Stheno`.
 [JuliaCon 2019 Talk](https://www.youtube.com/watch?v=OO3BBkGEMV8)
 
 [Go faster with TemporalGPs.jl](https://github.com/willtebbutt/TemporalGPs.jl/)
+
+## Version 0.7
+
+Lots of things have changed in version 0.7. Please consult NEWS.md for details, or take a look at the examples below.
 
 ## A Couple of Examples
 
