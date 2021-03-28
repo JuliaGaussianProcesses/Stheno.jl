@@ -19,9 +19,13 @@ __Installation__ - `] add Stheno`.
 
 [Go faster with TemporalGPs.jl](https://github.com/willtebbutt/TemporalGPs.jl/)
 
+
+
 ## Version 0.7
 
 Lots of things have changed in version 0.7. Please consult NEWS.md for details, or take a look at the examples below.
+
+
 
 ## A Couple of Examples
 
