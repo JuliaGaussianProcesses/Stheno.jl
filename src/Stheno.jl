@@ -51,8 +51,6 @@ module Stheno
     # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.
     include(joinpath("composite", "composite_gp.jl"))
     include(joinpath("composite", "cross.jl"))
-    include(joinpath("composite", "conditioning.jl"))
-    include(joinpath("composite", "approximate_conditioning.jl"))
     include(joinpath("composite", "product.jl"))
     include(joinpath("composite", "addition.jl"))
     include(joinpath("composite", "compose.jl"))

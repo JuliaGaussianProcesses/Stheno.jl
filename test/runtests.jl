@@ -45,11 +45,9 @@ include("test_util.jl")
     @timedtestset "composite" begin
         include(joinpath("composite", "test_util.jl"))
         include(joinpath("composite", "cross.jl"))
-        include(joinpath("composite", "conditioning.jl"))
         include(joinpath("composite", "product.jl"))
         include(joinpath("composite", "addition.jl"))
         include(joinpath("composite", "compose.jl"))
-        include(joinpath("composite", "approximate_conditioning.jl"))
     end
 
     println("abstract_gp:")
