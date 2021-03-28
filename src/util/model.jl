@@ -1,5 +1,3 @@
-using MacroTools: postwalk, splitdef, combinedef, @capture, prewalk
-
 macro model(expr)
 
     # Check it's a function and deconstruct.

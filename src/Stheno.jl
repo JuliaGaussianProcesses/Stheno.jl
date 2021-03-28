@@ -28,6 +28,8 @@ module Stheno
         elbo,
         dtc
 
+    using MacroTools: @capture, combinedef, postwalk, splitdef
+
     using ZygoteRules: @adjoint
 
     const AV{T} = AbstractVector{T}
