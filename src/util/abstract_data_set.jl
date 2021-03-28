@@ -11,6 +11,8 @@ end
 
 BlockData(X::Vector{AbstractVector}) = BlockData{Any, AbstractVector}(X)
 
+BlockData(xs::AbstractVector...) = BlockData([xs...])
+
 ==(D1::BlockData, D2::BlockData) = D1.X == D2.X
 
 size(D::BlockData) = (sum(length, D.X),)

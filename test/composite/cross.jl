@@ -44,43 +44,6 @@ using Stheno: BlockData, cross
         @test cov(f5(x5)) == cov(f2(x2))
         @test cov(f3(x3), f4(x4)) == cov(f3(x3), f1(x1))
         @test cov(f5(x5), f3(x3)) == cov(f2(x2), f3(x3))
-
-        @timedtestset "rand, logpdf, elbo, dtc" begin
-
-            # Single-sample rand
-            y1, y2 = rand([f1(x1), f2(x2)])
-            @test length(y1) == length(x1)
-            @test length(y2) == length(x2)
-
-            # Multi-sample rand
-            Y1, Y2 = rand([f1(x1), f2(x2)], 11)
-            @test size(Y1) == (length(y1), 11)
-            @test size(Y2) == (length(y2), 11)
-
-            # logpdf
-            @test logpdf([f1(x1), f2(x2)], [y1, y2]) ≈ logpdf(f1(x1), y1) + logpdf(f2(x2), y2)
-            @test logpdf([f1(x1), f2(x2)], [y1, y2]) ≈ logpdf([f1(x1)←y1, f2(x2)←y2])
-
-            # elbo
-            @test elbo([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2], [f1(x1), f2(x2)]) ≈
-                logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
-            @test elbo(
-                [f1(x1, 1e-3), f2(x2, 1e-3)],
-                [y1, y2],
-                Stheno.finites_to_block([f1(x1), f2(x2)]),
-            ) ≈ logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
-            @test elbo(f1(x1, 1e-3), y1, [f1(x1), f2(x2)]) ≈ logpdf(f1(x1, 1e-3), y1)
-
-            # dtc
-            @test dtc([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2], [f1(x1), f2(x2)]) ≈
-                logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
-            @test dtc(
-                [f1(x1, 1e-3), f2(x2, 1e-3)],
-                [y1, y2],
-                Stheno.finites_to_block([f1(x1), f2(x2)]),
-            ) ≈ logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
-            @test dtc(f1(x1, 1e-3), y1, [f1(x1), f2(x2)]) ≈ logpdf(f1(x1, 1e-3), y1)
-        end
     end
     @timedtestset "Standardised Tests" begin
         rng, P, Q = MersenneTwister(123456), 3, 5

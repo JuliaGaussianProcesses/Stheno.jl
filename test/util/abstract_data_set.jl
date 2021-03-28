@@ -33,5 +33,8 @@ using Stheno: ColVecs, BlockData
         @test eltype(DxX) == Any
         @test eltype(BlockData([DX, DX])) <: AbstractVector{Float64}
         @test eltype(BlockData([eachindex(DX), eachindex(DX)])) == Int
+
+        # Convenience constructor.
+        @test BlockData(x, DX) == DxX
     end
 end

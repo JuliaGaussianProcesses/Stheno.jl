@@ -45,18 +45,18 @@ include("test_util.jl")
     @timedtestset "composite" begin
         include(joinpath("composite", "test_util.jl"))
         include(joinpath("composite", "cross.jl"))
-        include(joinpath("composite", "conditioning.jl"))
         include(joinpath("composite", "product.jl"))
         include(joinpath("composite", "addition.jl"))
         include(joinpath("composite", "compose.jl"))
-        include(joinpath("composite", "approximate_conditioning.jl"))
     end
 
     println("abstract_gp:")
     @timedtestset "abstract_gp" begin
         include("abstract_gp.jl")
-        include("approximate_inference.jl")
     end
+
+    println("gaussian_process_probabilistic_programme:")
+    include("gaussian_process_probabilistic_programme.jl")
 
     println("flux:")
     @timedtestset "flux" begin

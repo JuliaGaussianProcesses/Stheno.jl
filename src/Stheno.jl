@@ -28,6 +28,8 @@ module Stheno
         elbo,
         dtc
 
+    using MacroTools: @capture, combinedef, postwalk, splitdef
+
     using ZygoteRules: @adjoint
 
     const AV{T} = AbstractVector{T}
@@ -49,19 +51,14 @@ module Stheno
     # Composite GPs, constructed via affine transformation of CompositeGPs and GPs.
     include(joinpath("composite", "composite_gp.jl"))
     include(joinpath("composite", "cross.jl"))
-    include(joinpath("composite", "conditioning.jl"))
-    include(joinpath("composite", "approximate_conditioning.jl"))
     include(joinpath("composite", "product.jl"))
     include(joinpath("composite", "addition.jl"))
     include(joinpath("composite", "compose.jl"))
     # include(joinpath("composite", "gradient.jl"))
     # include(joinpath("composite", "integrate.jl"))
 
-    # approximate inference
-    include("approximate_inference.jl")
-
-    # Various stuff for convenience.
-    include(joinpath("util", "model.jl"))
+    # Gaussian Process Probabilistic Programme object which implements the AbstractGPs API.
+    include("gaussian_process_probabilistic_programme.jl")
 
     function __init__()
         @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" begin
@@ -69,6 +66,9 @@ module Stheno
         end
     end
 
-    export wrap, GPC
+    include(joinpath("deprecate.jl"))
 
+    export wrap, BlockData, GPC, GPPPInput, @gppp
+    export elbo, dtc
+    export ∘, select, stretch, periodic, shift
 end # module

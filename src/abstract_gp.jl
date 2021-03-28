@@ -31,23 +31,3 @@ next_index(gpc::GPC) = gpc.n + 1
 
 # TYPE PIRACY!
 LinearAlgebra.cholesky(D::Diagonal{<:Real, <:Fill}) = AbstractGPs._cholesky(D)
-
-import Base: |, merge
-export ←, |, Obs
-
-"""
-    Observation
-
-Represents fixing a paricular (finite) GP to have a particular (vector) value.
-"""
-struct Observation{Tf<:FiniteGP, Ty<:Vector}
-    f::Tf
-    y::Ty
-end
-
-const Obs = Observation
-
-
-←(f, y) = Observation(f, y)
-get_f(c::Observation) = c.f
-get_y(c::Observation) = c.y

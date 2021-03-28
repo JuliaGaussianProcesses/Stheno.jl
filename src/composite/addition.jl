@@ -11,6 +11,8 @@ function +(fa::AbstractGP, fb::AbstractGP)
 end
 -(fa::AbstractGP, fb::AbstractGP) = fa + (-fb)
 
+
+
 #
 # Add two GPs
 #
@@ -52,6 +54,7 @@ end
 function cov_diag(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
     return cov_diag(f, fa, x, x′) .+ cov_diag(f, fb, x, x′)
 end
+
 
 
 #
