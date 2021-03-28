@@ -33,7 +33,6 @@ next_index(gpc::GPC) = gpc.n + 1
 LinearAlgebra.cholesky(D::Diagonal{<:Real, <:Fill}) = AbstractGPs._cholesky(D)
 
 import Base: |, merge
-export ←, |, Obs
 
 """
     Observation

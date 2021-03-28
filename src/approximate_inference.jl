@@ -1,9 +1,6 @@
 import Base: rand, length
 import Distributions: logpdf, AbstractMvNormal
 
-export elbo, dtc
-export SparseFiniteGP
-
 """
     SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP}
 

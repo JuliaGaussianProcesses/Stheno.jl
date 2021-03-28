@@ -1,5 +1,4 @@
 import Base: ∘
-export ∘, select, stretch, periodic, shift
 
 """
     ∘(f::GP, g)
