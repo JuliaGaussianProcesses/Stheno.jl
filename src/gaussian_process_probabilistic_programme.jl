@@ -1,7 +1,9 @@
 """
-    
+    GaussianProcessProbabilisticProgramme(fs, gpc)
 
-The definition of a GPPP here is essentially any kind of mapping between 
+Collects a group of related GPs together and interprets them as a single GP.
+This type isn't part of the user-facing API -- the `@gppp` macro should be used to
+construct a `GaussianProcessProbabilisticProgramme`.
 """
 struct GaussianProcessProbabilisticProgramme{Tfs<:Dict} <: AbstractGP
     fs::Tfs
