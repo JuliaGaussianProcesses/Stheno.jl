@@ -6,5 +6,5 @@ Stheno = "8188c328-b5d6-583d-959b-9690869a5511"
 
 [compat]
 Plots = "1"
-Stheno = "0.6"
+Stheno = "0.7"
 julia = "1"

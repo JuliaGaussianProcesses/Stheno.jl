@@ -11,15 +11,14 @@ Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
 # The time-to-first-plot issue means that this might take a little while.
-using BenchmarkTools, LinearAlgebra, Plots, Random, Stheno
-rng = MersenneTwister(123456)
-
+using AbstractGPs, BenchmarkTools, LinearAlgebra, Plots, Random, Stheno
+rng = MersenneTwister(123456);
 
 # Construct a Matern-5/2 kernel with lengthscale 0.5 and variance 1.2.
-k = kernel(Matern52(); l=0.5, s=1.2)
+k = 1.2 * transform(Matern52Kernel(), 2.0);
 
 # Construct a zero-mean GP with a simple kernel. Don't worry about the GPC object.
-f = GP(k, GPC())
+f = Stheno.wrap(GP(k), GPC());
 
 # Specify some locations at which to consider the GP.
 N = 5_000
@@ -57,7 +56,7 @@ display(@benchmark elbo($fx, $y, $u))
 println()
 
 # Compute the approximate posterior process.
-f_post = f | Stheno.PseudoObs(Obs(fx, y), u)
+f_post = approx_posterior(VFE(), fx, y, u);
 
 # Specify some points at which to plot the approximate posterior.
 Npr = 1000
@@ -81,20 +80,7 @@ gr();
 posterior_plot = plot(legend=nothing);
 
 # Generate several samples from the posterior predictive distribution.
-m = mean.(posterior_marginals)
-σ = std.(posterior_marginals)
-
-plot!(posterior_plot, xpr, m;
-    linecolor=:blue,
-    linewidth=2,
-);
-plot!(posterior_plot, xpr, [m m];
-    linewidth=0.0,
-    linecolor=:blue,
-    fillrange=[m .- 3 .* σ, m .+ 3 * σ],
-    fillalpha=0.3,
-    fillcolor=:blue,
-);
+plot!(posterior_plot, f_post(xpr); color=:blue);
 
 # Plot the observations.
 scatter!(posterior_plot, x, y;

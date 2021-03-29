@@ -14,10 +14,10 @@ using LinearAlgebra, Plots, Random, Stheno
 rng = MersenneTwister(123456)
 
 # Construct a Matern-5/2 kernel with lengthscale 0.5 and variance 1.2.
-k = kernel(Matern52(); l=0.5, s=1.2)
+k = 1.2 * transform(Matern52Kernel(), 0.5)
 
 # Construct a zero-mean GP with a simple kernel. Don't worry about the GPC object.
-f = GP(k, GPC())
+f = Stheno.wrap(GP(k), GPC())
 
 # Specify some locations at which to consider the GP.
 N = 50
@@ -39,7 +39,7 @@ logpdf(fx, y)
 
 # Do inference: compute the posterior distribution over `f` given we observe it + noise to
 # be `y` at locations `x`.
-f_post = f | Obs(fx, y)
+f_post = posterior(fx, y);
 
 # Specify some points at which to plot the posterior.
 Npr = 1000
