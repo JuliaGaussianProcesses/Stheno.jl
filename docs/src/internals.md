@@ -1,8 +1,9 @@
 # Interfaces
 
-The primary objects in Stheno are some special subtypes of `AbstractGP`. There are two primary concrete subtypes of `AbstractGP`:
+The primary objects in Stheno are some special subtypes of `AbstractGP`. There are three primary concrete subtypes of `AbstractGP`:
 - `WrappedGP`: an atomic Gaussian process given by wrapping an `AbstractGP`.
 - `CompositeGP`: a Gaussian process composed of other `WrappedGP`s and `CompositeGP`s, whose properties are determined recursively from the GPs of which it is composed.
+- `GaussianProcessProbabilisticProgramme` / `GPPP`: a Gaussian process comprising `WrappedGP`s and `CompositeGP`s. This is the primary piece of functionality that users should interact with.
 
 This documentation provides the information necessary to understand the internals of Stheno, and to extend it with custom functionality.
 
