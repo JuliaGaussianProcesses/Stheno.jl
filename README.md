@@ -101,18 +101,11 @@ f′_Xp = rand(rng, f′(Xp, 1e-9), S);
 # Chop up posterior samples using `split`.
 f₁′Xp, f₂′Xp, f₃′Xp = split(Xp, f′_Xp);
 
-# Compute posterior marginals and chop them up using `split`.
-ms = marginals(f′(Xp));
-μf₁′, μf₂′, μf₃′ = split(Xp, mean.(ms));
-σf₁′, σf₂′, σf₃′ = split(Xp, std.(ms));
-
 
 
 #
-# The convenience functionality in AbstractGPs.jl isn't quite sufficient to easily plot
-# GPPPs at the minute. Fortunately, it's not much more more effort to visualise the
-# posterior over the processes in our GPPP `f` as we've already computed all of the things
-# that we need.
+# We make use of the plotting recipes in AbstractGPs to plot the marginals,
+# and manually plot the joint posterior samples.
 #
 
 # Instantiate plot and chose backend.
@@ -120,8 +113,8 @@ plotly();
 posterior_plot = plot();
 
 # Plot posterior over f1.
-plot!(posterior_plot, X_, μf₁′; ribbon=3σf₁′, color=:red, label="f1", fillalpha=0.3);
-plot!(posterior_plot, X_, f₁′Xp[:, 1:S]; color=:red, label="", alpha=0.2, linewidth=1);
+plot!(posterior_plot, X_, f′(Xp1); color=:red, label="f1");
+plot!(posterior_plot, X_, f₁′Xp; color=:red, label="", alpha=0.2, linewidth=1);
 scatter!(posterior_plot, X₁.x, ŷ₁;
     markercolor=:red,
     markershape=:circle,
@@ -132,12 +125,12 @@ scatter!(posterior_plot, X₁.x, ŷ₁;
 );
 
 # Plot posterior over f2.
-plot!(posterior_plot, X_, μf₂′; ribbon=3σf₂′, color=:green, label="f2", fillalpha=0.3);
-plot!(posterior_plot, X_, f₂′Xp[:, 1:S]; color=:green, label="", alpha=0.2, linewidth=1);
+plot!(posterior_plot, X_, f′(Xp2); color=:green, label="f2");
+plot!(posterior_plot, X_, f₂′Xp; color=:green, label="", alpha=0.2, linewidth=1);
 
 # Plot posterior over f3
-plot!(posterior_plot, X_, μf₃′; ribbon=3σf₃′, color=:blue, label="f3", fillalpha=0.3);
-plot!(posterior_plot, X_, f₃′Xp[:, 1:S]; color=:blue, label="", alpha=0.2, linewidth=1);
+plot!(posterior_plot, X_, f′(Xp3); color=:blue, label="f3");
+plot!(posterior_plot, X_, f₃′Xp; color=:blue, label="", alpha=0.2, linewidth=1);
 scatter!(posterior_plot, X₃.x, ŷ₃;
     markercolor=:blue,
     markershape=:circle,
@@ -199,7 +192,8 @@ Xp = BlockData(Xp_f, Xp_y1, Xp_y2);
 # Sample jointly from posterior over process, and split up the result.
 f′Xp, y1′Xp, y2′Xp = split(Xp, rand(rng, f′(Xp, 1e-9), 11));
 
-# Compute and split up posterior marginals.
+# Compute and split up posterior marginals. We're not using the plotting recipes from
+# AbstractGPs here, to make it clear how one might compute the posterior marginals manually.
 ms = marginals(f′(Xp, 1e-9));
 μf′, μy1′, μy2′ = split(Xp, mean.(ms));
 σf′, σy1′, σy2′ = split(Xp, std.(ms));
