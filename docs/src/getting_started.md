@@ -1,6 +1,9 @@
 # Getting Started
 
-Here we document how to achieve the basic things that any GP package aught to be able to do. We lean heavily on the rest of the Julia ecosystem for each of these examples -- this page really exemplifies the way in which different packages play together nicely in the Julia!
+Here we document how to do some basic stuff, including learning and inference in kernel parameters, with Stheno.jl. To do this, we that makes use of a variety of packages from the Julia ecosystem. In particular, we'll make use of
+- [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl) to perform Bayesian inference in our model parameters.
+- [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) for point-estimates of our model parameters.
+- [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl) to make it easy to work with our model's parameters, and to ensure that it plays nicely with Optim and AdvancedHMC.
 
 This guide assumes that you know roughly what's going on conceptually with GPs. If you're new to Gaussian processes, I cannot recommend [this video lecture](http://videolectures.net/gpip06_mackay_gpb/) highly enough.
 
@@ -10,34 +13,45 @@ We shall first cover the most low-level ways to perform inference in both the pr
 
 ## Exact Inference in a GP in 2 Minutes
 
-While Stheno offers some bells and whistles that other GP frameworks do not, it also offers the same functionality as a usual GP framework.
+This is only a slightly more interesting version of the first example on the
+README.
+It's slightly more interesting in that we give the kernels some learnable
+parameters.
 
 ```julia
+# Import the packages we'll need for this bit of the demo.
+using AbstractGPs
 using Stheno
 
-# Choose the length-scale and variance of the process.
-l = 0.4
-σ² = 1.3
+# Short length-scale and small variance.
+l1 = 0.4
+s1 = 0.2
 
-# Construct a kernel with this variance and length scale.
-k = σ² * stretch(Matern52(), 1 / l)
+# Long length-scale and larger variance.
+l2 = 5.0
+s2 = 1.0
 
-# Specify a zero-mean GP with this kernel. Don't worry about the GPC object.
-f = GP(k, GPC())
+# Specify a GaussianProcessProbabilisticProgramme object, which is itself a GP
+# built from other GPs.
+f = @gppp let
+    f1 = s1 * stretch(GP(Matern52Kernel()), 1 / l1)
+    f2 = s2 * stretch(GP(SEKernel()), 1 / l2)
+    f3 = f1 + f2
+end;
 
-# Generate a sample from this GP at some random input locations.
+# Generate a sample from f3, one of the processes in f, at some random input locations.
 # Add some iid observation noise, with zero-mean and variance 0.05.
-const x = randn(100)
-σ²_n = 0.05
-fx = f(x, σ²_n)
-const y = rand(fx)
+const x = GPPPInput(:f3, collect(range(-5.0, 5.0; length=100)));
+σ²_n = 0.05;
+fx = f(x, σ²_n);
+const y = rand(fx);
 
 # Compute the log marginal likelihood of this observation, just because we can.
 logpdf(fx, y)
 ```
 `fx` should be thought of as "`f` at `x`", and is just as a multivariate Normal distribution, with zero mean and covariance matrix
 ```julia
-pw(k, x) + σ²_n * I
+cov(f, x) + σ²_n * I
 ```
 As such samples can be drawn from it, and the log probability any particular value under it can be computed, in the same way that you would an `MvNormal` from [Distributions.jl](https://github.com/JuliaStats/Distributions.jl).
 
@@ -45,72 +59,143 @@ We can visualise `x` and `y` with [Plots.jl](https://github.com/JuliaPlots/Plots
 ```julia
 using Plots
 plt = plot();
-scatter!(plt, x, y; color=:red, label="");
+scatter!(plt, x.x, y; color=:red, label="");
 display(plt);
 ```
 ![img](https://willtebbutt.github.io/resources/samples.svg)
 
 It's straightforward to compute the posterior over `f`:
 ```julia
-f_posterior = f | Obs(fx, y)
+f_posterior = posterior(fx, y);
 ```
-`f_posterior` is another GP, the posterior over `f` given noisy observations `y` at inputs `x`. Equivalently:
-```julia
-f_posterior = f | (fx ← y) # ← is \leftarrow[TAB]
-```
-This is just syntactic sugar for the above. You can use it, or not, the choice is entirely your own.
+`f_posterior` is another GP, the posterior over `f` given noisy observations `y` at inputs `x`.
 
-Stheno.jl knows how to use [Plots.jl](https://github.com/JuliaPlots/Plots.jl) to plot GPs, so it's straightforward to look at the posterior:
+Our plotting recipes aren't quite sophisticated enough at the minute to handle GPPPs properly, but plotting still isn't too much work:
 ```julia
-x_plot = range(-4.0, 4.0; length=1000);
-plot!(plt, f_posterior(x_plot); samples=10, label="", color=:blue);
+x_plot = range(-7.0, 7.0; length=1000);
+xp = GPPPInput(:f3, x_plot);
+ms = marginals(f_posterior(xp));
+plot!(
+    plt, x_plot, mean.(ms);
+    ribbon=3std.(ms), label="", color=:blue, fillalpha=0.2, linewidth=2,
+);
+plot!(
+    plt, x_plot, rand(f_posterior(xp), 10);
+    alpha=0.3, label="", color=:blue,
+);
 display(plt);
 ```
 ![img](https://willtebbutt.github.io/resources/samples_posterior.svg)
 
+So you've built a simple GP probabilistic programme, performed inference in it, and looked at the posterior.
+We've only looked at one component of it though -- we could look at others.
+Consider `f2`:
+```julia
+xp2 = GPPPInput(:f2, x_plot);
+ms = marginals(f_posterior(xp2));
+plot!(
+    plt, x_plot, mean.(ms);
+    ribbon=3std.(ms), label="", color=:red, fillalpha=0.2, linewidth=2,
+);
+plot!(
+    plt, x_plot, rand(f_posterior(xp2, 1e-9), 10);
+    alpha=0.3, label="", color=:red,
+);
+display(plt);
+```
+
+
 
 ## Fit a GP with NelderMead in 2 Minutes
 
-Stheno.jl is slightly unusual in that it declines to provide a `fit` or `train` function. Why is this? In short, because it's hard to design a one-size-fits-all interface for training a GP that composes well with the rest of the tools in the Julia ecosystem, and you _really_ want to avoid creating any impediments to interacting with other tools in the ecosystem.
+Stheno.jl is slightly unusual in that it declines to provide a `fit` or `train` function. Why is this? In short, because there's really no need -- the ecosystem now contains everything that is needed to easily do this yourself. By declining to insist on an interface, Stheno.jl is able to interact with a wide array of tools, that you can use in whichever way you please.
 
-Here we demonstrate the simplest most low-level way to work with Stheno, in which everything is done manually. This example is to demonstrate that the previous section provides all of the basic building blocks that you _need_ to solve regression problems with GPs.
+Optim requires that you provide an objective function with a single `Vector{<:Real}` parameter for most of its optimisers.
+We'll use ParameterHandling.jl to build one of these in a way that doesn't involve manually writing code to convert between a structured, human-readable, representation of our parameters (in a `NamedTuple`) and a `Vector{Float64}`.
 
+First, we'll put the model from before into a function:
 ```julia
-function unpack(θ)
-    σ² = exp(θ[1]) + 1e-6
-    l = exp(θ[2]) + 1e-6
-    σ²_n = exp(θ[3]) + 1e-6
-    return σ², l, σ²_n
-end
-
-# nlml = negative log marginal likelihood (of θ)
-function nlml(θ)
-    σ², l, σ²_n = unpack(θ)
-    k = σ² * stretch(Matern52(), 1 / l)
-    f = GP(k, GPC())
-    return -logpdf(f(x, σ²_n), y)
+function build_model(θ::NamedTuple)
+    return @gppp let
+        f1 = θ.s1 * stretch(GP(SEKernel()), 1 / θ.l1)
+        f2 = θ.s2 * stretch(GP(SEKernel()), 1 / θ.l2)
+        f3 = f1 + f2
+    end
 end
 ```
 
-Hopefully it's clear what we mean by low-level here. We've manually defined a function to unpack a parameter vector `θ` and use this to construct a function that computes the negative log marginal likelihood of `θ`. We can use any gradient-free optimisation technique from [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) to find the parameters whose negative log marginal likelihood is minimal:
+We've assumed that the parameters will be provided as a `NamedTuple`, so let's build one and check that the model can be constructed:
+```julia
+using ParameterHandling
+
+θ = (
+    # Short length-scale and small variance.
+    l1 = positive(0.4),
+    s1 = positive(0.2),
+
+    # Long length-scale and larger variance.
+    l2 = positive(5.0),
+    s2 = positive(1.0),
+
+    # Observation noise variance -- we'll be learning this as well.
+    s_noise = positive(0.1),
+)
+```
+We've used `ParameterHandling.jl`s `positive` constraint to ensure that all of the parameters remain positive during optimisation.
+Note that there's no magic here, and `Optim` knows nothing about `positive`.
+Rather, `ParameterHandling` knows how to make sure that `Optim` will optimise the log of the parameters which we want to be positive.
+
+We can make this happen with the following:
+```julia
+using ParameterHandling
+using ParameterHandling: value, flatten
+
+θ_flat_init, unflatten = flatten(θ);
+
+# Concrete types used for clarity only.
+unpack(θ_flat::Vector{Float64}) = value(unflatten(θ_flat))
+```
+Note that `θ_flat_init` is a `Vector{Float64}`, which is usable within `Optim`. `unflatten` takes it, and reconstructs `θ`. Moreover, if we ask for `value(θ)`, we'll get a version of `θ` with all of the `positive` stuff stripped out, and just leave the `NamedTuple`. So `unpack` takes the flat form of the parameters, and converts them into the form that `build_model` is expecting:
+```julia
+build_model(unpack(θ_flat_init))
+```
+
+We can now easily define a function which accepts the flat form of the parameters, and return the negative log marginal likelihood of the parameters:
+```julia
+# nlml = negative log marginal likelihood (of θ)
+function nlml(θ_flat)
+    θ = unpack(θ_flat)
+    f = build_model(θ)
+    return -logpdf(f(x, θ.s_noise), y)
+end
+```
+
+We can use any gradient-free optimisation technique from [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) to find the parameters whose negative log marginal likelihood is minimal:
 ```julia
 using Optim
-θ0 = randn(3);
-results = Optim.optimize(nlml, θ0, NelderMead())
-σ²_ml, l_ml, σ²_n_ml = unpack(results.minimizer);
+results = Optim.optimize(nlml, θ_flat_init + randn(5), NelderMead())
+θ_opt = unpack(results.minimizer);
 ```
+Note that we just added some noise to the initial values to make the optimisation more interesting.
 
 We can now use this to construct the posterior GP and look at the posterior in comparison to the true posterior with the known hyperparameters
 ```julia
-k = σ²_ml * stretch(Matern52(), 1 / l_ml);
-f = GP(k, GPC());
-f_posterior_ml = f | Obs(f(x, σ²_n_ml), y);
-plot!(plt, f_posterior_ml(x_plot); samples=10, color=:green, label="");
+f_opt = build_model(θ_opt);
+f_posterior_opt = posterior(f_opt(x, θ_opt.s_noise), y);
+ms_opt = marginals(f_posterior_opt(xp));
+plot!(
+    plt, x_plot, mean.(ms_opt);
+    ribbon=3std.(ms_opt), label="", color=:green, fillalpha=0.2, linewidth=2,
+);
+plot!(
+    plt, x_plot, rand(f_posterior_opt(xp, 1e-9), 10);
+    alpha=0.3, label="", color=:green,
+);
 display(plt);
 ```
 ![img](https://willtebbutt.github.io/resources/samples_posterior_both.svg)
 
-(Of course the exact posterior has not been recovered because the exact hyperparameters cannot be expected to be recovered.)
+(Of course the exact posterior has not been recovered because the exact hyperparameters cannot be expected to be recovered given a finite amount of data over a finite width window.)
 
 
 ## Fit a GP with BFGS in 2 minutes
@@ -119,17 +204,34 @@ The BFGS algorithm is generally the preferred choice when optimising the hyperpa
 
 ```julia
 using Zygote: gradient
-θ0 = randn(3);
-results = Optim.optimize(nlml, θ->gradient(nlml, θ)[1], θ0, BFGS(); inplace=false)
-σ²_bfgs, l_bfgs, σ²_n_bfgs = unpack(results.minimizer);
+
+# This will probably take a while to get going as Zygote needs to compile.
+results = Optim.optimize(
+    nlml,
+    θ->gradient(nlml, θ)[1],
+    θ_flat_init + randn(5),
+    BFGS(),
+    Optim.Options(
+        show_trace=true,
+    );
+    inplace=false,
+)
+θ_bfgs = unpack(results.minimizer);
 ```
 
 Once more visualising the results:
 ```julia
-k = σ²_bfgs * stretch(Matern52(), 1 / l_bfgs);
-f = GP(k, GPC());
-f_posterior_bfgs = f | Obs(f(x, σ²_n_bfgs), y);
-plot!(plt, f_posterior_bfgs(x_plot); samples=10, color=:purple, label="");
+f_bfgs = build_model(θ_bfgs);
+f_posterior_bfgs = posterior(f_bfgs(x, θ_bfgs.s_noise), y);
+ms_bfgs = marginals(f_posterior_bfgs(xp));
+plot!(
+    plt, x_plot, mean.(ms_bfgs);
+    ribbon=3std.(ms_bfgs), label="", color=:orange, fillalpha=0.2, linewidth=2,
+);
+plot!(
+    plt, x_plot, rand(f_posterior_bfgs(xp, 1e-9), 10);
+    alpha=0.3, label="", color=:orange,
+);
 display(plt);
 ```
 ![img](https://willtebbutt.github.io/resources/samples_posterior_bfgs.svg)
@@ -139,12 +241,13 @@ Notice that the two optimisers produce (almost) indistinguishable results.
 
 ## Inference with NUTS in 2 minutes
 
-[AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl/) provides a state-of-the-art implementation of the No-U-Turns sampler, which we can use to perform approximate Bayesian inference in the hyperparameters of the GP. This is slightly longer than the previous examples, but it's all set up associated with AdvancedHMC, which is literally a copy-paste from that package's README:
+[AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl/) provides a state-of-the-art implementation of the No-U-Turns sampler, which we can use to perform approximate Bayesian inference in the hyperparameters of the GP.
+This is slightly longer than the previous examples, but it's all set up associated with AdvancedHMC, which is literally a copy-paste from that package's README:
 ```julia
 using AdvancedHMC, Zygote
 
-# Define the log marginal likelihood function and its gradient
-ℓπ(θ) = -nlml(θ)
+# Define the log marginal joint density function and its gradient
+ℓπ(θ) = -nlml(θ) - 0.5 * sum(abs2, θ)
 function ∂ℓπ∂θ(θ)
     lml, back = Zygote.pullback(ℓπ, θ)
     ∂θ = first(back(1.0))
@@ -152,150 +255,37 @@ function ∂ℓπ∂θ(θ)
 end
 
 # Sampling parameter settings
-n_samples, n_adapts = 100, 20
+n_samples, n_adapts = 500, 20
 
 # Draw a random starting points
-θ0 = randn(3)
+θ0 = randn(5)
 
 # Define metric space, Hamiltonian, sampling method and adaptor
-metric = DiagEuclideanMetric(3)
+metric = DiagEuclideanMetric(5)
 h = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
 int = Leapfrog(find_good_eps(h, θ0))
 prop = NUTS{MultinomialTS, GeneralisedNoUTurn}(int)
 adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
 
-# Perform inference
+# Perform inference.
 samples, stats = sample(h, prop, θ0, n_samples, adaptor, n_adapts; progress=true)
 
 # Inspect posterior distribution over hyperparameters.
 hypers = unpack.(samples);
-plt_hypers = plot();
-plot!(plt_hypers, getindex.(hypers, 1); label="variance");
-plot!(plt_hypers, getindex.(hypers, 2); label="length scale");
-plot!(plt_hypers, getindex.(hypers, 3); label="obs noise variance");
-display(plt_hypers);
+h_l1 = histogram(getindex.(hypers, :l1); label="l1");
+h_l2 = histogram(getindex.(hypers, :l2); label="l2");
+h_s1 = histogram(getindex.(hypers, :s1); label="s1");
+h_s2 = histogram(getindex.(hypers, :s2); label="s2");
+display(plot(h_l1, h_l2, h_s1, h_s2; layout=(2, 2)));
 ```
 ![img](https://willtebbutt.github.io/resources/posterior_hypers.svg)
 
-As expected, the sampler converges to the posterior distribution quickly. One could combine this code with that from the previous sections to make predictions under the posterior over the hyperparameters.
+As expected, the sampler converges to the posterior distribution quickly.
+One could combine this code with that from the previous sections to make predictions under the posterior over the hyperparameters.
 
-Also note that we didn't specify a prior over the kernel parameters in this example, so essentially used an improper prior. We could have used a proper prior by appropriately modifying `ℓπ`.
-
-
-
-## Automation with Soss.jl
-
-In all of the examples above it has been necessary to define the function `unpack` to convert between a vector representation of our hyperparameters and one that is useful for computing the nlml. Moreover, it has been necessary to manually define conversions between unconstrained and constrained parametrisations of our hyperparameters. While this is fairly straightforward for a small number of parameters, it's clearly not a scalable solution as models grow in size and complexity.
-
-Instead we can make use of functionality defined in [Soss.jl](https://github.com/cscherrer/Soss.jl) to
-
-- specify priors for the model parameters
-- automatically derive transformations between a vector of unconstrained real numbers and a form that Soss models know how to handle
-
-
-
-### Specifying a Soss model
-
-```
-using Soss
-
-M = @model x begin
-    σ² ~ LogNormal(0, 1)
-    l ~ LogNormal(0, 1)
-    σ²_n ~ LogNormal(0, 1)
-    f = Stheno.GP(σ² * stretch(Matern52(), 1 / l), Stheno.GPC())
-    y ~ f(x, σ²_n + 1e-3)
-end
-```
-
-The above defines the model `M`, with `LogNormal(0, 1)` priors over each of our hyperparameters.
-
-```
-const t = xform(M(x=x), (y=y,))
-```
-
-`t` is a function that transforms between a vector of model parameters and a `NamedTuple` that `Soss` understands.
-
-```
-function ℓπ(θ)
-    (θ_, logjac) = Soss.transform_and_logjac(t, θ)
-    return logpdf(M(x=x), merge(θ_, (y=y,))) + logjac
-end
-nlj(θ) = -ℓπ(θ)
-```
-
-`ℓπ` computes the log joint of the hyperparameters and data. Note that we have replaced the unpacking and transformation functionality from the previous code with the automatically generated function `t`.
-
-The examples that follow simply repeat those found above, but utilise `t`.
-
-
-
-### Fit with Nelder Mead: Stheno + Soss + Optim
-
-```
-θ0 = randn(3);
-results = Optim.optimize(nlj, θ0, NelderMead());
-θ, _ = Soss.transform_and_logjac(t, results.minimizer);
-```
-
-
-
-### Fit with BFGS: Stheno + Soss + Zygote + Optim
-
-```
-# Hack to make Zygote play nicely with a particular thing in Distributions.
-ChainRulesCore.@non_differentiable Distributions.insupport(::Any...)
-
-# Point estimate of parameters via BFGS.
-θ0 = randn(3);
-results = Optim.optimize(nlj, θ->first(gradient(nlj, θ)), θ0, BFGS(); inplace=false)
-θ, _ = Soss.transform_and_logjac(t, results.minimizer);
-```
-
-
-
-### Inference with NUTS: Stheno + Soss + Zygote + AdvancedHMC
-
-```
-# Inference with AdvancedHMC.
-function ∂ℓπ∂θ(θ)
-    lml, back = Zygote.pullback(ℓπ, θ)
-    ∂θ = first(back(1.0))
-    return lml, ∂θ
-end
-
-# Sampling parameter settings
-n_samples, n_adapts = 100, 20
-
-# Draw a random starting points
-θ0 = randn(3)
-
-# Define metric space, Hamiltonian, sampling method and adaptor
-metric = DiagEuclideanMetric(3)
-h = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
-int = Leapfrog(find_good_eps(h, θ0))
-prop = NUTS{MultinomialTS, GeneralisedNoUTurn}(int)
-adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
-
-# Perform inference using NUTS.
-samples, stats = sample(h, prop, θ0, n_samples, adaptor, n_adapts; progress=true)
-
-hypers = first.(Soss.transform_and_logjac.(Ref(t), samples));
-```
-`hypers` could be plotted in exactly the same manner as before.
 
 
 
 ## Conclusion
 
-That's it! You now know how to do typical GP stuff in Stheno. In particular how to:
-
-- specify a kernel with a particular length-scale and variance
-- construct a GP
-- sample from a GP, and specify an observation noise
-- compute the log marginal likelihood of some observations
-- visualise a simple 1D example
-- infer kernel parameters in a variety of ways
-- utilise Soss.jl to automatically handle parameters and their transformations
-
-This are just the basic features of Stheno, that you could expect to find in any other GP package. We _haven't_ covered any of the fancy features of Stheno yet though.
+So you now know how to fit GPs using Stheno.jl, and to investigate their posterior distributions. It's also straightforward to utilise Stheno.jl inside probabilistic programming frameworks like Soss.jl and Turing.jl (see examples folder).
