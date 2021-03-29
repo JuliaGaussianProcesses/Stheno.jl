@@ -61,3 +61,35 @@ If, on the other hand, each _row_ of `X_data` corresponds to a vector-valued inp
 Consider a rectilinear grid of points in D-dimensional Euclidean space. Such grids of points can be represented in a more memory-efficient manner than can arbitrarily locate sets of points. Moreover, this structure can be exploited to accelerate inference for certain types of problems dramatically. Other such examples exist e.g., uniform grids in N-dimensions, and can be exploited to more efficiently represent input data and to accelerate inference.
 
 Work to exploit these kinds of structures is on-going at the time of writing and will be documented before merging.
+
+
+
+## GPPPInput and BlockData
+
+A `GPPPInput` is a special kind of `AbstractVector`, specifically designed for `GPPP`s.
+Given a `GPPP`:
+```julia
+f = @gppp let
+    f1 = GP(SEKernel())
+    f2 = GP(Matern52Kernel())
+    f3 = f1 + f2
+end
+```
+a `GPPPInput` like
+```julia
+x_ = randn(5)
+x = GPPPInput(:f3, x_)
+```
+applied to `f`
+```julia
+fx = f(x, 0.1)
+```
+constructs a `FiniteGP` comprising `f3` at `x_`.
+`GPPPInput(:f2, x_)` and `GPPPInput(:f1, x_)` are the analogues for `f1` and `f2`.
+
+If you wish to refer to multiple processes in `f` at the same time, use a `BlockData`.
+For example
+```julia
+x = BlockData(GPPPInput(:f2, x_), GPPPInput(:f3, x_))
+```
+would pull out a 10-dimensional `FiniteGP`, the first 5 dimensions being `f2` at `x_`, the last 5 dimensions being `f3` at `x_`.
