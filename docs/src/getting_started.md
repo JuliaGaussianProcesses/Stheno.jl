@@ -277,8 +277,6 @@ h_l2 = histogram(getindex.(hypers, :l2); label="l2");
 h_s1 = histogram(getindex.(hypers, :s1); label="s1");
 h_s2 = histogram(getindex.(hypers, :s2); label="s2");
 display(plot(h_l1, h_l2, h_s1, h_s2; layout=(2, 2)));
-
-
 ```
 ![img](https://willtebbutt.github.io/resources/posterior_hypers.svg)
 
