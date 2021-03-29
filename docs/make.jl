@@ -21,4 +21,4 @@ makedocs(
     ],
 )
 
-deploydocs(repo="github.com/willtebbutt/Stheno.jl.git")
+deploydocs(repo="github.com/JuliaGaussianProcesses/Stheno.jl.git")
