@@ -1,5 +1,4 @@
 import Base: ∘
-export ∘, select, stretch, periodic, shift
 
 """
     ∘(f::GP, g)
@@ -11,7 +10,7 @@ Constructs the GP f′ given by f′(x) := f(g(x))
 
 const comp_args = Tuple{typeof(∘), AbstractGP, Any}
 
-mean_vector((_, f, g)::comp_args, x::AV) = mean_vector(f, g.(x))
+mean((_, f, g)::comp_args, x::AV) = mean(f, g.(x))
 
 cov((_, f, g)::comp_args, x::AV) = cov(f, g.(x))
 cov_diag((_, f, g)::comp_args, x::AV) = cov_diag(f, g.(x))
@@ -40,13 +39,21 @@ broadcasted(s::Stretch{<:Real}, x::ColVecs) = ColVecs(s.l .* x.X)
 broadcasted(s::Stretch{<:AbstractMatrix}, x::ColVecs) = ColVecs(s.l * x.X)
 
 """
-    stretch(f::AbstractGP, l::Union{AbstractVecOrMat, Real})
+    stretch(f::AbstractGP, l::Union{AbstractVecOrMat{<:Real}, Real})
 
-Equivalent to `f ∘ Stretch(l)`
+This is the primary mechanism by which to introduce length scales to your programme.
+
+If `l isa Real` or `l isa AbstractMatrix{<:Real}`, `stretch(f, l)(x) == f(l * x)` for any
+input `x`.
+In the `l isa Real` case, this is equivalent to scaling the length scale by `1 / l`.
+
+`l isa AbstractVector{<:Real}` is equivalent to `stretch(f, Diagonal(l))`.
+
+Equivalent to `f ∘ Stretch(l)`.
 """
 stretch(f::AbstractGP, l::Real) = f ∘ Stretch(l)
-stretch(f::AbstractGP, a::AbstractVector) = stretch(f, Diagonal(a))
-stretch(f::AbstractGP, A::AbstractMatrix) = f ∘ Stretch(A)
+stretch(f::AbstractGP, a::AbstractVector{<:Real}) = stretch(f, Diagonal(a))
+stretch(f::AbstractGP, A::AbstractMatrix{<:Real}) = f ∘ Stretch(A)
 
 
 
@@ -70,7 +77,7 @@ function broadcasted(f::Select, x::AbstractVector{<:CartesianIndex})
     return ColVecs(out)
 end
 
-function rrule(::typeof(broadcasted), f::Select, x::AV{<:CartesianIndex})
+function ChainRulesCore.rrule(::typeof(broadcasted), f::Select, x::AV{<:CartesianIndex})
     return broadcasted(f, x), Δ->(NO_FIELDS, DoesNotExist(), Zero())
 end
 

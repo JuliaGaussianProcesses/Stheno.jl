@@ -1,4 +1,4 @@
-using Stheno: block_diagonal, BlockDiagonal, tr_At_A, blocksizes
+using Stheno: block_diagonal, BlockDiagonal, blocksizes
 
 function general_BlockDiagonal_tests(rng, blocks)
     d = block_diagonal(blocks)
@@ -8,12 +8,12 @@ function general_BlockDiagonal_tests(rng, blocks)
         @test blocksizes(d, 1) == Ps
         @test blocksizes(d, 2) == Qs
 
-        @test getblock(d, 1, 1) == blocks[1]
-        @test getblock(d, 2, 2) == blocks[2]
-        @test getblock(d, 1, 2) == zeros(Ps[1], Qs[2])
-        @test getblock(d, 2, 1) == zeros(Ps[2], Qs[1])
+        @test view(d, Block(1, 1)) == blocks[1]
+        @test view(d, Block(2, 2)) == blocks[2]
+        @test view(d, Block(1, 2)) == zeros(Ps[1], Qs[2])
+        @test view(d, Block(2, 1)) == zeros(Ps[2], Qs[1])
 
-        @test d[Block(1, 1)] == getblock(d, 1, 1)
+        @test d[Block(1, 1)] == view(d, Block(1, 1))
     end
 end
 
@@ -201,21 +201,6 @@ end
         S_diag, back_diag = Zygote.pullback(Symmetric, A)
         S_dens, back_dens = Zygote.pullback(Symmetric, Matrix(A))
         @test S_diag ≈ S_dens
-    end
-    @timedtestset "tr_At_A" begin
-        rng, Ps = MersenneTwister(123456), [4, 5, 6]
-        A = block_diagonal([randn(rng, P, P) for P in Ps])
-
-        @test tr_At_A(A) ≈ tr_At_A(Matrix(A))
-
-        b_diag, back_diag = Zygote.pullback(tr_At_A, A)
-        b_dens, back_dens = Zygote.pullback(tr_At_A, Matrix(A))
-        @test b_diag ≈ b_dens
-
-        b̄ = randn(rng)
-        Ā_diag, Ā_dens = first(back_diag(b̄)), first(back_dens(b̄))
-        @test Matrix(Ā_diag) ≈ Ā_dens
-        @test Ā_diag isa BlockDiagonal
     end
     @timedtestset "BlockDiagonal * BlockDiagonal" begin
         rng, Ps = MersenneTwister(123456), [4, 5, 6]

@@ -1,9 +1,10 @@
+using AbstractGPs
 using BlockArrays
-using Distances
 using Documenter
 using FiniteDifferences
 using Flux
 using LinearAlgebra
+using KernelFunctions
 using Random
 using Statistics
 using Stheno
@@ -11,8 +12,7 @@ using Test
 using TimerOutputs
 using Zygote
 
-using Stheno: ew, pw, mean_vector, cov, cov_diag
-using Stheno: EQ
+using Stheno: mean, cov, cov_diag, GPC, AV
 
 const to = TimerOutput()
 
@@ -34,45 +34,44 @@ include("test_util.jl")
             include(joinpath("util", "block_arrays", "diagonal.jl"))
         end
         include(joinpath("util", "abstract_data_set.jl"))
-        include(joinpath("util", "distances.jl"))
     end
 
     println("gp:")
     @timedtestset "gp" begin
-        include(joinpath("gp", "mean.jl"))
-        include(joinpath("gp", "kernel.jl"))
         include(joinpath("gp", "gp.jl"))
     end
 
     println("composite:")
     @timedtestset "composite" begin
         include(joinpath("composite", "test_util.jl"))
-        include(joinpath("composite", "indexing.jl"))
         include(joinpath("composite", "cross.jl"))
-        include(joinpath("composite", "conditioning.jl"))
         include(joinpath("composite", "product.jl"))
         include(joinpath("composite", "addition.jl"))
         include(joinpath("composite", "compose.jl"))
-        include(joinpath("composite", "approximate_conditioning.jl"))
     end
 
     println("abstract_gp:")
     @timedtestset "abstract_gp" begin
         include("abstract_gp.jl")
-        include("approximate_inference.jl")
     end
+
+    println("gaussian_process_probabilistic_programme:")
+    include("gaussian_process_probabilistic_programme.jl")
 
     println("flux:")
     @timedtestset "flux" begin
         include(joinpath("flux", "neural_kernel_network.jl"))
     end
 
+    println("sparse_finite_gp:")
+    include("sparse_finite_gp.jl")
+
     println("doctests")
     @timedtestset "doctests" begin
         DocMeta.setdocmeta!(
             Stheno,
             :DocTestSetup,
-            :(using Stheno, Random, Documenter, LinearAlgebra);
+            :(using AbstractGPs, Stheno, Random, Documenter, LinearAlgebra);
             recursive=true,
         )
         doctest(Stheno)

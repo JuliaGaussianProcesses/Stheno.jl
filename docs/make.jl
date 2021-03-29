@@ -3,7 +3,7 @@ using Documenter, Stheno
 DocMeta.setdocmeta!(
     Stheno,
     :DocTestSetup,
-    :(using Stheno, Random, LinearAlgebra);
+    :(using AbstractGPs, Stheno, Random, LinearAlgebra);
     recursive=true,
 )
 
@@ -14,11 +14,10 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
-        "GP API" => "gp_api.md",
-        "CompositeGP API" => "composite_gp_api.md",
         "Input Types" => "input_types.md",
         "Kernel Design" => "kernel_design.md",
         "Internals" => "internals.md",
+        "API" => "api.md",
     ],
 )
 

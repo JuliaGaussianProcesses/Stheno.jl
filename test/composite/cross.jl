@@ -1,11 +1,11 @@
-using Stheno: BlockData, GPC, cross
+using Stheno: BlockData, cross
 
 @timedtestset "cross" begin
     @timedtestset "Correctness tests" begin
         rng, P, Q, gpc = MersenneTwister(123456), 2, 3, GPC()
 
-        f1 = GP(sin, EQ(), gpc)
-        f2 = GP(cos, EQ(), gpc)
+        f1 = wrap(GP(sin, SEKernel()), gpc)
+        f2 = wrap(GP(cos, SEKernel()), gpc)
         f3 = cross([f1, f2])
         f4 = cross([f1])
         f5 = cross([f2])
@@ -44,33 +44,6 @@ using Stheno: BlockData, GPC, cross
         @test cov(f5(x5)) == cov(f2(x2))
         @test cov(f3(x3), f4(x4)) == cov(f3(x3), f1(x1))
         @test cov(f5(x5), f3(x3)) == cov(f2(x2), f3(x3))
-
-        @timedtestset "rand, logpdf, elbo" begin
-
-            # Single-sample rand
-            y1, y2 = rand([f1(x1), f2(x2)])
-            @test length(y1) == length(x1)
-            @test length(y2) == length(x2)
-
-            # Multi-sample rand
-            Y1, Y2 = rand([f1(x1), f2(x2)], 11)
-            @test size(Y1) == (length(y1), 11)
-            @test size(Y2) == (length(y2), 11)
-
-            # logpdf
-            @test logpdf([f1(x1), f2(x2)], [y1, y2]) ≈ logpdf(f1(x1), y1) + logpdf(f2(x2), y2)
-            @test logpdf([f1(x1), f2(x2)], [y1, y2]) ≈ logpdf([f1(x1)←y1, f2(x2)←y2])
-
-            # elbo
-            @test elbo([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2], [f1(x1), f2(x2)]) ≈
-                logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
-            @test elbo(
-                [f1(x1, 1e-3), f2(x2, 1e-3)],
-                [y1, y2],
-                Stheno.finites_to_block([f1(x1), f2(x2)]),
-            ) ≈ logpdf([f1(x1, 1e-3), f2(x2, 1e-3)], [y1, y2])
-            @test elbo(f1(x1, 1e-3), y1, [f1(x1), f2(x2)]) ≈ logpdf(f1(x1, 1e-3), y1)
-        end
     end
     @timedtestset "Standardised Tests" begin
         rng, P, Q = MersenneTwister(123456), 3, 5
@@ -80,7 +53,8 @@ using Stheno: BlockData, GPC, cross
         x2, x3 = randn(rng, P), randn(2P)
 
         gpc = GPC()
-        f1, f2 = GP(sin, EQ(), gpc), GP(cos, EQ(), gpc)
+        f1 = wrap(GP(sin, SEKernel()), gpc)
+        f2 = wrap(GP(cos, SEKernel()), gpc)
         f3 = cross([f1, f2])
         abstractgp_interface_tests(f3, f1, x0, x1, x2, x3)
 
@@ -91,8 +65,8 @@ using Stheno: BlockData, GPC, cross
         #     Dict(:l1=>0.5, :l2=>2.3),
         #     θ->begin
         #         gpc = GPC()
-        #         f1 = θ[:l1] * GP(sin, EQ(), gpc)
-        #         f2 = θ[:l2] * GP(cos, EQ(), gpc)
+        #         f1 = θ[:l1] * GP(sin, SqExponentialKernel(), gpc)
+        #         f2 = θ[:l2] * GP(cos, SqExponentialKernel(), gpc)
         #         f3 = cross([f1, f2])
         #         return f3, f3
         #     end,
@@ -104,7 +78,8 @@ using Stheno: BlockData, GPC, cross
         rng, P, Q = MersenneTwister(123456), 3, 5
         xp, xq = randn(rng, P), randn(rng, Q)
         gpc = GPC()
-        f_, g_ = GP(sin, EQ(), gpc), GP(cos, EQ(), gpc)
+        f_ = wrap(GP(sin, SEKernel()), gpc)
+        g_ = wrap(GP(cos, SEKernel()), gpc)
         h_x = Stheno.finites_to_block([f_(xp, 1.0), g_(xq, 1.0)])
     end
 end

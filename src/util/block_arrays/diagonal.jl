@@ -8,9 +8,6 @@ const BlockDiagonal{T, TM} = BlockMatrix{T, <:Diagonal{TM}} where {TM <: Abstrac
 
 block_diagonal(vs::AbstractVector{<:AbstractMatrix}) = mortar(Diagonal(vs))
 
-function LinearAlgebra.diagzero(D::Diagonal{<:AbstractMatrix{T}}, r, c) where {T}
-    return zeros(T, size(D.diag[r], 1), size(D.diag[c], 2))
-end
 
 
 #
@@ -36,10 +33,6 @@ LinearAlgebra.transpose(A::BlockDiagonal) = block_diagonal(transpose.(A.blocks.d
 
 function LinearAlgebra.UpperTriangular(A::BlockDiagonal)
     return block_diagonal(UpperTriangular.(A.blocks.diag))
-end
-
-function LinearAlgebra.LowerTriangular(A::BlockDiagonal)
-    return block_diagonal(LowerTriangular.(A.blocks.diag))
 end
 
 
@@ -89,17 +82,6 @@ end
 #
 
 Base.:-(A::BlockDiagonal) = block_diagonal([-a for a in A.blocks.diag])
-
-
-#
-# tr_At_A
-#
-
-tr_At_A(A::BlockDiagonal) = sum(tr_At_A.(A.blocks.diag))
-
-ZygoteRules.@adjoint function tr_At_A(A::BlockDiagonal)
-    return tr_At_A(A), Δ::Real->(block_diagonal(2Δ .* A.blocks.diag),)
-end
 
 
 #
@@ -187,7 +169,6 @@ ZygoteRules.@adjoint function LinearAlgebra.cholesky(A::BlockDiagonal{<:Real})
     Cs_backs = map(A->Zygote.pullback(A->cholesky(A).U, A), diag(A.blocks))
     Cs, backs = first.(Cs_backs), last.(Cs_backs)
     function back(Ū::BlockDiagonal)
-        # @show typeof(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs))
         return (block_diagonal(map((Ū, back)->first(back(Ū)), diag(Ū.blocks), backs)),)
     end
     return Cholesky(block_diagonal(Cs), :U, 0), Δ->back(Δ.factors)
@@ -212,11 +193,6 @@ end
 # Misc
 #
 
-# Legacy version of logabsdet for pre-1.4.
-if VERSION < v"1.4.0"
-    LinearAlgebra.logabsdet(d::Diagonal) = logabsdet(UpperTriangular(d))
-end
-
 #
 # BlockDiagonal mul! and *
 #
@@ -228,7 +204,7 @@ function LinearAlgebra.mul!(y::BlockVector, D::BlockDiagonal, x::BlockVector)
     @assert are_conformal(D, x) && are_conformal(D, y)
     blocks = D.blocks.diag
     for r in 1:nblocks(D, 1)
-        mul!(getblock(y, r), blocks[r], getblock(x, r))
+        mul!(view(y, Block(r)), blocks[r], view(x, Block(r)))
     end
     return y
 end
@@ -248,7 +224,7 @@ function LinearAlgebra.mul!(Y::BlockMatrix, D::BlockDiagonal, X::BlockMatrix)
     blocks = D.blocks.diag
     for r in 1:nblocks(D, 1)
         for c in 1:nblocks(X, 2)
-            mul!(getblock(Y, r, c), blocks[r], getblock(X, r, c))
+            mul!(view(Y, Block(r, c)), blocks[r], view(X, Block(r, c)))
         end
     end
     return Y

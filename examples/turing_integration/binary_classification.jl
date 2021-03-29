@@ -38,7 +38,7 @@ test_x = Matrix(transpose(convert(Array, test[:, 4:end])))
 σ(x) = one(T) / (one(T)+exp(-x))
 
 function build_gp(logl, σ², X)
-    ard_eq_kernel = σ² * stretch(EQ(), exp.(-logl))
+    ard_eq_kernel = σ² * stretch(SEKernel(), exp.(-logl))
     gp = GP(ard_eq_kernel, GPC())
     prior = gp(ColVecs(X), T(0.01))
     gp, prior
@@ -100,5 +100,3 @@ function accuracy(pred_y, y)
 end
 
 @show accuracy(pred_y, test_y)
-
-

@@ -1,5 +1,13 @@
 import Base: *, -
 
+"""
+    *(f, g::AbstractGP)
+
+Produce an `AbstractGP` `h` satisfying to `h(x) = f(x) * g(x)`, for some deterministic
+function `f`.
+
+If `f isa Real`, then `h(x) = f * g(x)`.
+"""
 *(f, g::AbstractGP) = CompositeGP((*, f, g), g.gpc)
 *(f::AbstractGP, g) = CompositeGP((*, g, f), f.gpc)
 *(f::AbstractGP, g::AbstractGP) = throw(ArgumentError("Cannot multiply two GPs together."))
@@ -10,7 +18,7 @@ const prod_args{Tf} = Tuple{typeof(*), Tf, <:AbstractGP}
 # Scale by a function
 #
 
-mean_vector((_, σ, g)::prod_args, x::AV) = σ.(x) .* mean_vector(g, x)
+mean((_, σ, g)::prod_args, x::AV) = σ.(x) .* mean(g, x)
 
 function cov((_, σ, g)::prod_args, x::AV)
     σx = σ.(x)
@@ -39,7 +47,7 @@ end
 # Scale by a constant
 #
 
-mean_vector((_, σ, g)::prod_args{<:Real}, x::AV) = σ .* mean_vector(g, x)
+mean((_, σ, g)::prod_args{<:Real}, x::AV) = σ .* mean(g, x)
 
 cov((_, σ, g)::prod_args{<:Real}, x::AV) = (σ^2) .* cov(g, x)
 cov_diag((_, σ, g)::prod_args{<:Real}, x::AV) = (σ^2) .* cov_diag(g, x)

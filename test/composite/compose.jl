@@ -1,10 +1,10 @@
-using Stheno: GPC, EQ, Exp
-
 @timedtestset "compose" begin
     @timedtestset "general" begin
         rng, N, N′, gpc = MersenneTwister(123456), 5, 3, GPC()
         x, x′ = randn(rng, N), randn(rng, N′)
-        f, g, h = GP(sin, EQ(), gpc), cos, GP(exp, Exp(), gpc)
+        f = wrap(GP(sin, SEKernel()), gpc)
+        g = cos
+        h = wrap(GP(exp, ExponentialKernel()), gpc)
         fg = f ∘ g
 
         # Check marginals statistics inductively.
@@ -26,7 +26,7 @@ using Stheno: GPC, EQ, Exp
             abstractgp_interface_tests(fg, f, x0, x1, x2, x3)
             abstractgp_interface_tests(stretch(f, 0.1), f, x0, x1, x2, x3)
 
-            # f = GP(EQ(), GPC())
+            # f = GP(SqExponentialKernel(), GPC())
             # abstractgp_interface_tests(periodic(f, 0.1), f, x0, x1, x2, x3)
         end
         @timedtestset "Diff Tests" begin
@@ -34,7 +34,7 @@ using Stheno: GPC, EQ, Exp
                 MersenneTwister(123456),
                 Dict(:σ=>0.5),
                 θ->begin
-                    f = θ[:σ] * GP(sin, EQ(), GPC())
+                    f = θ[:σ] * wrap(GP(sin, SEKernel()), GPC())
                     return stretch(f, 0.5), f
                 end,
                 collect(range(-2.0, 2.0; length=N)),
@@ -46,7 +46,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "scalar stretch" begin
             rng, N, λ = MersenneTwister(123456), 3, 0.51
             x = randn(rng)
-            f = GP(1.3, EQ(), GPC())
+            f = wrap(GP(1.3, SEKernel()), GPC())
             g = stretch(f, λ)
 
             @timedtestset "scalar input" begin
@@ -56,12 +56,16 @@ using Stheno: GPC, EQ, Exp
                     MersenneTwister(123456),
                     Dict(:σ=>0.5, :l=>0.32),
                     θ->begin
-                        f_ = θ[:σ] * GP(sin, EQ(), GPC())
+                        f_ = θ[:σ] * wrap(GP(sin, SEKernel()), GPC())
                         return stretch(f_, θ[:l]), f_
                     end,
                     collect(range(-2.0, 2.0; length=N)),
                     collect(range(-1.5, 2.2; length=5)),
                 )
+                @testset "StepRangeLen" begin
+                    v = range(-2.0, 2.0; length=N)
+                    @test cov(g(v)) ≈ cov(g(collect(v)))
+                end
             end
             @timedtestset "vector input" begin
                 D = 11
@@ -73,7 +77,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "Vector stretch" begin
             rng, N, D = MersenneTwister(123456), 3, 7
             λ = randn(rng, D)
-            f = GP(1.0, EQ(), GPC())
+            f = wrap(GP(1.0, SEKernel()), GPC())
             g = stretch(f, λ)
 
             X = randn(rng, D, 1)
@@ -83,7 +87,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "Matrix stretch" begin
             rng, N, D = MersenneTwister(123456), 3, 7
             A = randn(rng, D, D)
-            f = GP(1.0, EQ(), GPC())
+            f = wrap(GP(1.0, SEKernel()), GPC())
             g = stretch(f, A)
 
             X = randn(rng, D, 1)
@@ -93,21 +97,34 @@ using Stheno: GPC, EQ, Exp
     end
     @timedtestset "Select" begin
         rng, N, D = MersenneTwister(123456), 3, 6
-        idx = [1, 3]
-        f = GP(1.3, EQ(), GPC())
-        g = select(f, idx)
+        @testset "idx isa Integer" begin
+            idx = 1
+            f = wrap(GP(1.3, SEKernel()), GPC())
+            g = select(f, idx)
 
-        X = randn(rng, D, N)
-        X_f = ColVecs(X[idx, :])
-        X_g = ColVecs(X)
-        @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
-        @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
+            X = randn(rng, D, N)
+            X_f = X[idx, :]
+            X_g = ColVecs(X)
+            @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
+            @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
+        end
+        @testset "idx isa Vector" begin
+            idx = [1, 3]
+            f = wrap(GP(1.3, SEKernel()), GPC())
+            g = select(f, idx)
+
+            X = randn(rng, D, N)
+            X_f = ColVecs(X[idx, :])
+            X_g = ColVecs(X)
+            @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
+            @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
+        end
     end
     @timedtestset "Shift" begin
         @timedtestset "Shift{Float64}" begin
             rng, N, D = MersenneTwister(123456), 3, 6
             a = randn(rng)
-            f = GP(1.3, EQ(), GPC())
+            f = wrap(GP(1.3, SEKernel()), GPC())
             g = shift(f, a)
 
             x = randn(rng, N)
@@ -125,7 +142,7 @@ using Stheno: GPC, EQ, Exp
         @timedtestset "Shift{Vector{Float64}}" begin
             rng, N, D = MersenneTwister(123456), 3, 6
             a = randn(rng, D)
-            f = GP(1.3, EQ(), GPC())
+            f = wrap(GP(1.3, SEKernel()), GPC())
             g = shift(f, a)
 
             X = randn(rng, D, N)
@@ -134,5 +151,10 @@ using Stheno: GPC, EQ, Exp
             @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
             @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
         end
+    end
+    @timedtestset "Periodic" begin
+        f = wrap(GP(SEKernel()), GPC())
+        g = periodic(f, 2.0)
+        @test cov(g([0.0]), g([1.0])) ≈ cov(g([0.0]), g([3.0]))
     end
 end

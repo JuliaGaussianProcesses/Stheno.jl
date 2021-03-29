@@ -13,7 +13,8 @@ gr();
 posterior_plot = plot();
 
 # Plot the posterior distribution.
-plot!(posterior_plot, f_post(xpr); samples=5, color=:blue);
+plot!(posterior_plot, f_post(xpr); color=:blue);
+sampleplot!(posterior_plot, f_post(xpr); samples=5, color=:blue);
 
 # Plot the observations.
 scatter!(posterior_plot, x, y;

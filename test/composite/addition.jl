@@ -1,10 +1,9 @@
-using Stheno: GPC, EQ, Exp
-
 @timedtestset "addition" begin
     @timedtestset "Correlated GPs" begin
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
-        f1, f2 = GP(1, EQ(), gpc), GP(2, Exp(), gpc)
+        f1 = wrap(GP(1, SEKernel()), gpc)
+        f2 = wrap(GP(2, SEKernel()), gpc)
         f3 = f1 + f2
         f4 = f1 + f3
         f5 = f3 + f4
@@ -33,7 +32,7 @@ using Stheno: GPC, EQ, Exp
     @timedtestset "Verify mean / kernel numerically" begin
         rng, N, D = MersenneTwister(123456), 5, 6
         X = ColVecs(randn(rng, D, N))
-        c, f = randn(rng), GP(5, EQ(), GPC())
+        c, f = randn(rng), wrap(GP(5, SEKernel()), GPC())
 
         @test mean((f + c)(X)) == mean(f(X)) .+ c
         @test mean((f + c)(X)) == c .+ mean(f(X))
@@ -63,8 +62,8 @@ using Stheno: GPC, EQ, Exp
             Dict(:l1=>0.5, :l2=>2.3),
             θ->begin
                 gpc = GPC()
-                f1 = θ[:l1] * GP(sin, EQ(), gpc)
-                f2 = θ[:l2] * GP(cos, EQ(), gpc)
+                f1 = θ[:l1] * wrap(GP(sin, SEKernel()), gpc)
+                f2 = θ[:l2] * wrap(GP(cos, SEKernel()), gpc)
                 f3 = f1 + f2
                 return f3, f3
             end,
@@ -78,8 +77,8 @@ using Stheno: GPC, EQ, Exp
             Dict(:l1=>0.5, :l2=>2.3),
             θ->begin
                 gpc = GPC()
-                f1 = θ[:l1] * GP(sin, EQ(), gpc)
-                f2 = θ[:l2] * GP(cos, EQ(), gpc)
+                f1 = θ[:l1] * wrap(GP(sin, SEKernel()), gpc)
+                f2 = θ[:l2] * wrap(GP(cos, SEKernel()), gpc)
                 f3 = f1 + f2
                 f4 = f1 + f3
                 f5 = f3 + f4
@@ -93,16 +92,16 @@ end
 
 # # θ = Dict(:l1=>0.5, :l2=>2.3);
 # x, z = collect(range(-5.0, 5.0; length=512)), collect(range(-5.0, 5.0; length=128));
-# y = rand(GP(sin, EQ(), GPC())(x, 0.1));
+# y = rand(GP(sin, SqExponentialKernel(), GPC())(x, 0.1));
 
 # foo_logpdf = (x, y) -> begin
 #     gpc = GPC()
-#     f = GP(sin, EQ(), gpc)
+#     f = GP(sin, SqExponentialKernel(), gpc)
 #     return logpdf(f(x, 0.1), y)
 # end
 
 # foo_elbo = (x, y, z) -> begin
-#     f = GP(0, EQ(), GPC())
+#     f = GP(0, SqExponentialKernel(), GPC())
 #     return elbo(f(x, 0.1), y, f(z, 0.001))
 # end
 
@@ -116,7 +115,7 @@ end
 
 # let
 #     foo = function(x, y)
-#         fx = GP(0, EQ(), GPC())(x, 0.1)
+#         fx = GP(0, SqExponentialKernel(), GPC())(x, 0.1)
 #         C = cholesky(Symmetric(cov(fx)))
 #         return logdet(C) + Xt_invA_X(C, y)
 #     end
@@ -137,8 +136,8 @@ end
 
 # θ->begin
 #     gpc = GPC()
-#     f1 = GP(sin, EQ(l=θ[:l1]), gpc)
-#     f2 = GP(cos, EQ(l=θ[:l2]), gpc)
+#     f1 = GP(sin, SqExponentialKernel(l=θ[:l1]), gpc)
+#     f2 = GP(cos, SqExponentialKernel(l=θ[:l2]), gpc)
 #     f3 = f1 + f2
 #     return f3, f3
 # end,
