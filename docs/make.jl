@@ -17,6 +17,7 @@ makedocs(
         "Input Types" => "input_types.md",
         "Kernel Design" => "kernel_design.md",
         "Internals" => "internals.md",
+        "API" => "api.md",
     ],
 )
 

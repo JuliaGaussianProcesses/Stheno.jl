@@ -98,7 +98,42 @@ end
 
 
 
-# Helper functionality for chopping up data.
+"""
+    Base.split(x::BlockData, Y::AbstractVecOrMat)
+
+Split up the rows of `Y` according to the sizes of the data in `x`.
+
+```jldoctest
+julia> Y = vcat(randn(5, 3), randn(4, 3));
+
+julia> x = BlockData(randn(5), randn(4));
+
+julia> Y1, Y2 = split(x, Y);
+
+julia> Y1 == Y[1:5, :]
+true
+
+julia> Y2 == Y[6:end, :]
+true
+```
+
+Works with any `BlockData`, so blocks can e.g. be `GPPPInput`s. This is particularly helpful
+for working with the output from `rand` and `marginals` from a `GPPP` indexed at
+`BlockData`. For example
+```julia
+f = @gppp let
+    f1 = GP(SEKernel())
+    f2 = GP(Matern52Kernel())
+    f3 = f1 + f2
+end
+
+x = BlockData(GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(4)))
+y = rand(f(x))
+y2, y3 = split(x, y)
+```
+
+Functionality also works for `AbstractVectors`.
+"""
 function Base.split(x::BlockData, Y::AbstractMatrix)
     length(x) == size(Y, 1) || throw(error("Expected length(x) == size(Y, 1)"))
     return map(idx->Y[idx, :], _get_indices(x))
