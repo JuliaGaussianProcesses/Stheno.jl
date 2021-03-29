@@ -141,6 +141,7 @@ true
 ```
 """
 macro gppp(let_block::Expr)
+    # Consult the `Internals` section of the docs for info about what this macro is doing.
 
     # Ensure that we're dealing with a let block.
     let_block.head == :let || throw(error("gppp needs a let block."))
@@ -154,7 +155,7 @@ macro gppp(let_block::Expr)
     variable_names = map(x -> x.args[1], lines_declaring_variables)
 
     # Construct expression which specifies mappings between symbolic names and GPs.
-    # The resulting expression is of the form [:f1 => f1, :f2 => f2].
+    # The resulting expression is of the form (f1 = f1, f2 = f2).
     var_mapping = Expr(
         :tuple,
         map(variable_names) do var_name
