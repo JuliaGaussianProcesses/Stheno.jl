@@ -16,6 +16,13 @@ split
 
 ## Building GPPPs
 
-```@docs
+If in doubt about what any of these transformations can do, play around with them!
 
+```@docs
++
+*
+stretch
+periodic
+shift
+select
 ```

@@ -1,5 +1,13 @@
 import Base: *, -
 
+"""
+    *(f, g::AbstractGP)
+
+Produce an `AbstractGP` `h` satisfying to `h(x) = f(x) * g(x)`, for some deterministic
+function `f`.
+
+If `f isa Real`, then `h(x) = f * g(x)`.
+"""
 *(f, g::AbstractGP) = CompositeGP((*, f, g), g.gpc)
 *(f::AbstractGP, g) = CompositeGP((*, g, f), f.gpc)
 *(f::AbstractGP, g::AbstractGP) = throw(ArgumentError("Cannot multiply two GPs together."))
