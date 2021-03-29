@@ -16,10 +16,14 @@ This version contains a large number of _very_ breaking changes -- some of the b
 - The `@model` macro is gone, and has been replaced with the `@gppp` macro. This new macro has quite different functionality, and produces a `GPPP` object.
 - Stheno's own kernels have been replaced by ones from `KernelFunctions.jl`. This has removed a lot of code from the repo, but completely changes the function calls required to build GPs. To upgrade, consult KernelFunctions.jl for equivalent kernels.
 - Stheno's internal GP type has been replaced with a wrapper type `WrappedGP` for `AbstractGP`s.
+- Stheno's internal conditioning and approximate-conditioning functionality has been entirely removed, in favour of using AbstractGPs `posterior` and `approx_posterior` directly on entire `GPPP`s. This much simpler approach generally makes for correspondingly simpler code.
 
 ### New Features
 
-- Nothing noteworthy, other than the ability to use any kernels defined using `KernelFunctions.jl`.
+- Kernels defined using `KernelFunctions.jl` should all work now.
+- The @gppp macro.
+- New `GPPPInput` type for working with `GPPP`s.
+- `BlockData` exported for working with multiple processes in a `GPPP` at once.
 
 ## 0.6.1
 
