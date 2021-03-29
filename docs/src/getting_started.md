@@ -166,7 +166,7 @@ We can now easily define a function which accepts the flat form of the parameter
 function nlml(θ_flat)
     θ = unpack(θ_flat)
     f = build_model(θ)
-    return -logpdf(f(Zygote.dropgrad(x), θ.s_noise), Zygote.dropgrad(y))
+    return -logpdf(f(x, θ.s_noise), y)
 end
 ```
 
@@ -188,7 +188,7 @@ plot!(
     ribbon=3std.(ms_opt), label="", color=:green, fillalpha=0.2, linewidth=2,
 );
 plot!(
-    plt, x_plot, rand(f_posterior_opt(xp), 10);
+    plt, x_plot, rand(f_posterior_opt(xp, 1e-9), 10);
     alpha=0.3, label="", color=:green,
 );
 display(plt);
@@ -205,9 +205,7 @@ The BFGS algorithm is generally the preferred choice when optimising the hyperpa
 ```julia
 using Zygote: gradient
 
-# This will probably take a while to get going, because Zygote
-# has pretty long compile times.
-# Also note that we appear to have a performance bug somewhere, as gradient evaulation is taking 100x forward evaluation.
+# This will probably take a while to get going as Zygote needs to compile.
 results = Optim.optimize(
     nlml,
     θ->gradient(nlml, θ)[1],
@@ -231,7 +229,7 @@ plot!(
     ribbon=3std.(ms_bfgs), label="", color=:orange, fillalpha=0.2, linewidth=2,
 );
 plot!(
-    plt, x_plot, rand(f_posterior_bfgs(xp), 10);
+    plt, x_plot, rand(f_posterior_bfgs(xp, 1e-9), 10);
     alpha=0.3, label="", color=:orange,
 );
 display(plt);
@@ -248,8 +246,8 @@ This is slightly longer than the previous examples, but it's all set up associat
 ```julia
 using AdvancedHMC, Zygote
 
-# Define the log marginal likelihood function and its gradient
-ℓπ(θ) = -nlml(θ)
+# Define the log marginal joint density function and its gradient
+ℓπ(θ) = -nlml(θ) - 0.5 * sum(abs2, θ)
 function ∂ℓπ∂θ(θ)
     lml, back = Zygote.pullback(ℓπ, θ)
     ∂θ = first(back(1.0))
@@ -257,7 +255,7 @@ function ∂ℓπ∂θ(θ)
 end
 
 # Sampling parameter settings
-n_samples, n_adapts = 100, 20
+n_samples, n_adapts = 500, 20
 
 # Draw a random starting points
 θ0 = randn(5)
@@ -269,24 +267,23 @@ int = Leapfrog(find_good_eps(h, θ0))
 prop = NUTS{MultinomialTS, GeneralisedNoUTurn}(int)
 adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
 
-# Perform inference. Again, our performance bug appears to be problematic.
+# Perform inference.
 samples, stats = sample(h, prop, θ0, n_samples, adaptor, n_adapts; progress=true)
 
 # Inspect posterior distribution over hyperparameters.
 hypers = unpack.(samples);
-plt_hypers = plot();
-plot!(plt_hypers, getindex.(hypers, 1); label="variance");
-plot!(plt_hypers, getindex.(hypers, 2); label="length scale");
-plot!(plt_hypers, getindex.(hypers, 3); label="obs noise variance");
-display(plt_hypers);
+h_l1 = histogram(getindex.(hypers, :l1); label="l1");
+h_l2 = histogram(getindex.(hypers, :l2); label="l2");
+h_s1 = histogram(getindex.(hypers, :s1); label="s1");
+h_s2 = histogram(getindex.(hypers, :s2); label="s2");
+display(plot(h_l1, h_l2, h_s1, h_s2; layout=(2, 2)));
+
+
 ```
 ![img](https://willtebbutt.github.io/resources/posterior_hypers.svg)
 
 As expected, the sampler converges to the posterior distribution quickly.
 One could combine this code with that from the previous sections to make predictions under the posterior over the hyperparameters.
-
-Also note that we didn't specify a prior over the kernel parameters in this example, so essentially used an improper prior, which is often a bad idea.
-We could have used a proper prior by appropriately modifying `ℓπ`.
 
 
 
