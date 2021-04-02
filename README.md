@@ -37,8 +37,9 @@ In this first example we define a simple Gaussian process, make observations of 
 ```julia
 
 #
-# We'll get going by setting up our model, generating some toy observations, and
-# constructing the posterior processes produced by conditioning on these observations.
+# We'll get going by setting up our model, generating some toy observations,
+# and constructing the posterior processes produced by conditioning on these
+# observations.
 #
 
 using AbstractGPs, Stheno, Random, Plots
@@ -68,16 +69,18 @@ fx = f(X, 1e-2);
 # Sample toy observations of `f₁` / `f₃` at `X₁` / `X₃`.
 y = rand(rng, fx);
 
-# You could work backwards to figure out which elements of `y` correspond to which
-# of the elements of `X`, but `Stheno.jl` provides methods of `split` to do this for you.
-ŷ₁, ŷ₃ = split(X, y);
+# You could work backwards to figure out which elements of `y` correspond to
+# which of the elements of `X`, but `Stheno.jl` provides methods of `split` to
+# do this for you.
+ŷ₁, ŷ₃ = split(X, y);
 
-# Compute the logpdf of the observations. Notice that this looks exactly like what you would
-# write in AbstractGPs.jl.
+# Compute the logpdf of the observations. Notice that this looks exactly like
+# what you would write in AbstractGPs.jl.
 l = logpdf(fx, y)
 
-# Compute the ELBO of the observations, with pseudo-points at the same locations as the
-# observations. Could have placed them in any of the processes in f, even in f₂.
+# Compute the ELBO of the observations, with pseudo-points at the same
+# locations as the observations. Could have placed them in any of the processes
+# in f, even in f₂.
 l ≈ elbo(fx, y, f(X))
 
 # Compute the posterior. This is just an `AbstractGPs.PosteriorGP`.
@@ -115,7 +118,7 @@ posterior_plot = plot();
 # Plot posterior over f1.
 plot!(posterior_plot, X_, f′(Xp1); color=:red, label="f1");
 plot!(posterior_plot, X_, f₁′Xp; color=:red, label="", alpha=0.2, linewidth=1);
-scatter!(posterior_plot, X₁.x, ŷ₁;
+scatter!(posterior_plot, X₁.x, ŷ₁;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -131,7 +134,7 @@ plot!(posterior_plot, X_, f₂′Xp; color=:green, label="", alpha=0.2, linewidt
 # Plot posterior over f3
 plot!(posterior_plot, X_, f′(Xp3); color=:blue, label="f3");
 plot!(posterior_plot, X_, f₃′Xp; color=:blue, label="", alpha=0.2, linewidth=1);
-scatter!(posterior_plot, X₃.x, ŷ₃;
+scatter!(posterior_plot, X₃.x, ŷ₃;
     markercolor=:blue,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -152,19 +155,22 @@ This example can also be found in `examples/basic_gppp/process_decomposition.jl`
 In this next example we make observations of two different noisy versions of the same latent process. Again, this is just about doable in existing GP packages if you know what you're doing, but isn't straightforward.
 
 ```julia
+
 using AbstractGPs, Stheno, Random, Plots
 
 # Create a pseudo random number generator for reproducibility.
 rng = MersenneTwister(123456);
 
-# Construct a Gaussian Process Probabilistic Programme, which is just an AbstractGP.
+# Construct a Gaussian Process Probabilistic Programme,
+# which is just an AbstractGP.
 f = @gppp let
 
     # Define a smooth latent process that we wish to infer.
     f = GP(SEKernel())
 
     # Define the two noise processes described.
-    noise1 = sqrt(1e-2) * GP(WhiteKernel()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
+    g = x->sin.(x) .- 5.0 .+ sqrt.(abs.(x))
+    noise1 = sqrt(1e-2) * GP(WhiteKernel()) + g
     noise2 = sqrt(1e-1) * GP(3.5, WhiteKernel())
 
     # Define the processes that we get to observe.
@@ -177,7 +183,7 @@ X1 = GPPPInput(:y1, rand(rng, 3) * 10);
 X2 = GPPPInput(:y2, rand(rng, 10) * 10);
 X = BlockData(X1, X2);
 y = rand(rng, f(X));
-ŷ1, ŷ2 = split(X, y);
+ŷ1, ŷ2 = split(X, y);
 
 # Compute the posterior GPPP.
 f′ = posterior(f(X), y);
@@ -192,8 +198,9 @@ Xp = BlockData(Xp_f, Xp_y1, Xp_y2);
 # Sample jointly from posterior over process, and split up the result.
 f′Xp, y1′Xp, y2′Xp = split(Xp, rand(rng, f′(Xp, 1e-9), 11));
 
-# Compute and split up posterior marginals. We're not using the plotting recipes from
-# AbstractGPs here, to make it clear how one might compute the posterior marginals manually.
+# Compute and split up posterior marginals. We're not using the plotting
+# recipes from AbstractGPs here, to make it clear how one might compute the
+# posterior marginals manually.
 ms = marginals(f′(Xp, 1e-9));
 μf′, μy1′, μy2′ = split(Xp, mean.(ms));
 σf′, σy1′, σy2′ = split(Xp, std.(ms));
@@ -205,7 +212,7 @@ posterior_plot = plot();
 # Plot posterior over y1.
 plot!(posterior_plot, X_, μy1′; color=:red, ribbon=3σy1′, label="", fillalpha=0.3);
 plot!(posterior_plot, X_, y1′Xp; color=:red, label="", alpha=0.2, linewidth=1);
-scatter!(posterior_plot, X1.x, ŷ1;
+scatter!(posterior_plot, X1.x, ŷ1;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -217,7 +224,7 @@ scatter!(posterior_plot, X1.x, ŷ1;
 # Plot posterior over y2.
 plot!(posterior_plot, X_, μy2′; color=:green, ribbon=3σy2′, label="", fillalpha=0.3);
 plot!(posterior_plot, X_, y2′Xp; color=:green, label="", alpha=0.2, linewidth=1);
-scatter!(posterior_plot, X2.x, ŷ2;
+scatter!(posterior_plot, X2.x, ŷ2;
     markercolor=:green,
     markershape=:circle,
     markerstrokewidth=0.0,
