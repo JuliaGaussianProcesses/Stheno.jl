@@ -29,7 +29,7 @@ Lots of things have changed in version 0.7. Please consult NEWS.md for details, 
 
 ## A Couple of Examples
 
-The primary sources of information regarding this package are the [documentation](https://willtebbutt.github.io/Stheno.jl/stable) and the examples folder, but here are a couple of flashy examples to get started with.
+The primary sources of information regarding this package are the [documentation](https://juliagaussianprocesses.github.io/Stheno.jl/stable) and the examples folder, but here are a couple of flashy examples to get started with.
 
 Please raise an issue immediately if either of these examples don't work -- they're not currently included in CI, so there's always a higher chance that they'll be outdated than the internals of the package.
 
@@ -250,7 +250,7 @@ As before, this example can also be found in `examples/basic_gppp/process_decomp
 
 ## Hyperparameter learning and inference
 
-Fortunately, there is really no need for this package to explicitly provide support for hyperparameter optimisation as the functionality is already available elsewhere -- it's sufficient that it plays nicely with other standard packages in the ecosystem such as [Zygote.jl](https://github.com/FluxML/Zygote.jl/) (reverse-mode algorithmic differentiation), [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) (non-linear optimisation), [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl/) (Hamiltonian Monte Carlo / NUTS), [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl/), [Soss.jl](https://github.com/cscherrer/Soss.jl/) / [Turing.jl](https://github.com/TuringLang/Turing.jl). For concrete examples of the use of each of these packages in conjunction with Stheno, see the `Getting Started` section of the [(dev) docs](https://willtebbutt.github.io/Stheno.jl/dev).
+Fortunately, there is really no need for this package to explicitly provide support for hyperparameter optimisation as the functionality is already available elsewhere -- it's sufficient that it plays nicely with other standard packages in the ecosystem such as [Zygote.jl](https://github.com/FluxML/Zygote.jl/) (reverse-mode algorithmic differentiation), [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) (non-linear optimisation), [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl/) (Hamiltonian Monte Carlo / NUTS), [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl/), [Soss.jl](https://github.com/cscherrer/Soss.jl/) / [Turing.jl](https://github.com/TuringLang/Turing.jl). For concrete examples of the use of each of these packages in conjunction with Stheno, see the `Getting Started` section of the [(dev) docs](https://juliagaussianprocesses.github.io/Stheno.jl/dev).
 
 
 
