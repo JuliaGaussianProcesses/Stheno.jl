@@ -13,7 +13,7 @@ using Stheno: GPC
 
         @test mean(f, x) == AbstractGPs._map(m, x)
         @test cov(f, x) == kernelmatrix(k, x)
-        @test cov_diag(f, x) == diag(cov(f, x))
+        @test var(f, x) == diag(cov(f, x))
         @test cov(f, x, x) == kernelmatrix(k, x, x)
         @test cov(f, x, x′) == kernelmatrix(k, x, x′)
         @test cov(f, x, x′) ≈ cov(f, x′, x)'
@@ -34,7 +34,7 @@ using Stheno: GPC
         @test mean(f2, x) == AbstractGPs._map(m2, x)
 
         @test cov(f1, f2, x, x′) == zeros(N, N′)
-        @test cov_diag(f1, x) == ones(N)
+        @test var(f1, x) == ones(N)
 
         @test cov(f1, f1, x′, x) ≈ cov(f1, f1, x, x′)'
     end

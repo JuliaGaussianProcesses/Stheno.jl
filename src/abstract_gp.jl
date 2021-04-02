@@ -2,14 +2,9 @@
 abstract type SthenoAbstractGP <: AbstractGP end
 
 # TYPE-PIRACY
-function AbstractGPs.cov_diag(f::GP, x::AbstractVector, x′::AbstractVector)
+function var(f::GP, x::AbstractVector, x′::AbstractVector)
     return kernelmatrix_diag(f.kernel, x, x′)
 end
-
-# Implement some of the AbstractGPs API for all of the GPs in this package.
-mean_and_cov(f::SthenoAbstractGP, x::AbstractVector) = (mean(f, x), cov(f, x))
-
-mean_and_cov_diag(f::SthenoAbstractGP, x::AbstractVector) = (mean(f, x), cov_diag(f, x))
 
 # Ensure that this package gets to handle the covariance between its own GPs.
 # AbstractGPs doesn't support this in general because it's unclear how it ought to be

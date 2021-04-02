@@ -161,10 +161,10 @@ function standard_1D_tests(rng::AbstractRNG, θ, f, x::AV, z::AV)
 
     @test cov(g, x) ≈ cov(g, x)'
     @test minimum(eigvals(cov(g, x))) > -1e-9
-    @test cov_diag(g, x) ≈ diag(cov(g, x))
+    @test var(g, x) ≈ diag(cov(g, x))
 
     @test cov(g, g, x, x) ≈ cov(g, x)
-    @test cov_diag(g, g, x, x) ≈ diag(cov(g, g, x, x))
+    @test var(g, g, x, x) ≈ diag(cov(g, g, x, x))
 
     standard_1D_dense_test(rng, θ, f, x, z)
     standard_1D_diag_test(rng, θ, f, x, z)

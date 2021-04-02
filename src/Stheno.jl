@@ -20,13 +20,15 @@ module Stheno
     import AbstractGPs:
         mean,
         cov,
-        cov_diag,
+        var,
         mean_and_cov,
-        mean_and_cov_diag,
+        mean_and_var,
         rand,
         logpdf,
         elbo,
-        dtc
+        dtc,
+        posterior,
+        approx_posterior
 
     using MacroTools: @capture, combinedef, postwalk, splitdef
 
@@ -74,4 +76,5 @@ module Stheno
     export wrap, BlockData, GPC, GPPPInput, @gppp
     export elbo, dtc
     export ∘, select, stretch, periodic, shift
+    export cov_diag, mean_and_cov_diag
 end # module

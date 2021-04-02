@@ -27,8 +27,8 @@ function cov((_, fs)::cross_args, x::BlockData)
     return Array(mortar(reshape(Cs, :, 1)))
 end
 
-function cov_diag((_, fs)::cross_args, x::BlockData)
-    cs = map(cov_diag, fs, blocks(x))
+function var((_, fs)::cross_args, x::BlockData)
+    cs = map(var, fs, blocks(x))
     return Array(mortar(cs))
 end
 
@@ -37,8 +37,8 @@ function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
     return Array(mortar(reshape(Cs, :, 1)))
 end
 
-function cov_diag((_, fs)::cross_args, x::BlockData, x′::BlockData)
-    cs = map(cov_diag, fs, blocks(x), blocks(x′))
+function var((_, fs)::cross_args, x::BlockData, x′::BlockData)
+    cs = map(var, fs, blocks(x), blocks(x′))
     return Array(mortar(cs))
 end
 
@@ -51,10 +51,10 @@ function cov(f::AbstractGP, (_, fs)::cross_args, x::AV, x′::BlockData)
     return Array(mortar(Cs))
 end
 
-function cov_diag(args::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
+function var(args::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
     return diag(cov(args, f′, x, x′))
 end
-function cov_diag(f::AbstractGP, args::cross_args, x::AV, x′::BlockData)
+function var(f::AbstractGP, args::cross_args, x::AV, x′::BlockData)
     return diag(cov(f, args, x, x′))
 end
 

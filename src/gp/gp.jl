@@ -24,14 +24,14 @@ wrap(gp::Tgp, gpc::GPC) where {Tgp<:GP} = WrappedGP{Tgp}(gp, gpc)
 mean(f::WrappedGP, x::AbstractVector) = mean(f.gp, x)
 
 cov(f::WrappedGP, x::AbstractVector) = cov(f.gp, x)
-cov_diag(f::WrappedGP, x::AbstractVector) = cov_diag(f.gp, x)
+var(f::WrappedGP, x::AbstractVector) = var(f.gp, x)
 
 cov(f::WrappedGP, x::AbstractVector, x′::AbstractVector) = cov(f.gp, x, x′)
-cov_diag(f::WrappedGP, x::AbstractVector, x′::AbstractVector) = cov_diag(f.gp, x, x′)
+var(f::WrappedGP, x::AbstractVector, x′::AbstractVector) = var(f.gp, x, x′)
 
 function cov(f::WrappedGP, f′::WrappedGP, x::AbstractVector, x′::AbstractVector)
     return f === f′ ? cov(f, x, x′) : zeros(length(x), length(x′))
 end
-function cov_diag(f::WrappedGP, f′::WrappedGP, x::AbstractVector, x′::AbstractVector)
-    return f === f′ ? cov_diag(f, x, x′) : zeros(length(x))
+function var(f::WrappedGP, f′::WrappedGP, x::AbstractVector, x′::AbstractVector)
+    return f === f′ ? var(f, x, x′) : zeros(length(x))
 end

@@ -59,41 +59,41 @@ function extract_components(f::GPPP, x::BlockData)
     return cross(fs), BlockData(vs)
 end
 
-function AbstractGPs.mean(f::GPPP, x::AbstractVector)
+function mean(f::GPPP, x::AbstractVector)
     fs, vs = extract_components(f, x)
     return mean(fs, vs)
 end
 
-function AbstractGPs.cov(f::GPPP, x::AbstractVector)
+function cov(f::GPPP, x::AbstractVector)
     fs, vs = extract_components(f, x)
     return cov(fs, vs)
 end
 
-function AbstractGPs.cov_diag(f::GPPP, x::AbstractVector)
+function var(f::GPPP, x::AbstractVector)
     fs, vs = extract_components(f, x)
-    return cov_diag(fs, vs)
+    return var(fs, vs)
 end
 
-function AbstractGPs.cov(f::GPPP, x::AbstractVector, x′::AbstractVector)
+function cov(f::GPPP, x::AbstractVector, x′::AbstractVector)
     fs_x, vs_x = extract_components(f, x)
     fs_x′, vs_x′ = extract_components(f, x′)
     return cov(fs_x, fs_x′, vs_x, vs_x′)
 end
 
-function AbstractGPs.cov_diag(f::GPPP, x::AbstractVector, x′::AbstractVector)
+function var(f::GPPP, x::AbstractVector, x′::AbstractVector)
     fs_x, vs_x = extract_components(f, x)
     fs_x′, vs_x′ = extract_components(f, x′)
-    return cov_diag(fs_x, fs_x′, vs_x, vs_x′)
+    return var(fs_x, fs_x′, vs_x, vs_x′)
 end
 
-function AbstractGPs.mean_and_cov(f::GPPP, x::AbstractVector)
+function mean_and_cov(f::GPPP, x::AbstractVector)
     fs, vs = extract_components(f, x)
     return mean_and_cov(fs, vs)
 end
 
-function AbstractGPs.mean_and_cov_diag(f::GPPP, x::AbstractVector)
+function mean_and_var(f::GPPP, x::AbstractVector)
     fs, vs = extract_components(f, x)
-    return mean_and_cov_diag(fs, vs)
+    return mean_and_var(fs, vs)
 end
 
 

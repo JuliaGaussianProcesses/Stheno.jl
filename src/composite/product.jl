@@ -24,23 +24,23 @@ function cov((_, σ, g)::prod_args, x::AV)
     σx = σ.(x)
     return σx .* cov(g, x) .* σx'
 end
-cov_diag((_, σ, g)::prod_args, x::AV) = σ.(x).^2 .* cov_diag(g, x)
+var((_, σ, g)::prod_args, x::AV) = σ.(x).^2 .* var(g, x)
 
 function cov((_, σ, g)::prod_args, x::AV, x′::AV)
     return σ.(x) .* cov(g, x, x′) .* σ.(x′)'
 end
-function cov_diag((_, σ, g)::prod_args, x::AV, x′::AV)
-    return σ.(x) .* cov_diag(g, x, x′) .* σ.(x′)
+function var((_, σ, g)::prod_args, x::AV, x′::AV)
+    return σ.(x) .* var(g, x, x′) .* σ.(x′)
 end
 
 cov((_, σ, f)::prod_args, f′::AbstractGP, x::AV, x′::AV) = σ.(x) .* cov(f, f′, x, x′)
 cov(f::AbstractGP, (_, σ, f′)::prod_args, x::AV, x′::AV) = cov(f, f′, x, x′) .* (σ.(x′))'
 
-function cov_diag((_, σ, f)::prod_args, f′::AbstractGP, x::AV, x′::AV)
-    return σ.(x) .* cov_diag(f, f′, x, x′)
+function var((_, σ, f)::prod_args, f′::AbstractGP, x::AV, x′::AV)
+    return σ.(x) .* var(f, f′, x, x′)
 end
-function cov_diag(f::AbstractGP, (_, σ, f′)::prod_args, x::AV, x′::AV)
-    return cov_diag(f, f′, x, x′) .* σ.(x′)
+function var(f::AbstractGP, (_, σ, f′)::prod_args, x::AV, x′::AV)
+    return var(f, f′, x, x′) .* σ.(x′)
 end
 
 #
@@ -50,19 +50,19 @@ end
 mean((_, σ, g)::prod_args{<:Real}, x::AV) = σ .* mean(g, x)
 
 cov((_, σ, g)::prod_args{<:Real}, x::AV) = (σ^2) .* cov(g, x)
-cov_diag((_, σ, g)::prod_args{<:Real}, x::AV) = (σ^2) .* cov_diag(g, x)
+var((_, σ, g)::prod_args{<:Real}, x::AV) = (σ^2) .* var(g, x)
 
 cov((_, σ, g)::prod_args{<:Real}, x::AV, x′::AV) = (σ^2) .* cov(g, x, x′)
-cov_diag((_, σ, g)::prod_args{<:Real}, x::AV, x′::AV) = (σ^2) .* cov_diag(g, x, x′)
+var((_, σ, g)::prod_args{<:Real}, x::AV, x′::AV) = (σ^2) .* var(g, x, x′)
 
 cov((_, σ, f)::prod_args{<:Real}, f′::AbstractGP, x::AV, x′::AV) = σ .* cov(f, f′, x, x′)
 cov(f::AbstractGP, (_, σ, f′)::prod_args{<:Real}, x::AV, x′::AV) = cov(f, f′, x, x′) .* σ
 
-function cov_diag((_, σ, f)::prod_args{<:Real}, f′::AbstractGP, x::AV, x′::AV)
-    return σ .* cov_diag(f, f′, x, x′)
+function var((_, σ, f)::prod_args{<:Real}, f′::AbstractGP, x::AV, x′::AV)
+    return σ .* var(f, f′, x, x′)
 end
-function cov_diag(f::AbstractGP, (_, σ, f′)::prod_args{<:Real}, x::AV, x′::AV)
-    return cov_diag(f, f′, x, x′) .* σ
+function var(f::AbstractGP, (_, σ, f′)::prod_args{<:Real}, x::AV, x′::AV)
+    return var(f, f′, x, x′) .* σ
 end
 
 # Use multiplication to define the negation of a GP

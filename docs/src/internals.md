@@ -21,9 +21,9 @@ As such, we have the following functions in addition to the AbstractGPs API impl
 
 | Function | Brief description |
 |:--------------------- |:---------------------- |
-| `cov_diag(f, x)` | `diag(cov(f, x))` |
-| `cov_diag(f, x, x′)` | `diag(cov(f, x, x′))` |
-| `cov_diag(f, f′, x, x′)` | `diag(cov(f, f′, x, x′))` |
+| `var(f, x)` | `diag(cov(f, x))` |
+| `var(f, x, x′)` | `diag(cov(f, x, x′))` |
+| `var(f, f′, x, x′)` | `diag(cov(f, f′, x, x′))` |
 
 The second and third rows of the table only make sense when `length(x) == length(x′)`, of course.
 

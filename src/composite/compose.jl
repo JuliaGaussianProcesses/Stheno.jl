@@ -13,16 +13,16 @@ const comp_args = Tuple{typeof(∘), AbstractGP, Any}
 mean((_, f, g)::comp_args, x::AV) = mean(f, g.(x))
 
 cov((_, f, g)::comp_args, x::AV) = cov(f, g.(x))
-cov_diag((_, f, g)::comp_args, x::AV) = cov_diag(f, g.(x))
+var((_, f, g)::comp_args, x::AV) = var(f, g.(x))
 
 cov((_, f, g)::comp_args, x::AV, x′::AV) = cov(f, g.(x), g.(x′))
-cov_diag((_, f, g)::comp_args, x::AV, x′::AV) = cov_diag(f, g.(x), g.(x′))
+var((_, f, g)::comp_args, x::AV, x′::AV) = var(f, g.(x), g.(x′))
 
 cov((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, g.(x), x′)
 cov(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = cov(f, f′, x, g.(x′))
 
-cov_diag((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = cov_diag(f, f′, g.(x), x′)
-cov_diag(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = cov_diag(f, f′, x, g.(x′))
+var((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, g.(x), x′)
+var(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = var(f, f′, x, g.(x′))
 
 
 """
