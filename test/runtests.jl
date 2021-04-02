@@ -12,7 +12,7 @@ using Test
 using TimerOutputs
 using Zygote
 
-using Stheno: mean, cov, cov_diag, GPC, AV
+using Stheno: mean, cov, var, GPC, AV
 
 const to = TimerOutput()
 

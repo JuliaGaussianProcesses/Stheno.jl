@@ -19,8 +19,8 @@ end
         @test cov(fx) == cov(f, x)
         @test cov(fx, fx′) == cov(f, x, x′)
         @test mean.(marginals(fx)) == mean(f(x))
-        @test var.(marginals(fx)) == cov_diag(f, x)
-        @test std.(marginals(fx)) == sqrt.(cov_diag(f, x))
+        @test var.(marginals(fx)) == var(f, x)
+        @test std.(marginals(fx)) == sqrt.(var(f, x))
     end
     @testset "rand (deterministic)" begin
         rng, N, D = MersenneTwister(123456), 10, 2

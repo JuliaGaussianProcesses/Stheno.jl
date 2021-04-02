@@ -40,29 +40,29 @@ end
 
 Base.length(f::SparseFiniteGP) = length(f.fobs)
 
-AbstractGPs.mean(f::SparseFiniteGP) = mean(f.fobs)
+mean(f::SparseFiniteGP) = mean(f.fobs)
 
 const __covariance_error = "The covariance matrix of a sparse GP can often be dense and " *
     "can cause the computer to run out of memory. If you are sure you have enough " *
     "memory, you can use `cov(f.fobs)`."
 
-AbstractGPs.cov(f::SparseFiniteGP) = error(__covariance_error)
+cov(f::SparseFiniteGP) = error(__covariance_error)
 
-AbstractGPs.marginals(f::SparseFiniteGP) = marginals(f.fobs)
+marginals(f::SparseFiniteGP) = marginals(f.fobs)
 
-AbstractGPs.rand(rng::AbstractRNG, f::SparseFiniteGP, N::Int) = rand(rng, f.fobs, N)
-AbstractGPs.rand(f::SparseFiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
-AbstractGPs.rand(rng::AbstractRNG, f::SparseFiniteGP) = vec(rand(rng, f, 1))
-AbstractGPs.rand(f::SparseFiniteGP) = vec(rand(f, 1))
+rand(rng::AbstractRNG, f::SparseFiniteGP, N::Int) = rand(rng, f.fobs, N)
+rand(f::SparseFiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
+rand(rng::AbstractRNG, f::SparseFiniteGP) = vec(rand(rng, f, 1))
+rand(f::SparseFiniteGP) = vec(rand(f, 1))
 
-AbstractGPs.elbo(f::SparseFiniteGP, y::AV{<:Real}) = elbo(f.fobs, y, f.finducing)
+elbo(f::SparseFiniteGP, y::AV{<:Real}) = elbo(f.fobs, y, f.finducing)
 
-AbstractGPs.logpdf(f::SparseFiniteGP, y::AV{<:Real}) = elbo(f.fobs, y, f.finducing)
+logpdf(f::SparseFiniteGP, y::AV{<:Real}) = elbo(f.fobs, y, f.finducing)
 
-function AbstractGPs.logpdf(f::SparseFiniteGP, Y::AbstractMatrix{<:Real})
+function logpdf(f::SparseFiniteGP, Y::AbstractMatrix{<:Real})
     return map(y -> logpdf(f, y), eachcol(Y))
 end
 
-function AbstractGPs.posterior(f::SparseFiniteGP, y::AbstractVector{<:Real})
-    return AbstractGPs.approx_posterior(AbstractGPs.VFE(), f.fobs, y, f.finducing)
+function posterior(f::SparseFiniteGP, y::AbstractVector{<:Real})
+    return approx_posterior(AbstractGPs.VFE(), f.fobs, y, f.finducing)
 end

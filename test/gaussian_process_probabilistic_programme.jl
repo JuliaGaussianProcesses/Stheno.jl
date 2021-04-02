@@ -36,7 +36,7 @@
         @test cov(f3, x1.x) == cov(f, x1)
 
         @test cov(f1, f3, x0.x, x1.x) == cov(f, x0, x1)
-        @test cov_diag(f3, f1, x1.x, x0.x) == cov_diag(f, x1, x0)
+        @test var(f3, f1, x1.x, x0.x) == var(f, x1, x0)
 
         y = rand(f(x1))
         @test cov(posterior(f3(x1.x), y)(x1.x)) == cov(posterior(f(x1), y)(x1))
@@ -85,14 +85,14 @@
         @test K_x0_x1 isa AbstractMatrix{<:Real}
         @test size(K_x0_x1) == (length(x0), length(x1))
 
-        # Check that single-process binary cov_diag is consistent.
-        K_x0_x0_diag = cov_diag(f, x0, x0)
+        # Check that single-process binary var is consistent.
+        K_x0_x0_diag = var(f, x0, x0)
         @test K_x0_x0_diag isa AbstractVector{<:Real}
         @test length(K_x0_x0_diag) == length(x0)
         @test K_x0_x0_diag ≈ diag(cov(f, x0, x0)) atol=atol rtol=rtol
 
-        # Check that unary cov_diag conforms to the API and is consistent with unary cov
-        K_x0_diag = cov_diag(f, x0)
+        # Check that unary var conforms to the API and is consistent with unary cov
+        K_x0_diag = var(f, x0)
         @test K_x0_diag isa AbstractVector{<:Real}
         @test length(K_x0_diag) == length(x0)
         @test K_x0_diag ≈ diag(cov(f, x0)) atol=atol rtol=rtol
