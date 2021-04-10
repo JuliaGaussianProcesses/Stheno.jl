@@ -18,6 +18,7 @@
         fx = f(x)
         fxu = SparseFiniteGP(f(x), f(xu))
         @test mean(fxu) == mean(fx)
+        @test marginals(fxu) == marginals(fx)
         @test rand(MersenneTwister(12345), fxu) == rand(MersenneTwister(12345), fx)
         @test_throws ErrorException(covariance_error) cov(fxu)
         @test cov(fxu.fobs) == cov(fx)
