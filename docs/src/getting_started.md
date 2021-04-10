@@ -7,8 +7,6 @@ Here we document how to do some basic stuff, including learning and inference in
 
 This guide assumes that you know roughly what's going on conceptually with GPs. If you're new to Gaussian processes, I cannot recommend [this video lecture](http://videolectures.net/gpip06_mackay_gpb/) highly enough.
 
-We shall first cover the most low-level ways to perform inference in both the process and hyperparameters, and then discuss how to integrate Stheno models with Soss.jl to remove most of the annoying boilerplate code.
-
 
 
 ## Exact Inference in a GP in 2 Minutes
