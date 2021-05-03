@@ -1,5 +1,5 @@
 import Base: rand, length
-import Distributions: logpdf, AbstractMvNormal
+import AbstractGPs: logpdf, AbstractMvNormal
 
 export elbo, dtc
 export SparseFiniteGP
