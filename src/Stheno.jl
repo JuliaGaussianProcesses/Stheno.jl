@@ -5,6 +5,7 @@ module Stheno
     using AbstractGPs
     using BlockArrays
     using ChainRulesCore
+    using Distributions
     using FillArrays
     @reexport using KernelFunctions
     using LinearAlgebra
