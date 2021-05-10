@@ -2,7 +2,6 @@ using AbstractGPs
 using BlockArrays
 using Documenter
 using FiniteDifferences
-using Flux
 using LinearAlgebra
 using KernelFunctions
 using Random
@@ -57,11 +56,6 @@ include("test_util.jl")
 
     println("gaussian_process_probabilistic_programme:")
     include("gaussian_process_probabilistic_programme.jl")
-
-    println("flux:")
-    @timedtestset "flux" begin
-        include(joinpath("flux", "neural_kernel_network.jl"))
-    end
 
     println("sparse_finite_gp:")
     include("sparse_finite_gp.jl")
