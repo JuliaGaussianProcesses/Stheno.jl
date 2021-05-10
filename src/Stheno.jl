@@ -9,7 +9,6 @@ module Stheno
     @reexport using KernelFunctions
     using LinearAlgebra
     using Random
-    using Requires
     using Zygote
     using ZygoteRules
 
@@ -62,16 +61,10 @@ module Stheno
     # Gaussian Process Probabilistic Programme object which implements the AbstractGPs API.
     include("gaussian_process_probabilistic_programme.jl")
 
-    function __init__()
-        @require Flux="587475ba-b771-5e3f-ad9e-33799f191a9c" begin
-            include(joinpath("flux", "neural_kernel_network.jl"))
-        end
-    end
-
     # Sparse GP hack to make pseudo-point approximations play nicely with Turing.jl.
     include("sparse_finite_gp.jl")
 
-    include(joinpath("deprecate.jl"))
+    include("deprecate.jl")
 
     export wrap, BlockData, GPC, GPPPInput, @gppp
     export elbo, dtc
