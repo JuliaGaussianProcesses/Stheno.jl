@@ -78,7 +78,7 @@ function broadcasted(f::Select, x::AbstractVector{<:CartesianIndex})
 end
 
 function ChainRulesCore.rrule(::typeof(broadcasted), f::Select, x::AV{<:CartesianIndex})
-    return broadcasted(f, x), Δ->(NO_FIELDS, DoesNotExist(), Zero())
+    return broadcasted(f, x), Δ->(NoTangent(), NoTangent(), Zero())
 end
 
 function broadcasted(f::Select{<:Integer}, x::AV{<:CartesianIndex})

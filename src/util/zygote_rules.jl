@@ -19,12 +19,12 @@ import Base.Broadcast: broadcasted
 
 function ChainRulesCore.rrule(::typeof(broadcasted), ::typeof(-), x::AbstractArray)
     function broadcasted_minus_pullback(Δ)
-        return (NO_FIELDS, DoesNotExist(), .-Δ)
+        return (NoTangent(), NoTangent(), .-Δ)
     end
     return .-x, broadcasted_minus_pullback
 end
 
 function ChainRulesCore.rrule(::typeof(broadcasted), ::typeof(exp), x::AbstractArray)
     y = exp.(x)
-    return y, Δ->(NO_FIELDS, DoesNotExist(), Δ .* y)
+    return y, Δ->(NoTangent(), NoTangent(), Δ .* y)
 end
