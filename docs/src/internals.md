@@ -151,3 +151,7 @@ f = Stheno.GPPP((f1=f1, f2=f2, f3=f3), gpc)
 If you take a look at the `gaussian_process_probabilistic_programming.jl` source, you'll see
 that it's essentially just the above, and an implementation of the `AbstactGP`s API on top
 of a `GPPP`.
+
+A `GPPP` is essentially just a single GP on an extended input domain:
+
+![](no_luck_catching_them_swans_then.jpeg)
