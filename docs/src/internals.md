@@ -130,7 +130,9 @@ This particular function isn't part of the user-facing API because it isn't gene
 
 ## GPPP
 
-The `GaussianProcessProbabilisticProgramme` is another `AbstractGP` which enables provides a thin layer of convenience functionality on top of `WrappedGP`s and `CompositeGP`s, and is the primary way in which it is intended that users will interact with this package.
+The `GaussianProcessProbabilisticProgramme` is another `AbstractGP` which enables provides a
+thin layer of convenience functionality on top of `WrappedGP`s and `CompositeGP`s, and is
+the primary way in which it is intended that users will interact with this package.
 
 A `GPPP` like this
 ```julia
@@ -149,9 +151,8 @@ f3 = f1 + f2
 f = Stheno.GPPP((f1=f1, f2=f2, f3=f3), gpc)
 ```
 If you take a look at the `gaussian_process_probabilistic_programming.jl` source, you'll see
-that it's essentially just the above, and an implementation of the `AbstactGP`s API on top
+that it's essentially just the above, and an implementation of the `AbstractGP`s API on top
 of a `GPPP`.
 
-A `GPPP` is essentially just a single GP on an extended input domain:
-
+A `GPPP` is a single GP on an extended input domain:
 ![](no_luck_catching_them_swans_then.jpeg)
