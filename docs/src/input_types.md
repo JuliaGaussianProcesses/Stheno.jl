@@ -31,7 +31,7 @@ For example, this means that when handling multi-dimensional inputs stored in a 
 When constructing a GP whose domain is the real-line, for example when using a GP to solve some kind of time-series problem, it is sufficient to work with `Vector{<:Real}`s of inputs. As such, the following is completely valid:
 ```julia
 using Stheno: GPC
-f = GP(SqExponentialKernel(), GPC())
+f = wrap(GP(SqExponentialKernel()), GPC())
 x = randn(10)
 f(x)
 ```
