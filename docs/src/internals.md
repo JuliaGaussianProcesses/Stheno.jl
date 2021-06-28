@@ -154,15 +154,5 @@ If you take a look at the `gaussian_process_probabilistic_programming.jl` source
 that it's essentially just the above, and an implementation of the `AbstractGP`s API on top
 of a `GPPP`.
 
-A `GPPP` is a single GP on an extended input domain.
-A single input to a `GPPP` is a `Tuple{Symbol, T} where T`, where the first element picks a
-process from the `GPPP` (e.g. `:f1`), and the second specifies a location in that process
-(e.g. `5.4`).
-Consequently, a vector such as
-```julia
-[(:f1, 5.04), (:f3, 0.3), (:f2, 13.2)]
-```
-is a valid input to a `GPPP`.
-However, since one typically has a 
-
+A `GPPP` is a single GP on an extended input domain:
 ![](no_luck_catching_them_swans_then.jpeg)
