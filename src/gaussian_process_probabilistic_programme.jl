@@ -54,9 +54,21 @@ Base.getindex(x::GPPPInput, idx) = map(x_ -> (x.p, x_), x.x[idx])
 extract_components(f::GPPP, x::GPPPInput) = f.fs[x.p], x.x
 
 function extract_components(f::GPPP, x::BlockData)
-    fs = map(v -> f.fs[v.p], x.X)
-    vs = map(v -> v.x, x.X)
-    return cross(fs), BlockData(vs)
+    fs_and_vs = map(x_ -> extract_components(f, x_), x.X)
+    return cross(first.(fs_and_vs)), BlockData(last.(fs_and_vs))
+end
+
+function extract_components(f::GPPP, x::AbstractVector{<:Tuple{T, V}} where {T, V})
+    symbols = first.(x)
+    features = last.(x)
+
+    # Find the indices of `x` associated with each unique symbol.
+    unique_symbols = unique(symbols)
+    block_inds = map(s -> findall(t -> t == s, symbols), unique_symbols)
+
+    # Construct a BlockData comprising `GPPPInput`s, and extract_components from that.
+    blocks = map((s, inds) -> GPPPInput(s, features[inds]), unique_symbols, block_inds)
+    return extract_components(f, BlockData(blocks))
 end
 
 function mean(f::GPPP, x::AbstractVector)
@@ -101,7 +113,8 @@ end
 """
     Base.split(x::BlockData, Y::AbstractVecOrMat)
 
-Split up the rows of `Y` according to the sizes of the data in `x`.
+Convenience functionality to make working with the output of operations on GPPPs easier.
+Splits up the rows of `Y` according to the sizes of the data in `x`.
 
 ```jldoctest
 julia> Y = vcat(randn(5, 3), randn(4, 3));
@@ -132,7 +145,7 @@ y = rand(f(x))
 y2, y3 = split(x, y)
 ```
 
-Functionality also works for `AbstractVectors`.
+Functionality also works with any `AbstractVector`.
 """
 function Base.split(x::BlockData, Y::AbstractMatrix)
     length(x) == size(Y, 1) || throw(error("Expected length(x) == size(Y, 1)"))
