@@ -77,6 +77,10 @@
             collect(BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))])),
             GPPPInput(:f1, randn(4)),
         ),
+        (
+            BlockData([collect(GPPPInput(:f2, randn(3))), GPPPInput(:f3, randn(2))]),
+            GPPPInput(:f1, randn(4)),
+        ),
     ]
 
         atol=1e-9

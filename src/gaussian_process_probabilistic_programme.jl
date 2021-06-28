@@ -54,9 +54,8 @@ Base.getindex(x::GPPPInput, idx) = map(x_ -> (x.p, x_), x.x[idx])
 extract_components(f::GPPP, x::GPPPInput) = f.fs[x.p], x.x
 
 function extract_components(f::GPPP, x::BlockData)
-    fs = map(v -> f.fs[v.p], x.X)
-    vs = map(v -> v.x, x.X)
-    return cross(fs), BlockData(vs)
+    fs_and_vs = map(x_ -> extract_components(f, x_), x.X)
+    return cross(first.(fs_and_vs)), BlockData(last.(fs_and_vs))
 end
 
 function extract_components(f::GPPP, x::AbstractVector{<:Tuple{T, V}} where {T, V})
