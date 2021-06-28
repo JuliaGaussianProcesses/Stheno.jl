@@ -1,0 +1,28 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - master
+    tags: '*'
+  pull_request:
+
+jobs:
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+      - name: Install dependencies, build and deploy
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
+          include(joinpath(pwd(), "docs", "make.jl"))
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
+        shell: julia --color=yes --project=docs/ {0}
