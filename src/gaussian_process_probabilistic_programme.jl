@@ -59,6 +59,19 @@ function extract_components(f::GPPP, x::BlockData)
     return cross(fs), BlockData(vs)
 end
 
+function extract_components(f::GPPP, x::AbstractVector{<:Tuple{T, V}} where {T, V})
+    symbols = first.(x)
+    features = last.(x)
+
+    # Find the indices of `x` associated with each unique symbol.
+    unique_symbols = unique(symbols)
+    block_inds = map(s -> findall(t -> t == s, symbols), unique_symbols)
+
+    # Construct a BlockData comprising `GPPPInput`s, and extract_components from that.
+    blocks = map((s, inds) -> GPPPInput(s, features[inds]), unique_symbols, block_inds)
+    return extract_components(f, BlockData(blocks))
+end
+
 function mean(f::GPPP, x::AbstractVector)
     fs, vs = extract_components(f, x)
     return mean(fs, vs)
@@ -101,7 +114,8 @@ end
 """
     Base.split(x::BlockData, Y::AbstractVecOrMat)
 
-Split up the rows of `Y` according to the sizes of the data in `x`.
+Convenience functionality to make working with the output of operations on GPPPs easier.
+Splits up the rows of `Y` according to the sizes of the data in `x`.
 
 ```jldoctest
 julia> Y = vcat(randn(5, 3), randn(4, 3));
@@ -132,7 +146,7 @@ y = rand(f(x))
 y2, y3 = split(x, y)
 ```
 
-Functionality also works for `AbstractVectors`.
+Functionality also works with any `AbstractVector`.
 """
 function Base.split(x::BlockData, Y::AbstractMatrix)
     length(x) == size(Y, 1) || throw(error("Expected length(x) == size(Y, 1)"))

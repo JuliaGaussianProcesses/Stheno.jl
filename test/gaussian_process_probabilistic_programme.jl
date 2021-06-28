@@ -24,7 +24,7 @@
     f = Stheno.GPPP((f1 = f1, f2 = f2, f3 = f3), gpc)
 
     # The same answers should be obtained manually or via the GPPP.
-    @testset "External Consistency" begin
+    @timedtestset "External Consistency" begin
 
         x0 = GPPPInput(:f1, randn(4))
         x1 = GPPPInput(:f3, randn(3))
@@ -60,6 +60,22 @@
         (
             BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))]),
             BlockData([GPPPInput(:f1, randn(6))]),
+        ),
+        (
+            collect(GPPPInput(:f1, randn(4))),
+            collect(GPPPInput(:f3, randn(3))),
+        ),
+        (
+            GPPPInput(:f1, randn(4)),
+            collect(GPPPInput(:f3, randn(3))),
+        ),
+        (
+            collect(BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))])),
+            collect(GPPPInput(:f1, randn(4))),
+        ),
+        (
+            collect(BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))])),
+            GPPPInput(:f1, randn(4)),
         ),
     ]
 
@@ -98,7 +114,7 @@
         @test K_x0_diag ≈ diag(cov(f, x0)) atol=atol rtol=rtol
     end
 
-    @testset "gppp macro" begin
+    @timedtestset "gppp macro" begin
 
         # Declare a GPPP using the helper functionality.
         f = @gppp let
