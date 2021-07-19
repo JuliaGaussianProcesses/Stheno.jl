@@ -38,19 +38,13 @@ function ChainRulesCore.rrule(::typeof(BlockArrays.mortar), _blocks::AbstractArr
     return y, mortar_pullback  
 end
 
-function ChainRulesCore.rrule(::Type{<:Array}, X::BlockArray)
-    println("Hitting this rule")
+# A hook to which I can attach an rrule without commiting type-piracy against BlockArrays.
+_collect(X::BlockArray) = Array(X)
+
+function ChainRulesCore.rrule(::typeof(_collect), X::BlockArray)
     function Array_pullback(Δ::Array)
         ΔX = Tangent{Any}(blocks=BlockArray(Δ, axes(X)).blocks, axes=NoTangent())
         return (NoTangent(), ΔX)
-    end
-    return Array(X), Array_pullback
-end
-
-ZygoteRules.@adjoint function BlockArrays.Array(X::BlockArray)
-    function Array_pullback(Δ::Array)
-        ΔX = (blocks=BlockArray(Δ, axes(X)).blocks, axes=nothing)
-        return (ΔX,)
     end
     return Array(X), Array_pullback
 end

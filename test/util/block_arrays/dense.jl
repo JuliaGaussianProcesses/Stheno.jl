@@ -1,6 +1,6 @@
 @timedtestset "dense" begin
 
-    @timedtestset "Array ∘ mortar" begin
+    @timedtestset "Stheno._collect ∘ mortar" begin
         @timedtestset "BlockVector" begin
 
             # Generate some blocks.
@@ -9,7 +9,7 @@
 
             # Verify the pullback.
             ȳ = randn(sum(Ps))
-            adjoint_test(Array ∘ mortar, ȳ, x)
+            adjoint_test(Stheno._collect ∘ mortar, ȳ, x)
         end
         @timedtestset "BlockMatrix" begin
 
@@ -20,7 +20,7 @@
             Ȳ = randn(sum(Ps), sum(Qs))
 
             # Verify pullback.
-            adjoint_test(Array ∘ mortar, Ȳ, X)
+            adjoint_test(Stheno._collect ∘ mortar, Ȳ, X)
         end
     end
 end

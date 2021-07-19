@@ -31,8 +31,6 @@ module Stheno
 
     using MacroTools: @capture, combinedef, postwalk, splitdef
 
-    using ZygoteRules: @adjoint
-
     const AV{T} = AbstractVector{T}
 
     # Various bits of utility that aren't inherently GP-related. Often very type-piratic.
