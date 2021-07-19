@@ -1,8 +1,6 @@
 using Zygote
 import Zygote: accum
 
-const dtol = 1e-12 # threshold value for precise recalculation of distances
-
 function accum(D::Diagonal{T}, B::AbstractMatrix) where {T}
     A = Matrix{Union{T, Nothing}}(undef, size(D))
     A[diagind(A)] .= D.diag
