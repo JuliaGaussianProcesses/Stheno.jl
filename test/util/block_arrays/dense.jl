@@ -1,7 +1,7 @@
 @timedtestset "dense" begin
 
-    @testset "Array ∘ mortar" begin
-        @testset "BlockVector" begin
+    @timedtestset "Array ∘ mortar" begin
+        @timedtestset "BlockVector" begin
 
             # Generate some blocks.
             Ps = [5, 6, 7]
@@ -11,7 +11,7 @@
             ȳ = randn(sum(Ps))
             adjoint_test(Array ∘ mortar, ȳ, x)
         end
-        @testset "BlockMatrix" begin
+        @timedtestset "BlockMatrix" begin
 
             # Generate some blocks.
             Ps = [3, 4, 5]
