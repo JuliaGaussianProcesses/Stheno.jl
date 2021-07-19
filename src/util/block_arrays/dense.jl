@@ -26,20 +26,25 @@ result is itself straightforwardly representable as `BlockVecOrMat`.
 """
 are_conformal(A::BlockVecOrMat, B::BlockVecOrMat) = blocksizes(A, 2) == blocksizes(B, 1)
 
-ZygoteRules.@adjoint function BlockArrays.mortar(_blocks::AbstractArray)
-    function mortar_pullback(Δ::NamedTuple{(:blocks, :axes)})
-        return (Δ.blocks, )
+function ChainRulesCore.rrule(::typeof(BlockArrays.mortar), _blocks::AbstractArray)
+    y = BlockArrays.mortar(_blocks)
+    Ty = typeof(y)
+    function mortar_pullback(Δ::Tangent)
+        return (NoTangent(), Δ.blocks)
     end
     function mortar_pullback(Δ::BlockArray)
-        return mortar_pullback((blocks = Δ.blocks, axes=nothing))
+        return mortar_pullback(Tangent{Ty}(; blocks = Δ.blocks, axes=NoTangent()))
     end
-    return BlockArrays.mortar(_blocks), mortar_pullback
+    return y, mortar_pullback  
 end
 
-ZygoteRules.@adjoint function BlockArrays.Array(X::BlockArray)
+# A hook to which I can attach an rrule without commiting type-piracy against BlockArrays.
+_collect(X::BlockArray) = Array(X)
+
+function ChainRulesCore.rrule(::typeof(_collect), X::BlockArray)
     function Array_pullback(Δ::Array)
-        ΔX = (blocks=BlockArray(Δ, axes(X)).blocks, axes=nothing)
-        return (ΔX,)
+        ΔX = Tangent{Any}(blocks=BlockArray(Δ, axes(X)).blocks, axes=NoTangent())
+        return (NoTangent(), ΔX)
     end
     return Array(X), Array_pullback
 end

@@ -19,36 +19,36 @@ const cross_args{T<:AbstractVector{<:AbstractGP}} = Tuple{typeof(cross), T}
 
 function mean((_, fs)::cross_args, x::BlockData)
     blks = map((f, blk)->mean(f, blk), fs, blocks(x))
-    return Array(mortar(blks))
+    return _collect(mortar(blks))
 end
 
 function cov((_, fs)::cross_args, x::BlockData)
     Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x), fs, blocks(x)), :, 1)
-    return Array(mortar(reshape(Cs, :, 1)))
+    return _collect(mortar(reshape(Cs, :, 1)))
 end
 
 function var((_, fs)::cross_args, x::BlockData)
     cs = map(var, fs, blocks(x))
-    return Array(mortar(cs))
+    return _collect(mortar(cs))
 end
 
 function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
     Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x′), fs, blocks(x)), :, 1)
-    return Array(mortar(reshape(Cs, :, 1)))
+    return _collect(mortar(reshape(Cs, :, 1)))
 end
 
 function var((_, fs)::cross_args, x::BlockData, x′::BlockData)
     cs = map(var, fs, blocks(x), blocks(x′))
-    return Array(mortar(cs))
+    return _collect(mortar(cs))
 end
 
 function cov((_, fs)::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
     Cs = reshape(map((f, x)->cov(f, f′, x, x′), fs, blocks(x)), :, 1)
-    return Array(mortar(Cs))
+    return _collect(mortar(Cs))
 end
 function cov(f::AbstractGP, (_, fs)::cross_args, x::AV, x′::BlockData)
     Cs = reshape(map((f′, x′)->cov(f, f′, x, x′), fs, blocks(x′)), 1, :)
-    return Array(mortar(Cs))
+    return _collect(mortar(Cs))
 end
 
 function var(args::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
