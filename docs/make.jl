@@ -1,3 +1,58 @@
+### Process examples
+
+# Always rerun examples
+const EXAMPLES_OUT = joinpath(@__DIR__, "src", "examples")
+
+examples = [
+    "getting_started"
+]
+
+example_locations = map(example -> joinpath(@__DIR__, "..", "examples", example), examples)
+
+if ispath(EXAMPLES_OUT)
+    map(examples) do example
+        path = joinpath(EXAMPLES_OUT, example)
+        println(path)
+        isdir(path) && rm(path; recursive=true)
+    end
+else
+    mkpath(EXAMPLES_OUT)
+end
+
+
+let script = "using Pkg; Pkg.activate(ARGS[1]); Pkg.instantiate()"
+    for example in examples
+        if !success(`$(Base.julia_cmd()) -e $script $example`)
+            error(
+                "project environment of example ",
+                basename(example),
+                " could not be instantiated",
+            )
+        end
+    end
+end
+
+# Run examples asynchronously
+literate_path = joinpath(@__DIR__, "literate.jl")
+processes = map(examples) do example
+    return run(
+        pipeline(
+            `$(Base.julia_cmd()) $literate_path $(basename(example)) $EXAMPLES_OUT`;
+            stdin=devnull,
+            stdout=devnull,
+            stderr=stderr,
+        );
+        wait=true,
+    )::Base.Process
+end
+
+# Check that all examples were run successfully
+isempty(processes) || success(processes) || error("some examples were not run successfully")
+
+
+
+### Build documentation
+
 using Documenter, Stheno
 
 DocMeta.setdocmeta!(
@@ -8,17 +63,23 @@ DocMeta.setdocmeta!(
 )
 
 makedocs(
-	modules = [Stheno],
-    format = Documenter.HTML(),
-    sitename = "Stheno.jl",
-    pages = [
+    modules=[Stheno],
+    format=Documenter.HTML(),
+    sitename="Stheno.jl",
+    pages=[
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
         "Input Types" => "input_types.md",
         "Kernel Design" => "kernel_design.md",
         "Internals" => "internals.md",
         "API" => "api.md",
+        "Examples" => [joinpath("examples", "getting_started.md")],
+    ],
+    doctestfilters=[
+        r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
+        r"(Array{[a-zA-Z0-9]+,\s?1}|Vector{[a-zA-Z0-9]+})",
+        r"(Array{[a-zA-Z0-9]+,\s?2}|Matrix{[a-zA-Z0-9]+})",
     ],
 )
 
-deploydocs(repo="github.com/JuliaGaussianProcesses/Stheno.jl.git")
+deploydocs(; repo="github.com/JuliaGaussianProcesses/Stheno.jl.git", push_preview=true)
