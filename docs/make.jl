@@ -3,6 +3,15 @@
 # Always rerun examples
 const EXAMPLES_OUT = joinpath(@__DIR__, "src", "examples")
 
+# State explicitly which examples are to be included, rather than including everything by
+# default. This can make the docs development cycle faster -- it means that if you're not
+# working on the examples then you can just make `examples` an empty vector after building
+# all of the examples in a first run of the docs.
+# Similarly, when developing only a subset of the examples, only a subset need to be
+# re-built every time. To achieve this, comment out those examples that you don't wish to
+# repeatedly re-build. Alternatively, if you're just working on a single example, either
+# work on the source directly, or work with the literate.jl file to avoid needing to start
+# a fresh Julia session each time you want to run the example.
 examples = [
     "getting_started"
 ]
