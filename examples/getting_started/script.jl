@@ -1,9 +1,10 @@
 # # Getting Started
 #
 # Here we document how to do some basic stuff, including learning and inference in kernel parameters, with Stheno.jl. To do this, we that makes use of a variety of packages from the Julia ecosystem. In particular, we'll make use of
-# - [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl) to perform Bayesian inference in our model parameters.
-# - [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) for point-estimates of our model parameters.
-# - [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl) to make it easy to work with our model's parameters, and to ensure that it plays nicely with Optim and AdvancedHMC.
+# - [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl) to perform Bayesian inference in our model parameters,
+# - [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) for point-estimates of our model parameters,
+# - [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl) to make it easy to work with our model's parameters, and to ensure that it plays nicely with Optim and AdvancedHMC,
+# - [Zygote.jl](https://github.com/FluxML/Zygote.jl/) to compute gradients.
 
 # This guide assumes that you know roughly what's going on conceptually with GPs. If you're
 # new to Gaussian processes, an excellent introduction can be found in either
