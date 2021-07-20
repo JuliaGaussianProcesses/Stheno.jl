@@ -1,1 +1,0 @@
-See [Getting Started](@ref)

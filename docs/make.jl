@@ -77,12 +77,11 @@ makedocs(
     sitename="Stheno.jl",
     pages=[
         "Home" => "index.md",
-        "Getting Started" => "getting_started.md",
+        "Getting Started" => joinpath("examples", "getting_started.md"),
         "Input Types" => "input_types.md",
         "Kernel Design" => "kernel_design.md",
         "Internals" => "internals.md",
         "API" => "api.md",
-        "Examples" => [joinpath("examples", "getting_started.md")],
     ],
     doctestfilters=[
         r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
