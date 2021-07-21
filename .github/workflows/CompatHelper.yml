@@ -20,6 +20,7 @@ jobs:
       - name: "Run CompatHelper"
         run: |
           import CompatHelper
+          subdirs = ["", "test", "docs"]
           CompatHelper.main()
         shell: julia --color=yes {0}
         env:
