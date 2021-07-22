@@ -11,10 +11,7 @@
 
         @test mean(f, x) == AbstractGPs._map(m, x)
         @test cov(f, x) == kernelmatrix(k, x)
-        @test var(f, x) == diag(cov(f, x))
-        @test cov(f, x, x) == kernelmatrix(k, x, x)
-        @test cov(f, x, x′) == kernelmatrix(k, x, x′)
-        @test cov(f, x, x′) ≈ cov(f, x′, x)'
+        AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f, x, x′)
     end
 
     # Test the creation of indepenent GPs.

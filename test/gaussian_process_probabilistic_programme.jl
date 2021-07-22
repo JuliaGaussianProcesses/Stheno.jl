@@ -82,40 +82,8 @@
             GPPPInput(:f1, randn(4)),
         ),
     ]
-
-        atol=1e-9
-        rtol=1e-9
-
-        m = mean(f, x0)
-        @test m isa AbstractVector{<:Real}
-        @test length(m) == length(x0)
-
-        @assert length(x0) ≠ length(x1)
-
-        # Check that unary cov is consistent with binary cov and conforms to the API
-        K_x0 = cov(f, x0)
-        @test K_x0 isa AbstractMatrix{<:Real}
-        @test size(K_x0) == (length(x0), length(x0))
-        @test K_x0 ≈ cov(f, x0, x0) atol=atol rtol=rtol
-        @test minimum(eigvals(K_x0)) > -atol
-        @test K_x0 ≈ K_x0' atol=atol rtol=rtol
-
-        # Check that single-process binary cov is consistent with single-process binary-cov
-        K_x0_x1 = cov(f, x0, x1)
-        @test K_x0_x1 isa AbstractMatrix{<:Real}
-        @test size(K_x0_x1) == (length(x0), length(x1))
-
-        # Check that single-process binary var is consistent.
-        K_x0_x0_diag = var(f, x0, x0)
-        @test K_x0_x0_diag isa AbstractVector{<:Real}
-        @test length(K_x0_x0_diag) == length(x0)
-        @test K_x0_x0_diag ≈ diag(cov(f, x0, x0)) atol=atol rtol=rtol
-
-        # Check that unary var conforms to the API and is consistent with unary cov
-        K_x0_diag = var(f, x0)
-        @test K_x0_diag isa AbstractVector{<:Real}
-        @test length(K_x0_diag) == length(x0)
-        @test K_x0_diag ≈ diag(cov(f, x0)) atol=atol rtol=rtol
+        rng = MersenneTwister(123456)
+        AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f, x0, x1)
     end
 
     @timedtestset "gppp macro" begin
