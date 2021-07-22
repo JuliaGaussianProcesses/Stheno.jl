@@ -1,6 +1,3 @@
-using Stheno: FiniteGP, block_diagonal
-using Distributions: MvNormal
-
 _rng() = MersenneTwister(123456)
 
 function generate_noise_matrix(rng::AbstractRNG, N::Int)

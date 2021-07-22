@@ -61,13 +61,14 @@ isempty(processes) || success(processes) || error("some examples were not run su
 
 
 ### Build documentation
-
+using Pkg
+Pkg.develop(path=joinpath(@__DIR__, ".."))
 using Documenter, Stheno
 
 DocMeta.setdocmeta!(
     Stheno,
     :DocTestSetup,
-    :(using AbstractGPs, Stheno, Random, LinearAlgebra);
+    :(using Stheno.AbstractGPs, Stheno, Random, LinearAlgebra);
     recursive=true,
 )
 

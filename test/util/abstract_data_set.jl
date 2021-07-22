@@ -1,5 +1,3 @@
-using Stheno: ColVecs, BlockData
-
 @timedtestset "abstract_data_set" begin
     rng, N, D = MersenneTwister(123456), 10, 2
     x, X = randn(rng, N), randn(rng, D, N)

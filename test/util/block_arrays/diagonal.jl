@@ -1,5 +1,3 @@
-using Stheno: block_diagonal, BlockDiagonal, blocksizes
-
 function general_BlockDiagonal_tests(rng, blocks)
     d = block_diagonal(blocks)
     Ps, Qs = size.(blocks, 1), size.(blocks, 2)

@@ -1,5 +1,3 @@
-using Stheno: BlockData, cross
-
 @timedtestset "cross" begin
     @timedtestset "Correctness tests" begin
         rng, P, Q, gpc = MersenneTwister(123456), 2, 3, GPC()

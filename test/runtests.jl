@@ -1,17 +1,47 @@
-using AbstractGPs
-using BlockArrays
+using Stheno
+
+# Dependencies that are also used in Stheno that are not in the standard library.
+# This is a hack to prevent CompatHelper from trying to maintain a version number for these
+# packages in both Stheno and test.
+using Stheno.AbstractGPs
+using Stheno.BlockArrays
+using Stheno.KernelFunctions
+using Stheno.Zygote
+
+# Dependencies that are test-specific.
 using Documenter
 using FiniteDifferences
 using LinearAlgebra
-using KernelFunctions
 using Random
 using Statistics
-using Stheno
 using Test
 using TimerOutputs
-using Zygote
 
-using Stheno: mean, cov, var, GPC, AV
+using Stheno:
+    mean,
+    cov,
+    var,
+    GPC,
+    AV,
+    FiniteGP,
+    block_diagonal,
+    AbstractGP,
+    BlockData,
+    blocks,
+    cross,
+    ColVecs,
+    Xt_invA_Y,
+    Xt_invA_X,
+    diag_At_A,
+    diag_At_B,
+    diag_Xt_invA_X,
+    diag_Xt_invA_Y,
+    block_diagonal,
+    BlockDiagonal,
+    blocksizes
+
+using Stheno.AbstractGPs.Distributions: MvNormal
+using FiniteDifferences: j′vp
 
 const to = TimerOutput()
 
@@ -65,7 +95,7 @@ include("test_util.jl")
         DocMeta.setdocmeta!(
             Stheno,
             :DocTestSetup,
-            :(using AbstractGPs, Stheno, Random, Documenter, LinearAlgebra);
+            :(using Stheno.AbstractGPs, Stheno, Random, Documenter, LinearAlgebra);
             recursive=true,
         )
         doctest(Stheno)

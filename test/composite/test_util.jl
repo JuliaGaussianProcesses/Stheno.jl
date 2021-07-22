@@ -1,5 +1,3 @@
-using Stheno: FiniteGP
-
 """
     check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV)
 
