@@ -1,6 +1,3 @@
-using Stheno: AbstractGP, BlockData, blocks
-using FiniteDifferences: j′vp
-
 const _rtol = 1e-10
 const _atol = 1e-10
 

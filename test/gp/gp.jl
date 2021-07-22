@@ -1,5 +1,3 @@
-using Stheno: GPC
-
 @timedtestset "gp" begin
 
     # Ensure that basic functionality works as expected.

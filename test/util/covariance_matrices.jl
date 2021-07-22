@@ -1,5 +1,3 @@
-using Stheno: Xt_invA_Y, Xt_invA_X, diag_At_A, diag_At_B, diag_Xt_invA_X, diag_Xt_invA_Y
-
 @timedtestset "cholesky" begin
     # Set up some matrices and factorisations.
     rng, N, N′, P, Q = MersenneTwister(123456), 5, 3, 6, 2
