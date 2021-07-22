@@ -13,7 +13,7 @@ const EXAMPLES_OUT = joinpath(@__DIR__, "src", "examples")
 # work on the source directly, or work with the literate.jl file to avoid needing to start
 # a fresh Julia session each time you want to run the example.
 examples = [
-    # "getting_started"
+    "getting_started"
 ]
 
 example_locations = map(example -> joinpath(@__DIR__, "..", "examples", example), examples)
