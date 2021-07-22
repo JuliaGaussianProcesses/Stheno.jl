@@ -13,7 +13,7 @@ const EXAMPLES_OUT = joinpath(@__DIR__, "src", "examples")
 # work on the source directly, or work with the literate.jl file to avoid needing to start
 # a fresh Julia session each time you want to run the example.
 examples = [
-    "getting_started"
+    # "getting_started"
 ]
 
 example_locations = map(example -> joinpath(@__DIR__, "..", "examples", example), examples)
@@ -61,13 +61,14 @@ isempty(processes) || success(processes) || error("some examples were not run su
 
 
 ### Build documentation
-
+using Pkg
+Pkg.develop(path=joinpath(@__DIR__, ".."))
 using Documenter, Stheno
 
 DocMeta.setdocmeta!(
     Stheno,
     :DocTestSetup,
-    :(using AbstractGPs, Stheno, Random, LinearAlgebra);
+    :(using Stheno.AbstractGPs, Stheno, Random, LinearAlgebra);
     recursive=true,
 )
 
