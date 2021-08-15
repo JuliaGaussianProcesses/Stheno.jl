@@ -40,7 +40,7 @@ f = @gppp let
 end;
 
 # Generate a sample from f3, one of the processes in f, at some random input locations.
-# Add some iid observation noise, with zero-mean and variance 0.05.
+# Add some iid observation noise, with zero-mean and variance 0.02.
 const x = GPPPInput(:f3, collect(range(-5.0, 5.0; length=100)));
 σ²_n = 0.02;
 fx = f(x, σ²_n);
