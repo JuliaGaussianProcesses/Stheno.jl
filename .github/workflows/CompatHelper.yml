@@ -21,7 +21,7 @@ jobs:
         run: |
           import CompatHelper
           subdirs = ["", "test", "docs"]
-          CompatHelper.main(; subdirs=subdirs)
+          CompatHelper.main(; subdirs=subdirs, bump_version=true)
         shell: julia --color=yes {0}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
