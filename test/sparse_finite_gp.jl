@@ -30,12 +30,12 @@
         fxu = SparseFiniteGP(f(x, σ), f(xu, σu))
         y = rand(MersenneTwister(12345), fxu)
 
-        fpost1 = approx_posterior(VFE(), fxu.fobs, y, fxu.finducing)
+        fpost1 = posterior(VFE(fxu.finducing), fxu.fobs, y)
         fpost2 = posterior(fxu, y)
 
         @test marginals(fpost1(x)) == marginals(fpost2(x))
         @test elbo(fxu, y) == logpdf(fxu, y)
-        @test logpdf(fxu, y) == elbo(fxu.fobs, y, fxu.finducing)
+        @test logpdf(fxu, y) == elbo(VFE(fxu.finducing),fxu.fobs, y)
         yy = rand(fxu, 10)
         @test all(logpdf(fx, yy) .> logpdf(fxu, yy))
     end

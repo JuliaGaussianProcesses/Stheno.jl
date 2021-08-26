@@ -55,14 +55,14 @@ rand(f::SparseFiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 rand(rng::AbstractRNG, f::SparseFiniteGP) = vec(rand(rng, f, 1))
 rand(f::SparseFiniteGP) = vec(rand(f, 1))
 
-elbo(f::SparseFiniteGP, y::AV{<:Real}) = elbo(f.fobs, y, f.finducing)
+elbo(f::SparseFiniteGP, y::AV{<:Real}) = elbo(VFE(f.finducing), f.fobs, y)
 
-logpdf(f::SparseFiniteGP, y::AV{<:Real}) = elbo(f.fobs, y, f.finducing)
+logpdf(f::SparseFiniteGP, y::AV{<:Real}) = elbo(VFE(f.finducing), f.fobs, y)
 
 function logpdf(f::SparseFiniteGP, Y::AbstractMatrix{<:Real})
     return map(y -> logpdf(f, y), eachcol(Y))
 end
 
 function posterior(f::SparseFiniteGP, y::AbstractVector{<:Real})
-    return approx_posterior(AbstractGPs.VFE(), f.fobs, y, f.finducing)
+    return posterior(AbstractGPs.VFE(f.finducing), f.fobs, y)
 end
