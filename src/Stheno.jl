@@ -65,7 +65,6 @@ module Stheno
     include("deprecate.jl")
 
     export wrap, BlockData, GPC, GPPPInput, @gppp
-    export elbo, dtc
     export ∘, select, stretch, periodic, shift
     export cov_diag, mean_and_cov_diag
 end # module
