@@ -3,7 +3,7 @@
 
 Some basic consistency checks for the function `f(θ)::Tuple{GP, GP}`. Mainly just checks
 that Zygote works properly for `f`, and correctly derives the gradients w.r.t. `θ` for
-`rand`, `logpdf`, `elbo` when considering the f.d.d.s `f(x, Σ)` and observations `y`, where
+`rand`, `logpdf`, when considering the f.d.d.s `f(x, Σ)` and observations `y`, where
 `Σ = _to_psd(A)`. The first output of `f` will be the GP sampled from and whose `logpdf`
 will be computed, while the second will be used as the process for the pseudo-points, whose
 inputs are `z`.
@@ -46,7 +46,7 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
 
 
     # #
-    # # rand / logpdf / elbo tests
+    # # rand / logpdf tests
     # #
 
     # # Check that the gradient w.r.t. the samples is correct (single-sample).
@@ -69,19 +69,8 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
     #     rtol=1e-4, atol=1e-4,
     # )
 
-    # # Check adjoint for elbo.
-    # adjoint_test(
-    #     (ϴ, x, A, y, z, B)->begin
-    #         fx, uz = h(θ, x, A, z, B)
-    #         return elbo(fx, y, uz)
-    #     end,
-    #     randn(rng), θ, x, A, y, z, B;
-    #     rtol=1e-4, atol=1e-4,
-    # )
-
-
     # #
-    # # multi-process rand / logpdf / elbo tests - this stuff won't work for anything if
+    # # multi-process rand / logpdf tests - this stuff won't work for anything if
     # # cross-related functionality doesn't work properly
     # #
 
@@ -118,15 +107,6 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
     #         return logpdf([_g ← y, _g ← y])
     #     end,
     #     randn(rng), θ, x, A, y;
-    #     rtol=1e-4, atol=1e-4,
-    # )
-
-    # adjoint_test(
-    #     (ϴ, x, A, y, z, B)->begin
-    #         fx, uz = h(θ, x, A, z, B)
-    #         return elbo([fx, fx], [y, y], [uz, uz])
-    #     end,
-    #     randn(rng), θ, x, A, y, z, B;
     #     rtol=1e-4, atol=1e-4,
     # )
 end

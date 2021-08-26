@@ -73,85 +73,6 @@ end
             atol=1e-9, rtol=1e-9,
         )
     end
-    @testset "logpdf / elbo / dtc" begin
-        rng, N, S, σ, gpc = MersenneTwister(123456), 10, 11, 1e-1, GPC()
-        x = collect(range(-3.0, stop=3.0, length=N))
-        f = wrap(GP(1, SEKernel()), gpc)
-        fx, y = FiniteGP(f, x, 0), FiniteGP(f, x, σ^2)
-        ŷ = rand(rng, y)
-
-        # Check that logpdf returns the correct type and roughly agrees with Distributions.
-        @test logpdf(y, ŷ) isa Real
-        @test logpdf(y, ŷ) ≈ logpdf(MvNormal(Vector(mean(y)), cov(y)), ŷ)
-
-        # Check that multi-sample logpdf returns the correct type and is consistent with
-        # single-sample logpdf
-        Ŷ = rand(rng, y, S)
-        @test logpdf(y, Ŷ) isa Vector{Float64}
-        @test logpdf(y, Ŷ) ≈ [logpdf(y, Ŷ[:, n]) for n in 1:S]
-
-        # Check gradient of logpdf at mean is zero for `f`.
-        adjoint_test(ŷ->logpdf(fx, ŷ), 1, ones(size(ŷ)))
-        lp, back = Zygote.pullback(ŷ->logpdf(fx, ŷ), ones(size(ŷ)))
-        @test back(randn(rng))[1] == zeros(size(ŷ))
-
-        # Check that gradient of logpdf at mean is zero for `y`.
-        adjoint_test(ŷ->logpdf(y, ŷ), 1, ones(size(ŷ)))
-        lp, back = Zygote.pullback(ŷ->logpdf(y, ŷ), ones(size(ŷ)))
-        @test back(randn(rng))[1] == zeros(size(ŷ))
-
-        # Check that gradient w.r.t. inputs is approximately correct for `f`.
-        x, l̄ = randn(rng, N), randn(rng)
-        adjoint_test(
-            x->logpdf(FiniteGP(f, x, 1e-3), ones(size(x))),
-            l̄, collect(x);
-            atol=1e-8, rtol=1e-8,
-        )
-        adjoint_test(
-            x->sum(logpdf(FiniteGP(f, x, 1e-3), ones(size(Ŷ)))),
-            l̄, collect(x);
-            atol=1e-8, rtol=1e-8,
-        )
-
-        # Check that the gradient w.r.t. the noise is approximately correct for `f`.
-        σ_ = randn(rng)
-        adjoint_test((σ_, ŷ)->logpdf(FiniteGP(f, x, exp(σ_)), ŷ), l̄, σ_, ŷ)
-        adjoint_test((σ_, Ŷ)->sum(logpdf(FiniteGP(f, x, exp(σ_)), Ŷ)), l̄, σ_, Ŷ)
-
-        # Check that the gradient w.r.t. a scaling of the GP works.
-        adjoint_test(
-            α->logpdf(FiniteGP(α * f, x, 1e-1), ŷ), l̄, randn(rng);
-            atol=1e-8, rtol=1e-8,
-        )
-        adjoint_test(
-            α->sum(logpdf(FiniteGP(α * f, x, 1e-1), Ŷ)), l̄, randn(rng);
-            atol=1e-8, rtol=1e-8,
-        )
-
-        # Ensure that the elbo is close to the logpdf when appropriate.
-        @test elbo(y, ŷ, fx) isa Real
-        @test elbo(y, ŷ, fx) ≈ logpdf(y, ŷ)
-        @test elbo(y, ŷ, y) < logpdf(y, ŷ)
-        @test elbo(y, ŷ, FiniteGP(f, x, 2 * σ^2)) < elbo(y, ŷ, y)
-
-        # Check adjoint w.r.t. elbo is correct.
-        adjoint_test(
-            (x, ŷ, σ)->elbo(FiniteGP(f, x, σ^2), ŷ, FiniteGP(f, x, 0)),
-            randn(rng), x, ŷ, σ;
-            atol=1e-6, rtol=1e-6,
-        )
-
-        # Ensure that the dtc is close to the logpdf when appropriate.
-        @test dtc(y, ŷ, fx) isa Real
-        @test dtc(y, ŷ, fx) ≈ logpdf(y, ŷ)
-
-        # Check adjoint w.r.t. dtc is correct.
-        adjoint_test(
-            (x, ŷ, σ)->dtc(FiniteGP(f, x, σ^2), ŷ, FiniteGP(f, x, 0)),
-            randn(rng), x, ŷ, σ;
-            atol=1e-6, rtol=1e-6,
-        )
-    end
     @testset "Type Stability - $T" for T in [Float64, Float32]
         rng = MersenneTwister(123456)
         x = randn(rng, T, 123)
@@ -164,6 +85,5 @@ end
         y = rand(rng, fx)
         @test y isa Vector{T}
         @test logpdf(fx, y) isa T
-        @test elbo(fx, y, u) isa T
     end
 end
