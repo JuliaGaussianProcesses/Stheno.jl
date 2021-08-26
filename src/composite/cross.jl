@@ -61,7 +61,7 @@ end
 
 
 #
-# Util for multi-process versions of `rand`, `logpdf`, and `elbo`.
+# Build a single FiniteGP from a collection of FiniteGPs.
 #
 
 function finites_to_block(fs::AV{<:FiniteGP})
