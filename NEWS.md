@@ -6,6 +6,12 @@ between versions, and discuss new features.
 If you find a breaking change this is not reported here, please either raise an issue or
 make a PR to ammend this document.
 
+## 0.7.14
+
+AbstractGPs now takes care of everything sparsity-related.
+Consequently, Stheno no longer tests anything ELBO-related, and the functionality you get
+will depend entirely upon which version of AbstractGPs you're using.
+
 ## 0.7.0
 
 ### Breaking changes
