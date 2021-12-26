@@ -1,3 +1,5 @@
+struct ToyAbstractGP <: AbstractGP end
+
 @timedtestset "gp" begin
 
     # Ensure that basic functionality works as expected.
@@ -32,5 +34,9 @@
         @test var(f1, x) == ones(N)
 
         @test cov(f1, f1, x′, x) ≈ cov(f1, f1, x, x′)'
+    end
+
+    @timedtestset "wrapped AbstractGP" begin
+        wrap(ToyAbstractGP(), GPC())
     end
 end

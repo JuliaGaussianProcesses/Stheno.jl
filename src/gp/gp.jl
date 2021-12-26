@@ -12,14 +12,14 @@ struct WrappedGP{Tgp<:AbstractGP} <: SthenoAbstractGP
     gp::Tgp
     n::Int
     gpc::GPC
-    function WrappedGP{Tgp}(gp::Tgp, gpc::GPC) where {Tgp<:GP}
+    function WrappedGP{Tgp}(gp::Tgp, gpc::GPC) where {Tgp<:AbstractGP}
         wgp = new{Tgp}(gp, next_index(gpc), gpc)
         gpc.n += 1
         return wgp
     end
 end
 
-wrap(gp::Tgp, gpc::GPC) where {Tgp<:GP} = WrappedGP{Tgp}(gp, gpc)
+wrap(gp::Tgp, gpc::GPC) where {Tgp<:AbstractGP} = WrappedGP{Tgp}(gp, gpc)
 
 mean(f::WrappedGP, x::AbstractVector) = mean(f.gp, x)
 

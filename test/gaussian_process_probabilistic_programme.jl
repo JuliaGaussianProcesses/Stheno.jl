@@ -82,8 +82,7 @@
             GPPPInput(:f1, randn(4)),
         ),
     ]
-        rng = MersenneTwister(123456)
-        AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f, x0, x1)
+        test_internal_abstractgps_interface(MersenneTwister(123456), f, x0, x1)
     end
 
     @timedtestset "gppp macro" begin
@@ -102,5 +101,21 @@
         s = 0.1
         y = rand(f(x, s))
         Zygote.gradient((x, y, f, s) -> logpdf(f(x, s), y), x, y, f, s)
+    end
+
+    # Check that we can use one GPPP inside another.
+    @timedtestset "nested gppp" begin
+
+        gpc_outer = GPC()
+        f1_outer = Stheno.wrap(f, gpc_outer)
+        f2_outer = 5 * f1_outer
+        f_outer = Stheno.GPPP((f1=f1_outer, f2=f2_outer), gpc_outer)
+
+        x0 = GPPPInput(:f1, randn(5))
+        x1 = GPPPInput(:f2, randn(4))
+        x0_outer = GPPPInput(:f1, x0)
+        x1_outer = GPPPInput(:f2, x1)
+        rng = MersenneTwister(123456)
+        test_internal_abstractgps_interface(rng, f_outer, x0_outer, x1_outer)
     end
 end
