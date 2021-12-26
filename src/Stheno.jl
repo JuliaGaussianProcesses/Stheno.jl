@@ -37,7 +37,6 @@ module Stheno
     include(joinpath("util", "zygote_rules.jl"))
     include(joinpath("util", "covariance_matrices.jl"))
     include(joinpath("util", "block_arrays", "dense.jl"))
-    include(joinpath("util", "block_arrays", "diagonal.jl"))
     include(joinpath("util", "abstract_data_set.jl"))
     include(joinpath("util", "proper_type_piracy.jl"))
 

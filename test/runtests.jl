@@ -24,7 +24,6 @@ using Stheno:
     GPC,
     AV,
     FiniteGP,
-    block_diagonal,
     AbstractGP,
     BlockData,
     blocks,
@@ -36,8 +35,6 @@ using Stheno:
     diag_At_B,
     diag_Xt_invA_X,
     diag_Xt_invA_Y,
-    block_diagonal,
-    BlockDiagonal,
     blocksizes
 
 using Stheno.AbstractGPs.TestUtils: test_internal_abstractgps_interface
@@ -61,7 +58,6 @@ include("test_util.jl")
         @testset "block_arrays" begin
             include(joinpath("util", "block_arrays", "test_util.jl"))
             include(joinpath("util", "block_arrays", "dense.jl"))
-            include(joinpath("util", "block_arrays", "diagonal.jl"))
         end
         include(joinpath("util", "abstract_data_set.jl"))
     end
