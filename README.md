@@ -258,8 +258,7 @@ Fortunately, there is really no need for this package to explicitly provide supp
 
 As with hyperparmeter learning, Stheno doesn't support non-Gaussian likelihoods directly.
 Rather, we expect users to obtain this functionality through the general functionality provided in `AbstractGPs`.
-This part of the JuliaGaussianProcesses ecosystem is broadly under-developed, so please open issues on AbstractGPs if you're keen to help out!
-
+This part of the JuliaGaussianProcesses ecosystem is under development in [ApproximateGPs.jl](https://github.com/JuliaGaussianProcesses/ApproximateGPs.jl/) -- everything there should interoperate well with Stheno.jl.
 
 
 ## GPs + Deep Learning
