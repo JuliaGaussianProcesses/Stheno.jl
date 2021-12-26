@@ -40,6 +40,7 @@ using Stheno:
     BlockDiagonal,
     blocksizes
 
+using Stheno.AbstractGPs.TestUtils: test_internal_abstractgps_interface
 using Stheno.AbstractGPs.Distributions: MvNormal
 using FiniteDifferences: j′vp
 
