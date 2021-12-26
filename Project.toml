@@ -1,6 +1,6 @@
 name = "Stheno"
 uuid = "8188c328-b5d6-583d-959b-9690869a5511"
-version = "0.7.15"
+version = "0.7.16"
 
 [deps]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
