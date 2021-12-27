@@ -11,8 +11,8 @@ A finite-dimensional projection of an `AbstractGP` `f` at locations `x`, which u
 `FiniteGP` defined at a sparse set of inducing points [1] to do approximate inference.
 
 This object has similar methods to an ordinary `FiniteGP`, but when you call `logpdf` on it,
-it actually computes the `elbo`, and when you call `posterior` on it, `approx_posterior` is
-called.
+it actually computes the `elbo`, and when you call `posterior` on it, you get an approximate
+posterior.
 
 [1] - M. K. Titsias. "Variational learning of inducing variables in sparse Gaussian
 processes". In: Proceedings of the Twelfth International Conference on Artificial

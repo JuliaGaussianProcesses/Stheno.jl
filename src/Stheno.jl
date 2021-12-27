@@ -26,7 +26,6 @@ module Stheno
         elbo,
         dtc,
         posterior,
-        approx_posterior,
         marginals
 
     using MacroTools: @capture, combinedef, postwalk, splitdef
