@@ -6,6 +6,13 @@ between versions, and discuss new features.
 If you find a breaking change this is not reported here, please either raise an issue or
 make a PR to ammend this document.
 
+## 0.7.16
+- Deprecate `approx_posterior` in favour of `posterior`. This is being removed because it has been removed in AbstractGPs in favour of `posterior`. It will be entirely removed in the next breaking release.
+- Remove some redundant testing infrastructure and tidy up the file structure slightly.
+
+## 0.7.15
+Enable WrappedGP to work with any AbstractGP, not just the GP type.
+
 ## 0.7.14
 
 AbstractGPs now takes care of everything sparsity-related.

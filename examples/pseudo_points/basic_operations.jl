@@ -56,7 +56,7 @@ display(@benchmark elbo($fx, $y, $u))
 println()
 
 # Compute the approximate posterior process.
-f_post = approx_posterior(VFE(), fx, y, u);
+f_post = posterior(VFE(), fx, y, u);
 
 # Specify some points at which to plot the approximate posterior.
 Npr = 1000

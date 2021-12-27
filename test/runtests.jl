@@ -55,10 +55,7 @@ include("test_util.jl")
     @timedtestset "util" begin
         include(joinpath("util", "zygote_rules.jl"))
         include(joinpath("util", "covariance_matrices.jl"))
-        @testset "block_arrays" begin
-            include(joinpath("util", "block_arrays", "test_util.jl"))
-            include(joinpath("util", "block_arrays", "dense.jl"))
-        end
+        include(joinpath("util", "dense.jl"))
         include(joinpath("util", "abstract_data_set.jl"))
     end
 

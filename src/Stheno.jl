@@ -26,7 +26,6 @@ module Stheno
         elbo,
         dtc,
         posterior,
-        approx_posterior,
         marginals
 
     using MacroTools: @capture, combinedef, postwalk, splitdef
@@ -36,7 +35,7 @@ module Stheno
     # Various bits of utility that aren't inherently GP-related. Often very type-piratic.
     include(joinpath("util", "zygote_rules.jl"))
     include(joinpath("util", "covariance_matrices.jl"))
-    include(joinpath("util", "block_arrays", "dense.jl"))
+    include(joinpath("util", "dense.jl"))
     include(joinpath("util", "abstract_data_set.jl"))
     include(joinpath("util", "proper_type_piracy.jl"))
 
