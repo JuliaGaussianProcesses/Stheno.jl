@@ -3,3 +3,5 @@
 
 using KernelFunctions: NeuralKernelNetwork
 export NeuralKernelNetwork
+
+@deprecate approx_posterior posterior
