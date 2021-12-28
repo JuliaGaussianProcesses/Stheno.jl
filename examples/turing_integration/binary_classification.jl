@@ -1,3 +1,6 @@
+# This doesn't currently work.
+# https://github.com/JuliaGaussianProcesses/Stheno.jl/issues/222
+
 using AbstractGPs
 using Plots
 using Random
