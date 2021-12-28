@@ -5,7 +5,7 @@ using Plots
 using Random
 using Stheno
 
-###########################  Define and inspect our model  ###########################
+# ## Define and inspect our model
 
 rng = MersenneTwister(123456);
 
@@ -53,7 +53,7 @@ f′xp, y1′xp, y2′xp = split(xp, model′_xp);
 
 
 
-###########################  Plot results  ###########################
+# ## Plot results
 
 gr();
 
