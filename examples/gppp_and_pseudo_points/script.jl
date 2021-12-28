@@ -31,7 +31,7 @@ approx_in_latents_posterior_plot = plot();
 
 
 
-##################################### Exact Inference ######################################
+# ## Exact Inference
 
 # Compute the posterior processes, sample from them, and compute marginals.
 @show logpdf(fx, y)
@@ -63,11 +63,11 @@ scatter!(posterior_plot, x.x, y;
     markersize=4,
     markeralpha=0.7,
     label="",
-);
+)
 
 
 
-##################### Approximate inference with pseudo-data in f3 #########################
+# ## Approximate inference with pseudo-data in f3
 
 # Compute approximate posterior process.
 M3 = 25;
@@ -104,16 +104,16 @@ scatter!(approx_in_marginal_posterior_plot, z.x, zeros(M3);
     markersize=4,
     markeralpha=0.8,
     label="Z",
-);
+)
 
 
 
-############# Perform approximate inference by placing pseudo-data in f1 and f2 ############
+# ## Perform approximate inference by placing pseudo-data in f1 and f2
 
 # Compute approximate posterior process.
 M1, M2 = 15, 10;
-z1 = GPPPInput(:f1, collect(range(0.0; step=1 / ω, length=M1)));
-z2 = GPPPInput(:f2, collect(range(0.0; step=T, length=M2)));
+z1 = GPPPInput(:f1, collect(range(0.0, T; length=M1)));
+z2 = GPPPInput(:f2, collect(range(0.0, T; length=M2)));
 z12 = BlockData(z1, z2);
 u12 = f(z12, 1e-9);
 f′_approx_12 = posterior(VFE(u12), fx, y);
@@ -155,12 +155,8 @@ scatter!(approx_in_latents_posterior_plot, z2.x, zeros(M2);
     markersize=4,
     markeralpha=0.8,
     label="Z₂",
-);
+)
 
-
-
-# display(posterior_plot);
-# display(approx_in_marginal_posterior_plot);
-# display(approx_in_latents_posterior_plot);
+# ## The end result
 
 plot(f₁′_plot, f₂′_plot, f₃′_plot; layout=(3, 1))
