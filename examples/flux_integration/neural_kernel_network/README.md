@@ -1,4 +1,8 @@
 # Neural kernel network
+
+WARNING: almost certainly outdated.
+https://github.com/JuliaGaussianProcesses/Stheno.jl/issues/223
+
 When applying a neural network to data, we compute different linear features of data and pass the result to a nonlinear
 activation function. A similar thing can be done with kernels as well. In particular, kernels can be combined according to the following rules ( $k_1,\,k_2$ are kernel functions ):
 

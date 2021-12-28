@@ -1,11 +1,13 @@
-# Set up the environment to run this example. Make sure you're within the folder that this
-# file lives in.
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
+# This doesn't currently work.
+# https://github.com/JuliaGaussianProcesses/Stheno.jl/issues/222
 
+using AbstractGPs
+using Plots
+using Random
+using RDatasets
+using Stheno
+using Turing
 
-using Turing, Stheno, RDatasets, Random, Plots, Statistics
 rng = MersenneTwister(5)
 T = Float64
 

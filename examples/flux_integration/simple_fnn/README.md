@@ -1,4 +1,9 @@
 # Neural network + Gaussian process ( step function )
+
+WARNING: Almost certainly outdated
+https://github.com/JuliaGaussianProcesses/Stheno.jl/issues/223
+
+
 ## Introduction
 Gaussian process is typically used as a smoothing device, here, we show that by combining with a simple fully connected neural network, it's able to correctly learn sharp discontinuities.
 

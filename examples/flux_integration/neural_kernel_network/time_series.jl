@@ -1,3 +1,6 @@
+# WARNING: almost certainly outdated.
+# https://github.com/JuliaGaussianProcesses/Stheno.jl/issues/223
+
 # Set up the environment to run this example. Make sure you're within the folder that this
 # file lives in.
 using Pkg

@@ -1,11 +1,11 @@
-# Please run from the `basic_gppp` directory.
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
+# # Sensor Fusion
 
-using Stheno, Random, Plots, Statistics
+using AbstractGPs
+using Plots
+using Random
+using Stheno
 
-###########################  Define and inspect our model  ###########################
+# ## Define and inspect our model
 
 rng = MersenneTwister(123456);
 
@@ -20,14 +20,14 @@ bias is known to be 3.5. The model below specifies a model for this scenario.
 =#
 model = @gppp let
 
-    # Define a smooth latent process that we wish to infer.
+    ## Define a smooth latent process that we wish to infer.
     f = GP(SEKernel())
 
-    # Define the two noise processes described.
+    ## Define the two noise processes described.
     noise1 = sqrt(1e-2) * GP(WhiteKernel()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
     noise2 = sqrt(1e-1) * GP(3.5, WhiteKernel())
 
-    # Define the processes that we get to observe.
+    ## Define the processes that we get to observe.
     y1 = f + noise1
     y2 = f + noise2
 end;
@@ -53,7 +53,7 @@ f′xp, y1′xp, y2′xp = split(xp, model′_xp);
 
 
 
-###########################  Plot results  ###########################
+# ## Plot results
 
 gr();
 
@@ -89,4 +89,4 @@ scatter!(posterior_plot, x2.x, ŷ2;
     label="Sensor 2",
 );
 
-display(posterior_plot);
+posterior_plot

@@ -1,8 +1,6 @@
-# Set up the environment to run this example. Make sure you're within the folder that this
-# file lives in.
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
+# # Pseudo-Points in Additive Regression
+#
+#
 
 using AbstractGPs, Plots, Random, Stheno
 gr();
@@ -33,7 +31,7 @@ approx_in_latents_posterior_plot = plot();
 
 
 
-##################################### Exact Inference ######################################
+# ## Exact Inference
 
 # Compute the posterior processes, sample from them, and compute marginals.
 @show logpdf(fx, y)
@@ -65,19 +63,19 @@ scatter!(posterior_plot, x.x, y;
     markersize=4,
     markeralpha=0.7,
     label="",
-);
+)
 
 
 
-##################### Approximate inference with pseudo-data in f3 #########################
+# ## Approximate inference with pseudo-data in f3
 
 # Compute approximate posterior process.
 M3 = 25;
 z = GPPPInput(:f3, collect(range(0, T; length=M3)));
 u = f(z, 1e-9);
-f′_approx = posterior(VFE(), fx, y, u);
+f′_approx = posterior(VFE(u), fx, y);
 
-@show elbo(fx, y, u);
+@show elbo(VFE(u), fx, y);
 
 items = [
     (xp_f1, :green, "Z in f3", f₁′_plot),
@@ -106,21 +104,21 @@ scatter!(approx_in_marginal_posterior_plot, z.x, zeros(M3);
     markersize=4,
     markeralpha=0.8,
     label="Z",
-);
+)
 
 
 
-############# Perform approximate inference by placing pseudo-data in f1 and f2 ############
+# ## Perform approximate inference by placing pseudo-data in f1 and f2
 
 # Compute approximate posterior process.
 M1, M2 = 15, 10;
-z1 = GPPPInput(:f1, collect(range(0.0; step=1 / ω, length=M1)));
-z2 = GPPPInput(:f2, collect(range(0.0; step=T, length=M2)));
+z1 = GPPPInput(:f1, collect(range(0.0, T; length=M1)));
+z2 = GPPPInput(:f2, collect(range(0.0, T; length=M2)));
 z12 = BlockData(z1, z2);
 u12 = f(z12, 1e-9);
-f′_approx_12 = posterior(VFE(), fx, y, u12);
+f′_approx_12 = posterior(VFE(u12), fx, y);
 
-@show elbo(fx, y, u12);
+@show elbo(VFE(u12), fx, y);
 
 items = [
     (xp_f1, :blue, "Z in f1 and f2", f₁′_plot),
@@ -157,12 +155,8 @@ scatter!(approx_in_latents_posterior_plot, z2.x, zeros(M2);
     markersize=4,
     markeralpha=0.8,
     label="Z₂",
-);
+)
 
-
-
-# display(posterior_plot);
-# display(approx_in_marginal_posterior_plot);
-# display(approx_in_latents_posterior_plot);
+# ## The end result
 
 plot(f₁′_plot, f₂′_plot, f₃′_plot; layout=(3, 1))

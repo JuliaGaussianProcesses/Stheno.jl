@@ -1,13 +1,13 @@
-# Please run from the `basic_gppp` directory.
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
+# # Time-Varying Bayesian Linear Regression
 
-using AbstractGPs, ColorTypes, FixedPointNumbers, Plots, Random, Stheno
+using AbstractGPs
+using ColorTypes
+using FixedPointNumbers
+using Plots
+using Random
+using Stheno
 
-
-
-###########################  Define and inspect our model  ###########################
+# ## Define and inspect our model
 
 #=
 g1 and g2 are time-varying basis functions. In a real application, these might be specified
@@ -50,7 +50,7 @@ w1′s, w2′s, y′s = split(xp, f′_xp);
 
 
 
-###########################  Plot results ###########################
+# ## Plot results
 
 gr();
 posterior_plot = plot(
@@ -104,6 +104,4 @@ scatter!(posterior_plot, x.x, ŷ;
 plot!(posterior_plot, xp_, f′(xp_y); color=:blue, label="y");
 plot!(posterior_plot, xp_, y′s; color=:blue, label="", linewidth=1, alpha=0.2);
 
-# savefig(posterior_plot, "plotting_research_talk/tv_blr.pdf");
-
-display(posterior_plot);
+posterior_plot

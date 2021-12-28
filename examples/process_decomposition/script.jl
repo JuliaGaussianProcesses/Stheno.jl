@@ -1,14 +1,11 @@
-# Please run from the `basic_gppp` directory.
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
+# # Process Decomposition
 
-using AbstractGPs, Plots, Random, Stheno
+using AbstractGPs
+using Plots
+using Random
+using Stheno
 
-
-
-###########################  Define our model  ###########################
-
+# Define our model.
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
 f = @gppp let
     f1 = GP(randn(), SEKernel())
@@ -44,12 +41,8 @@ ms = marginals(f_post(xp, 1e-9));
 f′1_m, f′2_m, f′3_m = split(xp, mean.(ms));
 f′1_s, f′2_s, f′3_s = split(xp, std.(ms));
 
-
-
-###########################  Plot results  ###########################
-
-gr();
-posterior_plot = plot();
+# Plot results
+posterior_plot = plot(ylims=(-5.0, 5.0));
 
 # Plot posterior over f1.
 plot!(posterior_plot, xp_, f′1_m; ribbon=3f′1_s, color=:red, label="f1", fillalpha=0.3);
@@ -61,11 +54,11 @@ scatter!(posterior_plot, x1.x, y1;
     markersize=4,
     markeralpha=0.7,
     label="",
-);
+)
 
 # Plot posterior over f2.
 plot!(posterior_plot, xp_, f′2_m; ribbon=3f′2_s, color=:green, label="f2", fillalpha=0.3);
-plot!(posterior_plot, xp_, f′2_xp; color=:green, label="", alpha=0.2, linewidth=1);
+plot!(posterior_plot, xp_, f′2_xp; color=:green, label="", alpha=0.2, linewidth=1)
 
 # Plot posterior over f3
 plot!(posterior_plot, xp_, f′3_m; ribbon=3f′3_s, color=:blue, label="f3", fillalpha=0.3);
@@ -77,6 +70,4 @@ scatter!(posterior_plot, x3.x, y3;
     markersize=4,
     markeralpha=0.7,
     label="",
-);
-
-display(posterior_plot);
+)

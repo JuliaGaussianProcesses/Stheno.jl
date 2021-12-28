@@ -13,7 +13,11 @@ const EXAMPLES_OUT = joinpath(@__DIR__, "src", "examples")
 # work on the source directly, or work with the literate.jl file to avoid needing to start
 # a fresh Julia session each time you want to run the example.
 examples = [
-    "getting_started"
+    "getting_started",
+    "process_decomposition",
+    "sensor_fusion",
+    "time_varying_blr",
+    "gppp_and_pseudo_points",
 ]
 
 example_locations = map(example -> joinpath(@__DIR__, "..", "examples", example), examples)
@@ -30,7 +34,7 @@ end
 
 
 let script = "using Pkg; Pkg.activate(ARGS[1]); Pkg.instantiate()"
-    for example in examples
+    for example in example_locations
         if !success(`$(Base.julia_cmd()) -e $script $example`)
             error(
                 "project environment of example ",
@@ -43,7 +47,7 @@ end
 
 # Run examples asynchronously
 literate_path = joinpath(@__DIR__, "literate.jl")
-processes = map(examples) do example
+processes = map(example_locations) do example
     return run(
         pipeline(
             `$(Base.julia_cmd()) $literate_path $(basename(example)) $EXAMPLES_OUT`;
@@ -83,6 +87,13 @@ makedocs(
         "Kernel Design" => "kernel_design.md",
         "Internals" => "internals.md",
         "API" => "api.md",
+        "Examples" => [
+            "examples_note.md",
+            joinpath("examples", "process_decomposition.md"),
+            joinpath("examples", "sensor_fusion.md"),
+            joinpath("examples", "time_varying_blr.md"),
+            joinpath("examples", "gppp_and_pseudo_points.md"),
+        ],
     ],
     doctestfilters=[
         r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
