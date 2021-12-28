@@ -47,7 +47,7 @@ end
 
 # Run examples asynchronously
 literate_path = joinpath(@__DIR__, "literate.jl")
-processes = map(example_locations[4:4]) do example
+processes = map(example_locations) do example
     return run(
         pipeline(
             `$(Base.julia_cmd()) $literate_path $(basename(example)) $EXAMPLES_OUT`;
