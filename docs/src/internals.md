@@ -5,13 +5,9 @@ The primary objects in Stheno are some special subtypes of `AbstractGP`. There a
 - `CompositeGP`: a Gaussian process composed of other `WrappedGP`s and `CompositeGP`s, whose properties are determined recursively from the GPs of which it is composed.
 - `GaussianProcessProbabilisticProgramme` / `GPPP`: a Gaussian process comprising `WrappedGP`s and `CompositeGP`s. This is the primary piece of functionality that users should interact with.
 
+Each of these types implements the [Internal AbstractGPs API](https://github.com/JuliaGaussianProcesses/AbstractGPs.jl).
+
 This documentation provides the information necessary to understand the internals of Stheno, and to extend it with custom functionality.
-
-
-
-## AbstractGP
-
-[`WrappedGP`](https://github.com/willtebbutt/Stheno.jl/blob/master/src/gp/gp.jl) and [`CompositeGP`](https://github.com/willtebbutt/Stheno.jl/blob/master/src/composite/composite_gp.jl) implement the [AbstractGPs.jl](https://github.com/JuliaGaussianProcesses/AbstractGPs.jl/) API. Please refer to the AbstractGPs.jl docs for more info on this.
 
 ### diag methods
 
@@ -79,7 +75,9 @@ The mistake here is to construct a separate `GPC` object for each `GP`. Hopefull
 
 ## CompositeGP
 
-`CompositeGP`s are constructed as affine transformations of `CompositeGP`s and `GP`s. We describe the implemented transformations below.
+`CompositeGP`s are constructed as affine transformations of `CompositeGP`s and `WrappedGP`s.
+We describe the implemented transformations below.
+You can add additional transformations -- see [Custom Affine Transformations](@ref) for an a worked example.
 
 
 

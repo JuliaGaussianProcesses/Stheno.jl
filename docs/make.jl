@@ -14,6 +14,7 @@ const EXAMPLES_OUT = joinpath(@__DIR__, "src", "examples")
 # a fresh Julia session each time you want to run the example.
 examples = [
     "getting_started",
+    "custom_affine_transformations",
     "process_decomposition",
     "sensor_fusion",
     "time_varying_blr",
@@ -86,6 +87,8 @@ makedocs(
         "Input Types" => "input_types.md",
         "Kernel Design" => "kernel_design.md",
         "Internals" => "internals.md",
+        "Custom Affine Transformations" =>
+            joinpath("examples", "custom_affine_transformations.md"),
         "API" => "api.md",
         "Examples" => [
             "examples_note.md",
