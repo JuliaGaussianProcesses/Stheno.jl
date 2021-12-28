@@ -77,7 +77,7 @@ The mistake here is to construct a separate `GPC` object for each `GP`. Hopefull
 
 `CompositeGP`s are constructed as affine transformations of `CompositeGP`s and `WrappedGP`s.
 We describe the implemented transformations below.
-You can add additional transformations -- see ... for an a worked example.
+You can add additional transformations -- see [Custom Affine Transformations](@ref) for an a worked example.
 
 
 
