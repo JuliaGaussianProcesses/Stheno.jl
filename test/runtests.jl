@@ -34,8 +34,7 @@ using Stheno:
     diag_At_A,
     diag_At_B,
     diag_Xt_invA_X,
-    diag_Xt_invA_Y,
-    blocksizes
+    diag_Xt_invA_Y
 
 using Stheno.AbstractGPs.TestUtils: test_internal_abstractgps_interface
 using Stheno.AbstractGPs.Distributions: MvNormal
@@ -55,7 +54,7 @@ include("test_util.jl")
     @timedtestset "util" begin
         include(joinpath("util", "zygote_rules.jl"))
         include(joinpath("util", "covariance_matrices.jl"))
-        include(joinpath("util", "dense.jl"))
+        include(joinpath("util", "block_arrays.jl"))
         include(joinpath("util", "abstract_data_set.jl"))
     end
 
