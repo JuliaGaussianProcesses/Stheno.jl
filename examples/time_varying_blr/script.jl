@@ -7,9 +7,7 @@ using Plots
 using Random
 using Stheno
 
-
-
-###########################  Define and inspect our model  ###########################
+# ## Define and inspect our model
 
 #=
 g1 and g2 are time-varying basis functions. In a real application, these might be specified
@@ -52,7 +50,7 @@ w1′s, w2′s, y′s = split(xp, f′_xp);
 
 
 
-###########################  Plot results ###########################
+# ## Plot results
 
 gr();
 posterior_plot = plot(
