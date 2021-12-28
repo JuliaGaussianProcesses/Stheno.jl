@@ -1,7 +1,4 @@
-# Please run from the `basic_gppp` directory.
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
+# # Process Decomposition
 
 using AbstractGPs, Plots, Random, Stheno
 
@@ -48,7 +45,6 @@ f′1_s, f′2_s, f′3_s = split(xp, std.(ms));
 
 ###########################  Plot results  ###########################
 
-gr();
 posterior_plot = plot();
 
 # Plot posterior over f1.
@@ -79,4 +75,4 @@ scatter!(posterior_plot, x3.x, y3;
     label="",
 );
 
-display(posterior_plot);
+posterior_plot

@@ -1,9 +1,11 @@
-# Please run from the `basic_gppp` directory.
-using Pkg
-Pkg.activate(@__DIR__)
-Pkg.instantiate()
+# # Time-Varying Bayesian Linear Regression
 
-using AbstractGPs, ColorTypes, FixedPointNumbers, Plots, Random, Stheno
+using AbstractGPs
+using ColorTypes
+using FixedPointNumbers
+using Plots
+using Random
+using Stheno
 
 
 
@@ -104,6 +106,4 @@ scatter!(posterior_plot, x.x, ŷ;
 plot!(posterior_plot, xp_, f′(xp_y); color=:blue, label="y");
 plot!(posterior_plot, xp_, y′s; color=:blue, label="", linewidth=1, alpha=0.2);
 
-# savefig(posterior_plot, "plotting_research_talk/tv_blr.pdf");
-
-display(posterior_plot);
+posterior_plot

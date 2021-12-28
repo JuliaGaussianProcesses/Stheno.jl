@@ -1,9 +1,6 @@
 [deps]
+AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Stheno = "8188c328-b5d6-583d-959b-9690869a5511"
-
-[compat]
-Plots = "1"
-Stheno = "0.7"
-julia = "1"
