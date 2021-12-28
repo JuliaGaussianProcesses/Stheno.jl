@@ -1,3 +1,7 @@
+# # 1-Dimensional Additive Regression
+#
+#
+
 # Set up the environment to run this example. Make sure you're within the folder that this
 # file lives in.
 using Pkg
@@ -75,9 +79,9 @@ scatter!(posterior_plot, x.x, y;
 M3 = 25;
 z = GPPPInput(:f3, collect(range(0, T; length=M3)));
 u = f(z, 1e-9);
-f′_approx = posterior(VFE(), fx, y, u);
+f′_approx = posterior(VFE(u), fx, y);
 
-@show elbo(fx, y, u);
+@show elbo(VFE(u), fx, y);
 
 items = [
     (xp_f1, :green, "Z in f3", f₁′_plot),
@@ -118,9 +122,9 @@ z1 = GPPPInput(:f1, collect(range(0.0; step=1 / ω, length=M1)));
 z2 = GPPPInput(:f2, collect(range(0.0; step=T, length=M2)));
 z12 = BlockData(z1, z2);
 u12 = f(z12, 1e-9);
-f′_approx_12 = posterior(VFE(), fx, y, u12);
+f′_approx_12 = posterior(VFE(u12), fx, y);
 
-@show elbo(fx, y, u12);
+@show elbo(VFE(u12), fx, y);
 
 items = [
     (xp_f1, :blue, "Z in f1 and f2", f₁′_plot),
