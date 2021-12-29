@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Pseudo-Points in Additive Regression · Stheno.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Stheno.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../input_types/">Input Types</a></li><li><a class="tocitem" href="../../kernel_design/">Kernel Design</a></li><li><a class="tocitem" href="../../internals/">Internals</a></li><li><a class="tocitem" href="../custom_affine_transformations/">Custom Affine Transformations</a></li><li><a class="tocitem" href="../../api/">API</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_note/">Notes on Examples</a></li><li><a class="tocitem" href="../process_decomposition/">Process Decomposition</a></li><li><a class="tocitem" href="../sensor_fusion/">Sensor Fusion</a></li><li><a class="tocitem" href="../time_varying_blr/">Time-Varying Bayesian Linear Regression</a></li><li class="is-active"><a class="tocitem" href>Pseudo-Points in Additive Regression</a><ul class="internal"><li><a class="tocitem" href="#Exact-Inference"><span>Exact Inference</span></a></li><li><a class="tocitem" href="#Approximate-inference-with-pseudo-data-in-f3"><span>Approximate inference with pseudo-data in f3</span></a></li><li><a class="tocitem" href="#Perform-approximate-inference-by-placing-pseudo-data-in-f1-and-f2"><span>Perform approximate inference by placing pseudo-data in f1 and f2</span></a></li><li><a class="tocitem" href="#The-end-result"><span>The end result</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Pseudo-Points in Additive Regression</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Pseudo-Points in Additive Regression</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaGaussianProcesses/Stheno.jl/blob/master/examples/gppp_and_pseudo_points/script.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Pseudo-Points-in-Additive-Regression"><a class="docs-heading-anchor" href="#Pseudo-Points-in-Additive-Regression">Pseudo-Points in Additive Regression</a><a id="Pseudo-Points-in-Additive-Regression-1"></a><a class="docs-heading-anchor-permalink" href="#Pseudo-Points-in-Additive-Regression" title="Permalink"></a></h1><p><a href="https://nbviewer.jupyter.org/github/JuliaGaussianProcesses/Stheno.jl/blob/gh-pages/previews/PR225/examples/gppp_and_pseudo_points.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a></p><p><em>You are seeing the HTML output generated by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a> from the <a href="https://github.com/JuliaGaussianProcesses/Stheno.jl/blob/master/examples/gppp_and_pseudo_points/script.jl">Julia source file</a>. The corresponding notebook can be viewed in <a href="https://nbviewer.jupyter.org/github/JuliaGaussianProcesses/Stheno.jl/blob/gh-pages/previews/PR225/examples/gppp_and_pseudo_points.ipynb">nbviewer</a>.</em></p><pre><code class="language-julia hljs">using AbstractGPs, Plots, Random, Stheno
+gr();</code></pre><p>Define model.</p><pre><code class="language-julia hljs">σ², ω, T = 1e0, 1.0, 25.0;
+f = @gppp let
+    f1 = periodic(GP(SEKernel()), ω)
+    f2 = GP(0.1 * SEKernel())
+    f3 = f1 + f2
+end;</code></pre><p>Sample from marginal process to generate toy data.</p><pre><code class="language-julia hljs">rng = MersenneTwister(123456);
+S = 25;
+x = GPPPInput(:f3, range(0.0, T; length=300));
+fx = f(x, σ²);
+y = rand(rng, fx);
+
+xp_ = range(-2.5, T + 2.5; length=500);</code></pre><p>Plots for stuff.</p><pre><code class="language-julia hljs">f₁′_plot, f₂′_plot, f₃′_plot = plot(), plot(), plot();
+
+posterior_plot = plot();
+approx_in_marginal_posterior_plot = plot();
+approx_in_latents_posterior_plot = plot();</code></pre><h2 id="Exact-Inference"><a class="docs-heading-anchor" href="#Exact-Inference">Exact Inference</a><a id="Exact-Inference-1"></a><a class="docs-heading-anchor-permalink" href="#Exact-Inference" title="Permalink"></a></h2><p>Compute the posterior processes, sample from them, and compute marginals.</p><pre><code class="language-julia hljs">@show logpdf(fx, y)
+f′ = posterior(fx, y);
+xp_f1 = GPPPInput(:f1, xp_);
+xp_f2 = GPPPInput(:f2, xp_);
+xp_f3 = GPPPInput(:f3, xp_);
+xp = BlockData(xp_f1, xp_f2, xp_f3);
+f′xp = rand(f′(xp, 1e-9), S);
+f₁′xp, f₂′xp, f₃′xp = split(xp, f′xp);
+
+items = [
+    (xp_f1, f₁′xp, :red, &quot;exact&quot;, f₁′_plot),
+    (xp_f2, f₂′xp, :red, &quot;&quot;, f₂′_plot),
+    (xp_f3, f₃′xp, :red, &quot;&quot;, f₃′_plot),
+];</code></pre><pre><code class="nohighlight hljs">logpdf(fx, y) = -465.99349014012654
+</code></pre><p>Plot posterior marginals and samples.</p><pre><code class="language-julia hljs">for (x, samples, colour, name, plt) in items
+    plot!(plt, xp_, f′(x); fillalpha=0.2, color=colour, label=name);
+    plot!(plt, xp_, samples; alpha=0.3, color=colour, label=&quot;&quot;, linewidth=1);
+end</code></pre><p>Plot observations.</p><pre><code class="language-julia hljs">scatter!(posterior_plot, x.x, y;
+    markercolor=:blue,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.7,
+    label=&quot;&quot;,
+)</code></pre><p><img src="../4058212628.png" alt/></p><h2 id="Approximate-inference-with-pseudo-data-in-f3"><a class="docs-heading-anchor" href="#Approximate-inference-with-pseudo-data-in-f3">Approximate inference with pseudo-data in f3</a><a id="Approximate-inference-with-pseudo-data-in-f3-1"></a><a class="docs-heading-anchor-permalink" href="#Approximate-inference-with-pseudo-data-in-f3" title="Permalink"></a></h2><p>Compute approximate posterior process.</p><pre><code class="language-julia hljs">M3 = 25;
+z = GPPPInput(:f3, collect(range(0, T; length=M3)));
+u = f(z, 1e-9);
+f′_approx = posterior(VFE(u), fx, y);
+
+@show elbo(VFE(u), fx, y);
+
+items = [
+    (xp_f1, :green, &quot;Z in f3&quot;, f₁′_plot),
+    (xp_f2, :green, &quot;&quot;, f₂′_plot),
+    (xp_f3, :green, &quot;&quot;, f₃′_plot),
+];</code></pre><pre><code class="nohighlight hljs">elbo(VFE(u), fx, y) = -478.26616160163064
+</code></pre><p>Posterior marginal variance.</p><pre><code class="language-julia hljs">for (x, colour, name, plt) in items
+    plot!(plt, xp_, f′_approx(x); fillalpha=0.3, fillcolor=colour, label=name);
+end</code></pre><p>Plot observations and pseudo-input locations.</p><pre><code class="language-julia hljs">scatter!(approx_in_marginal_posterior_plot, x.x, y;
+    markercolor=:blue,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.7,
+    label=&quot;&quot;,
+);
+scatter!(approx_in_marginal_posterior_plot, z.x, zeros(M3);
+    markercolor=:black,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.8,
+    label=&quot;Z&quot;,
+)</code></pre><p><img src="../3584389588.png" alt/></p><h2 id="Perform-approximate-inference-by-placing-pseudo-data-in-f1-and-f2"><a class="docs-heading-anchor" href="#Perform-approximate-inference-by-placing-pseudo-data-in-f1-and-f2">Perform approximate inference by placing pseudo-data in f1 and f2</a><a id="Perform-approximate-inference-by-placing-pseudo-data-in-f1-and-f2-1"></a><a class="docs-heading-anchor-permalink" href="#Perform-approximate-inference-by-placing-pseudo-data-in-f1-and-f2" title="Permalink"></a></h2><p>Compute approximate posterior process.</p><pre><code class="language-julia hljs">M1, M2 = 15, 10;
+z1 = GPPPInput(:f1, collect(range(0.0, T; length=M1)));
+z2 = GPPPInput(:f2, collect(range(0.0, T; length=M2)));
+z12 = BlockData(z1, z2);
+u12 = f(z12, 1e-9);
+f′_approx_12 = posterior(VFE(u12), fx, y);
+
+@show elbo(VFE(u12), fx, y);
+
+items = [
+    (xp_f1, :blue, &quot;Z in f1 and f2&quot;, f₁′_plot),
+    (xp_f2, :blue, &quot;&quot;, f₂′_plot),
+    (xp_f3, :blue, &quot;&quot;, f₃′_plot),
+];</code></pre><pre><code class="nohighlight hljs">elbo(VFE(u12), fx, y) = -477.4916323879492
+</code></pre><p>Plot posterior marginals.</p><pre><code class="language-julia hljs">for (x, colour, name, plt) in items
+    plot!(plt, xp_, f′_approx_12(x); fillalpha=0.3, fillcolor=colour, label=name)
+end</code></pre><p>Plot observations and pseudo-input locations.</p><pre><code class="language-julia hljs">scatter!(approx_in_latents_posterior_plot, x.x, y;
+    markercolor=:blue,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.7,
+    label=&quot;&quot;,
+);
+scatter!(approx_in_latents_posterior_plot, z1.x, zeros(M1);
+    markercolor=:black,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.8,
+    label=&quot;Z₁&quot;,
+);
+scatter!(approx_in_latents_posterior_plot, z2.x, zeros(M2);
+    markercolor=:magenta,
+    markershape=:circle,
+    markerstrokewidth=0.0,
+    markersize=4,
+    markeralpha=0.8,
+    label=&quot;Z₂&quot;,
+)</code></pre><p><img src="../2608281131.png" alt/></p><h2 id="The-end-result"><a class="docs-heading-anchor" href="#The-end-result">The end result</a><a id="The-end-result-1"></a><a class="docs-heading-anchor-permalink" href="#The-end-result" title="Permalink"></a></h2><pre><code class="language-julia hljs">plot(f₁′_plot, f₂′_plot, f₃′_plot; layout=(3, 1))</code></pre><p><img src="../703422548.png" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../time_varying_blr/">« Time-Varying Bayesian Linear Regression</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 29 December 2021 11:47">Wednesday 29 December 2021</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
