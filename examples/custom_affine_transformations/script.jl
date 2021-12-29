@@ -1,5 +1,7 @@
 # # Custom Affine Transformations
 #
+# This page explains how to implement your own affine transformation operations by way of
+# example.
 # You can add your own custom affine transformations into Stheno using the same
 # mechanism as all of the existing transformations (addition, multiplication, composition,
 # etc).
@@ -15,7 +17,7 @@ using Stheno
 # Suppose that, for some reason, you wish to implement the affine transformation of a single
 # process `f` given by `(Af)(x) = f(x) + f(x + 3) - 2`.
 # In order to define this transformation, first create a function which accepts `f` and
-# return a `CompositeGP`:
+# returns a `CompositeGP`:
 using Stheno: AbstractGP, CompositeGP, SthenoAbstractGP
 
 A(f::SthenoAbstractGP) = CompositeGP((A, f), f.gpc)
@@ -32,13 +34,16 @@ A(f::SthenoAbstractGP) = CompositeGP((A, f), f.gpc)
 # as we can safely assume that these have a `gpc` field.
 
 # We'll now define a type alias in order to simplify some methods later on:
-const A_args = Tuple{typeof(A), SthenoAbstractGP}
+const A_args = Tuple{typeof(A), SthenoAbstractGP};
+
 
 # ## Most Important Methods
 
 # We must now define methods of three functions on
-# `CompositeGP{<:Tuple{typeof(A), SthenoAbstractGP}}`: `mean`, `cov`, and `var`.
-# First the `mean`. Some textbook calculations reveal that the mean is
+# `A_args`: `mean`, `cov`, and `var`.
+# First the `mean` -- this method should accept both an `A_args` and an `AbstracVector`, and
+# return the mean vector of `A(f)` at `x`.
+# Some textbook calculations reveal that this is
 
 Stheno.mean((A, f)::A_args, x::AbstractVector) = mean(f, x) .+ mean(f, x .+ 3) .- 2
 
@@ -61,7 +66,7 @@ end
 # `cov(args::A_args, g::AbstractGP, x::AbstractVector, y::AbstractVector)`, which should
 # return the cross-covariance matrix between `A(f)` at `x` and `g` at `y`.
 # When implementing this method, you can assume you have access to functions like
-# `cov(f, g, x, y)` etc.
+# `cov(f, g, x, y)` etc:
 
 function Stheno.cov((A, f)::A_args, g::AbstractGP, x::AbstractVector, y::AbstractVector)
     return cov(f, g, x, y) + cov(f, g, x .+ 3, y)
@@ -119,7 +124,7 @@ end
 var(gppp, x_Af, z_Af) ≈ diag(cov(gppp, x_Af, z_Af))
 
 
-# The diagonal of the cross-covariance between different processes:
+# The diagonal of the cross-covariance between different processes for equal-length inputs:
 
 function Stheno.var((A, f)::A_args, g::AbstractGP, x::AbstractVector, y::AbstractVector)
     return var(f, g, x, y) + var(f, g, x .+ 3, y)
@@ -147,7 +152,7 @@ var(gppp, x_f, x_Af) ≈ var(gppp, x_Af, x_f)
 # ## Checking Your Implementation
 
 # Given the numerous methods above, it's a really good idea to utilise the functionality
-# provided by AbstratGPs.jl to check that you've implemented them all concistently with one
+# provided by AbstractGPs.jl to check that you've implemented them all consistently with one
 # another.
 
 using AbstractGPs.TestUtils: test_internal_abstractgps_interface
@@ -162,4 +167,4 @@ test_internal_abstractgps_interface(rng, gppp, x_f, y_Af);
 # test ought to catch any glaring problems if you've made a mistake in the rest.
 # If course, it won't check that your implementations of the first three methods correctly
 # implement the desired affine transformation, so you should write whatever tests you need
-# in order to convince yourself of the correctness of those.
+# in order to convince yourself of that.
