@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Differentation · Stheno.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Stheno.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../input_types/">Input Types</a></li><li><a class="tocitem" href="../../kernel_design/">Kernel Design</a></li><li><a class="tocitem" href="../../internals/">Internals</a></li><li><a class="tocitem" href="../custom_affine_transformations/">Custom Affine Transformations</a></li><li><a class="tocitem" href="../../api/">API</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_note/">Notes on Examples</a></li><li><a class="tocitem" href="../process_decomposition/">Process Decomposition</a></li><li><a class="tocitem" href="../sensor_fusion/">Sensor Fusion</a></li><li><a class="tocitem" href="../time_varying_blr/">Time-Varying Bayesian Linear Regression</a></li><li><a class="tocitem" href="../gppp_and_pseudo_points/">Pseudo-Points in Additive Regression</a></li><li class="is-active"><a class="tocitem" href>Differentation</a><ul class="internal"><li><a class="tocitem" href="#Example:-Inference-given-observations-of-process-and-its-derivative"><span>Example: Inference given observations of process and its derivative</span></a></li><li><a class="tocitem" href="#Example:-Integration-via-Antiderivatives"><span>Example: Integration via Antiderivatives</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Differentation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Differentation</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaGaussianProcesses/Stheno.jl/blob/master/examples/differentiation/script.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Differentation"><a class="docs-heading-anchor" href="#Differentation">Differentation</a><a id="Differentation-1"></a><a class="docs-heading-anchor-permalink" href="#Differentation" title="Permalink"></a></h1><p><a href="https://nbviewer.jupyter.org/github/JuliaGaussianProcesses/Stheno.jl/blob/gh-pages/previews/PR226/examples/differentiation.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a></p><p><em>You are seeing the HTML output generated by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a> from the <a href="https://github.com/JuliaGaussianProcesses/Stheno.jl/blob/master/examples/differentiation/script.jl">Julia source file</a>. The corresponding notebook can be viewed in <a href="https://nbviewer.jupyter.org/github/JuliaGaussianProcesses/Stheno.jl/blob/gh-pages/previews/PR226/examples/differentiation.ipynb">nbviewer</a>.</em></p><p>No one has yet got around to doing a reasonably performant and general implementation of differentiation in the JuliaGPs ecosystem. Here we provide a correct, albeit unbearably slow implementation of differentiation as an affine transformation in Stheno.jl using FiniteDifferences.jl. This implementation should be correct, however. The <code>test_implementation</code> function hopefully ensures that.</p><p>The purpose of this example is to provide a template on which others could build.</p><pre><code class="language-julia hljs">using AbstractGPs
+using AbstractGPsMakie
+using CairoMakie
+using Distributions
+using FiniteDifferences
+using LinearAlgebra
+using Random
+using Stheno
+using Test
+
+import AbstractGPs: mean, cov, var
+
+using AbstractGPs: AbstractGP
+using AbstractGPs.TestUtils: test_internal_abstractgps_interface
+using Stheno: CompositeGP
+
+derivative(f::AbstractGP) = CompositeGP((derivative, f), f.gpc)
+
+
+const deriv_args = Tuple{typeof(derivative), AbstractGP}
+
+function mean((_, f)::deriv_args, x::AbstractVector{&lt;:Real})
+    return zeros(length(x))
+    return ForwardDiff.derivative(α -&gt; (mean(f, α * x)), 1.0)
+end
+
+function cov(args::deriv_args, x::AbstractVector{&lt;:Real})
+    return cov(args, x, x)
+end
+function var((_, f)::deriv_args, x::AbstractVector{&lt;:Real})
+    return var((derivative, f), x, x)
+end
+
+function cov((_, f)::deriv_args, x::AbstractVector{&lt;:Real}, x′::AbstractVector{&lt;:Real})
+    fdm = central_fdm(5, 1)
+    cols_of_C = map(x′) do x′n
+        col_elements = map(x) do xn
+            FiniteDifferences.grad(
+                fdm,
+                xn -&gt; FiniteDifferences.grad(
+                    fdm,
+                    x′n -&gt; cov(f, [xn], [x′n]),
+                    x′n,
+                ),
+                xn
+            )[1]
+        end
+    end
+    return reduce(hcat, cols_of_C)
+end
+function var((_, f)::deriv_args, x::AbstractVector{&lt;:Real}, x′::AbstractVector{&lt;:Real})
+    fdm = central_fdm(5, 1)
+    elements = map(x, x′) do xn, x′n
+        FiniteDifferences.grad(
+            fdm,
+            xn -&gt; FiniteDifferences.grad(
+                fdm,
+                x′n -&gt; cov(f, [xn], [x′n]),
+                x′n,
+            ),
+            xn
+        )[1]
+    end
+    return reduce(vcat, elements)
+end
+
+function cov(
+    (_, f)::deriv_args,
+    f′::AbstractGP,
+    x::AbstractVector{&lt;:Real},
+    x′::AbstractVector{&lt;:Real},
+)
+    fdm = central_fdm(5, 1)
+    cols_of_C = map(x′) do x′n
+        col_elements = map(x) do xn
+            FiniteDifferences.grad(
+                fdm,
+                xn -&gt; cov(f, [xn], [x′n]),
+                xn,
+            )[1]
+        end
+    end
+    return reduce(hcat, cols_of_C)
+end
+function cov(
+    f::AbstractGP,
+    args::deriv_args,
+    x::AbstractVector{&lt;:Real},
+    x′::AbstractVector{&lt;:Real},
+)
+    return collect(cov(args, f, x′, x)&#39;)
+end
+
+function test_implementation()
+
+    # Specify model and inputs.
+    rng = MersenneTwister(123456)
+    f = @gppp let
+        f = GP(SEKernel())
+        df = derivative(f)
+    end
+    x1 = GPPPInput(:df, randn(rng, 7))
+    x2 = GPPPInput(:df, randn(rng, 6))
+    x3 = GPPPInput(:f, randn(rng, 5))
+
+    # Verify self-consistency.
+    test_internal_abstractgps_interface(rng, f, x1, x2)
+    test_internal_abstractgps_interface(rng, f, x1, x3)
+    test_internal_abstractgps_interface(rng, f, x3, x2)
+
+    # Check that we can approximately differentiate simple trigonometric functions.
+    x_obs = collect(range(-3.0, 3.0; length=25))
+    x_pred = collect(range(-2.5, 2.5; length=25))
+    x_df_pred = GPPPInput(:df, x_pred)
+    let
+        f_post = posterior(f(GPPPInput(:f, x_obs), 1e-12), map(sin, x_obs))
+        @test map(cos, x_pred) ≈ mean(f_post, x_df_pred) rtol=1e-5
+        @test map(cos, x_pred) ≈ rand(f_post(x_df_pred, 1e-8)) rtol=1e-3
+    end
+    let
+        f_post = posterior(f(GPPPInput(:f, x_obs), 1e-12), map(cos, x_obs))
+        @test -map(sin, x_pred) ≈ mean(f_post, GPPPInput(:df, x_pred)) rtol=1e-5
+        @test -map(sin, x_pred) ≈ rand(f_post(x_df_pred, 1e-8)) rtol=1e-3
+    end
+end
+test_implementation()</code></pre><pre><code class="nohighlight hljs">Test Passed
+  Expression: ≈(-(map(sin, x_pred)), rand(f_post(x_df_pred, 1.0e-8)), rtol = 0.001)
+   Evaluated: ≈([0.5984721441039564, 0.751231555699293, 0.8715031914412654, 0.9540857816096938, 0.9954079577517649, 0.9936827001581868, 0.9489846193555862, 0.863246729498086, 0.7401768531960371, 0.5850972729404622, 0.40471456356112473, 0.20682955954864105, -0.0, -0.20682955954864105, -0.40471456356112473, -0.5850972729404622, -0.7401768531960371, -0.863246729498086, -0.9489846193555862, -0.9936827001581868, -0.9954079577517649, -0.9540857816096938, -0.8715031914412654, -0.751231555699293, -0.5984721441039564], [0.5984440276066885, 0.7513460242493524, 0.871449163000799, 0.954040558222534, 0.9952195483058992, 0.9937397852363852, 0.9488689354938028, 0.8633513367260431, 0.7402029020488422, 0.5851005066373465, 0.40471175409498344, 0.20672245485807844, 1.3459743973126653e-5, -0.20664338515395533, -0.40445417365646896, -0.5851426777664336, -0.7401663251864826, -0.8632023066036351, -0.9491516231855341, -0.9936545966439059, -0.9953053450410929, -0.9540804193592104, -0.8714469808304733, -0.7511703430900215, -0.5983977232136422]; rtol = 0.001)</code></pre><h2 id="Example:-Inference-given-observations-of-process-and-its-derivative"><a class="docs-heading-anchor" href="#Example:-Inference-given-observations-of-process-and-its-derivative">Example: Inference given observations of process and its derivative</a><a id="Example:-Inference-given-observations-of-process-and-its-derivative-1"></a><a class="docs-heading-anchor-permalink" href="#Example:-Inference-given-observations-of-process-and-its-derivative" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CairoMakie: RGB
+
+function colours()
+    return Dict(
+        :blue =&gt; RGB(0/255, 107/255, 164/255),
+        :cyan =&gt; RGB(75/255, 166/255, 251/255),
+        :red =&gt; RGB(200/255, 82 / 255, 0 / 255),
+        :pink =&gt; RGB(169/255, 90/255, 161/255),
+        :black =&gt; RGB(0.0, 0.0, 0.0),
+        :orange =&gt; RGB(245/255, 121/255, 58/255),
+    )
+end
+
+band_alpha() = 0.3
+sample_alpha() = 0.2
+point_alpha() = 1.0
+
+let
+    # Simple two-component model.
+    f = @gppp let
+        f = GP(SEKernel())
+        df = derivative(f)
+    end
+
+    # Specify inputs at which to make observations.
+    rng = MersenneTwister(123456)
+    x_f = GPPPInput(:f, rand(rng, Uniform(-5.0, 5.0), 10))
+    x_df = GPPPInput(:df, rand(rng, Uniform(-5.0, 5.0), 10))
+    x = BlockData(x_f, x_df)
+
+    # Build observations from simple functions.
+    y_f = map(sin, x_f.x)
+    y_df = map(cos, x_df.x)
+    y = vcat(y_f, y_df)
+
+    # Build posterior and visualise it.
+    f_post = posterior(f(x, 1e-12), y)
+    x_plot = collect(range(-6.0, 6.0; length=150))
+
+    fig = Figure()
+    ax = Axis(fig[1, 1])
+    xlims = (-5.1, 5.1)
+    ylims = (-2, 2)
+
+    let
+        f_xf = f_post(GPPPInput(:f, x_plot), 1e-6)
+        ms = marginals(f_xf)
+        symband!(
+            ax, x_plot, mean.(ms), std.(ms);
+            bandscale=3, color=(colours()[:blue], band_alpha()),
+        )
+        gpsample!(
+            ax, x_plot, f_xf;
+            samples=10, color=(colours()[:blue], sample_alpha()),
+        )
+        scatter!(ax, x_f.x, y_f; color=(colours()[:blue], point_alpha()), label=&quot;f&quot;)
+    end
+
+    let
+        f_xdf = f_post(GPPPInput(:df, x_plot), 1e-6)
+        ms = marginals(f_xdf)
+        symband!(
+            ax, x_plot, mean.(ms), std.(ms);
+            bandscale=3, color=(colours()[:orange], band_alpha()),
+        )
+        gpsample!(
+            ax, x_plot, f_xdf;
+            samples=10, color=(colours()[:orange], sample_alpha()),
+        )
+        scatter!(ax, x_df.x, y_df; color=(colours()[:orange], point_alpha()), label=&quot;df&quot;)
+    end
+
+    axislegend(ax; position=:rt)
+    xlims!(ax, xlims)
+    ylims!(ax, ylims)
+
+    fig
+end</code></pre><p><img src="../1221805191.png" alt/></p><h2 id="Example:-Integration-via-Antiderivatives"><a class="docs-heading-anchor" href="#Example:-Integration-via-Antiderivatives">Example: Integration via Antiderivatives</a><a id="Example:-Integration-via-Antiderivatives-1"></a><a class="docs-heading-anchor-permalink" href="#Example:-Integration-via-Antiderivatives" title="Permalink"></a></h2><pre><code class="language-julia hljs">let
+    # Build a model in which we place a prior over the integral, and differentiate it
+    # to obtain the process of which to compute the integral.
+    f = @gppp let
+        F = GP(SEKernel())
+        f = derivative(F)
+    end
+
+    # Build inputs. Integrate from -5.1.
+    rng = MersenneTwister(123456)
+    x_F = GPPPInput(:F, [-5.1])
+    x_f = GPPPInput(:f, rand(rng, Uniform(-5.0, 5.0), 20))
+    x = BlockData(x_F, x_f)
+
+    # Build observations from simple functions. We know that the integral is 0 at -5.1.
+    y_F = [0.0]
+    y_f = map(sin, x_f.x)
+    y = vcat(y_F, y_f)
+
+    # Build posterior and visualise it.
+    f_post = posterior(f(x, 1e-6), y)
+    x_plot = collect(range(-6.0, 6.0; length=150))
+
+    fig = Figure()
+    ax = Axis(fig[1, 1])
+    xlims = (-5.1, 5.1)
+    ylims = (-3, 3)
+
+    let
+        f_xf = f_post(GPPPInput(:f, x_plot), 1e-6)
+        ms = marginals(f_xf)
+        symband!(
+            ax, x_plot, mean.(ms), std.(ms);
+            bandscale=3, color=(colours()[:blue], band_alpha()),
+        )
+        gpsample!(
+            ax, x_plot, f_xf;
+            samples=10, color=(colours()[:blue], sample_alpha()),
+        )
+        scatter!(ax, x_f.x, y_f; color=(colours()[:blue], point_alpha()), label=&quot;f&quot;)
+    end
+
+    let
+        f_xdf = f_post(GPPPInput(:F, x_plot), 1e-6)
+        ms = marginals(f_xdf)
+        symband!(
+            ax, x_plot, mean.(ms), std.(ms);
+            bandscale=3, color=(colours()[:orange], band_alpha()),
+        )
+        gpsample!(
+            ax, x_plot, f_xdf;
+            samples=10, color=(colours()[:orange], sample_alpha()),
+        )
+        scatter!(ax, x_F.x, y_F; color=(colours()[:orange], point_alpha()), label=&quot;F&quot;)
+    end
+
+    axislegend(ax; position=:rt)
+    xlims!(ax, xlims)
+    ylims!(ax, ylims)
+
+    fig
+end</code></pre><p><img src="../4111066290.png" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../gppp_and_pseudo_points/">« Pseudo-Points in Additive Regression</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Sunday 9 January 2022 18:07">Sunday 9 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
