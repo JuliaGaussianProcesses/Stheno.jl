@@ -6,6 +6,8 @@
 # FiniteDifferences.jl. This implementation should be correct, however. The
 # `test_implementation` function hopefully ensures that.
 
+# The purpose of this example is to provide a template on which others could build.
+
 using AbstractGPs
 using AbstractGPsMakie
 using CairoMakie
