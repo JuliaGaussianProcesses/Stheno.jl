@@ -20,6 +20,7 @@ examples = [
     "time_varying_blr",
     "gppp_and_pseudo_points",
     "differentiation",
+    "extended_mauna_loa",
 ]
 
 example_locations = map(example -> joinpath(@__DIR__, "..", "examples", example), examples)
@@ -98,6 +99,7 @@ makedocs(
             joinpath("examples", "time_varying_blr.md"),
             joinpath("examples", "gppp_and_pseudo_points.md"),
             joinpath("examples", "differentiation.md"),
+            joinpath("examples", "extended_mauna_loa.md"),
         ],
     ],
     doctestfilters=[
