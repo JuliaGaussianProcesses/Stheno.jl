@@ -195,7 +195,7 @@ function optimize_loss(loss, θ_init; optimizer=default_optimizer, maxiter=1_000
     return unflatten(result.minimizer), result
 end
 
-θ_opt, result = optimize_loss(nlml, init_params)</code></pre><pre><code class="nohighlight hljs">((λ_trend = 0.08117957660311359, CO2 = (σ_latent = 1.0935497185064973, σ_wiggle = 0.013706063276011269, λ_wiggle = 5.326711695811043, σ_period = 0.060677805180666636, freq = 1.0, σ_noise = 0.007309872410842388, σm = 0.001859830165465387), T = (σ_trend = 1.663458877471338, σ_wiggle = 0.5791613744431963, λ_wiggle = 3.633490188157275, σ_noise = 0.40366773066765, σm = 1.1787763505016142)),  * Status: success
+θ_opt, result = optimize_loss(nlml, init_params)</code></pre><pre><code class="nohighlight hljs">((λ_trend = 0.08117925596820141, CO2 = (σ_latent = 1.0929694377096424, σ_wiggle = 0.013705932051262778, λ_wiggle = 5.326764962974475, σ_period = 0.06066085696206938, freq = 1.0, σ_noise = 0.007310148041717022, σm = 0.005211200364913826), T = (σ_trend = 1.6624938593141776, σ_wiggle = 0.5791619163697767, λ_wiggle = 3.6335576216944028, σ_noise = 0.40366881695460455, σm = 1.1786155793352608)),  * Status: success
 
  * Candidate solution
     Final objective value:     -1.952912e+03
@@ -208,13 +208,13 @@ end
     |x - x&#39;|/|x&#39;|          = 0.00e+00 ≤ 0.0e+00
     |f(x) - f(x&#39;)|         = 0.00e+00 ≤ 0.0e+00
     |f(x) - f(x&#39;)|/|f(x&#39;)| = 0.00e+00 ≤ 0.0e+00
-    |g(x)|                 = 1.53e-02 ≰ 1.0e-08
+    |g(x)|                 = 4.50e-02 ≰ 1.0e-08
 
  * Work counters
-    Seconds run:   227  (vs limit Inf)
-    Iterations:    84
-    f(x) calls:    177
-    ∇f(x) calls:   84
+    Seconds run:   284  (vs limit Inf)
+    Iterations:    78
+    f(x) calls:    101
+    ∇f(x) calls:   78
 )</code></pre><h2 id="Plot-the-resulting-model-fit."><a class="docs-heading-anchor" href="#Plot-the-resulting-model-fit.">Plot the resulting model fit.</a><a id="Plot-the-resulting-model-fit.-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-the-resulting-model-fit." title="Permalink"></a></h2><pre><code class="language-julia hljs">function colours()
     return Dict(
         :blue =&gt; RGB(0/255, 107/255, 164/255),
@@ -307,4 +307,4 @@ let
     rowgap!(ga, 5)
 
     fig
-end</code></pre><p><img src="../3240894250.png" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../differentiation/">« Differentation</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 11 January 2022 10:55">Tuesday 11 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><p><img src="../3240894250.png" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../differentiation/">« Differentation</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 12 January 2022 21:51">Wednesday 12 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
