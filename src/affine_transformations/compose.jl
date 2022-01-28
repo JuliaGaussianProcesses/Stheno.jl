@@ -5,7 +5,7 @@ import Base: ∘
 
 Constructs the GP f′ given by f′(x) := f(g(x))
 """
-∘(f::AbstractGP, g) = CompositeGP((∘, f, g), f.gpc)
+∘(f::AbstractGP, g) = DerivedGP((∘, f, g), f.gpc)
 
 
 const comp_args = Tuple{typeof(∘), AbstractGP, Any}

@@ -7,7 +7,7 @@ struct ToyAbstractGP <: AbstractGP end
         rng, gpc, N, N′ = MersenneTwister(123456), GPC(), 5, 6
         m = AbstractGPs.CustomMean(sin)
         k = SqExponentialKernel()
-        f = wrap(GP(m, k), gpc)
+        f = atomic(GP(m, k), gpc)
         x = collect(range(-1.0, 1.0; length=N))
         x′ = collect(range(-1.0, 1.0; length=N′))
 
@@ -25,7 +25,7 @@ struct ToyAbstractGP <: AbstractGP end
         gpc = GPC()
         m1, m2 = AbstractGPs.ZeroMean(), AbstractGPs.ConstMean(5)
         k1, k2 = SqExponentialKernel(), SqExponentialKernel()
-        f1, f2 = wrap(GP(m1, k1), gpc), wrap(GP(m2, k2), gpc)
+        f1, f2 = atomic(GP(m1, k1), gpc), atomic(GP(m2, k2), gpc)
 
         @test mean(f1, x) == AbstractGPs._map_meanfunction(m1, x)
         @test mean(f2, x) == AbstractGPs._map_meanfunction(m2, x)
@@ -37,6 +37,6 @@ struct ToyAbstractGP <: AbstractGP end
     end
 
     @timedtestset "wrapped AbstractGP" begin
-        wrap(ToyAbstractGP(), GPC())
+        atomic(ToyAbstractGP(), GPC())
     end
 end

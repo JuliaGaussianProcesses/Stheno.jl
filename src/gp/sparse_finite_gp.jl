@@ -19,7 +19,7 @@ processes". In: Proceedings of the Twelfth International Conference on Artificia
 Intelligence and Statistics. 2009.
 
 ```jldoctest
-julia> f = wrap(GP(Matern32Kernel()), GPC());
+julia> f = atomic(GP(Matern32Kernel()), GPC());
 
 julia> fobs = f(rand(100));
 

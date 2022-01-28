@@ -22,9 +22,9 @@ import AbstractGPs: mean, cov, var
 
 using AbstractGPs: AbstractGP
 using AbstractGPs.TestUtils: test_internal_abstractgps_interface
-using Stheno: CompositeGP
+using Stheno: DerivedGP
 
-derivative(f::AbstractGP) = CompositeGP((derivative, f), f.gpc)
+derivative(f::AbstractGP) = DerivedGP((derivative, f), f.gpc)
 
 
 const deriv_args = Tuple{typeof(derivative), AbstractGP}

@@ -6,6 +6,22 @@ between versions, and discuss new features.
 If you find a breaking change this is not reported here, please either raise an issue or
 make a PR to ammend this document.
 
+## 0.8.0
+
+### Breaking Changes
+
+This version contains some re-naming, specifically
+- `WrappedGP` -> `AtomicGP`,
+- `wrap` -> `atomic`, and
+- `CompositeGP` -> `DerivedGP`,
+which better reflect what these types / functions represent in the context of a `GPPP`.
+It's possible that you've never interacted with them, in which case there's nothing to
+worry about.
+
+
+
+Deprecations mentioned in the 0.7 release have also been dropped.
+
 ## 0.7.16
 - Deprecate `approx_posterior` in favour of `posterior`. This is being removed because it has been removed in AbstractGPs in favour of `posterior`. It will be entirely removed in the next breaking release.
 - Remove some redundant testing infrastructure and tidy up the file structure slightly.

@@ -1,14 +1,14 @@
 @timedtestset "product" begin
     @timedtestset "GP mul errors" begin
         gpc = GPC()
-        f1 = wrap(GP(SEKernel()), gpc)
-        f2 = wrap(GP(SEKernel()), gpc)
+        f1 = atomic(GP(SEKernel()), gpc)
+        f2 = atomic(GP(SEKernel()), gpc)
         @test_throws ArgumentError f1 * f2
     end
     @timedtestset "multiply by constant" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
-        g1, c, c′ = wrap(GP(1, SEKernel()), GPC()), -4.3, 2.1
+        g1, c, c′ = atomic(GP(1, SEKernel()), GPC()), -4.3, 2.1
         g2, g2′ = c * g1, g1 * c′
         g3, g3′ = c * g2, g2′ * c′
         g4, g4′ = c * g3, g3′ * c′
@@ -50,7 +50,7 @@
             x2, x3 = randn(rng, Q), randn(rng, P)
 
             gpc = GPC()
-            f1 = wrap(GP(cos, SEKernel()), gpc)
+            f1 = atomic(GP(cos, SEKernel()), gpc)
             f2 = 5 * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
@@ -59,7 +59,7 @@
                 MersenneTwister(123456),
                 [2.3],
                 θ->begin
-                    f = wrap(GP(0.5, SEKernel()), GPC())
+                    f = atomic(GP(0.5, SEKernel()), GPC())
                     return θ[1] * f, f
                 end,
                 X, X′,
@@ -69,7 +69,7 @@
     @timedtestset "multiply by function" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
-        g1, f, f′ = wrap(GP(1, SEKernel()), GPC()), x->sum(sin, x), x->sum(cos, x)
+        g1, f, f′ = atomic(GP(1, SEKernel()), GPC()), x->sum(sin, x), x->sum(cos, x)
         g2, g2′ = f * g1, g1 * f′
         g3, g3′ = f * g2, g2′ * f′
         g4, g4′ = f * g3, g3′ * f′
@@ -117,7 +117,7 @@
             x2, x3 = randn(rng, Q), randn(rng, P)
 
             gpc = GPC()
-            f1 = wrap(GP(cos, SEKernel()), gpc)
+            f1 = atomic(GP(cos, SEKernel()), gpc)
             f2 = sin * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
@@ -126,7 +126,7 @@
                 MersenneTwister(123456),
                 [2.3, 1.3],
                 θ->begin
-                    f = wrap(GP(θ[2], SEKernel()), GPC())
+                    f = atomic(GP(θ[2], SEKernel()), GPC())
                     return (x->θ[1] * x) * f, f
                 end,
                 collect(range(-2.0, 2.0; length=N)),

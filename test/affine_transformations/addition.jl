@@ -2,8 +2,8 @@
     @timedtestset "Correlated GPs" begin
         rng, N, N′, D, gpc = MersenneTwister(123456), 5, 6, 2, GPC()
         X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
-        f1 = wrap(GP(1, SEKernel()), gpc)
-        f2 = wrap(GP(2, SEKernel()), gpc)
+        f1 = atomic(GP(1, SEKernel()), gpc)
+        f2 = atomic(GP(2, SEKernel()), gpc)
         f3 = f1 + f2
         f4 = f1 + f3
         f5 = f3 + f4
@@ -32,7 +32,7 @@
     @timedtestset "Verify mean / kernel numerically" begin
         rng, N, D = MersenneTwister(123456), 5, 6
         X = ColVecs(randn(rng, D, N))
-        c, f = randn(rng), wrap(GP(5, SEKernel()), GPC())
+        c, f = randn(rng), atomic(GP(5, SEKernel()), GPC())
 
         @test mean((f + c)(X)) == mean(f(X)) .+ c
         @test mean((f + c)(X)) == c .+ mean(f(X))
@@ -62,8 +62,8 @@
             Dict(:l1=>0.5, :l2=>2.3),
             θ->begin
                 gpc = GPC()
-                f1 = θ[:l1] * wrap(GP(sin, SEKernel()), gpc)
-                f2 = θ[:l2] * wrap(GP(cos, SEKernel()), gpc)
+                f1 = θ[:l1] * atomic(GP(sin, SEKernel()), gpc)
+                f2 = θ[:l2] * atomic(GP(cos, SEKernel()), gpc)
                 f3 = f1 + f2
                 return f3, f3
             end,
@@ -77,8 +77,8 @@
             Dict(:l1=>0.5, :l2=>2.3),
             θ->begin
                 gpc = GPC()
-                f1 = θ[:l1] * wrap(GP(sin, SEKernel()), gpc)
-                f2 = θ[:l2] * wrap(GP(cos, SEKernel()), gpc)
+                f1 = θ[:l1] * atomic(GP(sin, SEKernel()), gpc)
+                f2 = θ[:l2] * atomic(GP(cos, SEKernel()), gpc)
                 f3 = f1 + f2
                 f4 = f1 + f3
                 f5 = f3 + f4

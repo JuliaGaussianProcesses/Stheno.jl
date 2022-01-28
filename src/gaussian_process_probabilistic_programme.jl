@@ -1,16 +1,6 @@
-"""
-    GaussianProcessProbabilisticProgramme(fs, gpc)
-
-Collects a group of related GPs together and interprets them as a single GP.
-This type isn't part of the user-facing API -- the `@gppp` macro should be used to
-construct a `GaussianProcessProbabilisticProgramme`.
-"""
-struct GaussianProcessProbabilisticProgramme{Tfs} <: AbstractGP
-    fs::Tfs
-    gpc::GPC
-end
-
-const GPPP = GaussianProcessProbabilisticProgramme
+#
+# Input vector types for GPPPs.
+#
 
 """
     GPPPInput(p, x::AbstractVector)
@@ -44,7 +34,85 @@ Base.size(x::GPPPInput) = (length(x.x), )
 
 Base.getindex(x::GPPPInput, idx) = map(x_ -> (x.p, x_), x.x[idx])
 
+"""
+    BlockData{T, TV<:AbstractVector{T}, TX<:AbstractVector{TV}} <: AbstractVector{T}
 
+A strictly ordered collection of `AbstractVector`s, representing a ragged array of data.
+
+Very useful when working with `GPPP`s. For example
+```julia
+f = @gppp let
+    f1 = GP(SEKernel())
+    f2 = GP(Matern52Kernel())
+    f3 = f1 + f2
+end
+
+# Specify a `BlockData` set that can be used to index into
+# the `f2` and `f3` processes in `f`.
+x = BlockData(
+    GPPPInput(:f2, randn(4)),
+    GPPPINput(:f3, randn(3)),
+)
+
+# Index into `f` at the input.
+f(x)
+```
+"""
+struct BlockData{T, V<:AbstractVector{<:T}} <: AbstractVector{T}
+    X::Vector{V}
+end
+
+BlockData(X::Vector{AbstractVector}) = BlockData{Any, AbstractVector}(X)
+
+BlockData(xs::AbstractVector...) = BlockData([xs...])
+
+Base.size(D::BlockData) = (sum(length, D.X),)
+
+function Base.getindex(D::BlockData, n::Int)
+    b = 1
+    while n > length(D.X[b])
+        n -= length(D.X[b])
+        b += 1
+    end
+    return D.X[b][n]
+end
+
+Base.:(==)(D1::BlockData, D2::BlockData) = D1.X == D2.X
+
+blocks(X::BlockData) = X.X
+
+Base.view(D::BlockData, b::Int, n) = view(D.X[b], n)
+
+Base.eltype(D::BlockData{T}) where {T} = T
+
+function Base.eachindex(D::BlockData)
+    lengths = map(length, blocks(D))
+    return BlockArray(1:sum(lengths), lengths)
+end
+
+
+
+
+
+
+#
+# GPPP implementation.
+#
+
+
+"""
+    GaussianProcessProbabilisticProgramme(fs, gpc)
+
+Collects a group of related GPs together and interprets them as a single GP.
+This type isn't part of the user-facing API -- the `@gppp` macro should be used to
+construct a `GaussianProcessProbabilisticProgramme`.
+"""
+struct GaussianProcessProbabilisticProgramme{Tfs} <: AbstractGP
+    fs::Tfs
+    gpc::GPC
+end
+
+const GPPP = GaussianProcessProbabilisticProgramme
 
 #
 # Implementation of the AbstractGPs API for the inputs types which are valid for a GPPP.
@@ -221,7 +289,7 @@ macro gppp(let_block::Expr)
     wrapped_model = Expr(:block,
         :($gpc_sym = Stheno.GPC()),
         postwalk(
-            x->@capture(x, GP(xs__)) ? :(Stheno.wrap(GP($(xs...)), $gpc_sym)) : x,
+            x->@capture(x, GP(xs__)) ? :(Stheno.atomic(GP($(xs...)), $gpc_sym)) : x,
             model_expr,
         ).args...,
         :(Stheno.GPPP($var_mapping, $gpc_sym)),

@@ -5,7 +5,7 @@ Creates a multi-output GP from an `AbstractVector` of `GP`s.
 """
 function LinearAlgebra.cross(fs::AbstractVector{<:AbstractGP})
     consistency_checks(fs)
-    return CompositeGP((cross, fs), first(fs).gpc)
+    return DerivedGP((cross, fs), first(fs).gpc)
 end
 
 function consistency_checks(fs)
