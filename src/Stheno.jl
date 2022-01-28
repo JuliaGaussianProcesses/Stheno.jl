@@ -48,8 +48,6 @@ module Stheno
     include(joinpath("affine_transformations", "product.jl"))
     include(joinpath("affine_transformations", "addition.jl"))
     include(joinpath("affine_transformations", "compose.jl"))
-    # include(joinpath("affine_transformations", "gradient.jl"))
-    # include(joinpath("affine_transformations", "integrate.jl"))
 
     include("gaussian_process_probabilistic_programme.jl")
 
