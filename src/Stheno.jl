@@ -13,6 +13,7 @@ module Stheno
     import Base.Broadcast: broadcasted
 
     using AbstractGPs: AbstractGP, FiniteGP
+    import AbstractGPs: mean, cov, var
 
     using MacroTools: @capture, combinedef, postwalk, splitdef
 
