@@ -23,6 +23,9 @@ Lots of code has been moved around in order to better organise everything.
 A method of `vcat` has been added to build `BlockData` from `GPPPInput`s. This can make
 your code look a bit nicer, so you might want to use it.
 
+Additionally, this package no longer depends explicitly upon Zygote or ZygoteRules.
+Instead, all AD rules that are needed use ChainRulesCore directly.
+
 Deprecations mentioned in the 0.7 release have also been dropped.
 
 ## 0.7.16
