@@ -20,9 +20,8 @@ worry about.
 
 Lots of code has been moved around in order to better organise everything.
 
-A method of `vcat` has been added for the concatentation of `GPPPInput`s to produce
-`BlockData`, and `BlockData` is no longer exported. In short: use `vcat`, rather than
-`BlockData` directly.
+A method of `vcat` has been added to build `BlockData` from `GPPPInput`s. This can make
+your code look a bit nicer, so you might want to use it.
 
 Deprecations mentioned in the 0.7 release have also been dropped.
 
