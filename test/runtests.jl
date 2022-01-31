@@ -6,7 +6,6 @@ using Stheno
 using Stheno.AbstractGPs
 using Stheno.BlockArrays
 using Stheno.KernelFunctions
-using Stheno.Zygote
 
 # Dependencies that are test-specific.
 using Documenter
@@ -16,6 +15,7 @@ using Random
 using Statistics
 using Test
 using TimerOutputs
+using Zygote
 
 using Stheno:
     mean,
@@ -28,13 +28,7 @@ using Stheno:
     BlockData,
     blocks,
     cross,
-    ColVecs,
-    Xt_invA_Y,
-    Xt_invA_X,
-    diag_At_A,
-    diag_At_B,
-    diag_Xt_invA_X,
-    diag_Xt_invA_Y
+    ColVecs
 
 using Stheno.AbstractGPs.TestUtils: test_internal_abstractgps_interface
 using Stheno.AbstractGPs.Distributions: MvNormal
@@ -50,12 +44,7 @@ include("test_util.jl")
 
 @testset "Stheno" begin
 
-    println("util:")
-    @timedtestset "util" begin
-        include(joinpath("util", "zygote_rules.jl"))
-        include(joinpath("util", "covariance_matrices.jl"))
-        include(joinpath("util", "block_arrays.jl"))
-    end
+    include("input_collection_types.jl")
 
     println("gp:")
     @timedtestset "gp" begin
@@ -68,12 +57,12 @@ include("test_util.jl")
     println("affine_transformations:")
     @timedtestset "affine_transformations" begin
         include(joinpath("affine_transformations", "test_util.jl"))
+        include(joinpath("affine_transformations", "cross.jl"))
         include(joinpath("affine_transformations", "addition.jl"))
         include(joinpath("affine_transformations", "compose.jl"))
         include(joinpath("affine_transformations", "product.jl"))
     end
 
-    include(joinpath("affine_transformations", "cross.jl"))
     include("gaussian_process_probabilistic_programme.jl")
 
     println("doctests")

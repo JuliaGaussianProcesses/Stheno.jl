@@ -1,9 +1,3 @@
-import Base: rand, length
-import AbstractGPs: logpdf, AbstractMvNormal
-
-export elbo, dtc
-export SparseFiniteGP
-
 """
     SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP}
 
@@ -33,36 +27,36 @@ julia> logpdf(fxu, y) < logpdf(fobs, y)
 true
 ```
 """
-struct SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP} <: AbstractMvNormal
+struct SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP} <: AbstractGPs.AbstractMvNormal
     fobs::T1
     finducing::T2
 end
 
 Base.length(f::SparseFiniteGP) = length(f.fobs)
 
-mean(f::SparseFiniteGP) = mean(f.fobs)
+AbstractGPs.mean(f::SparseFiniteGP) = mean(f.fobs)
 
 const __covariance_error = "The covariance matrix of a sparse GP can often be dense and " *
     "can cause the computer to run out of memory. If you are sure you have enough " *
     "memory, you can use `cov(f.fobs)`."
 
-cov(f::SparseFiniteGP) = error(__covariance_error)
+AbstractGPs.cov(f::SparseFiniteGP) = error(__covariance_error)
 
-marginals(f::SparseFiniteGP) = marginals(f.fobs)
+AbstractGPs.marginals(f::SparseFiniteGP) = marginals(f.fobs)
 
-rand(rng::AbstractRNG, f::SparseFiniteGP, N::Int) = rand(rng, f.fobs, N)
-rand(f::SparseFiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
-rand(rng::AbstractRNG, f::SparseFiniteGP) = vec(rand(rng, f, 1))
-rand(f::SparseFiniteGP) = vec(rand(f, 1))
+AbstractGPs.rand(rng::AbstractRNG, f::SparseFiniteGP, N::Int) = rand(rng, f.fobs, N)
+AbstractGPs.rand(f::SparseFiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
+AbstractGPs.rand(rng::AbstractRNG, f::SparseFiniteGP) = vec(rand(rng, f, 1))
+AbstractGPs.rand(f::SparseFiniteGP) = vec(rand(f, 1))
 
-elbo(f::SparseFiniteGP, y::AV{<:Real}) = elbo(VFE(f.finducing), f.fobs, y)
+AbstractGPs.elbo(f::SparseFiniteGP, y::AV{<:Real}) = elbo(VFE(f.finducing), f.fobs, y)
 
-logpdf(f::SparseFiniteGP, y::AV{<:Real}) = elbo(VFE(f.finducing), f.fobs, y)
+AbstractGPs.logpdf(f::SparseFiniteGP, y::AV{<:Real}) = elbo(VFE(f.finducing), f.fobs, y)
 
-function logpdf(f::SparseFiniteGP, Y::AbstractMatrix{<:Real})
+function AbstractGPs.logpdf(f::SparseFiniteGP, Y::AbstractMatrix{<:Real})
     return map(y -> logpdf(f, y), eachcol(Y))
 end
 
-function posterior(f::SparseFiniteGP, y::AbstractVector{<:Real})
+function AbstractGPs.posterior(f::SparseFiniteGP, y::AbstractVector{<:Real})
     return posterior(AbstractGPs.VFE(f.finducing), f.fobs, y)
 end

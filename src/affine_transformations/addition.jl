@@ -52,7 +52,7 @@ end
 
 
 #
-# Add a constant or known function to a GP -- just shifts the mean
+# Add a constant or known function to an AbstractGP -- just shifts the mean
 #
 
 +(b, f::AbstractGP) = DerivedGP((+, b, f), f.gpc)

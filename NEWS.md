@@ -18,7 +18,11 @@ which better reflect what these types / functions represent in the context of a 
 It's possible that you've never interacted with them, in which case there's nothing to
 worry about.
 
+Lots of code has been moved around in order to better organise everything.
 
+A method of `vcat` has been added for the concatentation of `GPPPInput`s to produce
+`BlockData`, and `BlockData` is no longer exported. In short: use `vcat`, rather than
+`BlockData` directly.
 
 Deprecations mentioned in the 0.7 release have also been dropped.
 

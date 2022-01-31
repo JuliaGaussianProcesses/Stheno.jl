@@ -1,9 +1,9 @@
 import Base: ∘
 
 """
-    ∘(f::GP, g)
+    ∘(f::AbstractGP, g)
 
-Constructs the GP f′ given by f′(x) := f(g(x))
+Constructs the DerivedGP f′ given by f′(x) := f(g(x))
 """
 ∘(f::AbstractGP, g) = DerivedGP((∘, f, g), f.gpc)
 
@@ -135,6 +135,6 @@ broadcasted(f::Shift, x::ColVecs) = ColVecs(x.X .- f.a)
     shift(f::AbstractGP, a::Real)
     shift(f::AbstractGP, a::AbstractVector{<:Real})
 
-Returns the GP `g` given by `g(x) = f(x - a)`
+Returns the DerivedGP `g` given by `g(x) = f(x - a)`
 """
 shift(f::AbstractGP, a) = f ∘ Shift(a)
