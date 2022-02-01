@@ -1,11 +1,11 @@
 import Base: ∘
 
 """
-    ∘(f::GP, g)
+    ∘(f::AbstractGP, g)
 
-Constructs the GP f′ given by f′(x) := f(g(x))
+Constructs the DerivedGP f′ given by f′(x) := f(g(x))
 """
-∘(f::AbstractGP, g) = CompositeGP((∘, f, g), f.gpc)
+∘(f::AbstractGP, g) = DerivedGP((∘, f, g), f.gpc)
 
 
 const comp_args = Tuple{typeof(∘), AbstractGP, Any}
@@ -60,7 +60,11 @@ stretch(f::AbstractGP, A::AbstractMatrix{<:Real}) = f ∘ Stretch(A)
 """
     Select{Tidx}
 
-Use inside an input transformation meanfunction / crosskernel to improve peformance.
+Construct the process given by
+```julia
+f_new(x) = f(x[idx])
+```
+In effect projects `f` into a higher-dimensional space.
 """
 struct Select{Tidx}
     idx::Tidx
@@ -68,26 +72,6 @@ end
 (f::Select)(x) = x[f.idx]
 broadcasted(f::Select, x::ColVecs) = ColVecs(x.X[f.idx, :])
 broadcasted(f::Select{<:Integer}, x::ColVecs) = x.X[f.idx, :]
-
-function broadcasted(f::Select, x::AbstractVector{<:CartesianIndex})
-    out = Matrix{Int}(undef, length(f.idx), length(x))
-    for i in f.idx, n in eachindex(x)
-        out[i, n] = x[n][i]
-    end
-    return ColVecs(out)
-end
-
-function ChainRulesCore.rrule(::typeof(broadcasted), f::Select, x::AV{<:CartesianIndex})
-    return broadcasted(f, x), Δ->(NoTangent(), NoTangent(), ZeroTangent())
-end
-
-function broadcasted(f::Select{<:Integer}, x::AV{<:CartesianIndex})
-    out = Matrix{Int}(undef, length(x))
-    for n in eachindex(x)
-        out[n] = x[n][f.idx]
-    end
-    return out
-end
 
 """
     select(f::AbstractGP, idx)
@@ -135,6 +119,6 @@ broadcasted(f::Shift, x::ColVecs) = ColVecs(x.X .- f.a)
     shift(f::AbstractGP, a::Real)
     shift(f::AbstractGP, a::AbstractVector{<:Real})
 
-Returns the GP `g` given by `g(x) = f(x - a)`
+Returns the DerivedGP `g` given by `g(x) = f(x - a)`
 """
 shift(f::AbstractGP, a) = f ∘ Shift(a)

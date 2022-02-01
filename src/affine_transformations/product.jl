@@ -8,8 +8,8 @@ function `f`.
 
 If `f isa Real`, then `h(x) = f * g(x)`.
 """
-*(f, g::AbstractGP) = CompositeGP((*, f, g), g.gpc)
-*(f::AbstractGP, g) = CompositeGP((*, g, f), f.gpc)
+*(f, g::AbstractGP) = DerivedGP((*, f, g), g.gpc)
+*(f::AbstractGP, g) = DerivedGP((*, g, f), f.gpc)
 *(f::AbstractGP, g::AbstractGP) = throw(ArgumentError("Cannot multiply two GPs together."))
 
 const prod_args{Tf} = Tuple{typeof(*), Tf, <:AbstractGP}

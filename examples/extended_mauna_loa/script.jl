@@ -209,6 +209,14 @@ function optimize_loss(loss, θ_init; optimizer=default_optimizer, maxiter=1_000
     return unflatten(result.minimizer), result
 end
 
+function KernelFunctions.kernelmatrix(k::ConstantKernel, x::AbstractVector)
+    return fill(only(k.c), length(x), length(x))
+end
+
+function KernelFunctions.kernelmatrix(k::ConstantKernel, x::AbstractVector, y::AbstractVector)
+    return fill(only(k.c), length(x), length(y))
+end
+
 θ_opt, result = optimize_loss(nlml, init_params)
 
 # ## Plot the resulting model fit.

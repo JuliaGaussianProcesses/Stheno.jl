@@ -1,9 +1,12 @@
-@timedtestset "abstract_data_set" begin
-    rng, N, D = MersenneTwister(123456), 10, 2
-    x, X = randn(rng, N), randn(rng, D, N)
-
-    # Test BlockDataSet.
+@testset "input_collection_types" begin
     @timedtestset "BlockData" begin
+
+        rng = MersenneTwister(123456)
+        N = 10
+        D = 2
+        x = randn(rng, N)
+        X = randn(rng, D, N)
+
         DX = ColVecs(X)
         DxX = BlockData([x, DX])
         @test size(DxX) == (2N,)
@@ -32,7 +35,17 @@
         @test eltype(BlockData([DX, DX])) <: AbstractVector{Float64}
         @test eltype(BlockData([eachindex(DX), eachindex(DX)])) == Int
 
-        # Convenience constructor.
+        # Convenience constructors.
         @test BlockData(x, DX) == DxX
+
+        # Convenience constructors when we have GPPPInputs.
+        @timedtestset "vcat(::GPPPInput...)" begin
+            ax = GPPPInput(:a, x)
+            bx = GPPPInput(:b, DX)
+            @test vcat(ax, bx) isa BlockData
+            @test vcat(ax, bx) == vcat(collect(ax), collect(bx))
+
+            @test eltype(vcat(ax, ax)) == eltype(ax)
+        end
     end
 end

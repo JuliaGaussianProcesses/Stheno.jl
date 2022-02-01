@@ -17,12 +17,12 @@ using Stheno
 # Suppose that, for some reason, you wish to implement the affine transformation of a single
 # process `f` given by `(Af)(x) = f(x) + f(x + 3) - 2`.
 # In order to define this transformation, first create a function which accepts `f` and
-# returns a `CompositeGP`:
-using Stheno: AbstractGP, CompositeGP, SthenoAbstractGP
+# returns a `DerivedGP`:
+using Stheno: AbstractGP, DerivedGP, SthenoAbstractGP
 
-A(f::SthenoAbstractGP) = CompositeGP((A, f), f.gpc)
+A(f::SthenoAbstractGP) = DerivedGP((A, f), f.gpc)
 
-# The first argument to `CompositeGP` contains `A` itself and any data needed to fully
+# The first argument to `DerivedGP` contains `A` itself and any data needed to fully
 # specify the process results from this transformation. In this case the only piece of
 # information required is `f`, but really any data can be put in this argument.
 # For example, if we wished to replace the translation of `-3` by a parameter, we could do
@@ -48,7 +48,7 @@ const A_args = Tuple{typeof(A), SthenoAbstractGP};
 Stheno.mean((A, f)::A_args, x::AbstractVector) = mean(f, x) .+ mean(f, x .+ 3) .- 2
 
 # The first argument here is _always_ going to be precisely the tuple of arguments passed
-# into the `CompositeGP` constructor above.
+# into the `DerivedGP` constructor above.
 # You can assume that you can compute any statistics of `f` that the AbstractGPs API
 # provides.
 

@@ -1,9 +1,41 @@
 @timedtestset "cross" begin
+    @timedtestset "block arrays" begin
+        @timedtestset "fdm stuff" begin
+            rng, Ps, Qs = MersenneTwister(123456), [5, 4], [3, 2, 1]
+            X = mortar([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
+            vec_X, from_vec = FiniteDifferences.to_vec(X)
+            @test vec_X isa Vector
+            @test from_vec(vec_X) == X
+        end
+        @timedtestset "Stheno._collect ∘ _mortar" begin
+            @timedtestset "BlockVector" begin
+
+                # Generate some blocks.
+                Ps = [5, 6, 7]
+                x = BlockArray(randn(sum(Ps)), Ps).blocks
+
+                # Verify the pullback.
+                ȳ = randn(sum(Ps))
+                adjoint_test(Stheno._collect ∘ Stheno._mortar, ȳ, x)
+            end
+            @timedtestset "BlockMatrix" begin
+
+                # Generate some blocks.
+                Ps = [3, 4, 5]
+                Qs = [6, 7, 8, 9]
+                X = BlockArray(randn(sum(Ps), sum(Qs)), Ps, Qs).blocks
+                Ȳ = randn(sum(Ps), sum(Qs))
+
+                # Verify pullback.
+                adjoint_test(Stheno._collect ∘ Stheno._mortar, Ȳ, X)
+            end
+        end
+    end
     @timedtestset "Correctness tests" begin
         rng, P, Q, gpc = MersenneTwister(123456), 2, 3, GPC()
 
-        f1 = wrap(GP(sin, SEKernel()), gpc)
-        f2 = wrap(GP(cos, SEKernel()), gpc)
+        f1 = atomic(GP(sin, SEKernel()), gpc)
+        f2 = atomic(GP(cos, SEKernel()), gpc)
         f3 = cross([f1, f2])
         f4 = cross([f1])
         f5 = cross([f2])
@@ -51,8 +83,8 @@
         x2, x3 = randn(rng, P), randn(2P)
 
         gpc = GPC()
-        f1 = wrap(GP(sin, SEKernel()), gpc)
-        f2 = wrap(GP(cos, SEKernel()), gpc)
+        f1 = atomic(GP(sin, SEKernel()), gpc)
+        f2 = atomic(GP(cos, SEKernel()), gpc)
         f3 = cross([f1, f2])
         abstractgp_interface_tests(f3, f1, x0, x1, x2, x3)
 
@@ -71,13 +103,5 @@
         #     BlockData([x1, x2]),
         #     BlockData([z1, z2]),
         # )
-    end
-    @timedtestset "finites_to_block" begin
-        rng, P, Q = MersenneTwister(123456), 3, 5
-        xp, xq = randn(rng, P), randn(rng, Q)
-        gpc = GPC()
-        f_ = wrap(GP(sin, SEKernel()), gpc)
-        g_ = wrap(GP(cos, SEKernel()), gpc)
-        h_x = Stheno.finites_to_block([f_(xp, 1.0), g_(xq, 1.0)])
     end
 end

@@ -1,11 +1,42 @@
-"""
-    cross(fs::AbstractVector{<:GP})
+#
+# Functionality for constructing block matrices.
+#
 
-Creates a multi-output GP from an `AbstractVector` of `GP`s.
+# Mangle name to avoid type piracy.
+_mortar(blocks::AbstractArray) = BlockArrays.mortar(blocks)
+
+function ChainRulesCore.rrule(::typeof(_mortar), _blocks::AbstractArray)
+    mortar_pullback(Δ::Tangent) = (NoTangent(), Δ.blocks)
+    return _mortar(_blocks), mortar_pullback
+end
+
+# A hook to which I can attach an rrule without commiting type-piracy against BlockArrays.
+_collect(X::BlockArray) = Array(X)
+
+function ChainRulesCore.rrule(::typeof(_collect), X::BlockArray)
+    function Array_pullback(Δ::Array)
+        ΔX = Tangent{Any}(blocks=BlockArray(Δ, axes(X)).blocks, axes=NoTangent())
+        return (NoTangent(), ΔX)
+    end
+    return Array(X), Array_pullback
+end
+
+
+
+#
+# Functionality for grouping together collections of GPs into a single GP.
+#
+
+"""
+    cross(fs::AbstractVector{<:AbstractGP})
+
+Creates a GPPP-like object from a collection of GPs.
+This is largely an implementation detail that is useful for GPPPs.
+Not included in the user-facing API.
 """
 function LinearAlgebra.cross(fs::AbstractVector{<:AbstractGP})
     consistency_checks(fs)
-    return CompositeGP((cross, fs), first(fs).gpc)
+    return DerivedGP((cross, fs), first(fs).gpc)
 end
 
 function consistency_checks(fs)
@@ -19,36 +50,36 @@ const cross_args{T<:AbstractVector{<:AbstractGP}} = Tuple{typeof(cross), T}
 
 function mean((_, fs)::cross_args, x::BlockData)
     blks = map((f, blk)->mean(f, blk), fs, blocks(x))
-    return _collect(mortar(blks))
+    return _collect(_mortar(blks))
 end
 
 function cov((_, fs)::cross_args, x::BlockData)
     Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x), fs, blocks(x)), :, 1)
-    return _collect(mortar(reshape(Cs, :, 1)))
+    return _collect(_mortar(reshape(Cs, :, 1)))
 end
 
 function var((_, fs)::cross_args, x::BlockData)
     cs = map(var, fs, blocks(x))
-    return _collect(mortar(cs))
+    return _collect(_mortar(cs))
 end
 
 function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
     Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x′), fs, blocks(x)), :, 1)
-    return _collect(mortar(reshape(Cs, :, 1)))
+    return _collect(_mortar(reshape(Cs, :, 1)))
 end
 
 function var((_, fs)::cross_args, x::BlockData, x′::BlockData)
     cs = map(var, fs, blocks(x), blocks(x′))
-    return _collect(mortar(cs))
+    return _collect(_mortar(cs))
 end
 
 function cov((_, fs)::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
     Cs = reshape(map((f, x)->cov(f, f′, x, x′), fs, blocks(x)), :, 1)
-    return _collect(mortar(Cs))
+    return _collect(_mortar(Cs))
 end
 function cov(f::AbstractGP, (_, fs)::cross_args, x::AV, x′::BlockData)
     Cs = reshape(map((f′, x′)->cov(f, f′, x, x′), fs, blocks(x′)), 1, :)
-    return _collect(mortar(Cs))
+    return _collect(_mortar(Cs))
 end
 
 function var(args::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
@@ -57,20 +88,3 @@ end
 function var(f::AbstractGP, args::cross_args, x::AV, x′::BlockData)
     return diag(cov(f, args, x, x′))
 end
-
-
-
-#
-# Build a single FiniteGP from a collection of FiniteGPs.
-#
-
-function finites_to_block(fs::AV{<:FiniteGP})
-    return FiniteGP(
-        cross(map(f->f.f, fs)),
-        BlockData(map(f->f.x, fs)),
-        make_block_noise(map(f->f.Σy, fs)),
-    )
-end
-
-make_block_noise(Σys::Vector{<:Diagonal}) = Diagonal(Vector(mortar(diag.(Σys))))
-make_block_noise(Σys::Vector) = block_diagonal(Σys)

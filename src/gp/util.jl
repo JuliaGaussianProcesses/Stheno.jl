@@ -23,6 +23,3 @@ end
 ChainRulesCore.@non_differentiable GPC()
 
 next_index(gpc::GPC) = gpc.n + 1
-
-# TYPE PIRACY!
-LinearAlgebra.cholesky(D::Diagonal{<:Real, <:Fill}) = AbstractGPs._cholesky(D)

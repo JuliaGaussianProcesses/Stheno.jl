@@ -1,9 +1,9 @@
 # Interfaces
 
 The primary objects in Stheno are some special subtypes of `AbstractGP`. There are three primary concrete subtypes of `AbstractGP`:
-- `WrappedGP`: an atomic Gaussian process given by wrapping an `AbstractGP`.
-- `CompositeGP`: a Gaussian process composed of other `WrappedGP`s and `CompositeGP`s, whose properties are determined recursively from the GPs of which it is composed.
-- `GaussianProcessProbabilisticProgramme` / `GPPP`: a Gaussian process comprising `WrappedGP`s and `CompositeGP`s. This is the primary piece of functionality that users should interact with.
+- `AtomicGP`: an atomic Gaussian process given by wrapping an `AbstractGP`.
+- `CompositeGP`: a Gaussian process composed of other `AtomicGP`s and `CompositeGP`s, whose properties are determined recursively from the GPs of which it is composed.
+- `GaussianProcessProbabilisticProgramme` / `GPPP`: a Gaussian process comprising `AtomicGP`s and `CompositeGP`s. This is the primary piece of functionality that users should interact with.
 
 Each of these types implements the [Internal AbstractGPs API](https://github.com/JuliaGaussianProcesses/AbstractGPs.jl).
 
@@ -13,7 +13,7 @@ This documentation provides the information necessary to understand the internal
 
 It is crucial for pseudo-point methods, and for the computation of marginal statistics at a reasonable scale, to be able to compute the diagonal of a given covariance matrix in linear time in the size of its inputs.
 This, in turn, necessitates that the diagonal of a given cross-covariance matrix can also be computed efficiently as the evaluation of covariance matrices often rely on the evaluation of cross-covariance matrices.
-As such, we have the following functions in addition to the AbstractGPs API implemented for `WrappedGP`s and `CompositeGP`s:
+As such, we have the following functions in addition to the AbstractGPs API implemented for `AtomicGP`s and `CompositeGP`s:
 
 | Function | Brief description |
 |:--------------------- |:---------------------- |
@@ -24,18 +24,18 @@ As such, we have the following functions in addition to the AbstractGPs API impl
 The second and third rows of the table only make sense when `length(x) == length(x′)`, of course.
 
 
-## WrappedGP
+## AtomicGP
 
-We can construct a `WrappedGP` in the following manner:
+We can construct a `AtomicGP` in the following manner:
 
 ```julia
-f = wrap(GP(m, k), gpc)
+f = atomic(GP(m, k), gpc)
 
 ```
 where `m` is its `MeanFunction`, `k` its `Kernel`. `gpc` is a `GPC` object that handles some book-keeping, and is discussed in more depth below.
 
-The `AbstractGP` interface is implemented for `WrappedGP`s in terms of the `AbstractGP` that they wrap.
-So if you want a particular behaviour, just make sure that the `AbstractGP` that you wrap has the functionality you want.
+The `AbstractGP` interface is implemented for `AtomicGP`s in terms of the `AbstractGP` that they atomic.
+So if you want a particular behaviour, just make sure that the `AbstractGP` that you atomic has the functionality you want.
 
 ### Aside: Example Kernel implementation
 
@@ -55,16 +55,16 @@ You should write
 ```julia
 # THIS IS GOOD. PLEASE DO THIS
 gpc = GPC()
-f = wrap(GP(mf, kf), gpc)
-g = wrap(GP(mg, kg), gpc)
+f = atomic(GP(mf, kf), gpc)
+g = atomic(GP(mg, kg), gpc)
 h = f + g
 # THIS IS GOOD. PLEASE DO THIS
 ```
 The rule is simple: when constructing GPs that you plan to make interact later in your program, construct them using the same `gpc` object. For example, DON'T do the following:
 ```julia
 # THIS IS BAD. PLEASE DON'T DO THIS
-f = wrap(GP(mf, kf), GPC())
-g = wrap(GP(mg, kg), GPC())
+f = atomic(GP(mf, kf), GPC())
+g = atomic(GP(mg, kg), GPC())
 h = f + g
 # THIS IS BAD. PLEASE DON'T DO THIS
 ```
@@ -75,7 +75,7 @@ The mistake here is to construct a separate `GPC` object for each `GP`. Hopefull
 
 ## CompositeGP
 
-`CompositeGP`s are constructed as affine transformations of `CompositeGP`s and `WrappedGP`s.
+`CompositeGP`s are constructed as affine transformations of `CompositeGP`s and `AtomicGP`s.
 We describe the implemented transformations below.
 You can add additional transformations -- see [Custom Affine Transformations](@ref) for an a worked example.
 
@@ -129,7 +129,7 @@ This particular function isn't part of the user-facing API because it isn't gene
 ## GPPP
 
 The `GaussianProcessProbabilisticProgramme` is another `AbstractGP` which enables provides a
-thin layer of convenience functionality on top of `WrappedGP`s and `CompositeGP`s, and is
+thin layer of convenience functionality on top of `AtomicGP`s and `CompositeGP`s, and is
 the primary way in which it is intended that users will interact with this package.
 
 A `GPPP` like this
@@ -140,11 +140,11 @@ f = @gppp let
     f3 = f1 + f2
 end
 ```
-is equivalent to manually constructing a `GPPP` using `WrappedGP`s and `CompositeGP`s:
+is equivalent to manually constructing a `GPPP` using `AtomicGP`s and `CompositeGP`s:
 ```julia
 gpc = GPC()
-f1 = wrap(GP(SEKernel()), gpc)
-f2 = wrap(GP(SEKernel()), gpc)
+f1 = atomic(GP(SEKernel()), gpc)
+f2 = atomic(GP(SEKernel()), gpc)
 f3 = f1 + f2
 f = Stheno.GPPP((f1=f1, f2=f2, f3=f3), gpc)
 ```

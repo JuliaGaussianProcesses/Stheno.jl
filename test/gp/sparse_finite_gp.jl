@@ -3,20 +3,21 @@
     xu = 0:10
     σ = 1.0
     σu = 1e-3
-    f = wrap(GP(Matern32Kernel()), GPC())
+    f = atomic(GP(Matern32Kernel()), GPC())
     covariance_error = "The covariance matrix of a sparse GP can often be dense and " *
         "can cause the computer to run out of memory. If you are sure you have enough " *
         "memory, you can use `cov(f.fobs)`."
 
     @timedtestset "SparseFiniteGP Constructors" begin
-        f = wrap(GP(Matern32Kernel()), GPC())
+        f = atomic(GP(Matern32Kernel()), GPC())
         @test SparseFiniteGP(f(x), f(xu)) == SparseFiniteGP(f(x, 1e-18), f(xu, 1e-18))
     end
 
     @timedtestset "SparseFiniteGP methods" begin
-        f = wrap(GP(Matern32Kernel()), GPC())
+        f = atomic(GP(Matern32Kernel()), GPC())
         fx = f(x)
         fxu = SparseFiniteGP(f(x), f(xu))
+        @test length(fxu) == length(x)
         @test mean(fxu) == mean(fx)
         @test marginals(fxu) == marginals(fx)
         @test rand(MersenneTwister(12345), fxu) == rand(MersenneTwister(12345), fx)
@@ -25,7 +26,7 @@
     end
 
     @timedtestset "SparseFiniteGP inference" begin
-        f = wrap(GP(Matern32Kernel()), GPC())
+        f = atomic(GP(Matern32Kernel()), GPC())
         fx = f(x, σ)
         fxu = SparseFiniteGP(f(x, σ), f(xu, σu))
         y = rand(MersenneTwister(12345), fxu)

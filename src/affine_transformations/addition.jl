@@ -7,7 +7,7 @@ Produces an AbstractGP `f` satisfying `f(x) = fa(x) + fb(x)`.
 """
 function +(fa::AbstractGP, fb::AbstractGP)
     @assert fa.gpc === fb.gpc
-    return CompositeGP((+, fa, fb), fa.gpc)
+    return DerivedGP((+, fa, fb), fa.gpc)
 end
 -(fa::AbstractGP, fb::AbstractGP) = fa + (-fb)
 
@@ -52,10 +52,10 @@ end
 
 
 #
-# Add a constant or known function to a GP -- just shifts the mean
+# Add a constant or known function to an AbstractGP -- just shifts the mean
 #
 
-+(b, f::AbstractGP) = CompositeGP((+, b, f), f.gpc)
++(b, f::AbstractGP) = DerivedGP((+, b, f), f.gpc)
 +(f::AbstractGP, b) = b + f
 -(b::Real, f::AbstractGP) = b + (-f)
 -(f::AbstractGP, b::Real) = f + (-b)

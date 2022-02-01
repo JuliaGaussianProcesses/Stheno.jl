@@ -2,9 +2,9 @@
     @timedtestset "general" begin
         rng, N, N′, gpc = MersenneTwister(123456), 5, 3, GPC()
         x, x′ = randn(rng, N), randn(rng, N′)
-        f = wrap(GP(sin, SEKernel()), gpc)
+        f = atomic(GP(sin, SEKernel()), gpc)
         g = cos
-        h = wrap(GP(exp, ExponentialKernel()), gpc)
+        h = atomic(GP(exp, ExponentialKernel()), gpc)
         fg = f ∘ g
 
         # Check marginals statistics inductively.
@@ -34,7 +34,7 @@
                 MersenneTwister(123456),
                 Dict(:σ=>0.5),
                 θ->begin
-                    f = θ[:σ] * wrap(GP(sin, SEKernel()), GPC())
+                    f = θ[:σ] * atomic(GP(sin, SEKernel()), GPC())
                     return stretch(f, 0.5), f
                 end,
                 collect(range(-2.0, 2.0; length=N)),
@@ -46,7 +46,7 @@
         @timedtestset "scalar stretch" begin
             rng, N, λ = MersenneTwister(123456), 3, 0.51
             x = randn(rng)
-            f = wrap(GP(1.3, SEKernel()), GPC())
+            f = atomic(GP(1.3, SEKernel()), GPC())
             g = stretch(f, λ)
 
             @timedtestset "scalar input" begin
@@ -56,7 +56,7 @@
                     MersenneTwister(123456),
                     Dict(:σ=>0.5, :l=>0.32),
                     θ->begin
-                        f_ = θ[:σ] * wrap(GP(sin, SEKernel()), GPC())
+                        f_ = θ[:σ] * atomic(GP(sin, SEKernel()), GPC())
                         return stretch(f_, θ[:l]), f_
                     end,
                     collect(range(-2.0, 2.0; length=N)),
@@ -77,7 +77,7 @@
         @timedtestset "Vector stretch" begin
             rng, N, D = MersenneTwister(123456), 3, 7
             λ = randn(rng, D)
-            f = wrap(GP(1.0, SEKernel()), GPC())
+            f = atomic(GP(1.0, SEKernel()), GPC())
             g = stretch(f, λ)
 
             X = randn(rng, D, 1)
@@ -87,7 +87,7 @@
         @timedtestset "Matrix stretch" begin
             rng, N, D = MersenneTwister(123456), 3, 7
             A = randn(rng, D, D)
-            f = wrap(GP(1.0, SEKernel()), GPC())
+            f = atomic(GP(1.0, SEKernel()), GPC())
             g = stretch(f, A)
 
             X = randn(rng, D, 1)
@@ -97,9 +97,18 @@
     end
     @timedtestset "Select" begin
         rng, N, D = MersenneTwister(123456), 3, 6
-        @testset "idx isa Integer" begin
+
+        @timedtestset "evaluation" begin
+            t = Stheno.Select(D - 1)
+            x = ColVecs(randn(rng, D, N))
+            @test t.(x) == [t(_x) for _x in x]
+
+            t = Stheno.Select((D-1):D)
+            @test t.(x) == [t(_x) for _x in x]
+        end
+        @timedtestset "idx isa Integer" begin
             idx = 1
-            f = wrap(GP(1.3, SEKernel()), GPC())
+            f = atomic(GP(1.3, SEKernel()), GPC())
             g = select(f, idx)
 
             X = randn(rng, D, N)
@@ -108,9 +117,9 @@
             @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
             @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
         end
-        @testset "idx isa Vector" begin
+        @timedtestset "idx isa Vector" begin
             idx = [1, 3]
-            f = wrap(GP(1.3, SEKernel()), GPC())
+            f = atomic(GP(1.3, SEKernel()), GPC())
             g = select(f, idx)
 
             X = randn(rng, D, N)
@@ -124,7 +133,7 @@
         @timedtestset "Shift{Float64}" begin
             rng, N, D = MersenneTwister(123456), 3, 6
             a = randn(rng)
-            f = wrap(GP(1.3, SEKernel()), GPC())
+            f = atomic(GP(1.3, SEKernel()), GPC())
             g = shift(f, a)
 
             x = randn(rng, N)
@@ -142,7 +151,7 @@
         @timedtestset "Shift{Vector{Float64}}" begin
             rng, N, D = MersenneTwister(123456), 3, 6
             a = randn(rng, D)
-            f = wrap(GP(1.3, SEKernel()), GPC())
+            f = atomic(GP(1.3, SEKernel()), GPC())
             g = shift(f, a)
 
             X = randn(rng, D, N)
@@ -153,8 +162,12 @@
         end
     end
     @timedtestset "Periodic" begin
-        f = wrap(GP(SEKernel()), GPC())
+        f = atomic(GP(SEKernel()), GPC())
         g = periodic(f, 2.0)
         @test cov(g([0.0]), g([1.0])) ≈ cov(g([0.0]), g([3.0]))
+
+        t = Stheno.Periodic(2.0)
+        x = randn(5)
+        @test t.(x) == [t(_x) for _x in x]
     end
 end

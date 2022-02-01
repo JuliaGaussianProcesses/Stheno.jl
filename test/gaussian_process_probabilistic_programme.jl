@@ -16,8 +16,8 @@
 
     # Build a toy collection of processes.
     gpc = GPC()
-    f1 = wrap(GP(sin, SEKernel()), gpc)
-    f2 = wrap(GP(cos, Matern52Kernel()), gpc)
+    f1 = atomic(GP(sin, SEKernel()), gpc)
+    f2 = atomic(GP(cos, Matern52Kernel()), gpc)
     f3 = f1 + 3 * f2
 
     # Use them to build a programme.
@@ -107,7 +107,7 @@
     @timedtestset "nested gppp" begin
 
         gpc_outer = GPC()
-        f1_outer = Stheno.wrap(f, gpc_outer)
+        f1_outer = Stheno.atomic(f, gpc_outer)
         f2_outer = 5 * f1_outer
         f_outer = Stheno.GPPP((f1=f1_outer, f2=f2_outer), gpc_outer)
 

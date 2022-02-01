@@ -1,3 +1,9 @@
+using Pkg
+Pkg.develop(path=joinpath(@__DIR__, ".."))
+
+using Documenter
+using Stheno
+
 ### Process examples
 
 # Always rerun examples
@@ -35,8 +41,9 @@ else
     mkpath(EXAMPLES_OUT)
 end
 
+dev_command = "Pkg.develop(PackageSpec(; path=relpath(\"$(pkgdir(Stheno))\", pwd())));"
 
-let script = "using Pkg; Pkg.activate(ARGS[1]); Pkg.instantiate()"
+let script = "using Pkg; Pkg.activate(ARGS[1]); $dev_command Pkg.instantiate()"
     for example in example_locations
         if !success(`$(Base.julia_cmd()) -e $script $example`)
             error(
@@ -68,10 +75,6 @@ isempty(processes) || success(processes) || error("some examples were not run su
 
 
 ### Build documentation
-using Pkg
-Pkg.develop(path=joinpath(@__DIR__, ".."))
-using Documenter, Stheno
-
 DocMeta.setdocmeta!(
     Stheno,
     :DocTestSetup,
