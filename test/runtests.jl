@@ -61,6 +61,7 @@ include("test_util.jl")
         include(joinpath("affine_transformations", "addition.jl"))
         include(joinpath("affine_transformations", "compose.jl"))
         include(joinpath("affine_transformations", "product.jl"))
+        include(joinpath("affine_transformations", "additive_gp.jl"))
     end
 
     include("gaussian_process_probabilistic_programme.jl")
