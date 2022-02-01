@@ -129,8 +129,9 @@ using ParameterHandling
     l2 = positive(5.0),
     s2 = positive(1.0),
 
-    ## Observation noise variance -- we'll be learning this as well.
-    s_noise = positive(0.1),
+    ## Observation noise variance -- we'll be learning this as well. Constrained to be
+    ## at least 1e-3.
+    s_noise = positive(0.1, exp, 1e-3),
 )
 
 # We've used `ParameterHandling.jl`s `positive` constraint to ensure that all of the
