@@ -17,6 +17,7 @@
         f = atomic(GP(Matern32Kernel()), GPC())
         fx = f(x)
         fxu = SparseFiniteGP(f(x), f(xu))
+        @test length(fxu) == length(x)
         @test mean(fxu) == mean(fx)
         @test marginals(fxu) == marginals(fx)
         @test rand(MersenneTwister(12345), fxu) == rand(MersenneTwister(12345), fx)

@@ -104,12 +104,4 @@
         #     BlockData([z1, z2]),
         # )
     end
-    @timedtestset "finites_to_block" begin
-        rng, P, Q = MersenneTwister(123456), 3, 5
-        xp, xq = randn(rng, P), randn(rng, Q)
-        gpc = GPC()
-        f_ = atomic(GP(sin, SEKernel()), gpc)
-        g_ = atomic(GP(cos, SEKernel()), gpc)
-        h_x = Stheno.finites_to_block([f_(xp, 1.0), g_(xq, 1.0)])
-    end
 end

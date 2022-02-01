@@ -97,7 +97,16 @@
     end
     @timedtestset "Select" begin
         rng, N, D = MersenneTwister(123456), 3, 6
-        @testset "idx isa Integer" begin
+
+        @timedtestset "evaluation" begin
+            t = Stheno.Select(D - 1)
+            x = ColVecs(randn(rng, D, N))
+            @test t.(x) == [t(_x) for _x in x]
+
+            t = Stheno.Select((D-1):D)
+            @test t.(x) == [t(_x) for _x in x]
+        end
+        @timedtestset "idx isa Integer" begin
             idx = 1
             f = atomic(GP(1.3, SEKernel()), GPC())
             g = select(f, idx)
@@ -108,7 +117,7 @@
             @test cov(f, g, X_f, X_g) ≈ cov(f, X_f, X_f)
             @test cov(f, g, X_f, X_g) ≈ cov(g, X_g, X_g)
         end
-        @testset "idx isa Vector" begin
+        @timedtestset "idx isa Vector" begin
             idx = [1, 3]
             f = atomic(GP(1.3, SEKernel()), GPC())
             g = select(f, idx)
@@ -156,5 +165,9 @@
         f = atomic(GP(SEKernel()), GPC())
         g = periodic(f, 2.0)
         @test cov(g([0.0]), g([1.0])) ≈ cov(g([0.0]), g([3.0]))
+
+        t = Stheno.Periodic(2.0)
+        x = randn(5)
+        @test t.(x) == [t(_x) for _x in x]
     end
 end

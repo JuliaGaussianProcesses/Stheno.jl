@@ -6,15 +6,8 @@
 _mortar(blocks::AbstractArray) = BlockArrays.mortar(blocks)
 
 function ChainRulesCore.rrule(::typeof(_mortar), _blocks::AbstractArray)
-    y = _mortar(_blocks)
-    Ty = typeof(y)
-    function mortar_pullback(Δ::Tangent)
-        return (NoTangent(), Δ.blocks)
-    end
-    function mortar_pullback(Δ::BlockArray)
-        return mortar_pullback(Tangent{Ty}(; blocks = Δ.blocks, axes=NoTangent()))
-    end
-    return y, mortar_pullback  
+    mortar_pullback(Δ::Tangent) = (NoTangent(), Δ.blocks)
+    return _mortar(_blocks), mortar_pullback
 end
 
 # A hook to which I can attach an rrule without commiting type-piracy against BlockArrays.
@@ -95,20 +88,3 @@ end
 function var(f::AbstractGP, args::cross_args, x::AV, x′::BlockData)
     return diag(cov(f, args, x, x′))
 end
-
-
-
-#
-# Build a single FiniteGP from a collection of FiniteGPs.
-#
-
-function finites_to_block(fs::AV{<:FiniteGP})
-    return FiniteGP(
-        cross(map(f->f.f, fs)),
-        BlockData(map(f->f.x, fs)),
-        make_block_noise(map(f->f.Σy, fs)),
-    )
-end
-
-make_block_noise(Σys::Vector{<:Diagonal}) = Diagonal(Vector(_mortar(diag.(Σys))))
-make_block_noise(Σys::Vector) = block_diagonal(Σys)
