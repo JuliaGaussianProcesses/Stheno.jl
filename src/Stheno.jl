@@ -36,12 +36,13 @@ module Stheno
     include(joinpath("affine_transformations", "addition.jl"))
     include(joinpath("affine_transformations", "compose.jl"))
     include(joinpath("affine_transformations", "product.jl"))
+    include(joinpath("affine_transformations", "additive_gp.jl"))
 
     # AbstractGP subtype which groups together other AbstractGP subtypes.
     include("gaussian_process_probabilistic_programme.jl")
 
     export atomic, BlockData, GPC, GPPPInput, @gppp
-    export ∘, select, stretch, periodic, shift
+    export ∘, select, stretch, periodic, shift, additive_gp
     export SparseFiniteGP
 
 end # module

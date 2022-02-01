@@ -25,4 +25,5 @@ stretch
 periodic
 shift
 select
+additive_gp
 ```
