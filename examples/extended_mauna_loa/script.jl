@@ -210,18 +210,12 @@ function optimize_loss(loss, θ_init; optimizer=default_optimizer, maxiter=1_000
 end
 
 function KernelFunctions.kernelmatrix(k::ConstantKernel, x::AbstractVector)
-    return fill(k.c, length(x), length(x))
+    return fill(only(k.c), length(x), length(x))
 end
 
-@info "testing primal"
-@show @time nlml(ParameterHandling.value(init_params))
-@show @time nlml(ParameterHandling.value(init_params))
-@info "testing forwards-pass"
-@show @time Zygote.pullback(nlml, ParameterHandling.value(init_params))
-@show @time Zygote.pullback(nlml, ParameterHandling.value(init_params))
-@info "testing gradient"
-@show @time Zygote.gradient(nlml, ParameterHandling.value(init_params))
-@show @time Zygote.gradient(nlml, ParameterHandling.value(init_params))
+function KernelFunctions.kernelmatrix(k::ConstantKernel, x::AbstractVector, y::AbstractVector)
+    return fill(only(k.c), length(x), length(y))
+end
 
 θ_opt, result = optimize_loss(nlml, init_params)
 
