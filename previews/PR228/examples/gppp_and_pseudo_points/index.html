@@ -28,7 +28,7 @@ items = [
     (xp_f1, f₁′xp, :red, &quot;exact&quot;, f₁′_plot),
     (xp_f2, f₂′xp, :red, &quot;&quot;, f₂′_plot),
     (xp_f3, f₃′xp, :red, &quot;&quot;, f₃′_plot),
-];</code></pre><pre><code class="nohighlight hljs">logpdf(fx, y) = -465.99349014012654
+];</code></pre><pre><code class="nohighlight hljs">logpdf(fx, y) = -465.9934901401266
 </code></pre><p>Plot posterior marginals and samples.</p><pre><code class="language-julia hljs">for (x, samples, colour, name, plt) in items
     plot!(plt, xp_, f′(x); fillalpha=0.2, color=colour, label=name);
     plot!(plt, xp_, samples; alpha=0.3, color=colour, label=&quot;&quot;, linewidth=1);
@@ -50,7 +50,7 @@ items = [
     (xp_f1, :green, &quot;Z in f3&quot;, f₁′_plot),
     (xp_f2, :green, &quot;&quot;, f₂′_plot),
     (xp_f3, :green, &quot;&quot;, f₃′_plot),
-];</code></pre><pre><code class="nohighlight hljs">elbo(VFE(u), fx, y) = -478.26616160163064
+];</code></pre><pre><code class="nohighlight hljs">elbo(VFE(u), fx, y) = -478.2661616016306
 </code></pre><p>Posterior marginal variance.</p><pre><code class="language-julia hljs">for (x, colour, name, plt) in items
     plot!(plt, xp_, f′_approx(x); fillalpha=0.3, fillcolor=colour, label=name);
 end</code></pre><p>Plot observations and pseudo-input locations.</p><pre><code class="language-julia hljs">scatter!(approx_in_marginal_posterior_plot, x.x, y;
@@ -81,7 +81,7 @@ items = [
     (xp_f1, :blue, &quot;Z in f1 and f2&quot;, f₁′_plot),
     (xp_f2, :blue, &quot;&quot;, f₂′_plot),
     (xp_f3, :blue, &quot;&quot;, f₃′_plot),
-];</code></pre><pre><code class="nohighlight hljs">elbo(VFE(u12), fx, y) = -477.4916323879492
+];</code></pre><pre><code class="nohighlight hljs">elbo(VFE(u12), fx, y) = -477.4916323879491
 </code></pre><p>Plot posterior marginals.</p><pre><code class="language-julia hljs">for (x, colour, name, plt) in items
     plot!(plt, xp_, f′_approx_12(x); fillalpha=0.3, fillcolor=colour, label=name)
 end</code></pre><p>Plot observations and pseudo-input locations.</p><pre><code class="language-julia hljs">scatter!(approx_in_latents_posterior_plot, x.x, y;
@@ -107,4 +107,4 @@ scatter!(approx_in_latents_posterior_plot, z2.x, zeros(M2);
     markersize=4,
     markeralpha=0.8,
     label=&quot;Z₂&quot;,
-)</code></pre><p><img src="../2608281131.svg" alt/></p><h2 id="The-end-result"><a class="docs-heading-anchor" href="#The-end-result">The end result</a><a id="The-end-result-1"></a><a class="docs-heading-anchor-permalink" href="#The-end-result" title="Permalink"></a></h2><pre><code class="language-julia hljs">plot(f₁′_plot, f₂′_plot, f₃′_plot; layout=(3, 1))</code></pre><p><img src="../703422548.svg" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../time_varying_blr/">« Time-Varying Bayesian Linear Regression</a><a class="docs-footer-nextpage" href="../differentiation/">Differentation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 31 January 2022 19:47">Monday 31 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+)</code></pre><p><img src="../2608281131.svg" alt/></p><h2 id="The-end-result"><a class="docs-heading-anchor" href="#The-end-result">The end result</a><a id="The-end-result-1"></a><a class="docs-heading-anchor-permalink" href="#The-end-result" title="Permalink"></a></h2><pre><code class="language-julia hljs">plot(f₁′_plot, f₂′_plot, f₃′_plot; layout=(3, 1))</code></pre><p><img src="../703422548.svg" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../time_varying_blr/">« Time-Varying Bayesian Linear Regression</a><a class="docs-footer-nextpage" href="../differentiation/">Differentation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Tuesday 1 February 2022 12:19">Tuesday 1 February 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

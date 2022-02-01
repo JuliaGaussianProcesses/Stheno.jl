@@ -195,7 +195,15 @@ function optimize_loss(loss, θ_init; optimizer=default_optimizer, maxiter=1_000
     return unflatten(result.minimizer), result
 end
 
-θ_opt, result = optimize_loss(nlml, init_params)</code></pre><pre><code class="nohighlight hljs">((λ_trend = 0.08099664498886491, CO2 = (σ_latent = 1.0889248936869045, σ_wiggle = 0.01359331577916642, λ_wiggle = 5.316246848247772, σ_period = 0.060248723068693, freq = 1.0, σ_noise = 0.007269890141413091, σm = 0.0008939874966791937), T = (σ_trend = 1.6657052868117048, σ_wiggle = 0.579146712779324, λ_wiggle = 3.633228661028855, σ_noise = 0.4036846267548007, σm = 1.1901128116713917)),  * Status: success
+function KernelFunctions.kernelmatrix(k::ConstantKernel, x::AbstractVector)
+    return fill(only(k.c), length(x), length(x))
+end
+
+function KernelFunctions.kernelmatrix(k::ConstantKernel, x::AbstractVector, y::AbstractVector)
+    return fill(only(k.c), length(x), length(y))
+end
+
+θ_opt, result = optimize_loss(nlml, init_params)</code></pre><pre><code class="nohighlight hljs">((λ_trend = 0.08100331563081177, CO2 = (σ_latent = 1.0891960996933283, σ_wiggle = 0.013591971990819648, λ_wiggle = 5.316289742729709, σ_period = 0.060234276815777275, freq = 1.0, σ_noise = 0.00727002656572483, σm = 0.0016937514974261778), T = (σ_trend = 1.6662376867328532, σ_wiggle = 0.5791563957207272, λ_wiggle = 3.633307845949236, σ_noise = 0.40367612741067543, σm = 1.191804139500965)),  * Status: success
 
  * Candidate solution
     Final objective value:     -1.967296e+03
@@ -208,13 +216,13 @@ end
     |x - x&#39;|/|x&#39;|          = 0.00e+00 ≤ 0.0e+00
     |f(x) - f(x&#39;)|         = 0.00e+00 ≤ 0.0e+00
     |f(x) - f(x&#39;)|/|f(x&#39;)| = 0.00e+00 ≤ 0.0e+00
-    |g(x)|                 = 3.46e-02 ≰ 1.0e-08
+    |g(x)|                 = 8.79e-03 ≰ 1.0e-08
 
  * Work counters
-    Seconds run:   3098  (vs limit Inf)
-    Iterations:    104
-    f(x) calls:    203
-    ∇f(x) calls:   104
+    Seconds run:   150  (vs limit Inf)
+    Iterations:    103
+    f(x) calls:    196
+    ∇f(x) calls:   103
 )</code></pre><h2 id="Plot-the-resulting-model-fit."><a class="docs-heading-anchor" href="#Plot-the-resulting-model-fit.">Plot the resulting model fit.</a><a id="Plot-the-resulting-model-fit.-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-the-resulting-model-fit." title="Permalink"></a></h2><pre><code class="language-julia hljs">function colours()
     return Dict(
         :blue =&gt; RGB(0/255, 107/255, 164/255),
@@ -307,4 +315,4 @@ let
     rowgap!(ga, 5)
 
     fig
-end</code></pre><p><img src="../3240894250.svg" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../differentiation/">« Differentation</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 31 January 2022 19:47">Monday 31 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><p><img src="../3240894250.svg" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../differentiation/">« Differentation</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Tuesday 1 February 2022 12:19">Tuesday 1 February 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
