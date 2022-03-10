@@ -1,0 +1,9 @@
+[deps]
+AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
+AbstractGPsMakie = "7834405d-1089-4985-bd30-732a30b92057"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
+KernelFunctions = "ec8451be-7e33-11e9-00cf-bbf324bd1392"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+Stheno = "8188c328-b5d6-583d-959b-9690869a5511"
