@@ -28,6 +28,7 @@ examples = [
     "differentiation",
     "extended_mauna_loa",
     "quadrature-convolution",
+    "convolutional_gp",
 ]
 
 example_locations = map(example -> joinpath(@__DIR__, "..", "examples", example), examples)
@@ -108,6 +109,7 @@ makedocs(
             "experimental_examples_notes.md",
             joinpath("examples", "differentiation.md"),
             joinpath("examples", "quadrature-convolution.md"),
+            joinpath("examples", "convolutional_gp.md"),
         ],
     ],
     doctestfilters=[

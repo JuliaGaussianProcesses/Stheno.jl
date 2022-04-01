@@ -6,7 +6,6 @@ using LinearAlgebra
 using MLDatasets
 using Random
 using Stheno
-using Zygote
 
 using AbstractGPs: AbstractGP
 using Stheno: DerivedGP
@@ -19,27 +18,22 @@ ones_and_twos_indices = findall(y -> y == 1 || y == 2, train_y_full);
 train_x = train_x_full[:, :, ones_and_twos_indices];
 train_y = train_y_full[ones_and_twos_indices];
 
-function extract_patches(X::AbstractArray{<:Real, 3})
-    patches_vec = map(1:size(X, 3)) do n
-        reduce(
-            hcat,
-            [vec(getindex(X, p:p+2, q:q+2, n)) for p in 1:size(X, 1)-2, q in 1:size(X, 2)-2],
-        )
-    end
-    return reduce(hcat, patches_vec)
-end
-
 # Simple wrapper type representing a stack of greyscale images.
 struct GreyScaleImageVector{T<:Real} <: AbstractVector{Matrix{T}}
     X::Array{T, 3}
-    patches::Matrix{T}
 end
-
-GreyScaleImageVector(X::Array{<:Real, 3}) = GreyScaleImageVector(X, extract_patches(X))
 
 Base.getindex(x::GreyScaleImageVector, n::Integer) = x.X[:, :, n]
 
 Base.size(x::GreyScaleImageVector) = (size(x.X, 3), )
+
+function extract_patches(x::GreyScaleImageVector)
+    X = x.X
+    return [
+        ColVecs(reshape(getindex(X, p:p+2, q:q+2, :), :, size(X, 3))) for
+        p in 1:size(X, 1)-2 for q in 1:size(X, 2)-2
+    ]
+end
 
 # ## Specify the linear transformation
 
@@ -48,31 +42,62 @@ patch_convolve(g::AbstractGP) = DerivedGP((patch_convolve, g), g.gpc)
 const patch_args = Tuple{typeof(patch_convolve), AbstractGP}
 
 function AbstractGPs.mean((_, g)::patch_args, x::GreyScaleImageVector)
-    m_patches = mean(g, ColVecs(x.patches))
-    M = reshape(m_patches, :, length(x))
-    return vec(sum(M; dims=1))
+    return sum(map(xp -> mean(g, xp), extract_patches(x)))
 end
 
 function AbstractGPs.cov(
     (_, g)::patch_args, f′::AbstractGP, x::GreyScaleImageVector, x′::AbstractVector
 )
-    k_patches = cov(g, f′, ColVecs(x.patches), x′)
-    K = reshape(k_patches, :, length(x), length(x′))
-    return dropdims(sum(K; dims=1), dims=1)
+    return sum(map(xp -> cov(g, xp, x′), extract_patches(x)))
+end
+
+function AbstractGPs.cov(
+    f::AbstractGP, (_, g)::patch_args, x::AbstractVector, x′::GreyScaleImageVector
+)
+    return sum(map(xp′ -> cov(g, x, xp′), extract_patches(x′)))
 end
 
 function AbstractGPs.cov(
     (_, g)::patch_args, x::GreyScaleImageVector, x′::GreyScaleImageVector
 )
-    k_patches = cov(g, ColVecs(x.patches), ColVecs(x′.patches))
-    K = 
+    xps = extract_patches(x)
+    xp′s = extract_patches(x′)
+    return sum(map(xp′ -> sum(map(xp -> cov(g, xp, xp′), xps)), xp′s))
 end
 
+AbstractGPs.cov(args::patch_args, x::GreyScaleImageVector) = cov(args, x, x)
+
+function AbstractGPs.var((_, g)::patch_args, x::GreyScaleImageVector)
+    xps = extract_patches(x)
+    return sum(map(xp′ -> sum(map(xp -> var(g, xp, xp′), xps)), xps))
+end
+
+# ## Specify a simple GPPP using this transformation.
+function build_gp(θ)
+    return @gppp let
+        g = GP(θ.var * with_lengthscale(SEKernel(), θ.l))
+        f = patch_convolve(g)
+    end
+end
+
+# Check that things work.
 x = GreyScaleImageVector(train_x[:, :, 1:10]);
-f = @gppp let
-    g = GP(SEKernel())
-    f = patch_convolve(g)
-end
 
+f = build_gp((var=1, l=1))
 mean(f, GPPPInput(:f, x))
-cov(f, GPPPInput(:f, x), GPPPInput(:g, ColVecs(x.patches[:, 1:7])))
+cov(f, GPPPInput(:f, x), GPPPInput(:g, extract_patches(x)[1]))
+cov(f, GPPPInput(:f, x), GPPPInput(:f, x))
+var(f, GPPPInput(:f, x))
+
+var(f, GPPPInput(:f, x)) ≈ diag(cov(f, GPPPInput(:f, x), GPPPInput(:f, x)))
+
+# ## Apply pseudo-point approximation
+M = 100;
+z = GPPPInput(:g, ColVecs(randn(9, M)));
+x = GPPPInput(:f, GreyScaleImageVector(train_x[:, :, 1:15]));
+
+y = rand(f(x, 0.1))
+
+cov(f, x, z)
+
+elbo(VFE(f(z)), f(x, 0.1), y)
