@@ -29,6 +29,7 @@ examples = [
     "extended_mauna_loa",
     "quadrature-convolution",
     "convolutional_gp",
+    "naive-linear-mixing",
 ]
 
 example_locations = map(example -> joinpath(@__DIR__, "..", "examples", example), examples)
@@ -104,6 +105,7 @@ makedocs(
             joinpath("examples", "time_varying_blr.md"),
             joinpath("examples", "gppp_and_pseudo_points.md"),
             joinpath("examples", "extended_mauna_loa.md"),
+            joinpath("examples", "naive-linear-mixing.md"),
         ],
         "Experimental Examples" => [
             "experimental_examples_notes.md",
