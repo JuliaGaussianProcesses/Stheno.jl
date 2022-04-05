@@ -42,20 +42,22 @@ set_theme!(
     patchcolor=(Set1_4[2], 0.2),
 )
 
-fig = Figure();
-ax_g1 = Axis(fig[1, 1]);
-plot!(ax_g1, x_pred, f_post(GPPPInput(:g1, x_pred)); bandscale=3);
-scatter!(ax_g1, x1, y1);
-ax_g2 = Axis(fig[2, 1]);
-plot!(ax_g2, x_pred, f_post(GPPPInput(:g2, x_pred)); bandscale=3);
-scatter!(ax_g2, x2, y2);
-ax_g3 = Axis(fig[3, 1]);
-plot!(ax_g3, x_pred, f_post(GPPPInput(:g3, x_pred)); bandscale=3);
-scatter!(ax_g3, x3, y3);
+let
+    fig = Figure();
+    ax_g1 = Axis(fig[1, 1]);
+    plot!(ax_g1, x_pred, f_post(GPPPInput(:g1, x_pred)); bandscale=3);
+    scatter!(ax_g1, x1, y1);
+    ax_g2 = Axis(fig[2, 1]);
+    plot!(ax_g2, x_pred, f_post(GPPPInput(:g2, x_pred)); bandscale=3);
+    scatter!(ax_g2, x2, y2);
+    ax_g3 = Axis(fig[3, 1]);
+    plot!(ax_g3, x_pred, f_post(GPPPInput(:g3, x_pred)); bandscale=3);
+    scatter!(ax_g3, x3, y3);
 
-ax_f1 = Axis(fig[1, 2]);
-plot!(ax_f1, x_pred, f_post(GPPPInput(:f1, x_pred)); bandscale=3);
-ax_f2 = Axis(fig[2, 2]);
-plot!(ax_f2, x_pred, f_post(GPPPInput(:f2, x_pred)); bandscale=3);
+    ax_f1 = Axis(fig[1, 2]);
+    plot!(ax_f1, x_pred, f_post(GPPPInput(:f1, x_pred)); bandscale=3);
+    ax_f2 = Axis(fig[2, 2]);
+    plot!(ax_f2, x_pred, f_post(GPPPInput(:f2, x_pred)); bandscale=3);
 
-save("foo.pdf", fig);
+    fig
+end
