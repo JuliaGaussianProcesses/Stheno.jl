@@ -26,7 +26,7 @@ function check_consistency(rng::AbstractRNG, θ, f, x::AV, y::AV, A, z::AV, B)
 
     # Check that we can differentiate through evaluation of the mean vector.
     adjoint_test(
-        (θ, x, A)->mean(g(θ, x, A)),
+        (θ, x, A)->collect(mean(g(θ, x, A))),
         randn(rng, length(x)), θ, x, A;
         rtol=1e-4, atol=1e-4,
     )
