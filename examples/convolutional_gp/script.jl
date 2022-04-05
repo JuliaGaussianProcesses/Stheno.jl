@@ -11,6 +11,7 @@ using AbstractGPs: AbstractGP
 using Stheno: DerivedGP
 
 # Load MNIST training data set.
+ENV["DATADEPS_ALWAYS_ACCEPT"] = true
 train_x_full, train_y_full = MNIST.traindata(Float32);
 
 # Pull out the 1s and 2s.
