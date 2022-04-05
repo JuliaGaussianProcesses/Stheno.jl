@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>The Convolutional Gaussian Process · Stheno.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Stheno.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../input_types/">Input Types</a></li><li><a class="tocitem" href="../../kernel_design/">Kernel Design</a></li><li><a class="tocitem" href="../../internals/">Internals</a></li><li><a class="tocitem" href="../custom_affine_transformations/">Custom Affine Transformations</a></li><li><a class="tocitem" href="../../api/">API</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_note/">Notes on Examples</a></li><li><a class="tocitem" href="../process_decomposition/">Process Decomposition</a></li><li><a class="tocitem" href="../sensor_fusion/">Sensor Fusion</a></li><li><a class="tocitem" href="../time_varying_blr/">Time-Varying Bayesian Linear Regression</a></li><li><a class="tocitem" href="../gppp_and_pseudo_points/">Pseudo-Points in Additive Regression</a></li><li><a class="tocitem" href="../extended_mauna_loa/">CO2 and temperature</a></li></ul></li><li><span class="tocitem">Experimental Examples</span><ul><li><a class="tocitem" href="../../experimental_examples_notes/">Notes on Experimental Examples</a></li><li><a class="tocitem" href="../differentiation/">Differentation</a></li><li><a class="tocitem" href="../quadrature-convolution/">Convolution via Quadrature</a></li><li class="is-active"><a class="tocitem" href>The Convolutional Gaussian Process</a><ul class="internal"><li><a class="tocitem" href="#Specify-the-linear-transformation"><span>Specify the linear transformation</span></a></li><li><a class="tocitem" href="#Specify-a-simple-GPPP-using-this-transformation."><span>Specify a simple GPPP using this transformation.</span></a></li><li><a class="tocitem" href="#Apply-pseudo-point-approximation"><span>Apply pseudo-point approximation</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Experimental Examples</a></li><li class="is-active"><a href>The Convolutional Gaussian Process</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>The Convolutional Gaussian Process</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaGaussianProcesses/Stheno.jl/blob/master/examples/convolutional_gp/script.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="The-Convolutional-Gaussian-Process"><a class="docs-heading-anchor" href="#The-Convolutional-Gaussian-Process">The Convolutional Gaussian Process</a><a id="The-Convolutional-Gaussian-Process-1"></a><a class="docs-heading-anchor-permalink" href="#The-Convolutional-Gaussian-Process" title="Permalink"></a></h1><p><a href="https://nbviewer.jupyter.org/github/JuliaGaussianProcesses/Stheno.jl/blob/gh-pages/previews/PR232/examples/convolutional_gp.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a></p><p><em>You are seeing the HTML output generated by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a> from the <a href="https://github.com/JuliaGaussianProcesses/Stheno.jl/blob/master/examples/convolutional_gp/script.jl">Julia source file</a>. The corresponding notebook can be viewed in <a href="https://nbviewer.jupyter.org/github/JuliaGaussianProcesses/Stheno.jl/blob/gh-pages/previews/PR232/examples/convolutional_gp.ipynb">nbviewer</a>.</em></p><pre><code class="language-julia hljs">using AbstractGPs
+using KernelFunctions
+using LinearAlgebra
+using MLDatasets
+using Random
+using Stheno
+
+using AbstractGPs: AbstractGP
+using Stheno: DerivedGP</code></pre><p>Load MNIST training data set.</p><pre><code class="language-julia hljs">ENV[&quot;DATADEPS_ALWAYS_ACCEPT&quot;] = true
+train_x_full, train_y_full = MNIST.traindata(Float32);</code></pre><p>Pull out the 1s and 2s.</p><pre><code class="language-julia hljs">ones_and_twos_indices = findall(y -&gt; y == 1 || y == 2, train_y_full);
+train_x = train_x_full[:, :, ones_and_twos_indices];
+train_y = train_y_full[ones_and_twos_indices];</code></pre><p>Simple wrapper type representing a stack of greyscale images.</p><pre><code class="language-julia hljs">struct GreyScaleImageVector{T&lt;:Real} &lt;: AbstractVector{Matrix{T}}
+    X::Array{T, 3}
+end
+
+Base.getindex(x::GreyScaleImageVector, n::Integer) = x.X[:, :, n]
+
+Base.size(x::GreyScaleImageVector) = (size(x.X, 3), )
+
+function extract_patches(x::GreyScaleImageVector)
+    X = x.X
+    return [
+        ColVecs(reshape(getindex(X, p:p+2, q:q+2, :), :, size(X, 3))) for
+        p in 1:size(X, 1)-2 for q in 1:size(X, 2)-2
+    ]
+end</code></pre><pre><code class="nohighlight hljs">extract_patches (generic function with 1 method)</code></pre><h2 id="Specify-the-linear-transformation"><a class="docs-heading-anchor" href="#Specify-the-linear-transformation">Specify the linear transformation</a><a id="Specify-the-linear-transformation-1"></a><a class="docs-heading-anchor-permalink" href="#Specify-the-linear-transformation" title="Permalink"></a></h2><pre><code class="language-julia hljs">patch_convolve(g::AbstractGP) = DerivedGP((patch_convolve, g), g.gpc)
+
+const patch_args = Tuple{typeof(patch_convolve), AbstractGP}
+
+function AbstractGPs.mean((_, g)::patch_args, x::GreyScaleImageVector)
+    return sum(map(xp -&gt; mean(g, xp), extract_patches(x)))
+end
+
+function AbstractGPs.cov(
+    (_, g)::patch_args, f′::AbstractGP, x::GreyScaleImageVector, x′::AbstractVector
+)
+    return sum(map(xp -&gt; cov(g, xp, x′), extract_patches(x)))
+end
+
+function AbstractGPs.cov(
+    f::AbstractGP, (_, g)::patch_args, x::AbstractVector, x′::GreyScaleImageVector
+)
+    return sum(map(xp′ -&gt; cov(g, x, xp′), extract_patches(x′)))
+end
+
+function AbstractGPs.cov(
+    (_, g)::patch_args, x::GreyScaleImageVector, x′::GreyScaleImageVector
+)
+    xps = extract_patches(x)
+    xp′s = extract_patches(x′)
+    return sum(map(xp′ -&gt; sum(map(xp -&gt; cov(g, xp, xp′), xps)), xp′s))
+end
+
+AbstractGPs.cov(args::patch_args, x::GreyScaleImageVector) = cov(args, x, x)
+
+function AbstractGPs.var((_, g)::patch_args, x::GreyScaleImageVector)
+    xps = extract_patches(x)
+    return sum(map(xp′ -&gt; sum(map(xp -&gt; var(g, xp, xp′), xps)), xps))
+end</code></pre><h2 id="Specify-a-simple-GPPP-using-this-transformation."><a class="docs-heading-anchor" href="#Specify-a-simple-GPPP-using-this-transformation.">Specify a simple GPPP using this transformation.</a><a id="Specify-a-simple-GPPP-using-this-transformation.-1"></a><a class="docs-heading-anchor-permalink" href="#Specify-a-simple-GPPP-using-this-transformation." title="Permalink"></a></h2><pre><code class="language-julia hljs">function build_gp(θ)
+    return @gppp let
+        g = GP(θ.var * with_lengthscale(SEKernel(), θ.l))
+        f = patch_convolve(g)
+    end
+end</code></pre><pre><code class="nohighlight hljs">build_gp (generic function with 1 method)</code></pre><p>Check that things work.</p><pre><code class="language-julia hljs">x = GreyScaleImageVector(train_x[:, :, 1:10]);
+
+f = build_gp((var=1, l=1))
+mean(f, GPPPInput(:f, x))
+cov(f, GPPPInput(:f, x), GPPPInput(:g, extract_patches(x)[1]))
+cov(f, GPPPInput(:f, x), GPPPInput(:f, x))
+var(f, GPPPInput(:f, x))
+
+var(f, GPPPInput(:f, x)) ≈ diag(cov(f, GPPPInput(:f, x), GPPPInput(:f, x)))</code></pre><pre><code class="nohighlight hljs">true</code></pre><h2 id="Apply-pseudo-point-approximation"><a class="docs-heading-anchor" href="#Apply-pseudo-point-approximation">Apply pseudo-point approximation</a><a id="Apply-pseudo-point-approximation-1"></a><a class="docs-heading-anchor-permalink" href="#Apply-pseudo-point-approximation" title="Permalink"></a></h2><pre><code class="language-julia hljs">M = 100;
+z = GPPPInput(:g, ColVecs(randn(9, M)));
+x = GPPPInput(:f, GreyScaleImageVector(train_x[:, :, 1:15]));
+
+y = rand(f(x, 0.1))
+
+cov(f, x, z)
+
+elbo(VFE(f(z)), f(x, 0.1), y)</code></pre><pre><code class="nohighlight hljs">-1.387979103031141e7</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../quadrature-convolution/">« Convolution via Quadrature</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.15 on <span class="colophon-date" title="Tuesday 5 April 2022 10:48">Tuesday 5 April 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

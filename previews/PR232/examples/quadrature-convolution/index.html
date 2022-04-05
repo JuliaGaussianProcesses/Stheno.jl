@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Convolution via Quadrature · Stheno.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Stheno.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../input_types/">Input Types</a></li><li><a class="tocitem" href="../../kernel_design/">Kernel Design</a></li><li><a class="tocitem" href="../../internals/">Internals</a></li><li><a class="tocitem" href="../custom_affine_transformations/">Custom Affine Transformations</a></li><li><a class="tocitem" href="../../api/">API</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_note/">Notes on Examples</a></li><li><a class="tocitem" href="../process_decomposition/">Process Decomposition</a></li><li><a class="tocitem" href="../sensor_fusion/">Sensor Fusion</a></li><li><a class="tocitem" href="../time_varying_blr/">Time-Varying Bayesian Linear Regression</a></li><li><a class="tocitem" href="../gppp_and_pseudo_points/">Pseudo-Points in Additive Regression</a></li><li><a class="tocitem" href="../extended_mauna_loa/">CO2 and temperature</a></li></ul></li><li><span class="tocitem">Experimental Examples</span><ul><li><a class="tocitem" href="../../experimental_examples_notes/">Notes on Experimental Examples</a></li><li><a class="tocitem" href="../differentiation/">Differentation</a></li><li class="is-active"><a class="tocitem" href>Convolution via Quadrature</a><ul class="internal"><li><a class="tocitem" href="#Define-new-affine-transformation"><span>Define new affine transformation</span></a></li><li><a class="tocitem" href="#Some-plotting-config"><span>Some plotting config</span></a></li><li><a class="tocitem" href="#Plot-some-stuff"><span>Plot some stuff</span></a></li></ul></li><li><a class="tocitem" href="../convolutional_gp/">The Convolutional Gaussian Process</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Experimental Examples</a></li><li class="is-active"><a href>Convolution via Quadrature</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Convolution via Quadrature</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaGaussianProcesses/Stheno.jl/blob/master/examples/quadrature-convolution/script.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Convolution-via-Quadrature"><a class="docs-heading-anchor" href="#Convolution-via-Quadrature">Convolution via Quadrature</a><a id="Convolution-via-Quadrature-1"></a><a class="docs-heading-anchor-permalink" href="#Convolution-via-Quadrature" title="Permalink"></a></h1><p><a href="https://nbviewer.jupyter.org/github/JuliaGaussianProcesses/Stheno.jl/blob/gh-pages/previews/PR232/examples/quadrature-convolution.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a></p><p><em>You are seeing the HTML output generated by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a> from the <a href="https://github.com/JuliaGaussianProcesses/Stheno.jl/blob/master/examples/quadrature-convolution/script.jl">Julia source file</a>. The corresponding notebook can be viewed in <a href="https://nbviewer.jupyter.org/github/JuliaGaussianProcesses/Stheno.jl/blob/gh-pages/previews/PR232/examples/quadrature-convolution.ipynb">nbviewer</a>.</em></p><p>This example implements the convolution of a GP against the function ϕ(x) = exp(-x^2), i.e.: (Lf)(x′) = ∫ ϕ(x′ - x) f(x) dx It does this approximately using Gauss-Hermite quadrature, the implementation for which is provided by FastGaussQuadrature.jl. The implementation is limited to GPs whose index set is the real line.</p><pre><code class="language-julia hljs">using AbstractGPs
+using AbstractGPsMakie
+using CairoMakie
+using FastGaussQuadrature
+using KernelFunctions
+using LaTeXStrings
+using LinearAlgebra
+using Literate
+using Random
+using Stheno
+
+import AbstractGPs: AbstractGP, mean, cov, var
+
+using CairoMakie: RGB
+using Stheno: DerivedGP</code></pre><h2 id="Define-new-affine-transformation"><a class="docs-heading-anchor" href="#Define-new-affine-transformation">Define new affine transformation</a><a id="Define-new-affine-transformation-1"></a><a class="docs-heading-anchor-permalink" href="#Define-new-affine-transformation" title="Permalink"></a></h2><p>The mean function is assumed to have zero-mean. The cross-kernel (function of <code>x′</code>) is <code>∫ ϕ(x′ - x) k(x, y) dx</code>, and the kernel (function of <code>x′</code> and <code>y′</code>) is <code>∫ ϕ(x′ - x) k(x, y) ϕ(y′ - y) dx dy</code>.</p><pre><code class="language-julia hljs">convolve(f::AbstractGP) = DerivedGP((convolve, f), f.gpc)
+
+const conv_args = Tuple{typeof(convolve), AbstractGP}
+
+mean((_, f)::conv_args, x::AbstractVector{&lt;:Real}) = zeros(length(x))
+cov(args::conv_args, x::AbstractVector{&lt;:Real}) = cov(args, x, x)
+var(args::conv_args, x::AbstractVector{&lt;:Real}) = var(args, x, x)
+function var(args::conv_args, x::AbstractVector{&lt;:Real}, x′::AbstractVector{&lt;:Real})
+    return diag(cov(args, x, x′))
+end
+
+_quadrature(f, xs, ws) = sum(map((x, w) -&gt; w * f(x), xs, ws))
+
+function cov((_, f)::conv_args, x::AbstractVector{&lt;:Real}, x′::AbstractVector{&lt;:Real})
+
+    num_points = 15
+    xs, ws = gausshermite(num_points)
+
+    cols_of_C = map(x′) do x′n
+        col_elements = map(x) do xn
+            _quadrature(
+                x -&gt; _quadrature(x′ -&gt; only(cov(f, [xn - x], [x′n - x′])), xs, ws), xs, ws
+            )
+        end
+    end
+    return reduce(hcat, cols_of_C)
+end
+
+function cov(
+    (_, f)::conv_args,
+    f′::AbstractGP,
+    x::AbstractVector{&lt;:Real},
+    x′::AbstractVector{&lt;:Real},
+)
+    num_points = 15
+    xs, ws = gausshermite(num_points)
+
+    cols_of_C = map(x′) do x′n
+        col_elements = map(x) do xn
+            _quadrature(x -&gt; only(cov(f, [xn - x], [x′n])), xs, ws)
+        end
+    end
+    return reduce(hcat, cols_of_C)
+end
+
+function cov(
+    f′::AbstractGP,
+    args::conv_args,
+    x::AbstractVector{&lt;:Real},
+    x′::AbstractVector{&lt;:Real},
+)
+    return collect(transpose(cov(args, f′, x′, x)))
+end</code></pre><pre><code class="nohighlight hljs">cov (generic function with 86 methods)</code></pre><h2 id="Some-plotting-config"><a class="docs-heading-anchor" href="#Some-plotting-config">Some plotting config</a><a id="Some-plotting-config-1"></a><a class="docs-heading-anchor-permalink" href="#Some-plotting-config" title="Permalink"></a></h2><pre><code class="language-julia hljs">pt_per_unit() = 1
+
+font_size() = 12
+
+listing_font_size() = 10
+
+page_width() = 6
+
+size_from_inches(; height=4, width=4) = 72 .* (width, height)
+
+set_theme!(font=&quot;Times&quot;)
+
+function colours()
+    return Dict(
+        :blue =&gt; RGB(0/255, 107/255, 164/255),
+        :cyan =&gt; RGB(75/255, 166/255, 251/255),
+        :red =&gt; RGB(200/255, 82 / 255, 0 / 255),
+        :pink =&gt; RGB(169/255, 90/255, 161/255),
+        :black =&gt; RGB(0.0, 0.0, 0.0),
+        :orange =&gt; RGB(245/255, 121/255, 58/255),
+    )
+end
+
+shapes() = [:utriangle, :diamond, :square, :circle, :cross]
+
+band_alpha() = 0.3
+sample_alpha() = 0.2
+point_alpha() = 1.0
+
+
+function plot_band!(ax, x_plot, fx, colour, label)
+    ms = marginals(fx)
+    symband!(
+        ax, x_plot, mean.(ms), std.(ms);
+        bandscale=3,
+        color=(colours()[colour], 0.5 * band_alpha()),
+        label=label,
+    )
+end
+
+function plot_sample!(ax, x_plot, fx, colour)
+    gpsample!(
+        ax, x_plot, fx;
+        samples=4, color=(colours()[colour], sample_alpha()),
+    )
+end
+
+function plot_gp!(ax, x_plot, fx, colour, label)
+    plot_band!(ax, x_plot, fx, colour, label)
+    plot_sample!(ax, x_plot, fx, colour)
+end</code></pre><pre><code class="nohighlight hljs">plot_gp! (generic function with 1 method)</code></pre><h2 id="Plot-some-stuff"><a class="docs-heading-anchor" href="#Plot-some-stuff">Plot some stuff</a><a id="Plot-some-stuff-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-some-stuff" title="Permalink"></a></h2><p>Build a GPPP in which one GP is a convolution of the other, using the <code>convolve</code> transformation defined above.</p><pre><code class="language-julia hljs">let
+    f = @gppp let
+        f = GP(with_lengthscale(Matern52Kernel(), 0.5))
+        g = convolve(f)
+    end
+
+    rng = Xoshiro(123)
+    x_f_obs = GPPPInput(:f, rand(rng, 2) .+ 1)
+    x_g_obs = GPPPInput(:g, -rand(rng, 2) .- 1)
+    x_obs = vcat(x_f_obs, x_g_obs)
+    y = rand(Xoshiro(123), f(x_obs, 1e-3))
+    y_f, y_g = split(x_obs, y)
+    f_post = posterior(f(x_obs, 1e-3), y)
+
+    x_plot = range(-5.0, 5.0; length=100)
+    x_f = GPPPInput(:f, x_plot)
+    x_g = GPPPInput(:g, x_plot)
+    x = vcat(x_f, x_g)
+    fig = Figure()
+
+    # Plot posterior.
+    ax = Axis(fig[1, 1]; xlabel=L&quot;x&quot;)
+    plot_gp!(ax, x_plot, f_post(x_f, 1e-6), :blue, &quot;f&quot;)
+    plot_gp!(ax, x_plot, f_post(x_g, 1e-6), :orange, &quot;g&quot;)
+    scatter!(ax, x_f_obs.x, y_f; color=colours()[:blue], markersize=7)
+    scatter!(ax, x_g_obs.x, y_g; color=colours()[:orange], markersize=7)
+
+    # Plot legend.
+    Legend(fig[1, 2], ax; orientation=:vertical)
+
+    fig
+end</code></pre><p><img src="../3771962047.png" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../differentiation/">« Differentation</a><a class="docs-footer-nextpage" href="../convolutional_gp/">The Convolutional Gaussian Process »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.15 on <span class="colophon-date" title="Tuesday 5 April 2022 10:48">Tuesday 5 April 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
