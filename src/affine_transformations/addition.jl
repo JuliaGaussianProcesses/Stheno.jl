@@ -17,35 +17,33 @@ end
 # Add two GPs
 #
 
-const add_args = Tuple{typeof(+), AbstractGP, AbstractGP}
+mean(::typeof(+), fa::AbstractGP, fb::AbstractGP, x::AV) = mean(fa, x) .+ mean(fb, x)
 
-mean((_, fa, fb)::add_args, x::AV) = mean(fa, x) .+ mean(fb, x)
-
-function cov((_, fa, fb)::add_args, x::AV)
+function cov(::typeof(+), fa::AbstractGP, fb::AbstractGP, x::AV)
     return cov(fa, x) .+ cov(fb, x) .+ cov(fa, fb, x, x) .+ cov(fb, fa, x, x)
 end
-function var((_, fa, fb)::add_args, x::AV)
+function var(::typeof(+), fa::AbstractGP, fb::AbstractGP, x::AV)
     return var(fa, x) .+ var(fb, x) .+ var(fa, fb, x, x) .+ var(fb, fa, x, x)
 end
 
-function cov((_, fa, fb)::add_args, x::AV, x′::AV)
+function cov(::typeof(+), fa::AbstractGP, fb::AbstractGP, x::AV, x′::AV)
     return cov(fa, x, x′) .+ cov(fb, x, x′) .+ cov(fa, fb, x, x′) .+ cov(fb, fa, x, x′)
 end
-function var((_, fa, fb)::add_args, x::AV, x′::AV)
+function var(::typeof(+), fa::AbstractGP, fb::AbstractGP, x::AV, x′::AV)
     return var(fa, x, x′) .+ var(fb, x, x′) .+ var(fa, fb, x, x′) .+ var(fb, fa, x, x′)
 end
 
-function cov((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
+function cov(::typeof(+), fa::AbstractGP, fb::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     return cov(fa, f′, x, x′) .+ cov(fb, f′, x, x′)
 end
-function cov(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
+function cov(f::AbstractGP, ::typeof(+), fa::AbstractGP, fb::AbstractGP, x::AV, x′::AV)
     return cov(f, fa, x, x′) .+ cov(f, fb, x, x′)
 end
 
-function var((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
+function var(::typeof(+), fa::AbstractGP, fb::AbstractGP, f′::AbstractGP, x::AV, x′::AV)
     return var(fa, f′, x, x′) .+ var(fb, f′, x, x′)
 end
-function var(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
+function var(f::AbstractGP, ::typeof(+), fa::AbstractGP, fb::AbstractGP, x::AV, x′::AV)
     return var(f, fa, x, x′) .+ var(f, fb, x, x′)
 end
 
@@ -60,19 +58,17 @@ end
 -(b::Real, f::AbstractGP) = b + (-f)
 -(f::AbstractGP, b::Real) = f + (-b)
 
-const add_known{T} = Tuple{typeof(+), T, AbstractGP}
+mean(::typeof(+), b, f::AbstractGP, x::AV) = b.(x) .+ mean(f, x)
+mean(::typeof(+), b::Real, f::AbstractGP, x::AV) = b .+ mean(f, x)
 
-mean((_, b, f)::add_known, x::AV) = b.(x) .+ mean(f, x)
-mean((_, b, f)::add_known{<:Real}, x::AV) = b .+ mean(f, x)
+cov(::typeof(+), b, f::AbstractGP, x::AV) = cov(f, x)
+var(::typeof(+), b, f::AbstractGP, x::AV) = var(f, x)
 
-cov((_, b, f)::add_known, x::AV) = cov(f, x)
-var((_, b, f)::add_known, x::AV) = var(f, x)
+cov(::typeof(+), b, f::AbstractGP, x::AV, x′::AV) = cov(f, x, x′)
+var(::typeof(+), b, f::AbstractGP, x::AV, x′::AV) = var(f, x, x′)
 
-cov((_, b, f)::add_known, x::AV, x′::AV) = cov(f, x, x′)
-var((_, b, f)::add_known, x::AV, x′::AV) = var(f, x, x′)
+cov(::typeof(+), b, f::AbstractGP, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, x, x′)
+cov(f::AbstractGP, ::typeof(+), b, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, x, x′)
 
-cov((_, b, f)::add_known, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, x, x′)
-cov(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = cov(f, f′, x, x′)
-
-var((_, b, f)::add_known, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, x, x′)
-var(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = var(f, f′, x, x′)
+var(::typeof(+), b, f::AbstractGP, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, x, x′)
+var(f::AbstractGP, ::typeof(+), b, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, x, x′)

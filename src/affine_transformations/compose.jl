@@ -8,21 +8,19 @@ Constructs the DerivedGP f′ given by f′(x) := f(g(x))
 ∘(f::AbstractGP, g) = DerivedGP((∘, f, g), f.gpc)
 
 
-const comp_args = Tuple{typeof(∘), AbstractGP, Any}
+mean(::typeof(∘), f::AbstractGP, g, x::AV) = mean(f, g.(x))
 
-mean((_, f, g)::comp_args, x::AV) = mean(f, g.(x))
+cov(::typeof(∘), f::AbstractGP, g, x::AV) = cov(f, g.(x))
+var(::typeof(∘), f::AbstractGP, g, x::AV) = var(f, g.(x))
 
-cov((_, f, g)::comp_args, x::AV) = cov(f, g.(x))
-var((_, f, g)::comp_args, x::AV) = var(f, g.(x))
+cov(::typeof(∘), f::AbstractGP, g, x::AV, x′::AV) = cov(f, g.(x), g.(x′))
+var(::typeof(∘), f::AbstractGP, g, x::AV, x′::AV) = var(f, g.(x), g.(x′))
 
-cov((_, f, g)::comp_args, x::AV, x′::AV) = cov(f, g.(x), g.(x′))
-var((_, f, g)::comp_args, x::AV, x′::AV) = var(f, g.(x), g.(x′))
+cov(::typeof(∘), f::AbstractGP, g, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, g.(x), x′)
+cov(f::AbstractGP, ::typeof(∘), f′::AbstractGP, g, x::AV, x′::AV) = cov(f, f′, x, g.(x′))
 
-cov((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, g.(x), x′)
-cov(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = cov(f, f′, x, g.(x′))
-
-var((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, g.(x), x′)
-var(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = var(f, f′, x, g.(x′))
+var(::typeof(∘), f::AbstractGP, g, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, g.(x), x′)
+var(f::AbstractGP, ::typeof(∘), f′::AbstractGP, g, x::AV, x′::AV) = var(f, f′, x, g.(x′))
 
 
 """
@@ -30,7 +28,7 @@ var(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = var(f, f′, x, g
 
 Stretch all elements of the inputs by `l`.
 """
-struct Stretch{T<:Union{Real, AbstractMatrix{<:Real}}}
+struct Stretch{T<:Union{Real,AbstractMatrix{<:Real}}}
     l::T
 end
 (s::Stretch)(x) = s.l * x
@@ -108,7 +106,7 @@ periodic(g::AbstractGP, f::Real) = g ∘ Periodic(f)
 # Translations of GPs through their input spaces.
 #
 
-struct Shift{Ta<:Union{Real, AV{<:Real}}}
+struct Shift{Ta<:Union{Real,AV{<:Real}}}
     a::Ta
 end
 (f::Shift{<:Real})(x::Real) = x - f.a

@@ -16,26 +16,26 @@ struct DerivedGP{Targs} <: SthenoAbstractGP
 end
 DerivedGP(args::Targs, gpc::GPC) where {Targs} = DerivedGP{Targs}(args, gpc)
 
-AbstractGPs.mean(f::DerivedGP, x::AbstractVector) = mean(f.args, x)
+AbstractGPs.mean(f::DerivedGP, x::AbstractVector) = mean((f.args..., x)...)
 
-AbstractGPs.cov(f::DerivedGP, x::AbstractVector) = cov(f.args, x)
-AbstractGPs.var(f::DerivedGP, x::AbstractVector) = var(f.args, x)
+AbstractGPs.cov(f::DerivedGP, x::AbstractVector) = cov((f.args..., x)...)
+AbstractGPs.var(f::DerivedGP, x::AbstractVector) = var((f.args..., x)...)
 
-AbstractGPs.cov(f::DerivedGP, x::AbstractVector, x′::AbstractVector) = cov(f.args, x, x′)
-AbstractGPs.var(f::DerivedGP, x::AbstractVector, x′::AbstractVector) = var(f.args, x, x′)
+AbstractGPs.cov(f::DerivedGP, x::AbstractVector, x′::AbstractVector) = cov((f.args..., x, x′)...)
+AbstractGPs.var(f::DerivedGP, x::AbstractVector, x′::AbstractVector) = var((f.args..., x, x′)...)
 
 function AbstractGPs.cov(
     f::SthenoAbstractGP, f′::SthenoAbstractGP, x::AbstractVector, x′::AbstractVector,
 )
     @assert f.gpc === f′.gpc
     if f.n === f′.n
-        return cov(f.args, x, x′)
+        return cov((f.args..., x, x′)...)
     elseif f isa AtomicGP && f.n > f′.n || f′ isa AtomicGP && f′.n > f.n
         return zeros(length(x), length(x′))
     elseif f.n >= f′.n
-        return cov(f.args, f′, x, x′)
+        return cov((f.args..., f′, x, x′)...)
     else
-        return cov(f, f′.args, x, x′)
+        return cov((f, f′.args..., x, x′)...)
     end
 end
 
@@ -44,12 +44,12 @@ function AbstractGPs.var(
 )
     @assert f.gpc === f′.gpc
     if f.n === f′.n
-        return var(f.args, x, x′)
+        return var((f.args..., x, x′)...)
     elseif f isa AtomicGP && f.n > f′.n || f′ isa AtomicGP && f′.n > f.n
         return zeros(length(x))
     elseif f.n >= f′.n
-        return var(f.args, f′, x, x′)
+        return var((f.args..., f′, x, x′)...)
     else
-        return var(f, f′.args, x, x′)
+        return var((f, f′.args..., x, x′)...)
     end
 end

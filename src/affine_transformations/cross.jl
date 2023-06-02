@@ -46,45 +46,43 @@ end
 ChainRulesCore.@non_differentiable consistency_checks(::Any)
 
 
-const cross_args{T<:AbstractVector{<:AbstractGP}} = Tuple{typeof(cross), T}
-
-function mean((_, fs)::cross_args, x::BlockData)
-    blks = map((f, blk)->mean(f, blk), fs, blocks(x))
+function mean(::typeof(cross), fs::AbstractVector{<:AbstractGP}, x::BlockData)
+    blks = map((f, blk) -> mean(f, blk), fs, blocks(x))
     return _collect(_mortar(blks))
 end
 
-function cov((_, fs)::cross_args, x::BlockData)
-    Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x), fs, blocks(x)), :, 1)
+function cov(::typeof(cross), fs::AbstractVector{<:AbstractGP}, x::BlockData)
+    Cs = reshape(map((f, blk) -> cov(f, cross, fs, blk, x), fs, blocks(x)), :, 1)
     return _collect(_mortar(reshape(Cs, :, 1)))
 end
 
-function var((_, fs)::cross_args, x::BlockData)
+function var(::typeof(cross), fs::AbstractVector{<:AbstractGP}, x::BlockData)
     cs = map(var, fs, blocks(x))
     return _collect(_mortar(cs))
 end
 
-function cov((_, fs)::cross_args, x::BlockData, x′::BlockData)
-    Cs = reshape(map((f, blk)->cov(f, (cross, fs), blk, x′), fs, blocks(x)), :, 1)
+function cov(::typeof(cross), fs::AbstractVector{<:AbstractGP}, x::BlockData, x′::BlockData)
+    Cs = reshape(map((f, blk) -> cov(f, cross, fs, blk, x′), fs, blocks(x)), :, 1)
     return _collect(_mortar(reshape(Cs, :, 1)))
 end
 
-function var((_, fs)::cross_args, x::BlockData, x′::BlockData)
+function var(::typeof(cross), fs::AbstractVector{<:AbstractGP}, x::BlockData, x′::BlockData)
     cs = map(var, fs, blocks(x), blocks(x′))
     return _collect(_mortar(cs))
 end
 
-function cov((_, fs)::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
-    Cs = reshape(map((f, x)->cov(f, f′, x, x′), fs, blocks(x)), :, 1)
+function cov(::typeof(cross), fs::AbstractVector{<:AbstractGP}, f′::AbstractGP, x::BlockData, x′::AV)
+    Cs = reshape(map((f, x) -> cov(f, f′, x, x′), fs, blocks(x)), :, 1)
     return _collect(_mortar(Cs))
 end
-function cov(f::AbstractGP, (_, fs)::cross_args, x::AV, x′::BlockData)
-    Cs = reshape(map((f′, x′)->cov(f, f′, x, x′), fs, blocks(x′)), 1, :)
+function cov(f::AbstractGP, ::typeof(cross), fs::AbstractVector{<:AbstractGP}, x::AV, x′::BlockData)
+    Cs = reshape(map((f′, x′) -> cov(f, f′, x, x′), fs, blocks(x′)), 1, :)
     return _collect(_mortar(Cs))
 end
 
-function var(args::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
-    return diag(cov(args, f′, x, x′))
+function var(op::typeof(cross), fs::AbstractVector{<:AbstractGP}, f′::AbstractGP, x::BlockData, x′::AV)
+    return diag(cov(op, fs, f′, x, x′))
 end
-function var(f::AbstractGP, args::cross_args, x::AV, x′::BlockData)
-    return diag(cov(f, args, x, x′))
+function var(f::AbstractGP, op::typeof(cross), fs::AbstractVector{<:AbstractGP}, x::AV, x′::BlockData)
+    return diag(cov(f, op, fs, x, x′))
 end
