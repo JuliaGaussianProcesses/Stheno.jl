@@ -10,9 +10,13 @@ If `f isa Real`, then `h(x) = f * g(x)`.
 """
 *(f, g::AbstractGP) = DerivedGP((*, f, g), g.gpc)
 *(f::AbstractGP, g) = DerivedGP((*, g, f), f.gpc)
-*(f::AbstractGP, g::AbstractGP) = throw(ArgumentError("Cannot multiply two GPs together."))
+*(::AbstractGP, ::AbstractGP) = throw(ArgumentError("Cannot multiply two GPs together."))
 
 const prod_args{Tf} = Tuple{typeof(*), Tf, <:AbstractGP}
+
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::prod_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::prod_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::prod_args, ::AV)
 
 #
 # Scale by a function

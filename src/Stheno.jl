@@ -19,6 +19,8 @@ module Stheno
 
     const AV{T} = AbstractVector{T}
 
+    import ChainRulesCore: rrule
+
     # A couple of AbstractVector subtypes useful for expressing structure in inputs
     # regularly found in GPPPs.
     include("input_collection_types.jl")

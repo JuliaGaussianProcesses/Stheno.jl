@@ -21,6 +21,10 @@ end
 
 atomic(gp::Tgp, gpc::GPC) where {Tgp<:AbstractGP} = AtomicGP{Tgp}(gp, gpc)
 
+@opt_out rrule(::typeof(mean), ::AtomicGP, ::AbstractVector)
+@opt_out rrule(::typeof(cov), ::AtomicGP, ::AbstractVector)
+@opt_out rrule(::typeof(var), ::AtomicGP, ::AbstractVector)
+
 AbstractGPs.mean(f::AtomicGP, x::AbstractVector) = mean(f.gp, x)
 
 AbstractGPs.cov(f::AtomicGP, x::AbstractVector) = cov(f.gp, x)

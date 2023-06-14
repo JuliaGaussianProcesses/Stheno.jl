@@ -14,8 +14,8 @@ end
 _collect(X::BlockArray) = Array(X)
 
 function ChainRulesCore.rrule(::typeof(_collect), X::BlockArray)
-    function Array_pullback(Δ::Array)
-        ΔX = Tangent{Any}(blocks=BlockArray(Δ, axes(X)).blocks, axes=NoTangent())
+    function Array_pullback(Δ::AbstractArray)
+        ΔX = Tangent{Any}(blocks=BlockArray(collect(Δ), axes(X)).blocks, axes=NoTangent())
         return (NoTangent(), ΔX)
     end
     return Array(X), Array_pullback
@@ -45,8 +45,11 @@ function consistency_checks(fs)
 end
 ChainRulesCore.@non_differentiable consistency_checks(::Any)
 
-
 const cross_args{T<:AbstractVector{<:AbstractGP}} = Tuple{typeof(cross), T}
+
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::cross_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::cross_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::cross_args, ::AV)
 
 function mean((_, fs)::cross_args, x::BlockData)
     blks = map((f, blk)->mean(f, blk), fs, blocks(x))

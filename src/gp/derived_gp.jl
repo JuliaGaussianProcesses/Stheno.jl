@@ -16,6 +16,10 @@ struct DerivedGP{Targs} <: SthenoAbstractGP
 end
 DerivedGP(args::Targs, gpc::GPC) where {Targs} = DerivedGP{Targs}(args, gpc)
 
+@opt_out rrule(::typeof(mean), ::DerivedGP, ::AbstractVector)
+@opt_out rrule(::typeof(cov), ::DerivedGP, ::AbstractVector)
+@opt_out rrule(::typeof(var), ::DerivedGP, ::AbstractVector)
+
 AbstractGPs.mean(f::DerivedGP, x::AbstractVector) = mean(f.args, x)
 
 AbstractGPs.cov(f::DerivedGP, x::AbstractVector) = cov(f.args, x)
