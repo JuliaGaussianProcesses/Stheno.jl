@@ -7,8 +7,11 @@ Constructs the DerivedGP f′ given by f′(x) := f(g(x))
 """
 ∘(f::AbstractGP, g) = DerivedGP((∘, f, g), f.gpc)
 
-
 const comp_args = Tuple{typeof(∘), AbstractGP, Any}
+
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::comp_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::comp_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::comp_args, ::AV)
 
 mean((_, f, g)::comp_args, x::AV) = mean(f, g.(x))
 

@@ -19,6 +19,10 @@ end
 
 const add_args = Tuple{typeof(+), AbstractGP, AbstractGP}
 
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::add_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::add_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::add_args, ::AV)
+
 mean((_, fa, fb)::add_args, x::AV) = mean(fa, x) .+ mean(fb, x)
 
 function cov((_, fa, fb)::add_args, x::AV)
@@ -61,6 +65,10 @@ end
 -(f::AbstractGP, b::Real) = f + (-b)
 
 const add_known{T} = Tuple{typeof(+), T, AbstractGP}
+
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::add_known, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::add_known, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::add_known, ::AV)
 
 mean((_, b, f)::add_known, x::AV) = b.(x) .+ mean(f, x)
 mean((_, b, f)::add_known{<:Real}, x::AV) = b .+ mean(f, x)

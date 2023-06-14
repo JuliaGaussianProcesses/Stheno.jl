@@ -45,8 +45,11 @@ function consistency_checks(fs)
 end
 ChainRulesCore.@non_differentiable consistency_checks(::Any)
 
-
 const cross_args{T<:AbstractVector{<:AbstractGP}} = Tuple{typeof(cross), T}
+
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::cross_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::cross_args, ::AV)
+@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::cross_args, ::AV)
 
 function mean((_, fs)::cross_args, x::BlockData)
     blks = map((f, blk)->mean(f, blk), fs, blocks(x))
