@@ -48,7 +48,7 @@ ml_df, Ttr_df, Tte_df = let
     mauna_loa_co2 = let
         mauna_loa_data_raw = CSV.read(
             joinpath(datadep"mauna_loa", "monthly_in_situ_co2_mlo.csv"), DataFrame;
-            skipto=58, header=false,
+            skipto=61, header=false,
         )
 
         data = DataFrame(

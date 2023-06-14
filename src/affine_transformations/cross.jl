@@ -14,8 +14,8 @@ end
 _collect(X::BlockArray) = Array(X)
 
 function ChainRulesCore.rrule(::typeof(_collect), X::BlockArray)
-    function Array_pullback(Δ::Array)
-        ΔX = Tangent{Any}(blocks=BlockArray(Δ, axes(X)).blocks, axes=NoTangent())
+    function Array_pullback(Δ::AbstractArray)
+        ΔX = Tangent{Any}(blocks=BlockArray(collect(Δ), axes(X)).blocks, axes=NoTangent())
         return (NoTangent(), ΔX)
     end
     return Array(X), Array_pullback
