@@ -21,12 +21,6 @@ __Installation__ - `] add Stheno`.
 
 
 
-## Version 0.7
-
-Lots of things have changed in version 0.7. Please consult NEWS.md for details, or take a look at the examples below.
-
-
-
 ## A Couple of Examples
 
 The primary sources of information regarding this package are the [documentation](https://juliagaussianprocesses.github.io/Stheno.jl/stable) and the examples folder, but here are a couple of flashy examples to get started with.
