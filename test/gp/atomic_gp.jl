@@ -11,7 +11,7 @@ struct ToyAbstractGP <: AbstractGP end
         x = collect(range(-1.0, 1.0; length=N))
         x′ = collect(range(-1.0, 1.0; length=N′))
 
-        @test mean(f, x) == AbstractGPs._map_meanfunction(m, x)
+        @test mean(f, x) == mean_vector(m, x)
         @test cov(f, x) == kernelmatrix(k, x)
         AbstractGPs.TestUtils.test_internal_abstractgps_interface(rng, f, x, x′)
     end
@@ -27,8 +27,8 @@ struct ToyAbstractGP <: AbstractGP end
         k1, k2 = SqExponentialKernel(), SqExponentialKernel()
         f1, f2 = atomic(GP(m1, k1), gpc), atomic(GP(m2, k2), gpc)
 
-        @test mean(f1, x) == AbstractGPs._map_meanfunction(m1, x)
-        @test mean(f2, x) == AbstractGPs._map_meanfunction(m2, x)
+        @test mean(f1, x) == mean_vector(m1, x)
+        @test mean(f2, x) == mean_vector(m2, x)
 
         @test cov(f1, f2, x, x′) == zeros(N, N′)
         @test var(f1, x) == ones(N)
