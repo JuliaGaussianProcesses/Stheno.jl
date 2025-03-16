@@ -1,5 +1,3 @@
-_rng() = MersenneTwister(123456)
-
 function generate_noise_matrix(rng::AbstractRNG, N::Int)
     A = randn(rng, N, N)
     return Symmetric(A * A' + I)
@@ -44,34 +42,6 @@ end
 
         Σ′ = (f̂ .- mean(f)) * (f̂ .- mean(f))' ./ S
         @test mean(abs.(Σ′ - cov(f))) < 1e-2
-    end
-    @testset "rand (gradients)" begin
-        rng, N, S = MersenneTwister(123456), 10, 3
-        x = collect(range(-3.0, stop=3.0, length=N))
-        Σy = 1e-12
-
-        # Check that the gradient w.r.t. the samples is correct (single-sample).
-        adjoint_test(
-            x->rand(
-                MersenneTwister(123456),
-                FiniteGP(atomic(GP(sin, SEKernel()), GPC()), x, Σy),
-            ),
-            randn(rng, N),
-            x;
-            atol=1e-9, rtol=1e-9,
-        )
-
-        # Check that the gradient w.r.t. the samples is correct (multisample).
-        adjoint_test(
-            x->rand(
-                MersenneTwister(123456),
-                FiniteGP(atomic(GP(sin, SEKernel()), GPC()), x, Σy),
-                S,
-            ),
-            randn(rng, N, S),
-            x;
-            atol=1e-9, rtol=1e-9,
-        )
     end
     @testset "Type Stability - $T" for T in [Float64, Float32]
         rng = MersenneTwister(123456)

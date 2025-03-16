@@ -1,11 +1,11 @@
-@timedtestset "product" begin
-    @timedtestset "GP mul errors" begin
+@testset "product" begin
+    @testset "GP mul errors" begin
         gpc = GPC()
         f1 = atomic(GP(SEKernel()), gpc)
         f2 = atomic(GP(SEKernel()), gpc)
         @test_throws ArgumentError f1 * f2
     end
-    @timedtestset "multiply by constant" begin
+    @testset "multiply by constant" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
         g1, c, c′ = atomic(GP(1, SEKernel()), GPC()), -4.3, 2.1
@@ -43,7 +43,7 @@
         @test cov(g2(X), g4′(X′)) ≈ (c * c′^3) .* cov(g1(X), g1(X′))
         @test cov(g4(X), g2′(X′)) ≈ (c^3 * c′) .* cov(g1(X), g1(X′))
 
-        @timedtestset "Consistency Tests" begin
+        @testset "Consistency Tests" begin
             rng, P, Q = MersenneTwister(123456), 3, 5
             x0 = collect(range(-1.0, 1.0; length=P))
             x1 = collect(range(-0.5, 1.5; length=Q))
@@ -54,22 +54,23 @@
             f2 = 5 * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
-        @timedtestset "Diff Tests" begin
+        @testset "Diff Tests" begin
             standard_1D_tests(
                 MersenneTwister(123456),
                 [2.3],
-                θ->begin
+                θ -> begin
                     f = atomic(GP(0.5, SEKernel()), GPC())
                     return θ[1] * f, f
                 end,
-                X, X′,
+                X,
+                X′,
             )
         end
     end
-    @timedtestset "multiply by function" begin
+    @testset "multiply by function" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
         X, X′ = ColVecs(randn(rng, D, N)), ColVecs(randn(rng, D, N′))
-        g1, f, f′ = atomic(GP(1, SEKernel()), GPC()), x->sum(sin, x), x->sum(cos, x)
+        g1, f, f′ = atomic(GP(1, SEKernel()), GPC()), x -> sum(sin, x), x -> sum(cos, x)
         g2, g2′ = f * g1, g1 * f′
         g3, g3′ = f * g2, g2′ * f′
         g4, g4′ = f * g3, g3′ * f′
@@ -91,26 +92,26 @@
 
         fX′, f′X′ = map(f, X′), map(f′, X′)
         @test cov(g2(X), g1(X′)) ≈ fX .* cov(g1(X), g1(X′))
-        @test cov(g3(X), g1(X′)) ≈ fX.^2 .* cov(g1(X), g1(X′))
-        @test cov(g4(X), g1(X′)) ≈ fX.^3 .* cov(g1(X), g1(X′))
+        @test cov(g3(X), g1(X′)) ≈ fX .^ 2 .* cov(g1(X), g1(X′))
+        @test cov(g4(X), g1(X′)) ≈ fX .^ 3 .* cov(g1(X), g1(X′))
         @test cov(g2′(X), g1(X′)) ≈ f′X .* cov(g1(X), g1(X′))
-        @test cov(g3′(X), g1(X′)) ≈ (f′X.^2) .* cov(g1(X), g1(X′))
-        @test cov(g4′(X), g1(X′)) ≈ (f′X.^3) .* cov(g1(X), g1(X′))
+        @test cov(g3′(X), g1(X′)) ≈ (f′X .^ 2) .* cov(g1(X), g1(X′))
+        @test cov(g4′(X), g1(X′)) ≈ (f′X .^ 3) .* cov(g1(X), g1(X′))
 
         @test cov(g1(X′), g2(X)) == cov(g2(X), g1(X′))'
         @test cov(g1(X′), g3(X)) == cov(g3(X), g1(X′))'
         @test cov(g1(X′), g4(X)) == cov(g4(X), g1(X′))'
 
         @test cov(g2(X), g2′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* f′X′'
-        @test cov(g3(X), g3′(X′)) ≈ fX.^2 .* cov(g1(X), g1(X′)) .* (f′X′.^2)'
-        @test cov(g4(X), g4′(X′)) ≈ fX.^3 .* cov(g1(X), g1(X′)) .* (f′X′.^3)'
+        @test cov(g3(X), g3′(X′)) ≈ fX .^ 2 .* cov(g1(X), g1(X′)) .* (f′X′ .^ 2)'
+        @test cov(g4(X), g4′(X′)) ≈ fX .^ 3 .* cov(g1(X), g1(X′)) .* (f′X′ .^ 3)'
 
-        @test cov(g2(X), g3′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* (f′X′').^2
-        @test cov(g3(X), g2′(X′)) ≈ fX.^2 .* cov(g1(X), g1(X′)) .* (f′X′')
-        @test cov(g2(X), g4′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* (f′X′').^3
-        @test cov(g4(X), g2′(X′)) ≈ fX.^3 .* cov(g1(X), g1(X′)) .* (f′X′')
+        @test cov(g2(X), g3′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* (f′X′') .^ 2
+        @test cov(g3(X), g2′(X′)) ≈ fX .^ 2 .* cov(g1(X), g1(X′)) .* (f′X′')
+        @test cov(g2(X), g4′(X′)) ≈ fX .* cov(g1(X), g1(X′)) .* (f′X′') .^ 3
+        @test cov(g4(X), g2′(X′)) ≈ fX .^ 3 .* cov(g1(X), g1(X′)) .* (f′X′')
 
-        @timedtestset "Consistency Tests" begin
+        @testset "Consistency Tests" begin
             rng, P, Q = MersenneTwister(123456), 3, 5
             x0 = collect(range(-1.0, 1.0; length=P))
             x1 = collect(range(-0.5, 1.5; length=Q))
@@ -121,13 +122,13 @@
             f2 = sin * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
-        @timedtestset "Diff Tests" begin
+        @testset "Diff Tests" begin
             standard_1D_tests(
                 MersenneTwister(123456),
                 [2.3, 1.3],
-                θ->begin
+                θ -> begin
                     f = atomic(GP(θ[2], SEKernel()), GPC())
-                    return (x->θ[1] * x) * f, f
+                    return (x -> θ[1] * x) * f, f
                 end,
                 collect(range(-2.0, 2.0; length=N)),
                 collect(range(-1.5, 2.5; length=N′)),

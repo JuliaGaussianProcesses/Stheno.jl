@@ -1,37 +1,5 @@
-@timedtestset "cross" begin
-    @timedtestset "block arrays" begin
-        @timedtestset "fdm stuff" begin
-            rng, Ps, Qs = MersenneTwister(123456), [5, 4], [3, 2, 1]
-            X = mortar([randn(rng, P, Q) for P in Ps, Q in Qs], Ps, Qs)
-            vec_X, from_vec = FiniteDifferences.to_vec(X)
-            @test vec_X isa Vector
-            @test from_vec(vec_X) == X
-        end
-        @timedtestset "Stheno._collect ∘ _mortar" begin
-            @timedtestset "BlockVector" begin
-
-                # Generate some blocks.
-                Ps = [5, 6, 7]
-                x = BlockArray(randn(sum(Ps)), Ps).blocks
-
-                # Verify the pullback.
-                ȳ = randn(sum(Ps))
-                adjoint_test(Stheno._collect ∘ Stheno._mortar, ȳ, x)
-            end
-            @timedtestset "BlockMatrix" begin
-
-                # Generate some blocks.
-                Ps = [3, 4, 5]
-                Qs = [6, 7, 8, 9]
-                X = BlockArray(randn(sum(Ps), sum(Qs)), Ps, Qs).blocks
-                Ȳ = randn(sum(Ps), sum(Qs))
-
-                # Verify pullback.
-                adjoint_test(Stheno._collect ∘ Stheno._mortar, Ȳ, X)
-            end
-        end
-    end
-    @timedtestset "Correctness tests" begin
+@testset "cross" begin
+    @testset "Correctness tests" begin
         rng, P, Q, gpc = MersenneTwister(123456), 2, 3, GPC()
 
         f1 = atomic(GP(sin, SEKernel()), gpc)
@@ -53,8 +21,7 @@
 
         # cov
         @test cov(f3(x3)) ≈ vcat(
-            hcat(cov(f1(x1)), cov(f1(x1), f2(x2))),
-            hcat(cov(f2(x2), f1(x1)), cov(f2(x2))),
+            hcat(cov(f1(x1)), cov(f1(x1), f2(x2))), hcat(cov(f2(x2), f1(x1)), cov(f2(x2)))
         )
         @test cov(f3(x3), f3(x3)) == cov(f3(x3))
         @test cov(f4(x4), f4(x4)) == cov(f4(x4))
@@ -75,7 +42,7 @@
         @test cov(f3(x3), f4(x4)) == cov(f3(x3), f1(x1))
         @test cov(f5(x5), f3(x3)) == cov(f2(x2), f3(x3))
     end
-    @timedtestset "Standardised Tests" begin
+    @testset "Standardised Tests" begin
         rng, P, Q = MersenneTwister(123456), 3, 5
         x0_1, x0_2 = collect(range(-1.0, 1.0; length=P)), collect(range(2.0, 4.0; length=P))
         x1_1, x1_2 = randn(rng, Q), randn(rng, Q)

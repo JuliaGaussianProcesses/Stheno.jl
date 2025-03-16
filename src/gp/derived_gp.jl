@@ -16,10 +16,6 @@ struct DerivedGP{Targs} <: SthenoAbstractGP
 end
 DerivedGP(args::Targs, gpc::GPC) where {Targs} = DerivedGP{Targs}(args, gpc)
 
-@opt_out rrule(::typeof(mean), ::DerivedGP, ::AbstractVector)
-@opt_out rrule(::typeof(cov), ::DerivedGP, ::AbstractVector)
-@opt_out rrule(::typeof(var), ::DerivedGP, ::AbstractVector)
-
 AbstractGPs.mean(f::DerivedGP, x::AbstractVector) = mean(f.args, x)
 
 AbstractGPs.cov(f::DerivedGP, x::AbstractVector) = cov(f.args, x)
@@ -29,7 +25,7 @@ AbstractGPs.cov(f::DerivedGP, x::AbstractVector, x′::AbstractVector) = cov(f.a
 AbstractGPs.var(f::DerivedGP, x::AbstractVector, x′::AbstractVector) = var(f.args, x, x′)
 
 function AbstractGPs.cov(
-    f::SthenoAbstractGP, f′::SthenoAbstractGP, x::AbstractVector, x′::AbstractVector,
+    f::SthenoAbstractGP, f′::SthenoAbstractGP, x::AbstractVector, x′::AbstractVector
 )
     @assert f.gpc === f′.gpc
     if f.n === f′.n
@@ -44,7 +40,7 @@ function AbstractGPs.cov(
 end
 
 function AbstractGPs.var(
-    f::SthenoAbstractGP, f′::SthenoAbstractGP, x::AbstractVector, x′::AbstractVector,
+    f::SthenoAbstractGP, f′::SthenoAbstractGP, x::AbstractVector, x′::AbstractVector
 )
     @assert f.gpc === f′.gpc
     if f.n === f′.n

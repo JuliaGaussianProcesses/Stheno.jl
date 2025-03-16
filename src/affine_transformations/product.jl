@@ -12,11 +12,7 @@ If `f isa Real`, then `h(x) = f * g(x)`.
 *(f::AbstractGP, g) = DerivedGP((*, g, f), f.gpc)
 *(::AbstractGP, ::AbstractGP) = throw(ArgumentError("Cannot multiply two GPs together."))
 
-const prod_args{Tf} = Tuple{typeof(*), Tf, <:AbstractGP}
-
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::prod_args, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::prod_args, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::prod_args, ::AV)
+const prod_args{Tf} = Tuple{typeof(*),Tf,<:AbstractGP}
 
 #
 # Scale by a function
@@ -28,7 +24,7 @@ function cov((_, σ, g)::prod_args, x::AV)
     σx = σ.(x)
     return σx .* cov(g, x) .* σx'
 end
-var((_, σ, g)::prod_args, x::AV) = σ.(x).^2 .* var(g, x)
+var((_, σ, g)::prod_args, x::AV) = σ.(x) .^ 2 .* var(g, x)
 
 function cov((_, σ, g)::prod_args, x::AV, x′::AV)
     return σ.(x) .* cov(g, x, x′) .* σ.(x′)'

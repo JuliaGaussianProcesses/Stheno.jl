@@ -1,6 +1,5 @@
-@timedtestset "gaussian_process_probabilistic_programme" begin
-
-    @timedtestset "split" begin
+@testset "gaussian_process_probabilistic_programme" begin
+    @testset "split" begin
         x = BlockData(randn(5), randn(4))
         @testset "Vector" begin
             x1, x2 = split(x, randn(9))
@@ -21,11 +20,10 @@
     f3 = f1 + 3 * f2
 
     # Use them to build a programme.
-    f = Stheno.GPPP((f1 = f1, f2 = f2, f3 = f3), gpc)
+    f = Stheno.GPPP((f1=f1, f2=f2, f3=f3), gpc)
 
     # The same answers should be obtained manually or via the GPPP.
-    @timedtestset "External Consistency" begin
-
+    @testset "External Consistency" begin
         x0 = GPPPInput(:f1, randn(4))
         x1 = GPPPInput(:f3, randn(3))
 
@@ -45,10 +43,7 @@
     # The GPPP must be self-consistent like any other AbstractGP.
     # This should hold for all of the various permutations of applicable input types.
     @testset "Internal Conistency ($(typeof(x0)), $(typeof(x1))" for (x0, x1) in [
-        (
-            GPPPInput(:f1, randn(4)),
-            GPPPInput(:f3, randn(3)),
-        ),
+        (GPPPInput(:f1, randn(4)), GPPPInput(:f3, randn(3))),
         (
             GPPPInput(:f1, randn(4)),
             BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))]),
@@ -61,14 +56,8 @@
             BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))]),
             BlockData([GPPPInput(:f1, randn(6))]),
         ),
-        (
-            collect(GPPPInput(:f1, randn(4))),
-            collect(GPPPInput(:f3, randn(3))),
-        ),
-        (
-            GPPPInput(:f1, randn(4)),
-            collect(GPPPInput(:f3, randn(3))),
-        ),
+        (collect(GPPPInput(:f1, randn(4))), collect(GPPPInput(:f3, randn(3)))),
+        (GPPPInput(:f1, randn(4)), collect(GPPPInput(:f3, randn(3)))),
         (
             collect(BlockData([GPPPInput(:f2, randn(3)), GPPPInput(:f3, randn(2))])),
             collect(GPPPInput(:f1, randn(4))),
@@ -85,7 +74,7 @@
         test_internal_abstractgps_interface(MersenneTwister(123456), f, x0, x1)
     end
 
-    @timedtestset "gppp macro" begin
+    @testset "gppp macro" begin
 
         # Declare a GPPP using the helper functionality.
         f = @gppp let
@@ -95,17 +84,8 @@
         end
     end
 
-    # No custom rules to worry about, just need to make sure that nothing errors.
-    @timedtestset "Zygote" begin
-        x = GPPPInput(:f3, randn(5))
-        s = 0.1
-        y = rand(f(x, s))
-        Zygote.gradient((x, y, f, s) -> logpdf(f(x, s), y), x, y, f, s)
-    end
-
     # Check that we can use one GPPP inside another.
-    @timedtestset "nested gppp" begin
-
+    @testset "nested gppp" begin
         gpc_outer = GPC()
         f1_outer = Stheno.atomic(f, gpc_outer)
         f2_outer = 5 * f1_outer

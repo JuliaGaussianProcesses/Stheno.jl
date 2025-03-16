@@ -13,13 +13,10 @@ function cov(fx::FiniteGP{<:SthenoAbstractGP}, gx::FiniteGP{<:SthenoAbstractGP})
     return cov(fx.f, gx.f, fx.x, gx.x)
 end
 
-
 # A collection of GPs (GPC == "GP Collection"). Used to keep track of GPs.
 mutable struct GPC
     n::Int
     GPC() = new(0)
 end
-
-ChainRulesCore.@non_differentiable GPC()
 
 next_index(gpc::GPC) = gpc.n + 1

@@ -7,11 +7,7 @@ Constructs the DerivedGP f′ given by f′(x) := f(g(x))
 """
 ∘(f::AbstractGP, g) = DerivedGP((∘, f, g), f.gpc)
 
-const comp_args = Tuple{typeof(∘), AbstractGP, Any}
-
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::comp_args, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::comp_args, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::comp_args, ::AV)
+const comp_args = Tuple{typeof(∘),AbstractGP,Any}
 
 mean((_, f, g)::comp_args, x::AV) = mean(f, g.(x))
 
@@ -27,13 +23,12 @@ cov(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = cov(f, f′, x, g
 var((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, g.(x), x′)
 var(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = var(f, f′, x, g.(x′))
 
-
 """
     Stretch{T<:Union{Real, AbstractMatrix{<:Real}}}
 
 Stretch all elements of the inputs by `l`.
 """
-struct Stretch{T<:Union{Real, AbstractMatrix{<:Real}}}
+struct Stretch{T<:Union{Real,AbstractMatrix{<:Real}}}
     l::T
 end
 (s::Stretch)(x) = s.l * x
@@ -58,8 +53,6 @@ stretch(f::AbstractGP, l::Real) = f ∘ Stretch(l)
 stretch(f::AbstractGP, a::AbstractVector{<:Real}) = stretch(f, Diagonal(a))
 stretch(f::AbstractGP, A::AbstractMatrix{<:Real}) = f ∘ Stretch(A)
 
-
-
 """
     Select{Tidx}
 
@@ -83,8 +76,6 @@ Select the dimensions of the input to `f` given by `idx`.
 """
 select(f::AbstractGP, idx) = f ∘ Select(idx)
 
-
-
 """
     Periodic{Tf<:Real}
 
@@ -105,13 +96,11 @@ Produce an AbstractGP with period `f`.
 """
 periodic(g::AbstractGP, f::Real) = g ∘ Periodic(f)
 
-
-
 #
 # Translations of GPs through their input spaces.
 #
 
-struct Shift{Ta<:Union{Real, AV{<:Real}}}
+struct Shift{Ta<:Union{Real,AV{<:Real}}}
     a::Ta
 end
 (f::Shift{<:Real})(x::Real) = x - f.a

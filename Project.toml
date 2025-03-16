@@ -5,7 +5,6 @@ version = "0.9.0"
 [deps]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
-ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 KernelFunctions = "ec8451be-7e33-11e9-00cf-bbf324bd1392"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"

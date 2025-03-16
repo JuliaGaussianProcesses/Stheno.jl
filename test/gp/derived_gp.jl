@@ -1,5 +1,4 @@
-@timedtestset "derived_gp" begin
-    
+@testset "derived_gp" begin
 end
 
 # This type is tested in affine_transformations
