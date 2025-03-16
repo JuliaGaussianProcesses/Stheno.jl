@@ -16,8 +16,6 @@ import AbstractGPs: mean, cov, var
 
 using MacroTools: @capture, combinedef, postwalk, splitdef
 
-const AV{T} = AbstractVector{T}
-
 # A couple of AbstractVector subtypes useful for expressing structure in inputs
 # regularly found in GPPPs.
 include("input_collection_types.jl")
