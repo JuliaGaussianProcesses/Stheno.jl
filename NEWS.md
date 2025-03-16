@@ -6,6 +6,20 @@ between versions, and discuss new features.
 If you find a breaking change this is not reported here, please either raise an issue or
 make a PR to ammend this document.
 
+## 0.9.0
+
+This version is largely a tidying up job. It simplies much of the test suite, bumps the
+required version to Julia LTS. It additionally drops the various ChainRules that were
+implemented, in favour of assuming that users make use of a more powerful AD system than was
+available when this package was originally written. For example, you may wish to make use of
+Mooncake to differentiate code in this package.
+
+### Breaking Changes
+
+Removal of dependency on ChainRulesCore.jl, and associated rules. This means that this
+package almost certainly no longer supports Zygote.jl, but achieves a great reduction in the
+amount of testing which much be performed.
+
 ## 0.8.0
 
 ### Breaking Changes
