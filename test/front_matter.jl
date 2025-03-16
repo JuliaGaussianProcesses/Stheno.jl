@@ -1,5 +1,4 @@
-using AbstractGPs,
-    BlockArrays, LinearAlgebra, KernelFunctions, Random, Statistics, Stheno, Test
+using AbstractGPs, BlockArrays, LinearAlgebra, KernelFunctions, Random, Stheno, Test
 
 using Stheno: mean, cov, var, GPC, FiniteGP, AbstractGP, BlockData, blocks, cross, ColVecs
 
