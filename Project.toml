@@ -12,6 +12,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 [compat]
 AbstractGPs = "0.5"
 BlockArrays = "1"
+KernelFunctions = "0.10"
 MacroTools = "0.5"
 Test = "1"
 julia = "1.10"
