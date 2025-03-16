@@ -1,8 +1,7 @@
 using Pkg
-Pkg.develop(path=joinpath(@__DIR__, ".."))
+Pkg.develop(; path=joinpath(@__DIR__, ".."))
 
-using Documenter
-using Stheno
+using Documenter, Stheno
 
 ### Process examples
 
@@ -75,8 +74,6 @@ end
 # Check that all examples were run successfully
 isempty(processes) || success(processes) || error("some examples were not run successfully")
 
-
-
 ### Build documentation
 DocMeta.setdocmeta!(
     Stheno,
@@ -85,7 +82,7 @@ DocMeta.setdocmeta!(
     recursive=true,
 )
 
-makedocs(
+makedocs(;
     modules=[Stheno],
     format=Documenter.HTML(),
     sitename="Stheno.jl",
