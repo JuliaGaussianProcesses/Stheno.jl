@@ -5,9 +5,7 @@ using Reexport
 @reexport using AbstractGPs
 @reexport using KernelFunctions
 
-using BlockArrays
-using LinearAlgebra
-using Random
+using BlockArrays, LinearAlgebra, Random
 
 import Base.Broadcast: broadcasted
 
