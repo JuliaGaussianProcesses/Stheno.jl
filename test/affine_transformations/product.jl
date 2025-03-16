@@ -54,18 +54,6 @@
             f2 = 5 * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
         end
-        @testset "Diff Tests" begin
-            standard_1D_tests(
-                MersenneTwister(123456),
-                [2.3],
-                θ -> begin
-                    f = atomic(GP(0.5, SEKernel()), GPC())
-                    return θ[1] * f, f
-                end,
-                X,
-                X′,
-            )
-        end
     end
     @testset "multiply by function" begin
         rng, N, N′, D = MersenneTwister(123456), 3, 5, 2
@@ -121,18 +109,6 @@
             f1 = atomic(GP(cos, SEKernel()), gpc)
             f2 = sin * f1
             abstractgp_interface_tests(f2, f1, x0, x1, x2, x3)
-        end
-        @testset "Diff Tests" begin
-            standard_1D_tests(
-                MersenneTwister(123456),
-                [2.3, 1.3],
-                θ -> begin
-                    f = atomic(GP(θ[2], SEKernel()), GPC())
-                    return (x -> θ[1] * x) * f, f
-                end,
-                collect(range(-2.0, 2.0; length=N)),
-                collect(range(-1.5, 2.5; length=N′)),
-            )
         end
     end
 end

@@ -54,21 +54,5 @@
         f2 = atomic(GP(cos, SEKernel()), gpc)
         f3 = cross([f1, f2])
         abstractgp_interface_tests(f3, f1, x0, x1, x2, x3)
-
-        # x1, x2 = collect(range(-2.0, 2.0; length=5)), collect(range(1.2, 1.5; length=4))
-        # z1, z2 = collect(range(-1.5, 0.75; length=3)), collect(range(0.89, 2.0; length=4))
-        # standard_1D_tests(
-        #     MersenneTwister(123456),
-        #     Dict(:l1=>0.5, :l2=>2.3),
-        #     θ->begin
-        #         gpc = GPC()
-        #         f1 = θ[:l1] * GP(sin, SqExponentialKernel(), gpc)
-        #         f2 = θ[:l2] * GP(cos, SqExponentialKernel(), gpc)
-        #         f3 = cross([f1, f2])
-        #         return f3, f3
-        #     end,
-        #     BlockData([x1, x2]),
-        #     BlockData([z1, z2]),
-        # )
     end
 end

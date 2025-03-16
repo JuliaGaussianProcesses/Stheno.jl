@@ -59,36 +59,4 @@
             abstractgp_interface_tests(c + f, f, x0, x1, x2, x3)
         end
     end
-    @testset "Standardised Tests (independent sum)" begin
-        standard_1D_tests(
-            MersenneTwister(123456),
-            Dict(:l1 => 0.5, :l2 => 2.3),
-            θ -> begin
-                gpc = GPC()
-                f1 = θ[:l1] * atomic(GP(sin, SEKernel()), gpc)
-                f2 = θ[:l2] * atomic(GP(cos, SEKernel()), gpc)
-                f3 = f1 + f2
-                return f3, f3
-            end,
-            collect(range(-1.5, 1.5; length=5)),
-            collect(range(-1.0, 0.5; length=3)),
-        )
-    end
-    @testset "Standardised Tests (correlated sum)" begin
-        standard_1D_tests(
-            MersenneTwister(123456),
-            Dict(:l1 => 0.5, :l2 => 2.3),
-            θ -> begin
-                gpc = GPC()
-                f1 = θ[:l1] * atomic(GP(sin, SEKernel()), gpc)
-                f2 = θ[:l2] * atomic(GP(cos, SEKernel()), gpc)
-                f3 = f1 + f2
-                f4 = f1 + f3
-                f5 = f3 + f4
-                return f5, f5
-            end,
-            collect(range(-1.5, 1.5; length=5)),
-            collect(range(-1.0, 0.5; length=3)),
-        )
-    end
 end

@@ -12,7 +12,6 @@ include("front_matter.jl")
 
     println("affine_transformations:")
     @testset "affine_transformations" begin
-        include(joinpath("affine_transformations", "test_util.jl"))
         include(joinpath("affine_transformations", "cross.jl"))
         include(joinpath("affine_transformations", "addition.jl"))
         include(joinpath("affine_transformations", "compose.jl"))

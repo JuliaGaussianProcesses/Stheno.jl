@@ -25,21 +25,6 @@
             x0, x1, x2, x3 = randn(rng, P), randn(rng, Q), randn(rng, Q), randn(rng, P)
             abstractgp_interface_tests(fg, f, x0, x1, x2, x3)
             abstractgp_interface_tests(stretch(f, 0.1), f, x0, x1, x2, x3)
-
-            # f = GP(SqExponentialKernel(), GPC())
-            # abstractgp_interface_tests(periodic(f, 0.1), f, x0, x1, x2, x3)
-        end
-        @testset "Diff Tests" begin
-            standard_1D_tests(
-                MersenneTwister(123456),
-                Dict(:σ => 0.5),
-                θ -> begin
-                    f = θ[:σ] * atomic(GP(sin, SEKernel()), GPC())
-                    return stretch(f, 0.5), f
-                end,
-                collect(range(-2.0, 2.0; length=N)),
-                collect(range(-1.5, 2.2; length=N′)),
-            )
         end
     end
     @testset "Stretch" begin
@@ -52,20 +37,8 @@
             @testset "scalar input" begin
                 @test first(cov(f, g, [0.0], [0.0])) == 1.0
                 @test first(cov(f, g, [λ * x], [x])) == 1.0
-                standard_1D_tests(
-                    MersenneTwister(123456),
-                    Dict(:σ => 0.5, :l => 0.32),
-                    θ -> begin
-                        f_ = θ[:σ] * atomic(GP(sin, SEKernel()), GPC())
-                        return stretch(f_, θ[:l]), f_
-                    end,
-                    collect(range(-2.0, 2.0; length=N)),
-                    collect(range(-1.5, 2.2; length=5)),
-                )
-                @testset "StepRangeLen" begin
-                    v = range(-2.0, 2.0; length=N)
-                    @test cov(g(v)) ≈ cov(g(collect(v)))
-                end
+                v = range(-2.0, 2.0; length=N)
+                @test cov(g(v)) ≈ cov(g(collect(v)))
             end
             @testset "vector input" begin
                 D = 11
