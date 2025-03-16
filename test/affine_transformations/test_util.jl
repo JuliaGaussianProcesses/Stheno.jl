@@ -1,4 +1,4 @@
-function standard_1D_tests(rng::AbstractRNG, θ, f, x::AV, z::AV)
+function standard_1D_tests(rng::AbstractRNG, θ, f, x::AbstractVector, z::AbstractVector)
     g, u = f(θ)
 
     @test cov(g, x) ≈ cov(g, x)'

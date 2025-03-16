@@ -47,18 +47,18 @@ function var((_, fs)::cross_args, x::BlockData, x′::BlockData)
     return Array(BlockArrays.mortar(cs))
 end
 
-function cov((_, fs)::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
+function cov((_, fs)::cross_args, f′::AbstractGP, x::BlockData, x′::AbstractVector)
     Cs = reshape(map((f, x) -> cov(f, f′, x, x′), fs, blocks(x)), :, 1)
     return Array(BlockArrays.mortar(Cs))
 end
-function cov(f::AbstractGP, (_, fs)::cross_args, x::AV, x′::BlockData)
+function cov(f::AbstractGP, (_, fs)::cross_args, x::AbstractVector, x′::BlockData)
     Cs = reshape(map((f′, x′) -> cov(f, f′, x, x′), fs, blocks(x′)), 1, :)
     return Array(BlockArrays.mortar(Cs))
 end
 
-function var(args::cross_args, f′::AbstractGP, x::BlockData, x′::AV)
+function var(args::cross_args, f′::AbstractGP, x::BlockData, x′::AbstractVector)
     return diag(cov(args, f′, x, x′))
 end
-function var(f::AbstractGP, args::cross_args, x::AV, x′::BlockData)
+function var(f::AbstractGP, args::cross_args, x::AbstractVector, x′::BlockData)
     return diag(cov(f, args, x, x′))
 end

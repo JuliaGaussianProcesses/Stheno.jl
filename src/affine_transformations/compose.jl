@@ -9,19 +9,27 @@ Constructs the DerivedGP f′ given by f′(x) := f(g(x))
 
 const comp_args = Tuple{typeof(∘),AbstractGP,Any}
 
-mean((_, f, g)::comp_args, x::AV) = mean(f, g.(x))
+mean((_, f, g)::comp_args, x::AbstractVector) = mean(f, g.(x))
 
-cov((_, f, g)::comp_args, x::AV) = cov(f, g.(x))
-var((_, f, g)::comp_args, x::AV) = var(f, g.(x))
+cov((_, f, g)::comp_args, x::AbstractVector) = cov(f, g.(x))
+var((_, f, g)::comp_args, x::AbstractVector) = var(f, g.(x))
 
-cov((_, f, g)::comp_args, x::AV, x′::AV) = cov(f, g.(x), g.(x′))
-var((_, f, g)::comp_args, x::AV, x′::AV) = var(f, g.(x), g.(x′))
+cov((_, f, g)::comp_args, x::AbstractVector, x′::AbstractVector) = cov(f, g.(x), g.(x′))
+var((_, f, g)::comp_args, x::AbstractVector, x′::AbstractVector) = var(f, g.(x), g.(x′))
 
-cov((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, g.(x), x′)
-cov(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = cov(f, f′, x, g.(x′))
+function cov((_, f, g)::comp_args, f′::AbstractGP, x::AbstractVector, x′::AbstractVector)
+    return cov(f, f′, g.(x), x′)
+end
+function cov(f::AbstractGP, (_, f′, g)::comp_args, x::AbstractVector, x′::AbstractVector)
+    return cov(f, f′, x, g.(x′))
+end
 
-var((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, g.(x), x′)
-var(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = var(f, f′, x, g.(x′))
+function var((_, f, g)::comp_args, f′::AbstractGP, x::AbstractVector, x′::AbstractVector)
+    return var(f, f′, g.(x), x′)
+end
+function var(f::AbstractGP, (_, f′, g)::comp_args, x::AbstractVector, x′::AbstractVector)
+    return var(f, f′, x, g.(x′))
+end
 
 """
     Stretch{T<:Union{Real, AbstractMatrix{<:Real}}}
@@ -100,7 +108,7 @@ periodic(g::AbstractGP, f::Real) = g ∘ Periodic(f)
 # Translations of GPs through their input spaces.
 #
 
-struct Shift{Ta<:Union{Real,AV{<:Real}}}
+struct Shift{Ta<:Union{Real,AbstractVector{<:Real}}}
     a::Ta
 end
 (f::Shift{<:Real})(x::Real) = x - f.a
