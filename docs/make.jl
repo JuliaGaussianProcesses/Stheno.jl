@@ -47,6 +47,7 @@ dev_command = "Pkg.develop(PackageSpec(; path=relpath(\"$(pkgdir(Stheno))\", pwd
 
 let script = "using Pkg; Pkg.activate(ARGS[1]); $dev_command Pkg.instantiate()"
     for example in example_locations
+        @show example
         if !success(`$(Base.julia_cmd()) -e $script $example`)
             error(
                 "project environment of example ",
