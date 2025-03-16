@@ -1,11 +1,6 @@
 module Stheno
 
-# Users generally need access to the functionality from both of these packages.
-using Reexport
-@reexport using AbstractGPs
-@reexport using KernelFunctions
-
-using BlockArrays, LinearAlgebra, Random
+using AbstractGPs, BlockArrays, LinearAlgebra, Random
 
 import Base.Broadcast: broadcasted
 
