@@ -1,9 +1,6 @@
 # # Process Decomposition
 
-using AbstractGPs
-using Plots
-using Random
-using Stheno
+using AbstractGPs, Plots, Random, Stheno
 
 # Define our model.
 # Define a distribution over f₁, f₂, and f₃, where f₃(x) = f₁(x) + f₂(x).
@@ -33,7 +30,7 @@ xp_ = range(-2.5; stop=12.5, length=Np);
 xp = BlockData(GPPPInput(:f1, xp_), GPPPInput(:f2, xp_), GPPPInput(:f3, xp_));
 
 # Sample jointly from the posterior over each process.
-f_samples = rand(rng, f_post(xp, 1e-9), S);
+f_samples = rand(rng, f_post(xp, 1e-5), S);
 f′1_xp, f′2_xp, f′3_xp = split(xp, f_samples);
 
 # Compute posterior marginals.
