@@ -1,26 +1,26 @@
 # # CO2 and temperature
 
-using AbstractGPs
-using AbstractGPsMakie
-using CairoMakie
-using CSV
-using DataDeps
-using DataFrames
-using Dates
-using Distributions
-using KernelFunctions
-using LinearAlgebra
-using Optim
-using ParameterHandling
-using Random
-using Statistics
-using Stheno
-using Zygote
+using AbstractGPs,
+    AbstractGPsMakie,
+    ADTypes,
+    CairoMakie,
+    CSV,
+    DataDeps,
+    DataFrames,
+    Dates,
+    Distributions,
+    KernelFunctions,
+    LinearAlgebra,
+    Mooncake,
+    Optim,
+    ParameterHandling,
+    Random,
+    Statistics,
+    Stheno
 
 using CairoMakie: RGB
 
 ENV["DATADEPS_ALWAYS_ACCEPT"] = "true"
-
 
 # ## Obtain the data
 
@@ -37,10 +37,6 @@ register(DataDep(
     "https://www.metoffice.gov.uk/hadobs/hadcrut5/data/current/analysis/diagnostics/" *
         "HadCRUT.5.0.1.0.analysis.summary_series.global.monthly.csv",
 ))
-
-
-
-
 
 # Load and pre-process the data.
 ml_df, Ttr_df, Tte_df = let
@@ -178,46 +174,20 @@ init_params = (
     ),
 )
 
-default_optimizer = LBFGS(;
-    alphaguess=Optim.LineSearches.InitialStatic(; scaled=true),
-    linesearch=Optim.LineSearches.BackTracking(),
-)
+flat_init_params, unflatten = ParameterHandling.value_flatten(init_params)
 
-function optimize_loss(loss, θ_init; optimizer=default_optimizer, maxiter=1_000)
-    options = Optim.Options(; iterations=maxiter, show_trace=true)
-
-    θ_flat_init, unflatten = ParameterHandling.value_flatten(θ_init)
-    loss_packed = loss ∘ unflatten
-
-    ## https://julianlsolvers.github.io/Optim.jl/stable/#user/tipsandtricks/#avoid-repeating-computations
-    function fg!(F, G, x)
-        if F !== nothing && G !== nothing
-            val, grad = Zygote.withgradient(loss_packed, x)
-            G .= only(grad)
-            return val
-        elseif G !== nothing
-            grad = Zygote.gradient(loss_packed, x)
-            G .= only(grad)
-            return nothing
-        elseif F !== nothing
-            return loss_packed(x)
-        end
-    end
-
-    result = optimize(Optim.only_fg!(fg!), θ_flat_init, optimizer, options; inplace=false)
-
-    return unflatten(result.minimizer), result
-end
-
-function KernelFunctions.kernelmatrix(k::ConstantKernel, x::AbstractVector)
-    return fill(only(k.c), length(x), length(x))
-end
-
-function KernelFunctions.kernelmatrix(k::ConstantKernel, x::AbstractVector, y::AbstractVector)
-    return fill(only(k.c), length(x), length(y))
-end
-
-θ_opt, result = optimize_loss(nlml, init_params)
+result = Optim.optimize(
+    nlml ∘ unflatten,
+    flat_init_params,
+    BFGS(
+        alphaguess = Optim.LineSearches.InitialStatic(scaled=true),
+        linesearch = Optim.LineSearches.BackTracking(),
+    ),
+    Optim.Options(show_trace = true);
+    inplace=false,
+    autodiff=AutoMooncake(; config=nothing),
+);
+θ_opt = unflatten(result.minimizer);
 
 # ## Plot the resulting model fit.
 
