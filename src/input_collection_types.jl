@@ -21,18 +21,16 @@ julia> v == map(x_ -> (:a, x_), x)
 true
 ```
 """
-struct GPPPInput{Tp, T, Tx<:AbstractVector{T}} <: AbstractVector{Tuple{Tp, T}}
+struct GPPPInput{Tp,T,Tx<:AbstractVector{T}} <: AbstractVector{Tuple{Tp,T}}
     p::Tp
     x::Tx
 end
 
-Base.size(x::GPPPInput) = (length(x.x), )
+Base.size(x::GPPPInput) = (length(x.x),)
 
 Base.getindex(x::GPPPInput, idx::Integer) = only(x[idx:idx])
 
 Base.getindex(x::GPPPInput, idx) = map(x_ -> (x.p, x_), x.x[idx])
-
-
 
 """
     BlockData{T, TV<:AbstractVector{T}, TX<:AbstractVector{TV}} <: AbstractVector{T}
@@ -58,11 +56,11 @@ x = BlockData(
 f(x)
 ```
 """
-struct BlockData{T, V<:AbstractVector{<:T}} <: AbstractVector{T}
+struct BlockData{T,V<:AbstractVector{<:T}} <: AbstractVector{T}
     X::Vector{V}
 end
 
-BlockData(X::Vector{AbstractVector}) = BlockData{Any, AbstractVector}(X)
+BlockData(X::Vector{AbstractVector}) = BlockData{Any,AbstractVector}(X)
 
 BlockData(xs::AbstractVector...) = BlockData([xs...])
 
@@ -92,4 +90,4 @@ end
 
 Base.vcat(x::GPPPInput...) = BlockData(AbstractVector[x...])
 
-Base.vcat(x::GPPPInput{Symbol, T}...) where {T} = BlockData([x...])
+Base.vcat(x::GPPPInput{Symbol,T}...) where {T} = BlockData([x...])

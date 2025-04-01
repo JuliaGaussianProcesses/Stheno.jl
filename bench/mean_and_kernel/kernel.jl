@@ -1,5 +1,4 @@
 @benchset "kernel" begin
-
     @benchset "ZeroKernel{Float64}()" begin
         create_benchmarks(ZeroKernel{Float64}(); grads=false)
     end
@@ -8,12 +7,12 @@
     # end
     # @benchset "SEKernel" begin
     #     @benchset "Real CPU" create_benchmarks(SEKernel())
-        # @benchset "Real GPU" create_benchmarks(
-        #     SEKernel();
-        #     x=randn(Float32), x′=randn(Float32),
-        #     x̄s=[CuArray{Float32}(randn(N)) for N in Ns()],
-        #     x̄′s=[CuArray{Float32}(randn(N)) for N in Ns()],
-        # )
+    # @benchset "Real GPU" create_benchmarks(
+    #     SEKernel();
+    #     x=randn(Float32), x′=randn(Float32),
+    #     x̄s=[CuArray{Float32}(randn(N)) for N in Ns()],
+    #     x̄′s=[CuArray{Float32}(randn(N)) for N in Ns()],
+    # )
 
     #     for D in Ds()
     #         @benchset "ColVecs (D=$D) CPU" create_benchmarks(

@@ -27,7 +27,7 @@ julia> logpdf(fxu, y) < logpdf(fobs, y)
 true
 ```
 """
-struct SparseFiniteGP{T1<:FiniteGP, T2<:FiniteGP} <: AbstractGPs.AbstractMvNormal
+struct SparseFiniteGP{T1<:FiniteGP,T2<:FiniteGP} <: AbstractGPs.AbstractMvNormal
     fobs::T1
     finducing::T2
 end
@@ -36,7 +36,8 @@ Base.length(f::SparseFiniteGP) = length(f.fobs)
 
 AbstractGPs.mean(f::SparseFiniteGP) = mean(f.fobs)
 
-const __covariance_error = "The covariance matrix of a sparse GP can often be dense and " *
+const __covariance_error =
+    "The covariance matrix of a sparse GP can often be dense and " *
     "can cause the computer to run out of memory. If you are sure you have enough " *
     "memory, you can use `cov(f.fobs)`."
 
@@ -49,9 +50,13 @@ AbstractGPs.rand(f::SparseFiniteGP, N::Int) = rand(Random.GLOBAL_RNG, f, N)
 AbstractGPs.rand(rng::AbstractRNG, f::SparseFiniteGP) = vec(rand(rng, f, 1))
 AbstractGPs.rand(f::SparseFiniteGP) = vec(rand(f, 1))
 
-AbstractGPs.elbo(f::SparseFiniteGP, y::AV{<:Real}) = elbo(VFE(f.finducing), f.fobs, y)
+function AbstractGPs.elbo(f::SparseFiniteGP, y::AbstractVector{<:Real})
+    return elbo(VFE(f.finducing), f.fobs, y)
+end
 
-AbstractGPs.logpdf(f::SparseFiniteGP, y::AV{<:Real}) = elbo(VFE(f.finducing), f.fobs, y)
+function AbstractGPs.logpdf(f::SparseFiniteGP, y::AbstractVector{<:Real})
+    return elbo(VFE(f.finducing), f.fobs, y)
+end
 
 function AbstractGPs.logpdf(f::SparseFiniteGP, Y::AbstractMatrix{<:Real})
     return map(y -> logpdf(f, y), eachcol(Y))

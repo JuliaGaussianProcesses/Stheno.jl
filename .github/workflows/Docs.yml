@@ -1,30 +1,37 @@
-name: Docs
+name: Documentation
 
 on:
   push:
     branches:
-      - master
+      - master # update to match your development branch (master, main, dev, trunk, ...)
     tags: '*'
   pull_request:
 
 jobs:
-  docs:
-    name: Documentation
+  build:
+    # These permissions are needed to:
+    # - Deploy the documentation: https://documenter.juliadocs.org/stable/man/hosting/#Permissions
+    # - Delete old caches: https://github.com/julia-actions/cache#usage
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: read
+      statuses: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
-      - name: Install dependencies, build and deploy
+      - uses: julia-actions/cache@v2
+      - name: Install dependencies
+        shell: julia --color=yes --project=docs {0}
         run: |
           using Pkg
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
-          include(joinpath(pwd(), "docs", "make.jl"))
+      - name: Build and deploy
+        run: julia --color=yes --project=docs docs/make.jl
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
-          GKSwstype: nul # turn off GR's interactive plotting for notebooks
-          JULIA_PKG_SERVER: ''
-        shell: julia --color=yes --project=docs/ {0}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

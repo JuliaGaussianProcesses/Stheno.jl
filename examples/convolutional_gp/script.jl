@@ -21,18 +21,18 @@ train_y = train_y_full[ones_and_twos_indices];
 
 # Simple wrapper type representing a stack of greyscale images.
 struct GreyScaleImageVector{T<:Real} <: AbstractVector{Matrix{T}}
-    X::Array{T, 3}
+    X::Array{T,3}
 end
 
 Base.getindex(x::GreyScaleImageVector, n::Integer) = x.X[:, :, n]
 
-Base.size(x::GreyScaleImageVector) = (size(x.X, 3), )
+Base.size(x::GreyScaleImageVector) = (size(x.X, 3),)
 
 function extract_patches(x::GreyScaleImageVector)
     X = x.X
     return [
-        ColVecs(reshape(getindex(X, p:p+2, q:q+2, :), :, size(X, 3))) for
-        p in 1:size(X, 1)-2 for q in 1:size(X, 2)-2
+        ColVecs(reshape(getindex(X, p:(p + 2), q:(q + 2), :), :, size(X, 3))) for
+        p in 1:(size(X, 1) - 2) for q in 1:(size(X, 2) - 2)
     ]
 end
 
@@ -40,7 +40,7 @@ end
 
 patch_convolve(g::AbstractGP) = DerivedGP((patch_convolve, g), g.gpc)
 
-const patch_args = Tuple{typeof(patch_convolve), AbstractGP}
+const patch_args = Tuple{typeof(patch_convolve),AbstractGP}
 
 function AbstractGPs.mean((_, g)::patch_args, x::GreyScaleImageVector)
     return sum(map(xp -> mean(g, xp), extract_patches(x)))

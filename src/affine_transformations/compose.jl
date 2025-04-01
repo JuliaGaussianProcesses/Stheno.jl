@@ -7,33 +7,36 @@ Constructs the DerivedGP f′ given by f′(x) := f(g(x))
 """
 ∘(f::AbstractGP, g) = DerivedGP((∘, f, g), f.gpc)
 
-const comp_args = Tuple{typeof(∘), AbstractGP, Any}
+const comp_args = Tuple{typeof(∘),AbstractGP,Any}
 
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::comp_args, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::comp_args, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::comp_args, ::AV)
+mean((_, f, g)::comp_args, x::AbstractVector) = mean(f, g.(x))
 
-mean((_, f, g)::comp_args, x::AV) = mean(f, g.(x))
+cov((_, f, g)::comp_args, x::AbstractVector) = cov(f, g.(x))
+var((_, f, g)::comp_args, x::AbstractVector) = var(f, g.(x))
 
-cov((_, f, g)::comp_args, x::AV) = cov(f, g.(x))
-var((_, f, g)::comp_args, x::AV) = var(f, g.(x))
+cov((_, f, g)::comp_args, x::AbstractVector, x′::AbstractVector) = cov(f, g.(x), g.(x′))
+var((_, f, g)::comp_args, x::AbstractVector, x′::AbstractVector) = var(f, g.(x), g.(x′))
 
-cov((_, f, g)::comp_args, x::AV, x′::AV) = cov(f, g.(x), g.(x′))
-var((_, f, g)::comp_args, x::AV, x′::AV) = var(f, g.(x), g.(x′))
+function cov((_, f, g)::comp_args, f′::AbstractGP, x::AbstractVector, x′::AbstractVector)
+    return cov(f, f′, g.(x), x′)
+end
+function cov(f::AbstractGP, (_, f′, g)::comp_args, x::AbstractVector, x′::AbstractVector)
+    return cov(f, f′, x, g.(x′))
+end
 
-cov((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, g.(x), x′)
-cov(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = cov(f, f′, x, g.(x′))
-
-var((_, f, g)::comp_args, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, g.(x), x′)
-var(f::AbstractGP, (_, f′, g)::comp_args, x::AV, x′::AV) = var(f, f′, x, g.(x′))
-
+function var((_, f, g)::comp_args, f′::AbstractGP, x::AbstractVector, x′::AbstractVector)
+    return var(f, f′, g.(x), x′)
+end
+function var(f::AbstractGP, (_, f′, g)::comp_args, x::AbstractVector, x′::AbstractVector)
+    return var(f, f′, x, g.(x′))
+end
 
 """
     Stretch{T<:Union{Real, AbstractMatrix{<:Real}}}
 
 Stretch all elements of the inputs by `l`.
 """
-struct Stretch{T<:Union{Real, AbstractMatrix{<:Real}}}
+struct Stretch{T<:Union{Real,AbstractMatrix{<:Real}}}
     l::T
 end
 (s::Stretch)(x) = s.l * x
@@ -58,8 +61,6 @@ stretch(f::AbstractGP, l::Real) = f ∘ Stretch(l)
 stretch(f::AbstractGP, a::AbstractVector{<:Real}) = stretch(f, Diagonal(a))
 stretch(f::AbstractGP, A::AbstractMatrix{<:Real}) = f ∘ Stretch(A)
 
-
-
 """
     Select{Tidx}
 
@@ -83,8 +84,6 @@ Select the dimensions of the input to `f` given by `idx`.
 """
 select(f::AbstractGP, idx) = f ∘ Select(idx)
 
-
-
 """
     Periodic{Tf<:Real}
 
@@ -105,13 +104,11 @@ Produce an AbstractGP with period `f`.
 """
 periodic(g::AbstractGP, f::Real) = g ∘ Periodic(f)
 
-
-
 #
 # Translations of GPs through their input spaces.
 #
 
-struct Shift{Ta<:Union{Real, AV{<:Real}}}
+struct Shift{Ta<:Union{Real,AbstractVector{<:Real}}}
     a::Ta
 end
 (f::Shift{<:Real})(x::Real) = x - f.a

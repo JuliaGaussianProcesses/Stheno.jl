@@ -2,7 +2,6 @@
 # GPPP implementation.
 #
 
-
 """
     GaussianProcessProbabilisticProgramme(fs, gpc)
 
@@ -29,7 +28,7 @@ function extract_components(f::GPPP, x::BlockData)
     return cross(first.(fs_and_vs)), BlockData(last.(fs_and_vs))
 end
 
-function extract_components(f::GPPP, x::AbstractVector{<:Tuple{T, V}} where {T, V})
+function extract_components(f::GPPP, x::AbstractVector{<:Tuple{T,V}} where {T,V})
     symbols = first.(x)
     features = last.(x)
 
@@ -79,8 +78,6 @@ function AbstractGPs.mean_and_var(f::GPPP, x::AbstractVector)
     return mean_and_var(fs, vs)
 end
 
-
-
 """
     Base.split(x::BlockData, Y::AbstractVecOrMat)
 
@@ -120,21 +117,18 @@ Functionality also works with any `AbstractVector`.
 """
 function Base.split(x::BlockData, Y::AbstractMatrix)
     length(x) == size(Y, 1) || throw(error("Expected length(x) == size(Y, 1)"))
-    return map(idx->Y[idx, :], _get_indices(x))
+    return map(idx -> Y[idx, :], _get_indices(x))
 end
 
 function Base.split(x::BlockData, y::AbstractVector)
     length(x) == length(y) || throw(error("Expected length(x) == length(y)"))
-    return map(idx->y[idx], _get_indices(x))
+    return map(idx -> y[idx], _get_indices(x))
 end
 
 function _get_indices(x::BlockData)
     sz = cumsum(map(length, x.X))
-    return [sz[n] - length(x.X[n]) + 1:sz[n] for n in eachindex(x.X)]
+    return [(sz[n] - length(x.X[n]) + 1):sz[n] for n in eachindex(x.X)]
 end
-ChainRulesCore.@non_differentiable _get_indices(::Any)
-
-
 
 """
     @gppp(model_expression)
@@ -179,20 +173,18 @@ macro gppp(let_block::Expr)
 
     # Construct expression which specifies mappings between symbolic names and GPs.
     # The resulting expression is of the form (f1 = f1, f2 = f2).
-    var_mapping = Expr(
-        :tuple,
-        map(variable_names) do var_name
-            Expr(:(=), var_name, var_name)
-        end...,
-    )
+    var_mapping = Expr(:tuple, map(variable_names) do var_name
+        Expr(:(=), var_name, var_name)
+    end...)
 
     gpc_sym = gensym("gpc")
 
     # Construct an expression which wraps the GPs, and returns a GPPP.
-    wrapped_model = Expr(:block,
+    wrapped_model = Expr(
+        :block,
         :($gpc_sym = Stheno.GPC()),
         postwalk(
-            x->@capture(x, GP(xs__)) ? :(Stheno.atomic(GP($(xs...)), $gpc_sym)) : x,
+            x -> @capture(x, GP(xs__)) ? :(Stheno.atomic(GP($(xs...)), $gpc_sym)) : x,
             model_expr,
         ).args...,
         :(Stheno.GPPP($var_mapping, $gpc_sym)),

@@ -11,49 +11,41 @@ function +(fa::AbstractGP, fb::AbstractGP)
 end
 -(fa::AbstractGP, fb::AbstractGP) = fa + (-fb)
 
-
-
 #
 # Add two GPs
 #
 
-const add_args = Tuple{typeof(+), AbstractGP, AbstractGP}
+const add_args = Tuple{typeof(+),AbstractGP,AbstractGP}
 
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::add_args, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::add_args, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::add_args, ::AV)
+mean((_, fa, fb)::add_args, x::AbstractVector) = mean(fa, x) .+ mean(fb, x)
 
-mean((_, fa, fb)::add_args, x::AV) = mean(fa, x) .+ mean(fb, x)
-
-function cov((_, fa, fb)::add_args, x::AV)
+function cov((_, fa, fb)::add_args, x::AbstractVector)
     return cov(fa, x) .+ cov(fb, x) .+ cov(fa, fb, x, x) .+ cov(fb, fa, x, x)
 end
-function var((_, fa, fb)::add_args, x::AV)
+function var((_, fa, fb)::add_args, x::AbstractVector)
     return var(fa, x) .+ var(fb, x) .+ var(fa, fb, x, x) .+ var(fb, fa, x, x)
 end
 
-function cov((_, fa, fb)::add_args, x::AV, x′::AV)
+function cov((_, fa, fb)::add_args, x::AbstractVector, x′::AbstractVector)
     return cov(fa, x, x′) .+ cov(fb, x, x′) .+ cov(fa, fb, x, x′) .+ cov(fb, fa, x, x′)
 end
-function var((_, fa, fb)::add_args, x::AV, x′::AV)
+function var((_, fa, fb)::add_args, x::AbstractVector, x′::AbstractVector)
     return var(fa, x, x′) .+ var(fb, x, x′) .+ var(fa, fb, x, x′) .+ var(fb, fa, x, x′)
 end
 
-function cov((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
+function cov((_, fa, fb)::add_args, f′::AbstractGP, x::AbstractVector, x′::AbstractVector)
     return cov(fa, f′, x, x′) .+ cov(fb, f′, x, x′)
 end
-function cov(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
+function cov(f::AbstractGP, (_, fa, fb)::add_args, x::AbstractVector, x′::AbstractVector)
     return cov(f, fa, x, x′) .+ cov(f, fb, x, x′)
 end
 
-function var((_, fa, fb)::add_args, f′::AbstractGP, x::AV, x′::AV)
+function var((_, fa, fb)::add_args, f′::AbstractGP, x::AbstractVector, x′::AbstractVector)
     return var(fa, f′, x, x′) .+ var(fb, f′, x, x′)
 end
-function var(f::AbstractGP, (_, fa, fb)::add_args, x::AV, x′::AV)
+function var(f::AbstractGP, (_, fa, fb)::add_args, x::AbstractVector, x′::AbstractVector)
     return var(f, fa, x, x′) .+ var(f, fb, x, x′)
 end
-
-
 
 #
 # Add a constant or known function to an AbstractGP -- just shifts the mean
@@ -64,23 +56,27 @@ end
 -(b::Real, f::AbstractGP) = b + (-f)
 -(f::AbstractGP, b::Real) = f + (-b)
 
-const add_known{T} = Tuple{typeof(+), T, AbstractGP}
+const add_known{T} = Tuple{typeof(+),T,AbstractGP}
 
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(mean), ::add_known, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(cov), ::add_known, ::AV)
-@opt_out rrule(::RuleConfig{>:HasReverseMode}, ::typeof(var), ::add_known, ::AV)
+mean((_, b, f)::add_known, x::AbstractVector) = b.(x) .+ mean(f, x)
+mean((_, b, f)::add_known{<:Real}, x::AbstractVector) = b .+ mean(f, x)
 
-mean((_, b, f)::add_known, x::AV) = b.(x) .+ mean(f, x)
-mean((_, b, f)::add_known{<:Real}, x::AV) = b .+ mean(f, x)
+cov((_, b, f)::add_known, x::AbstractVector) = cov(f, x)
+var((_, b, f)::add_known, x::AbstractVector) = var(f, x)
 
-cov((_, b, f)::add_known, x::AV) = cov(f, x)
-var((_, b, f)::add_known, x::AV) = var(f, x)
+cov((_, b, f)::add_known, x::AbstractVector, x′::AbstractVector) = cov(f, x, x′)
+var((_, b, f)::add_known, x::AbstractVector, x′::AbstractVector) = var(f, x, x′)
 
-cov((_, b, f)::add_known, x::AV, x′::AV) = cov(f, x, x′)
-var((_, b, f)::add_known, x::AV, x′::AV) = var(f, x, x′)
+function cov((_, b, f)::add_known, f′::AbstractGP, x::AbstractVector, x′::AbstractVector)
+    return cov(f, f′, x, x′)
+end
+function cov(f::AbstractGP, (_, b, f′)::add_known, x::AbstractVector, x′::AbstractVector)
+    return cov(f, f′, x, x′)
+end
 
-cov((_, b, f)::add_known, f′::AbstractGP, x::AV, x′::AV) = cov(f, f′, x, x′)
-cov(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = cov(f, f′, x, x′)
-
-var((_, b, f)::add_known, f′::AbstractGP, x::AV, x′::AV) = var(f, f′, x, x′)
-var(f::AbstractGP, (_, b, f′)::add_known, x::AV, x′::AV) = var(f, f′, x, x′)
+function var((_, b, f)::add_known, f′::AbstractGP, x::AbstractVector, x′::AbstractVector)
+    return var(f, f′, x, x′)
+end
+function var(f::AbstractGP, (_, b, f′)::add_known, x::AbstractVector, x′::AbstractVector)
+    return var(f, f′, x, x′)
+end

@@ -1,6 +1,5 @@
 @testset "input_collection_types" begin
-    @timedtestset "BlockData" begin
-
+    @testset "BlockData" begin
         rng = MersenneTwister(123456)
         N = 10
         D = 2
@@ -21,7 +20,7 @@
         @test view(DxX, 2, 1) == view(DX, 1)
         @test view(DxX, 2, N) == view(DX, N)
         @test eachindex(DxX) isa BlockVector
-        @test eachindex(DxX) == mortar([1:N, N+1:2N], [N, N])
+        @test eachindex(DxX) == mortar([1:N, (N + 1):(2N)], [N, N])
 
         # Test iteration.
         @test [x for x in DxX][1] == x[1]
@@ -39,7 +38,7 @@
         @test BlockData(x, DX) == DxX
 
         # Convenience constructors when we have GPPPInputs.
-        @timedtestset "vcat(::GPPPInput...)" begin
+        @testset "vcat(::GPPPInput...)" begin
             ax = GPPPInput(:a, x)
             bx = GPPPInput(:b, DX)
             @test vcat(ax, bx) isa BlockData

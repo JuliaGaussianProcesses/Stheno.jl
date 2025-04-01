@@ -4,13 +4,12 @@
 # - [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl) to perform Bayesian inference in our model parameters,
 # - [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) for point-estimates of our model parameters,
 # - [ParameterHandling.jl](https://github.com/invenia/ParameterHandling.jl) to make it easy to work with our model's parameters, and to ensure that it plays nicely with Optim and AdvancedHMC,
-# - [Zygote.jl](https://github.com/FluxML/Zygote.jl/) to compute gradients.
+# - [Mooncake.jl](https://github.com/compintell/Mooncake.jl/) to compute gradients.
 
 # This guide assumes that you know roughly what's going on conceptually with GPs. If you're
 # new to Gaussian processes, an excellent introduction can be found in either
 # [this video lecture](http://videolectures.net/gpip06_mackay_gpb/) or
 # [this one](https://www.youtube.com/watch?v=92-98SYOdlY).
-
 
 # ## Exact Inference in a GP in 2 Minutes
 #
@@ -18,10 +17,7 @@
 # It's slightly more interesting in that we give the kernels some learnable parameters.
 
 # Import the packages we'll need for this bit of the demo.
-using AbstractGPs
-using LinearAlgebra
-using Stheno
-using Plots
+using AbstractGPs, LinearAlgebra, Stheno, Plots
 
 # Short length-scale and small variance.
 l1 = 0.4
@@ -41,10 +37,10 @@ end;
 
 # Generate a sample from f3, one of the processes in f, at some random input locations.
 # Add some iid observation noise, with zero-mean and variance 0.02.
-const x = GPPPInput(:f3, collect(range(-5.0, 5.0; length=100)));
+x = GPPPInput(:f3, collect(range(-5.0, 5.0; length=100)));
 σ²_n = 0.02;
 fx = f(x, σ²_n);
-const y = rand(fx);
+y = rand(fx);
 
 # Compute the log marginal likelihood of this observation, just because we can.
 logpdf(fx, y)
@@ -63,7 +59,6 @@ plt = plot();
 scatter!(plt, x.x, y; color=:red, label="");
 display(plt)
 
-
 # It's straightforward to compute the posterior over `f`:
 f_posterior = posterior(fx, y);
 # `f_posterior` is another GP, the posterior over `f` given noisy observations `y` at inputs `x`.
@@ -73,12 +68,24 @@ f_posterior = posterior(fx, y);
 x_plot = range(-7.0, 7.0; length=1000);
 xp = GPPPInput(:f3, x_plot);
 plot!(
-    plt, x_plot, f_posterior(xp);
-    ribbon_scale=3, label="", color=:blue, fillalpha=0.2, linewidth=2,
+    plt,
+    x_plot,
+    f_posterior(xp);
+    ribbon_scale=3,
+    label="",
+    color=:blue,
+    fillalpha=0.2,
+    linewidth=2,
 )
 plot!(
-    plt, x_plot, rand(f_posterior(xp, 1e-9), 10);
-    samples=10, markersize=1, alpha=0.3, label="", color=:blue,
+    plt,
+    x_plot,
+    rand(f_posterior(xp, 1e-9), 10);
+    samples=10,
+    markersize=1,
+    alpha=0.3,
+    label="",
+    color=:blue,
 );
 plt
 
@@ -88,17 +95,17 @@ plt
 # Consider `f2`:
 xp2 = GPPPInput(:f2, x_plot);
 plot!(
-    plt, x_plot, f_posterior(xp2);
-    ribbon_scale=3, label="", color=:red, fillalpha=0.2, linewidth=2,
+    plt,
+    x_plot,
+    f_posterior(xp2);
+    ribbon_scale=3,
+    label="",
+    color=:red,
+    fillalpha=0.2,
+    linewidth=2,
 );
-plot!(
-    plt, x_plot, rand(f_posterior(xp2, 1e-9), 10);
-    alpha=0.3, label="", color=:red,
-);
+plot!(plt, x_plot, rand(f_posterior(xp2, 1e-9), 10); alpha=0.3, label="", color=:red);
 plt
-
-
-
 
 # ## Fit a GP with NelderMead in 2 Minutes
 
@@ -116,22 +123,21 @@ function build_model(θ::NamedTuple)
     end
 end
 
-
 # We've assumed that the parameters will be provided as a `NamedTuple`, so let's build one and check that the model can be constructed:
 using ParameterHandling
 
 θ = (
     ## Short length-scale and small variance.
-    l1 = positive(0.4),
-    s1 = positive(0.2),
+    l1=positive(0.4),
+    s1=positive(0.2),
 
     ## Long length-scale and larger variance.
-    l2 = positive(5.0),
-    s2 = positive(1.0),
+    l2=positive(5.0),
+    s2=positive(1.0),
 
     ## Observation noise variance -- we'll be learning this as well. Constrained to be
     ## at least 1e-3.
-    s_noise = positive(0.1, exp, 1e-3),
+    s_noise=positive(0.1, exp, 1e-3),
 )
 
 # We've used `ParameterHandling.jl`s `positive` constraint to ensure that all of the
@@ -156,15 +162,12 @@ function nlml(θ::NamedTuple)
     return -logpdf(f(x, θ.s_noise + 1e-6), y)
 end
 
-
 # We can use any gradient-free optimisation technique from
 # [Optim.jl](https://github.com/JuliaNLSolvers/Optim.jl) to find the parameters whose
 # negative log marginal likelihood is locally minimal:
 using Optim
 results = Optim.optimize(
-    nlml ∘ unpack,
-    θ_flat_init + randn(length(θ_flat_init)),
-    NelderMead(),
+    nlml ∘ unpack, θ_flat_init + randn(length(θ_flat_init)), NelderMead()
 )
 θ_opt = unpack(results.minimizer);
 # Note that we just added some noise to the initial values to make the optimisation more
@@ -176,39 +179,41 @@ f_opt = build_model(θ_opt);
 f_posterior_opt = posterior(f_opt(x, θ_opt.s_noise), y);
 ms_opt = marginals(f_posterior_opt(xp));
 plot!(
-    plt, x_plot, mean.(ms_opt);
-    ribbon=3std.(ms_opt), label="", color=:green, fillalpha=0.2, linewidth=2,
+    plt,
+    x_plot,
+    mean.(ms_opt);
+    ribbon=3std.(ms_opt),
+    label="",
+    color=:green,
+    fillalpha=0.2,
+    linewidth=2,
 );
-plot!(
-    plt, x_plot, rand(f_posterior_opt(xp, 1e-9), 10);
-    alpha=0.3, label="", color=:green,
-);
+plot!(plt, x_plot, rand(f_posterior_opt(xp, 1e-9), 10); alpha=0.3, label="", color=:green);
 plt
 
 # Of course, the exact posterior has not been recovered because the exact hyperparameters
 # cannot be expected to be recovered given a finite amount of data over a finite width
 # window.
 
-
 # ## Fit a GP with BFGS in 2 minutes
 
 # The BFGS algorithm is generally the preferred choice when optimising the hyperparameters
 # of fairly simple GPs. It requires access to the gradient of our `nlml` function, which
 # can be straightforwardly obtained via reverse-mode algorithmic differentiation, which is
-# provided by [Zygote.jl](https://github.com/FluxML/Zygote.jl):
+# provided by [Mooncake.jl](https://github.com/compintell/Mooncake.jl):
 
-using Zygote: gradient
+using ADTypes
+using Mooncake: Mooncake
 
-# This will probably take a while to get going as Zygote needs to compile.
+# This will probably take a while to get going as Mooncake needs to compile.
+backend = AutoMooncake(; config=nothing)
 results = Optim.optimize(
     nlml ∘ unpack,
-    θ->gradient(nlml ∘ unpack, θ)[1],
     θ_flat_init + 0.1 * randn(length(θ_flat_init)),
     BFGS(),
-    Optim.Options(
-        show_trace=true,
-    );
+    Optim.Options(; show_trace=true);
     inplace=false,
+    autodiff=backend,
 )
 θ_bfgs = unpack(results.minimizer);
 
@@ -217,17 +222,19 @@ f_bfgs = build_model(θ_bfgs);
 f_posterior_bfgs = posterior(f_bfgs(x, θ_bfgs.s_noise), y);
 ms_bfgs = marginals(f_posterior_bfgs(xp));
 plot!(
-    plt, x_plot, mean.(ms_bfgs);
-    ribbon=3std.(ms_bfgs), label="", color=:orange, fillalpha=0.2, linewidth=2,
+    plt,
+    x_plot,
+    mean.(ms_bfgs);
+    ribbon=3std.(ms_bfgs),
+    label="",
+    color=:orange,
+    fillalpha=0.2,
+    linewidth=2,
 );
-plot!(
-    plt, x_plot, rand(f_posterior_bfgs(xp, 1e-9), 10);
-    alpha=0.3, label="", color=:orange,
-);
+plot!(plt, x_plot, rand(f_posterior_bfgs(xp, 1e-9), 10); alpha=0.3, label="", color=:orange);
 plt
 
 # Notice that the two optimisers produce (almost) indistinguishable results.
-
 
 # ## Inference with NUTS in 2 minutes
 
@@ -236,15 +243,13 @@ plt
 # approximate Bayesian inference in the hyperparameters of the GP.
 # This is slightly longer than the previous examples, but it's all set up associated with
 # AdvancedHMC, which is literally a copy-paste from that package's README:
-using AdvancedHMC, Zygote
+using AdvancedHMC
+import DifferentiationInterface as DI
 
 # Define the log marginal joint density function and its gradient
 ℓπ(θ_flat) = -nlml(unpack(θ_flat)) - 0.5 * sum(abs2, θ_flat)
-function ∂ℓπ∂θ(θ_flat)
-    lml, back = Zygote.pullback(ℓπ, θ_flat)
-    ∂θ_flat = first(back(1.0))
-    return lml, ∂θ_flat
-end
+const ∂ℓπ∂θ_prep = DI.prepare_gradient(ℓπ, backend, θ_flat_init)
+∂ℓπ∂θ(θ_flat) = DI.value_and_gradient(ℓπ, ∂ℓπ∂θ_prep, backend, θ_flat)
 
 # Sampling parameter settings
 n_samples, n_adapts = 500, 20
@@ -254,13 +259,15 @@ n_samples, n_adapts = 500, 20
 
 # Define metric space, Hamiltonian, sampling method and adaptor
 metric = DiagEuclideanMetric(5)
-h = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
-int = Leapfrog(find_good_eps(h, θ0_flat))
-prop = NUTS{MultinomialTS, GeneralisedNoUTurn}(int)
-adaptor = StanHMCAdaptor(n_adapts, Preconditioner(metric), NesterovDualAveraging(0.8, int.ϵ))
+hamiltonian = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
+integrator = Leapfrog(find_good_eps(hamiltonian, θ0_flat))
+kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
+adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
 # Perform inference.
-samples, stats = sample(h, prop, θ0_flat, n_samples, adaptor, n_adapts; progress=true)
+samples, stats = sample(
+    hamiltonian, kernel, θ0_flat, n_samples, adaptor, n_adapts; progress=true
+)
 
 # Inspect posterior distribution over hyperparameters.
 hypers = map(unpack, samples);
@@ -273,9 +280,6 @@ plot(h_l1, h_l2, h_s1, h_s2; layout=(2, 2))
 # As expected, the sampler converges to the posterior distribution quickly.
 # One could combine this code with that from the previous sections to make predictions under
 # the posterior over the hyperparameters.
-
-
-
 
 # ## Conclusion
 

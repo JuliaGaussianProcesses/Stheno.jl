@@ -11,7 +11,6 @@ using AbstractGPs
 using LinearAlgebra
 using Stheno
 
-
 # ## The Affine Transformation
 
 # Suppose that, for some reason, you wish to implement the affine transformation of a single
@@ -34,8 +33,7 @@ A(f::SthenoAbstractGP) = DerivedGP((A, f), f.gpc)
 # as we can safely assume that these have a `gpc` field.
 
 # We'll now define a type alias in order to simplify some methods later on:
-const A_args = Tuple{typeof(A), SthenoAbstractGP};
-
+const A_args = Tuple{typeof(A),SthenoAbstractGP};
 
 # ## Most Important Methods
 
@@ -96,7 +94,6 @@ x_Af = GPPPInput(:Af, randn(3))
 y_Af = GPPPInput(:Af, randn(6))
 z_Af = GPPPInput(:Af, randn(3))
 
-
 # The covariance matrix at a single pair of inputs:
 
 function Stheno.cov((A, f)::A_args, x::AbstractVector)
@@ -104,7 +101,6 @@ function Stheno.cov((A, f)::A_args, x::AbstractVector)
 end
 
 cov(gppp, x_Af, x_Af) ≈ cov(gppp, x_Af)
-
 
 # The diagonal of the covariance matrix at a single pair of inputs:
 
@@ -114,7 +110,6 @@ end
 
 var(gppp, x_Af) ≈ diag(cov(gppp, x_Af))
 
-
 # The diagonal of the cross-covariance matrix for equal-length inputs:
 
 function Stheno.var((A, f)::A_args, x::AbstractVector, y::AbstractVector)
@@ -123,7 +118,6 @@ end
 
 var(gppp, x_Af, z_Af) ≈ diag(cov(gppp, x_Af, z_Af))
 
-
 # The diagonal of the cross-covariance between different processes for equal-length inputs:
 
 function Stheno.var((A, f)::A_args, g::AbstractGP, x::AbstractVector, y::AbstractVector)
@@ -131,7 +125,6 @@ function Stheno.var((A, f)::A_args, g::AbstractGP, x::AbstractVector, y::Abstrac
 end
 
 var(gppp, x_Af, x_f) ≈ diag(cov(gppp, x_Af, x_f))
-
 
 # `cov` and `var` between processes when `Af`'s arguments are the second argument, rather
 # than the first:
@@ -147,7 +140,6 @@ function Stheno.var(g::AbstractGP, (A, f)::A_args, x::AbstractVector, y::Abstrac
 end
 
 var(gppp, x_f, x_Af) ≈ var(gppp, x_Af, x_f)
-
 
 # ## Checking Your Implementation
 

@@ -9,8 +9,6 @@ const x2 = randn(25)
 
 @model foo(θ) = GP(ConstMean(θ.m), kernel(SEKernel(); l=θ.l));
 
-
-
 #
 # Test single-process versions of operations on foo.
 #
@@ -28,8 +26,6 @@ y = rand(foo(θ)(x, 0.1));
 
 @code_warntype logpdf(foo(θ)(x, 0.1), y)
 @benchmark logpdf(foo($θ)($x, 0.1), $y)
-
-
 
 #
 # Test multi-process versions of operations on foo.

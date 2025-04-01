@@ -1,9 +1,9 @@
 struct ToyAbstractGP <: AbstractGP end
 
-@timedtestset "gp" begin
+@testset "gp" begin
 
     # Ensure that basic functionality works as expected.
-    @timedtestset "GP" begin
+    @testset "GP" begin
         rng, gpc, N, N′ = MersenneTwister(123456), GPC(), 5, 6
         m = AbstractGPs.CustomMean(sin)
         k = SqExponentialKernel()
@@ -17,7 +17,7 @@ struct ToyAbstractGP <: AbstractGP end
     end
 
     # Test the creation of indepenent GPs.
-    @timedtestset "independent GPs" begin
+    @testset "independent GPs" begin
         rng, N, N′ = MersenneTwister(123456), 5, 6
         x, x′ = randn(rng, N), randn(rng, N′)
 
@@ -36,7 +36,7 @@ struct ToyAbstractGP <: AbstractGP end
         @test cov(f1, f1, x′, x) ≈ cov(f1, f1, x, x′)'
     end
 
-    @timedtestset "wrapped AbstractGP" begin
+    @testset "wrapped AbstractGP" begin
         atomic(ToyAbstractGP(), GPC())
     end
 end

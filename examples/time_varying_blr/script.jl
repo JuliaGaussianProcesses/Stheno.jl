@@ -21,7 +21,7 @@ f is the prediction of the regressor.
 y is the addition of f and rough temporally-correlated "noise".
 =#
 f = @gppp let
-    g1 = x->x / 4
+    g1 = x -> x / 4
     g2 = cos
     w1 = stretch(GP(SEKernel()), 0.2)
     w2 = stretch(GP(SEKernel()), 1)
@@ -38,7 +38,7 @@ ŷ = rand(rng, f(x));
 f′ = posterior(f(x), ŷ);
 
 # Sample from the posterior and write to file.
-xp_ = range(-2.5, stop=12.5, length=Nplot);
+xp_ = range(-2.5; stop=12.5, length=Nplot);
 xp_w1 = GPPPInput(:w1, xp_);
 xp_w2 = GPPPInput(:w2, xp_);
 xp_y = GPPPInput(:y, xp_);
@@ -48,25 +48,17 @@ xp = BlockData(xp_w1, xp_w2, xp_y);
 f′_xp = rand(rng, f′(xp, 1e-9), S);
 w1′s, w2′s, y′s = split(xp, f′_xp);
 
-
-
 # ## Plot results
 
 gr();
-posterior_plot = plot(
+posterior_plot = plot(;
     legend=:topleft,
     legendfont=Plots.Font(
-        "sans-serif",
-        10,
-        :hcenter,
-        :vcenter,
-        0.0,
-        RGB{Normed{UInt8, 8}}(0.0,0.0,0.0)
+        "sans-serif", 10, :hcenter, :vcenter, 0.0, RGB{Normed{UInt8,8}}(0.0, 0.0, 0.0)
     ),
     background_color_legend=RGBA(1, 1, 1, 0),
     foreground_color_legend=RGBA(1, 1, 1, 0),
 );
-
 
 # Plot posterior over w1.
 plot!(posterior_plot, xp_, f′(xp_w1); color=:green, label="w1");
@@ -76,14 +68,14 @@ plot!(posterior_plot, xp_, w1′s; color=:green, label="", linewidth=1, alpha=0.
 plot!(posterior_plot, xp_, f′(xp_w2); color=:magenta, label="w2");
 plot!(posterior_plot, xp_, w2′s; color=:magenta, label="", linewidth=1, alpha=0.2);
 
-
 # Plot x1 and x2
-plot!(posterior_plot, xp_, (x->x / 4).(xp_);
-    linecolor=:black,
-    linewidth=1.0,
-    label="x / 4",
+plot!(
+    posterior_plot, xp_, (x -> x / 4).(xp_); linecolor=:black, linewidth=1.0, label="x / 4"
 );
-plot!(posterior_plot, xp_, cos.(xp_);
+plot!(
+    posterior_plot,
+    xp_,
+    cos.(xp_);
     linecolor=:black,
     linewidth=1.0,
     linestyle=:dash,
@@ -91,7 +83,10 @@ plot!(posterior_plot, xp_, cos.(xp_);
 );
 
 # Plot samples against which we're regressing.
-scatter!(posterior_plot, x.x, ŷ;
+scatter!(
+    posterior_plot,
+    x.x,
+    ŷ;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
