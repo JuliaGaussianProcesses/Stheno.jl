@@ -37,10 +37,10 @@ end;
 
 # Generate a sample from f3, one of the processes in f, at some random input locations.
 # Add some iid observation noise, with zero-mean and variance 0.02.
-const x = GPPPInput(:f3, collect(range(-5.0, 5.0; length=100)));
+x = GPPPInput(:f3, collect(range(-5.0, 5.0; length=100)));
 σ²_n = 0.02;
 fx = f(x, σ²_n);
-const y = rand(fx);
+y = rand(fx);
 
 # Compute the log marginal likelihood of this observation, just because we can.
 logpdf(fx, y)
@@ -202,22 +202,18 @@ plt
 # can be straightforwardly obtained via reverse-mode algorithmic differentiation, which is
 # provided by [Mooncake.jl](https://github.com/compintell/Mooncake.jl):
 
-using DifferentiationInterface
+using ADTypes
 using Mooncake: Mooncake
-const DI = DifferentiationInterface
 
 # This will probably take a while to get going as Mooncake needs to compile.
-const backend = AutoMooncake(; config=nothing);
-objective(θ_flat) = nlml(unpack(θ_flat))
-
-prep = DI.prepare_gradient(objective, backend, θ_flat_init);
+backend = AutoMooncake(; config=nothing)
 results = Optim.optimize(
-    objective,
-    θ -> DI.gradient(objective, prep, backend, θ),
+    nlml ∘ unpack,
     θ_flat_init + 0.1 * randn(length(θ_flat_init)),
     BFGS(),
     Optim.Options(; show_trace=true);
     inplace=false,
+    autodiff=backend,
 )
 θ_bfgs = unpack(results.minimizer);
 
@@ -248,6 +244,7 @@ plt
 # This is slightly longer than the previous examples, but it's all set up associated with
 # AdvancedHMC, which is literally a copy-paste from that package's README:
 using AdvancedHMC
+import DifferentiationInterface as DI
 
 # Define the log marginal joint density function and its gradient
 ℓπ(θ_flat) = -nlml(unpack(θ_flat)) - 0.5 * sum(abs2, θ_flat)

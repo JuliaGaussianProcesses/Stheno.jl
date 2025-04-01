@@ -24,7 +24,7 @@ model = @gppp let
     f = GP(SEKernel())
 
     ## Define the two noise processes described.
-    noise1 = sqrt(1e-2) * GP(WhiteKernel()) + (x->sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
+    noise1 = sqrt(1e-2) * GP(WhiteKernel()) + (x -> sin.(x) .- 5.0 .+ sqrt.(abs.(x)))
     noise2 = sqrt(1e-1) * GP(3.5, WhiteKernel())
 
     ## Define the processes that we get to observe.
@@ -43,15 +43,13 @@ ŷ1, ŷ2 = split(x, ŷ);
 model′ = posterior(model(x), ŷ);
 
 # Sample jointly from the posterior processes and compute posterior marginals.
-xp_ = range(-2.5, stop=12.5, length=500);
+xp_ = range(-2.5; stop=12.5, length=500);
 xp_f = GPPPInput(:f, xp_);
 xp_y1 = GPPPInput(:y1, xp_);
 xp_y2 = GPPPInput(:y2, xp_);
 xp = BlockData(xp_f, xp_y1, xp_y2);
 model′_xp = rand(rng, model′(xp, 1e-9));
 f′xp, y1′xp, y2′xp = split(xp, model′_xp);
-
-
 
 # ## Plot results
 
@@ -72,7 +70,10 @@ plot!(posterior_plot, xp_, model′(xp_f); color=:blue, label="Latent Function")
 plot!(posterior_plot, xp_, f′xp; color=:blue, label="", linewidth=1, linealpha=0.2);
 
 # Plot samples on which we conditioned.
-scatter!(posterior_plot, x1.x, ŷ1;
+scatter!(
+    posterior_plot,
+    x1.x,
+    ŷ1;
     markercolor=:red,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -80,7 +81,10 @@ scatter!(posterior_plot, x1.x, ŷ1;
     markeralpha=0.8,
     label="Sensor 1",
 );
-scatter!(posterior_plot, x2.x, ŷ2;
+scatter!(
+    posterior_plot,
+    x2.x,
+    ŷ2;
     markercolor=:green,
     markershape=:circle,
     markerstrokewidth=0.0,

@@ -22,8 +22,6 @@ import AbstractGPs: AbstractGP, mean, cov, var
 using CairoMakie: RGB
 using Stheno: DerivedGP
 
-
-
 # ## Define new affine transformation
 #
 # The mean function is assumed to have zero-mean.
@@ -34,7 +32,7 @@ using Stheno: DerivedGP
 
 convolve(f::AbstractGP) = DerivedGP((convolve, f), f.gpc)
 
-const conv_args = Tuple{typeof(convolve), AbstractGP}
+const conv_args = Tuple{typeof(convolve),AbstractGP}
 
 mean((_, f)::conv_args, x::AbstractVector{<:Real}) = zeros(length(x))
 cov(args::conv_args, x::AbstractVector{<:Real}) = cov(args, x, x)
@@ -46,14 +44,15 @@ end
 _quadrature(f, xs, ws) = sum(map((x, w) -> w * f(x), xs, ws))
 
 function cov((_, f)::conv_args, x::AbstractVector{<:Real}, x′::AbstractVector{<:Real})
-
     num_points = 15
     xs, ws = gausshermite(num_points)
 
     cols_of_C = map(x′) do x′n
         col_elements = map(x) do xn
             _quadrature(
-                x -> _quadrature(x′ -> only(cov(f, [xn - x], [x′n - x′])), xs, ws), xs, ws
+                x -> _quadrature(x′ -> only(cov(f, [xn - x], [x′n - x′])), xs, ws),
+                xs,
+                ws,
             )
         end
     end
@@ -61,10 +60,7 @@ function cov((_, f)::conv_args, x::AbstractVector{<:Real}, x′::AbstractVector{
 end
 
 function cov(
-    (_, f)::conv_args,
-    f′::AbstractGP,
-    x::AbstractVector{<:Real},
-    x′::AbstractVector{<:Real},
+    (_, f)::conv_args, f′::AbstractGP, x::AbstractVector{<:Real}, x′::AbstractVector{<:Real}
 )
     num_points = 15
     xs, ws = gausshermite(num_points)
@@ -78,14 +74,10 @@ function cov(
 end
 
 function cov(
-    f′::AbstractGP,
-    args::conv_args,
-    x::AbstractVector{<:Real},
-    x′::AbstractVector{<:Real},
+    f′::AbstractGP, args::conv_args, x::AbstractVector{<:Real}, x′::AbstractVector{<:Real}
 )
     return collect(transpose(cov(args, f′, x′, x)))
 end
-
 
 # ## Some plotting config
 
@@ -99,16 +91,16 @@ page_width() = 6
 
 size_from_inches(; height=4, width=4) = 72 .* (width, height)
 
-set_theme!(font="Times")
+set_theme!(; font="Times")
 
 function colours()
     return Dict(
-        :blue => RGB(0/255, 107/255, 164/255),
-        :cyan => RGB(75/255, 166/255, 251/255),
-        :red => RGB(200/255, 82 / 255, 0 / 255),
-        :pink => RGB(169/255, 90/255, 161/255),
+        :blue => RGB(0 / 255, 107 / 255, 164 / 255),
+        :cyan => RGB(75 / 255, 166 / 255, 251 / 255),
+        :red => RGB(200 / 255, 82 / 255, 0 / 255),
+        :pink => RGB(169 / 255, 90 / 255, 161 / 255),
         :black => RGB(0.0, 0.0, 0.0),
-        :orange => RGB(245/255, 121/255, 58/255),
+        :orange => RGB(245 / 255, 121 / 255, 58 / 255),
     )
 end
 
@@ -118,11 +110,13 @@ band_alpha() = 0.3
 sample_alpha() = 0.2
 point_alpha() = 1.0
 
-
 function plot_band!(ax, x_plot, fx, colour, label)
     ms = marginals(fx)
-    symband!(
-        ax, x_plot, mean.(ms), std.(ms);
+    return symband!(
+        ax,
+        x_plot,
+        mean.(ms),
+        std.(ms);
         bandscale=3,
         color=(colours()[colour], 0.5 * band_alpha()),
         label=label,
@@ -130,15 +124,12 @@ function plot_band!(ax, x_plot, fx, colour, label)
 end
 
 function plot_sample!(ax, x_plot, fx, colour)
-    gpsample!(
-        ax, x_plot, fx;
-        samples=4, color=(colours()[colour], sample_alpha()),
-    )
+    return gpsample!(ax, x_plot, fx; samples=4, color=(colours()[colour], sample_alpha()))
 end
 
 function plot_gp!(ax, x_plot, fx, colour, label)
     plot_band!(ax, x_plot, fx, colour, label)
-    plot_sample!(ax, x_plot, fx, colour)
+    return plot_sample!(ax, x_plot, fx, colour)
 end
 
 # ## Plot some stuff

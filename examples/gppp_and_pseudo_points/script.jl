@@ -29,8 +29,6 @@ posterior_plot = plot();
 approx_in_marginal_posterior_plot = plot();
 approx_in_latents_posterior_plot = plot();
 
-
-
 # ## Exact Inference
 
 # Compute the posterior processes, sample from them, and compute marginals.
@@ -51,12 +49,15 @@ items = [
 
 # Plot posterior marginals and samples.
 for (x, samples, colour, name, plt) in items
-    plot!(plt, xp_, f′(x); fillalpha=0.2, color=colour, label=name);
-    plot!(plt, xp_, samples; alpha=0.3, color=colour, label="", linewidth=1);
+    plot!(plt, xp_, f′(x); fillalpha=0.2, color=colour, label=name)
+    plot!(plt, xp_, samples; alpha=0.3, color=colour, label="", linewidth=1)
 end
 
 # Plot observations.
-scatter!(posterior_plot, x.x, y;
+scatter!(
+    posterior_plot,
+    x.x,
+    y;
     markercolor=:blue,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -64,8 +65,6 @@ scatter!(posterior_plot, x.x, y;
     markeralpha=0.7,
     label="",
 )
-
-
 
 # ## Approximate inference with pseudo-data in f3
 
@@ -85,11 +84,14 @@ items = [
 
 # Posterior marginal variance.
 for (x, colour, name, plt) in items
-    plot!(plt, xp_, f′_approx(x); fillalpha=0.3, fillcolor=colour, label=name);
+    plot!(plt, xp_, f′_approx(x); fillalpha=0.3, fillcolor=colour, label=name)
 end
 
 # Plot observations and pseudo-input locations.
-scatter!(approx_in_marginal_posterior_plot, x.x, y;
+scatter!(
+    approx_in_marginal_posterior_plot,
+    x.x,
+    y;
     markercolor=:blue,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -97,7 +99,10 @@ scatter!(approx_in_marginal_posterior_plot, x.x, y;
     markeralpha=0.7,
     label="",
 );
-scatter!(approx_in_marginal_posterior_plot, z.x, zeros(M3);
+scatter!(
+    approx_in_marginal_posterior_plot,
+    z.x,
+    zeros(M3);
     markercolor=:black,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -105,8 +110,6 @@ scatter!(approx_in_marginal_posterior_plot, z.x, zeros(M3);
     markeralpha=0.8,
     label="Z",
 )
-
-
 
 # ## Perform approximate inference by placing pseudo-data in f1 and f2
 
@@ -132,7 +135,10 @@ for (x, colour, name, plt) in items
 end
 
 # Plot observations and pseudo-input locations.
-scatter!(approx_in_latents_posterior_plot, x.x, y;
+scatter!(
+    approx_in_latents_posterior_plot,
+    x.x,
+    y;
     markercolor=:blue,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -140,7 +146,10 @@ scatter!(approx_in_latents_posterior_plot, x.x, y;
     markeralpha=0.7,
     label="",
 );
-scatter!(approx_in_latents_posterior_plot, z1.x, zeros(M1);
+scatter!(
+    approx_in_latents_posterior_plot,
+    z1.x,
+    zeros(M1);
     markercolor=:black,
     markershape=:circle,
     markerstrokewidth=0.0,
@@ -148,7 +157,10 @@ scatter!(approx_in_latents_posterior_plot, z1.x, zeros(M1);
     markeralpha=0.8,
     label="Z₁",
 );
-scatter!(approx_in_latents_posterior_plot, z2.x, zeros(M2);
+scatter!(
+    approx_in_latents_posterior_plot,
+    z2.x,
+    zeros(M2);
     markercolor=:magenta,
     markershape=:circle,
     markerstrokewidth=0.0,

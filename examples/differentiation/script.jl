@@ -26,8 +26,7 @@ using Stheno: DerivedGP
 
 derivative(f::AbstractGP) = DerivedGP((derivative, f), f.gpc)
 
-
-const deriv_args = Tuple{typeof(derivative), AbstractGP}
+const deriv_args = Tuple{typeof(derivative),AbstractGP}
 
 function mean((_, f)::deriv_args, x::AbstractVector{<:Real})
     return zeros(length(x))
@@ -47,12 +46,8 @@ function cov((_, f)::deriv_args, x::AbstractVector{<:Real}, x′::AbstractVector
         col_elements = map(x) do xn
             FiniteDifferences.grad(
                 fdm,
-                xn -> FiniteDifferences.grad(
-                    fdm,
-                    x′n -> cov(f, [xn], [x′n]),
-                    x′n,
-                ),
-                xn
+                xn -> FiniteDifferences.grad(fdm, x′n -> cov(f, [xn], [x′n]), x′n),
+                xn,
             )[1]
         end
     end
@@ -62,13 +57,7 @@ function var((_, f)::deriv_args, x::AbstractVector{<:Real}, x′::AbstractVector
     fdm = central_fdm(5, 1)
     elements = map(x, x′) do xn, x′n
         FiniteDifferences.grad(
-            fdm,
-            xn -> FiniteDifferences.grad(
-                fdm,
-                x′n -> cov(f, [xn], [x′n]),
-                x′n,
-            ),
-            xn
+            fdm, xn -> FiniteDifferences.grad(fdm, x′n -> cov(f, [xn], [x′n]), x′n), xn
         )[1]
     end
     return reduce(vcat, elements)
@@ -83,20 +72,13 @@ function cov(
     fdm = central_fdm(5, 1)
     cols_of_C = map(x′) do x′n
         col_elements = map(x) do xn
-            FiniteDifferences.grad(
-                fdm,
-                xn -> cov(f, [xn], [x′n]),
-                xn,
-            )[1]
+            FiniteDifferences.grad(fdm, xn -> cov(f, [xn], [x′n]), xn)[1]
         end
     end
     return reduce(hcat, cols_of_C)
 end
 function cov(
-    f::AbstractGP,
-    args::deriv_args,
-    x::AbstractVector{<:Real},
-    x′::AbstractVector{<:Real},
+    f::AbstractGP, args::deriv_args, x::AbstractVector{<:Real}, x′::AbstractVector{<:Real}
 )
     return collect(cov(args, f, x′, x)')
 end
@@ -124,17 +106,16 @@ function test_implementation()
     x_df_pred = GPPPInput(:df, x_pred)
     let
         f_post = posterior(f(GPPPInput(:f, x_obs), 1e-12), map(sin, x_obs))
-        @test map(cos, x_pred) ≈ mean(f_post, x_df_pred) rtol=1e-5
-        @test map(cos, x_pred) ≈ rand(f_post(x_df_pred, 1e-8)) rtol=1e-3
+        @test map(cos, x_pred) ≈ mean(f_post, x_df_pred) rtol = 1e-5
+        @test map(cos, x_pred) ≈ rand(f_post(x_df_pred, 1e-8)) rtol = 1e-3
     end
     let
         f_post = posterior(f(GPPPInput(:f, x_obs), 1e-12), map(cos, x_obs))
-        @test -map(sin, x_pred) ≈ mean(f_post, GPPPInput(:df, x_pred)) rtol=1e-5
-        @test -map(sin, x_pred) ≈ rand(f_post(x_df_pred, 1e-8)) rtol=1e-3
+        @test -map(sin, x_pred) ≈ mean(f_post, GPPPInput(:df, x_pred)) rtol = 1e-5
+        @test -map(sin, x_pred) ≈ rand(f_post(x_df_pred, 1e-8)) rtol = 1e-3
     end
 end
 test_implementation()
-
 
 # ## Example: Inference given observations of process and its derivative
 
@@ -142,12 +123,12 @@ using CairoMakie: RGB
 
 function colours()
     return Dict(
-        :blue => RGB(0/255, 107/255, 164/255),
-        :cyan => RGB(75/255, 166/255, 251/255),
-        :red => RGB(200/255, 82 / 255, 0 / 255),
-        :pink => RGB(169/255, 90/255, 161/255),
+        :blue => RGB(0 / 255, 107 / 255, 164 / 255),
+        :cyan => RGB(75 / 255, 166 / 255, 251 / 255),
+        :red => RGB(200 / 255, 82 / 255, 0 / 255),
+        :pink => RGB(169 / 255, 90 / 255, 161 / 255),
         :black => RGB(0.0, 0.0, 0.0),
-        :orange => RGB(245/255, 121/255, 58/255),
+        :orange => RGB(245 / 255, 121 / 255, 58 / 255),
     )
 end
 
@@ -186,13 +167,14 @@ let
         f_xf = f_post(GPPPInput(:f, x_plot), 1e-6)
         ms = marginals(f_xf)
         symband!(
-            ax, x_plot, mean.(ms), std.(ms);
-            bandscale=3, color=(colours()[:blue], band_alpha()),
+            ax,
+            x_plot,
+            mean.(ms),
+            std.(ms);
+            bandscale=3,
+            color=(colours()[:blue], band_alpha()),
         )
-        gpsample!(
-            ax, x_plot, f_xf;
-            samples=10, color=(colours()[:blue], sample_alpha()),
-        )
+        gpsample!(ax, x_plot, f_xf; samples=10, color=(colours()[:blue], sample_alpha()))
         scatter!(ax, x_f.x, y_f; color=(colours()[:blue], point_alpha()), label="f")
     end
 
@@ -200,13 +182,14 @@ let
         f_xdf = f_post(GPPPInput(:df, x_plot), 1e-6)
         ms = marginals(f_xdf)
         symband!(
-            ax, x_plot, mean.(ms), std.(ms);
-            bandscale=3, color=(colours()[:orange], band_alpha()),
+            ax,
+            x_plot,
+            mean.(ms),
+            std.(ms);
+            bandscale=3,
+            color=(colours()[:orange], band_alpha()),
         )
-        gpsample!(
-            ax, x_plot, f_xdf;
-            samples=10, color=(colours()[:orange], sample_alpha()),
-        )
+        gpsample!(ax, x_plot, f_xdf; samples=10, color=(colours()[:orange], sample_alpha()))
         scatter!(ax, x_df.x, y_df; color=(colours()[:orange], point_alpha()), label="df")
     end
 
@@ -216,7 +199,6 @@ let
 
     fig
 end
-
 
 # ## Example: Integration via Antiderivatives
 
@@ -252,13 +234,14 @@ let
         f_xf = f_post(GPPPInput(:f, x_plot), 1e-6)
         ms = marginals(f_xf)
         symband!(
-            ax, x_plot, mean.(ms), std.(ms);
-            bandscale=3, color=(colours()[:blue], band_alpha()),
+            ax,
+            x_plot,
+            mean.(ms),
+            std.(ms);
+            bandscale=3,
+            color=(colours()[:blue], band_alpha()),
         )
-        gpsample!(
-            ax, x_plot, f_xf;
-            samples=10, color=(colours()[:blue], sample_alpha()),
-        )
+        gpsample!(ax, x_plot, f_xf; samples=10, color=(colours()[:blue], sample_alpha()))
         scatter!(ax, x_f.x, y_f; color=(colours()[:blue], point_alpha()), label="f")
     end
 
@@ -266,13 +249,14 @@ let
         f_xdf = f_post(GPPPInput(:F, x_plot), 1e-6)
         ms = marginals(f_xdf)
         symband!(
-            ax, x_plot, mean.(ms), std.(ms);
-            bandscale=3, color=(colours()[:orange], band_alpha()),
+            ax,
+            x_plot,
+            mean.(ms),
+            std.(ms);
+            bandscale=3,
+            color=(colours()[:orange], band_alpha()),
         )
-        gpsample!(
-            ax, x_plot, f_xdf;
-            samples=10, color=(colours()[:orange], sample_alpha()),
-        )
+        gpsample!(ax, x_plot, f_xdf; samples=10, color=(colours()[:orange], sample_alpha()))
         scatter!(ax, x_F.x, y_F; color=(colours()[:orange], point_alpha()), label="F")
     end
 

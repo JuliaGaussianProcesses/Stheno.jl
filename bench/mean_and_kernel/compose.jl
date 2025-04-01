@@ -1,5 +1,12 @@
-using Stheno: UnaryMean, BinaryMean, BinaryKernel, BinaryCrossKernel, LhsCross, RhsCross,
-    OuterCross, OuterKernel
+using Stheno:
+    UnaryMean,
+    BinaryMean,
+    BinaryKernel,
+    BinaryCrossKernel,
+    LhsCross,
+    RhsCross,
+    OuterCross,
+    OuterKernel
 
 @benchset "compose" begin
     let
